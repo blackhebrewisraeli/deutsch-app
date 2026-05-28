@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Check, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
+import { Analytics } from '@vercel/analytics/react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { StatBlock } from './components/UI';
@@ -195,6 +196,7 @@ export default function App() {
         <span>Lernen × Sprechen × Verstehen</span>
         <span>// Powered by Claude</span>
       </footer>
+      <Analytics />
     </div>
   );
 }
