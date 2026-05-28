@@ -7,6 +7,7 @@ import ChatTab from './components/ChatTab';
 import AlphabetTab from './components/AlphabetTab';
 import VocabTab from './components/VocabTab';
 import TranslateTab from './components/TranslateTab';
+import { Analytics } from '@vercel/analytics/react';
 
 export default function App() {
   const [tab, setTab] = useState('chat');
@@ -195,6 +196,8 @@ export default function App() {
         <span>Lernen × Sprechen × Verstehen</span>
         <span>// Powered by Claude</span>
       </footer>
+
+      <Analytics />
     </div>
   );
 }
