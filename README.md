@@ -30,6 +30,10 @@
 
 <br/>
 
+![Chat tab — AI tutor Anna](docs/screenshot-chat.png)
+
+<br/>
+
 </div>
 
 ---
@@ -47,6 +51,8 @@ Every AI-powered feature — the conversation tutor, the vocabulary generator, t
 <details>
 <summary><b>&nbsp;01 · Chat — Talk to Anna, your AI tutor</b></summary>
 <br/>
+
+![Chat tab](docs/screenshot-chat.png)
 
 Anna is a friendly German tutor who lives inside Claude Sonnet 4. She speaks back to you using the browser's native text-to-speech engine, accepts voice input from your microphone (Chrome / Edge / Arc), corrects your German in real time, and stays in character across four role-play scenarios.
 
@@ -89,6 +95,8 @@ If your German is flawless, the same panel shows:  **✓ Alles gut! No mistakes 
 <summary><b>&nbsp;02 · Alphabet — Das Alphabet</b></summary>
 <br/>
 
+![Alphabet tab](docs/screenshot-alphabet.png)
+
 An interactive 6-column grid of all **30 German letters** — the standard 26 plus **Ä, Ö, Ü, ß**. The four special characters are displayed on a slightly deeper background so they stand out.
 
 Click any tile to:
@@ -105,6 +113,8 @@ The selected letter expands into a full-width detail card with the letter render
 <details>
 <summary><b>&nbsp;03 · Vocab — Wortschatz (Flashcards)</b></summary>
 <br/>
+
+![Vocab tab](docs/screenshot-vocab.png)
 
 Flashcard-style vocabulary practice. Four curated decks are built-in, and you can generate any custom deck via Claude.
 
@@ -136,6 +146,8 @@ Flashcard-style vocabulary practice. Four curated decks are built-in, and you ca
 <details>
 <summary><b>&nbsp;04 · Translate — Übersetzer (Smart Translator)</b></summary>
 <br/>
+
+![Translate tab](docs/screenshot-translate.png)
 
 A translator that auto-detects whether you're typing **English or German** and returns far more than just a translation.
 
