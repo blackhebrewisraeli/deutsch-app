@@ -7,12 +7,26 @@ import ChatTab from './components/ChatTab';
 import AlphabetTab from './components/AlphabetTab';
 import VocabTab from './components/VocabTab';
 import TranslateTab from './components/TranslateTab';
+import SplashScreen from './components/SplashScreen';
 import { Analytics } from '@vercel/analytics/react';
 
 export default function App() {
   const [tab, setTab] = useState('chat');
   const [stats, setStats] = useState({ streak: 0, learnedCount: 0, lastVisit: null });
   const [learnedWords, setLearnedWords] = useState({});
+
+  // Onboarding + level
+  const [showSplash, setShowSplash] = useState(
+    () => !localStorage.getItem('deutsch-onboarded')
+  );
+  const [level, setLevel] = useState(
+    () => localStorage.getItem('deutsch-level') || 'intermediate'
+  );
+
+  const handleSplashComplete = (chosenLevel) => {
+    setLevel(chosenLevel);
+    setShowSplash(false);
+  };
 
   useEffect(() => {
     const s = loadState();
@@ -49,11 +63,17 @@ export default function App() {
   };
 
   const tabs = [
-    { id: 'chat', label: 'Chat', icon: MessageSquare, num: '01' },
-    { id: 'alphabet', label: 'Alphabet', icon: Type, num: '02' },
-    { id: 'vocab', label: 'Vocab', icon: BookOpen, num: '03' },
-    { id: 'translate', label: 'Translate', icon: Languages, num: '04' },
+    { id: 'chat',      label: 'Chat',      icon: MessageSquare, num: '01' },
+    { id: 'alphabet',  label: 'Alphabet',  icon: Type,          num: '02' },
+    { id: 'vocab',     label: 'Vocab',     icon: BookOpen,      num: '03' },
+    { id: 'translate', label: 'Translate', icon: Languages,     num: '04' },
   ];
+
+  // Streak pulsing: user hasn't visited today yet and has a streak to protect
+  const streakPulsing =
+    stats.streak > 0 && stats.lastVisit !== new Date().toDateString();
+
+  if (showSplash) return <SplashScreen onComplete={handleSplashComplete} />;
 
   return (
     <div style={{
@@ -72,9 +92,12 @@ export default function App() {
         ::-webkit-scrollbar { width: 10px; height: 10px; }
         ::-webkit-scrollbar-track { background: ${COLORS.paperDeep}; }
         ::-webkit-scrollbar-thumb { background: ${COLORS.ink}; border: 2px solid ${COLORS.paperDeep}; }
-        @keyframes blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0; } }
-        @keyframes pulse-red { 0%, 100% { box-shadow: 0 0 0 0 ${COLORS.red}80; } 50% { box-shadow: 0 0 0 12px ${COLORS.red}00; } }
-        @keyframes slide-up { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes blink      { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0; } }
+        @keyframes pulse-red  { 0%, 100% { box-shadow: 0 0 0 0 ${COLORS.red}80; } 50% { box-shadow: 0 0 0 12px ${COLORS.red}00; } }
+        @keyframes slide-up   { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes bounce     { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
+        @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,197,24,0.7); } 50% { box-shadow: 0 0 0 10px rgba(245,197,24,0); } }
+        @keyframes shimmer    { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
         .slide-up { animation: slide-up 0.3s ease-out; }
       `}</style>
 
@@ -111,7 +134,13 @@ export default function App() {
         </div>
 
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
-          <StatBlock label="STREAK" value={stats.streak} icon={<Flame size={14} />} accent />
+          <StatBlock
+            label="STREAK"
+            value={stats.streak}
+            icon={<Flame size={14} />}
+            accent
+            pulsing={streakPulsing}
+          />
           <div style={{ width: 1, height: 32, background: COLORS.ink }} />
           <StatBlock label="LEARNED" value={stats.learnedCount} icon={<Check size={14} />} />
         </div>
@@ -175,9 +204,9 @@ export default function App() {
       </nav>
 
       <main style={{ padding: 32, maxWidth: 1400, margin: '0 auto' }}>
-        {tab === 'chat' && <ChatTab />}
-        {tab === 'alphabet' && <AlphabetTab />}
-        {tab === 'vocab' && <VocabTab learnedWords={learnedWords} markLearned={markLearned} />}
+        {tab === 'chat'      && <ChatTab level={level} />}
+        {tab === 'alphabet'  && <AlphabetTab />}
+        {tab === 'vocab'     && <VocabTab learnedWords={learnedWords} markLearned={markLearned} />}
         {tab === 'translate' && <TranslateTab />}
       </main>
 
