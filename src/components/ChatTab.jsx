@@ -302,8 +302,8 @@ function MessageBubble({ msg }) {
         </div>
         <div style={{
           padding: '14px 18px',
-          background: isUser ? COLORS.ink : COLORS.paperDeep,
-          color: isUser ? COLORS.paper : COLORS.ink,
+          background: isUser ? COLORS.ink : COLORS.gold,
+          color: COLORS.ink,
           border: `2px solid ${COLORS.ink}`,
         }}>
           <div style={{
