@@ -30,6 +30,8 @@
 
 <br/>
 
+![Splash screen — German flag onboarding](docs/screenshot-splash.png)
+
 ![Chat tab — AI tutor Anna](docs/screenshot-chat.png)
 
 <br/>
@@ -40,7 +42,9 @@
 
 ## What is this?
 
-**Deutsch · Sprachschule** is a full-featured German language learning app that runs entirely in the browser. It combines four independent learning modules under one editorial, Bauhaus-inspired interface — high-contrast ink-and-parchment typography, bold serif headings, and monospace labels.
+**Deutsch · Sprachschule** is a full-featured German language learning app that runs entirely in the browser. It combines four independent learning modules under one editorial, Bauhaus-inspired interface — bold German flag palette (black · red · gold · white), Fraunces serif headings, and monospace labels.
+
+On first visit, a dramatic full-screen splash with the German flag colours greets you and asks you to choose your level — **Beginner** (A1–A2) or **Intermediate** (A2–B1). Anna, the AI tutor, adapts her language complexity accordingly.
 
 Every AI-powered feature — the conversation tutor, the vocabulary generator, the smart translator — calls **Claude Sonnet 4** via a secure server-side proxy, keeping your API key out of the browser at all times.
 
@@ -51,6 +55,10 @@ Every AI-powered feature — the conversation tutor, the vocabulary generator, t
 <details>
 <summary><b>&nbsp;01 · Chat — Talk to Anna, your AI tutor</b></summary>
 <br/>
+
+![Splash screen](docs/screenshot-splash.png)
+
+*First visit: choose your level on the German flag splash screen*
 
 ![Chat tab](docs/screenshot-chat.png)
 
