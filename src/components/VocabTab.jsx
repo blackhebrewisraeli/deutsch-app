@@ -7,12 +7,13 @@ import { PRESET_DECKS } from '../data/content';
 import { Hero, SectionLabel, btnSecondary } from './UI';
 
 export default function VocabTab({ learnedWords, markLearned }) {
-  const [deckId, setDeckId] = useState('greetings');
+  const [deckId, setDeckId]           = useState('greetings');
   const [customCards, setCustomCards] = useState(null);
   const [customTopic, setCustomTopic] = useState('');
-  const [generating, setGenerating] = useState(false);
-  const [cardIdx, setCardIdx] = useState(0);
-  const [flipped, setFlipped] = useState(false);
+  const [generating, setGenerating]   = useState(false);
+  const [cardIdx, setCardIdx]         = useState(0);
+  const [flipped, setFlipped]         = useState(false);
+  const [deckComplete, setDeckComplete] = useState(false);
 
   const activeDeck = deckId === 'custom' && customCards ? customCards : PRESET_DECKS[deckId] || [];
   const card = activeDeck[cardIdx];
@@ -20,6 +21,7 @@ export default function VocabTab({ learnedWords, markLearned }) {
   useEffect(() => {
     setCardIdx(0);
     setFlipped(false);
+    setDeckComplete(false);
   }, [deckId, customCards]);
 
   const next = () => {
@@ -51,12 +53,26 @@ export default function VocabTab({ learnedWords, markLearned }) {
     }
   };
 
+  const handleMarkLearned = (e, word) => {
+    e.stopPropagation();
+    markLearned(word);
+    // Check if this marks the last unlearned card
+    const wasLearned = learnedWords[word];
+    if (!wasLearned) {
+      const updatedLearned = { ...learnedWords, [word]: true };
+      const allDone = activeDeck.every(c => updatedLearned[c.de]);
+      if (allDone) setDeckComplete(true);
+    }
+  };
+
   const decks = [
-    { id: 'greetings', name: 'Greetings', count: 10 },
-    { id: 'food', name: 'Food & Drink', count: 10 },
-    { id: 'travel', name: 'Travel', count: 10 },
-    { id: 'numbers', name: 'Numbers', count: 10 },
+    { id: 'greetings', name: 'Greetings',   count: 10 },
+    { id: 'food',      name: 'Food & Drink', count: 10 },
+    { id: 'travel',    name: 'Travel',       count: 10 },
+    { id: 'numbers',   name: 'Numbers',      count: 10 },
   ];
+
+  const learnedInDeck = activeDeck.filter(c => learnedWords[c.de]).length;
 
   return (
     <div>
@@ -129,7 +145,7 @@ export default function VocabTab({ learnedWords, markLearned }) {
               style={{
                 width: '100%',
                 padding: 12,
-                background: COLORS.paper,
+                background: COLORS.card,
                 border: `2px solid ${COLORS.ink}`,
                 fontFamily: FONT_BODY,
                 fontSize: 15,
@@ -145,7 +161,7 @@ export default function VocabTab({ learnedWords, markLearned }) {
                 width: '100%',
                 padding: 14,
                 background: generating ? COLORS.mute : COLORS.red,
-                color: COLORS.paper,
+                color: COLORS.card,
                 border: 'none',
                 fontFamily: FONT_MONO,
                 fontWeight: 700,
@@ -170,21 +186,62 @@ export default function VocabTab({ learnedWords, markLearned }) {
                   Card {cardIdx + 1} / {activeDeck.length}
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  {activeDeck.map((_, i) => (
+                  {activeDeck.map((c, i) => (
                     <div key={i} style={{
                       width: 24, height: 4,
-                      background: i === cardIdx ? COLORS.red : (learnedWords[activeDeck[i].de] ? COLORS.ink : COLORS.paperDeep),
+                      background: i === cardIdx
+                        ? COLORS.red
+                        : learnedWords[c.de]
+                          ? COLORS.ink
+                          : i === 0 && cardIdx === 0
+                            ? `${COLORS.ink}30`
+                            : COLORS.paperDeep,
                     }} />
                   ))}
                 </div>
               </div>
 
+              {/* ── Deck Completion Banner ── */}
+              {deckComplete && (
+                <div className="slide-up" style={{
+                  background: 'linear-gradient(90deg, #F5C518 0%, #FFE44D 50%, #F5C518 100%)',
+                  backgroundSize: '200% auto',
+                  animation: 'shimmer 2s linear infinite',
+                  border: `2px solid ${COLORS.ink}`,
+                  padding: '14px 20px',
+                  marginBottom: 16,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                }}>
+                  <span style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 700, color: COLORS.ink }}>
+                    ✓ Deck complete — {learnedInDeck} words learned
+                  </span>
+                  <button
+                    onClick={() => setDeckComplete(false)}
+                    style={{
+                      background: 'transparent',
+                      border: `1px solid ${COLORS.ink}`,
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      letterSpacing: '0.15em',
+                      padding: '4px 10px',
+                      cursor: 'pointer',
+                      color: COLORS.ink,
+                    }}
+                  >
+                    DISMISS
+                  </button>
+                </div>
+              )}
+
+              {/* ── Flashcard ── */}
               <div
                 onClick={() => setFlipped((f) => !f)}
                 style={{
                   border: `2px solid ${COLORS.ink}`,
-                  background: flipped ? COLORS.ink : COLORS.paper,
-                  color: flipped ? COLORS.paper : COLORS.ink,
+                  background: flipped ? COLORS.ink : COLORS.card,
+                  color: flipped ? COLORS.card : COLORS.ink,
                   minHeight: 360,
                   padding: 48,
                   cursor: 'pointer',
@@ -212,7 +269,7 @@ export default function VocabTab({ learnedWords, markLearned }) {
                     position: 'absolute',
                     top: 20, left: 20,
                     background: COLORS.red,
-                    color: COLORS.paper,
+                    color: COLORS.card,
                     padding: '4px 10px',
                     fontFamily: FONT_MONO,
                     fontSize: 10,
@@ -247,12 +304,12 @@ export default function VocabTab({ learnedWords, markLearned }) {
                   <Volume2 size={16} />
                 </button>
                 <button
-                  onClick={(e) => { e.stopPropagation(); markLearned(card.de); }}
+                  onClick={(e) => handleMarkLearned(e, card.de)}
                   style={{
                     flex: 1,
                     padding: 14,
                     background: learnedWords[card.de] ? COLORS.red : COLORS.ink,
-                    color: COLORS.paper,
+                    color: COLORS.card,
                     border: 'none',
                     fontFamily: FONT_MONO,
                     fontWeight: 700,
