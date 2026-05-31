@@ -17,6 +17,9 @@ dist-ssr
 .env.local
 .env.*.local
 
+# Superpowers brainstorm sessions
+.superpowers/
+
 # Editor directories
 .vscode/*
 !.vscode/extensions.json
