@@ -6,7 +6,7 @@ import { callClaude } from '../lib/claude';
 import { SCENARIOS } from '../data/content';
 import { SectionLabel } from './UI';
 
-export default function ChatTab() {
+export default function ChatTab({ level = 'intermediate' }) {
   const [scenario, setScenario] = useState('free');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -69,11 +69,17 @@ export default function ChatTab() {
     setThinking(true);
 
     const scenarioDesc = SCENARIOS.find((s) => s.id === scenario)?.desc || 'open conversation';
-    const systemPrompt = `You are a friendly German tutor named Anna for a beginner/intermediate learner. The current scenario is: ${scenarioDesc}.
+    const levelInstructions = level === 'beginner'
+      ? `The learner is a BEGINNER (A1-A2). Keep your German very simple: short sentences, common vocabulary only, always provide the English translation. Use lots of encouragement.`
+      : `The learner is INTERMEDIATE (A2-B1). Use natural German, moderate complexity. Provide English translation but push them a little.`;
+
+    const systemPrompt = `You are a friendly German tutor named Anna for a language learner. The current scenario is: ${scenarioDesc}.
+
+${levelInstructions}
 
 You MUST always respond with strict JSON only (no markdown, no extra text):
 {
-  "de": "your reply in German (1-2 sentences, beginner-friendly)",
+  "de": "your reply in German (1-2 sentences)",
   "ipa": "IPA pronunciation of the German",
   "en": "English translation",
   "correction": null OR { "original": "what they said", "fixed": "corrected German", "explain": "brief friendly explanation in English" }
