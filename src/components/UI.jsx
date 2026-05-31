@@ -1,13 +1,15 @@
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from '../lib/theme';
 
-export function StatBlock({ label, value, icon, accent }) {
+export function StatBlock({ label, value, icon, accent, pulsing }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
       <div style={{
         width: 36, height: 36,
-        background: accent ? COLORS.red : COLORS.ink,
-        color: COLORS.paper,
+        background: accent ? COLORS.gold : COLORS.ink,
+        color: accent ? COLORS.ink : COLORS.card,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
+        flexShrink: 0,
+        animation: pulsing ? 'pulse-gold 2s infinite' : 'none',
       }}>{icon}</div>
       <div>
         <div style={{ fontFamily: FONT_MONO, fontSize: 9, letterSpacing: '0.15em', color: COLORS.mute }}>{label}</div>
