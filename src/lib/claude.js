@@ -1,14 +1,13 @@
 // Claude API client.
 //
-// In development, requests go to /api/anthropic which is proxied by Vite
-// (see vite.config.js) to https://api.anthropic.com with the API key
-// injected from the VITE_ANTHROPIC_API_KEY env variable.
+// In development:  requests go to /api/anthropic (Vite proxy → api.anthropic.com)
+// In production:   requests go to /api/chat (Vercel serverless function)
 //
-// For production deployment, replace this with a call to your own backend
-// or a serverless function — NEVER expose your API key in client-side code
-// in a deployed app.
+// The API key is ALWAYS injected server-side — never exposed in the browser bundle.
 
-const API_URL = '/api/anthropic/v1/messages';
+const API_URL = import.meta.env.PROD
+  ? '/api/chat'
+  : '/api/anthropic/v1/messages';
 
 export const callClaude = async (systemPrompt, userMessage, conversationHistory = []) => {
   const messages = [...conversationHistory, { role: 'user', content: userMessage }];
@@ -27,7 +26,7 @@ export const callClaude = async (systemPrompt, userMessage, conversationHistory 
   if (!response.ok) {
     const errorText = await response.text();
     console.error('Claude API error:', response.status, errorText);
-    throw new Error(`API call failed (${response.status}). Check your .env file has VITE_ANTHROPIC_API_KEY set.`);
+    throw new Error(`API call failed (${response.status}). Make sure VITE_ANTHROPIC_API_KEY is set in Vercel Environment Variables.`);
   }
 
   const data = await response.json();
