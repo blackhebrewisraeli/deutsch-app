@@ -22,8 +22,15 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
+
+    if (!response.ok) {
+      // Log full Anthropic error so it appears in Vercel logs
+      console.error('Anthropic error', response.status, JSON.stringify(data));
+    }
+
     return res.status(response.status).json(data);
   } catch (err) {
+    console.error('Function error:', err.message);
     return res.status(500).json({ error: err.message });
   }
 }

@@ -24,9 +24,10 @@ export const callClaude = async (systemPrompt, userMessage, conversationHistory 
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    console.error('Claude API error:', response.status, errorText);
-    throw new Error(`API call failed (${response.status}). Make sure VITE_ANTHROPIC_API_KEY is set in Vercel Environment Variables.`);
+    const errorData = await response.json().catch(() => ({}));
+    const detail = errorData?.error?.message || JSON.stringify(errorData);
+    console.error('Claude API error:', response.status, detail);
+    throw new Error(`API call failed (${response.status}): ${detail}`);
   }
 
   const data = await response.json();
