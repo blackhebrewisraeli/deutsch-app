@@ -10,6 +10,14 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'VITE_ANTHROPIC_API_KEY is not set on the server.' });
   }
 
+  // Log what we received to help debug
+  console.log('req.body type:', typeof req.body);
+  console.log('req.body:', JSON.stringify(req.body));
+
+  const requestBody = typeof req.body === 'string'
+    ? req.body
+    : JSON.stringify(req.body);
+
   try {
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -18,15 +26,14 @@ export default async function handler(req, res) {
         'x-api-key':         apiKey,
         'anthropic-version': '2023-06-01',
       },
-      body: JSON.stringify(req.body),
+      body: requestBody,
     });
 
     const data = await response.json();
 
-    if (!response.ok) {
-      // Log full Anthropic error so it appears in Vercel logs
-      console.error('Anthropic error', response.status, JSON.stringify(data));
-    }
+    // Log full Anthropic response for debugging
+    console.log('Anthropic status:', response.status);
+    console.log('Anthropic response:', JSON.stringify(data));
 
     return res.status(response.status).json(data);
   } catch (err) {
