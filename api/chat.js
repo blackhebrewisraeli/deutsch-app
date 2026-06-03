@@ -10,10 +10,6 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'VITE_ANTHROPIC_API_KEY is not set on the server.' });
   }
 
-  // Log what we received to help debug
-  console.log('req.body type:', typeof req.body);
-  console.log('req.body:', JSON.stringify(req.body));
-
   const requestBody = typeof req.body === 'string'
     ? req.body
     : JSON.stringify(req.body);
@@ -30,11 +26,6 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json();
-
-    // Log full Anthropic response for debugging
-    console.log('Anthropic status:', response.status);
-    console.log('Anthropic response:', JSON.stringify(data));
-
     return res.status(response.status).json(data);
   } catch (err) {
     console.error('Function error:', err.message);
