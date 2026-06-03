@@ -65,7 +65,7 @@ export default function AlphabetTab() {
                 fontStyle: 'italic',
                 marginTop: 4,
                 opacity: 0.8,
-              }}>{letter.w.toLowerCase()}</span>
+              }}>{letter.w}</span>
             </button>
           );
         })}
