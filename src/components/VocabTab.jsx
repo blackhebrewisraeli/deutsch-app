@@ -224,7 +224,7 @@ export default function VocabTab({ level, learnedWords, markLearned }) {
               )}
 
               {/* Card face — always shows German */}
-              <div style={{ border: BORDER.standard, background: COLORS.card, minHeight: 200, padding: SPACE[12], display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', marginBottom: SPACE[4] }}>
+              <div style={{ border: BORDER.standard, background: COLORS.card, minHeight: 200, padding: SPACE[12], display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', marginBottom: SPACE[4], position: 'relative' }}>
                 {learnedWords[card.de] && (
                   <div style={{ position: 'absolute', background: COLORS.red, color: COLORS.card, padding: '4px 10px', fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.widest, alignSelf: 'flex-start', marginBottom: 'auto' }}>
                     ✓ LEARNED
@@ -239,7 +239,7 @@ export default function VocabTab({ level, learnedWords, markLearned }) {
               </div>
 
               {/* A1/A2 — multiple choice */}
-              {(level === 'a1' || level === 'a2') && !answered && currentIdx !== null && (
+              {(level === 'a1' || level === 'a2') && !answered && currentIdx !== null && activeDeck.length >= 4 && (
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE[3] }}>
                   {getChoices(activeDeck, currentIdx).map(choice => (
                     <button
@@ -260,7 +260,7 @@ export default function VocabTab({ level, learnedWords, markLearned }) {
               )}
 
               {/* B1 — type the meaning */}
-              {level === 'b1' && !answered && (
+              {(level === 'b1' || ((level === 'a1' || level === 'a2') && activeDeck.length < 4)) && !answered && (
                 <div>
                   <input
                     type="text"
