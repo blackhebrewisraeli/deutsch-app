@@ -27,7 +27,7 @@ export default function VocabTab({ level, learnedWords, markLearned }) {
     setResult(null);
     setTypedAnswer('');
     setDeckComplete(false);
-  }, [deckId, customCards]);
+  }, [deckId, customCards, level]);
 
   const currentIdx = queue[0] ?? null;
   const card = currentIdx !== null ? activeDeck[currentIdx] : null;
@@ -56,7 +56,7 @@ export default function VocabTab({ level, learnedWords, markLearned }) {
     const res = dist === 0 ? 'correct' : dist <= 2 ? 'almost' : 'wrong';
     setAnswered(true);
     setResult(res);
-    if (res === 'correct') markLearned(card.de);
+    if (res === 'correct' || res === 'almost') markLearned(card.de);
   };
 
   const generateDeck = async () => {
@@ -292,10 +292,10 @@ export default function VocabTab({ level, learnedWords, markLearned }) {
                   </div>
                   <button
                     type="button"
-                    onClick={() => advanceQueue(result === 'correct')}
+                    onClick={() => advanceQueue(result === 'correct' || result === 'almost')}
                     style={{ ...BUTTON.primary }}
                   >
-                    {result === 'correct' ? 'NEXT CARD →' : 'TRY AGAIN LATER →'}
+                    {result === 'wrong' ? 'TRY AGAIN LATER →' : 'NEXT CARD →'}
                   </button>
                 </div>
               )}

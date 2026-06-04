@@ -16,6 +16,7 @@ export default function ChatTab({ level = 'a1' }) {
   const [correction, setCorrection] = useState(null);
   const [taskIdx, setTaskIdx] = useState(0);
   const [hintVisible, setHintVisible] = useState(false);
+  const [tasksCompleted, setTasksCompleted] = useState(false);
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -29,6 +30,7 @@ export default function ChatTab({ level = 'a1' }) {
   useEffect(() => {
     setTaskIdx(0);
     setHintVisible(false);
+    setTasksCompleted(false);
   }, [scenario, level]);
 
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function ChatTab({ level = 'a1' }) {
     setMessages([{ role: 'assistant', ...intros[scenario] }]);
     setCorrection(null);
     setTimeout(() => speak(intros[scenario].de), 400);
-  }, [scenario]);
+  }, [scenario, level]);
 
   const startListening = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -119,7 +121,9 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
       setMessages((m) => [...m, reply]);
       setCorrection(parsed.correction || null);
       if (parsed.taskComplete) {
-        setTaskIdx(i => (i + 1) % Math.max(tasks.length, 1));
+        const nextIdx = (taskIdx + 1) % Math.max(tasks.length, 1);
+        if (nextIdx === 0) setTasksCompleted(true);
+        setTaskIdx(nextIdx);
         setHintVisible(false);
       }
       setTimeout(() => speak(parsed.de), 200);
@@ -170,39 +174,53 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
               <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, letterSpacing: LETTER_SPACING.wider, background: COLORS.red, color: COLORS.paper, padding: `2px ${SPACE[2]}px` }}>C</span>
               <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.ultra, textTransform: 'uppercase', color: COLORS.mute }}>Your Task</span>
             </div>
-            <div style={{ border: BORDER.standard, background: COLORS.red, color: COLORS.paper, padding: SPACE[4] }}>
-              <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, opacity: 0.8, marginBottom: SPACE[2] }}>
-                TASK {taskIdx + 1}
+            {tasksCompleted ? (
+              <div style={{ border: BORDER.standard, background: COLORS.gold, color: COLORS.ink, padding: SPACE[4] }}>
+                <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, marginBottom: SPACE[2] }}>
+                  ✓ ALL TASKS DONE
+                </div>
+                <div style={{ fontFamily: FONTS.body, fontSize: FONT_SIZE.base, fontStyle: 'italic', marginBottom: SPACE[3] }}>
+                  Great work! Tasks are cycling from the start.
+                </div>
+                <button type="button" onClick={() => { setTasksCompleted(false); setTaskIdx(0); }} style={{ background: 'transparent', border: `1px solid ${COLORS.ink}`, fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.wider, padding: `${SPACE[1]}px ${SPACE[3]}px`, cursor: 'pointer' }}>
+                  CONTINUE
+                </button>
               </div>
-              <div style={{ fontFamily: FONT_BODY, fontSize: FONT_SIZE.base, lineHeight: 1.6, fontStyle: 'italic', marginBottom: currentTask.hint ? SPACE[3] : 0 }}>
-                {currentTask.task}
+            ) : (
+              <div style={{ border: BORDER.standard, background: COLORS.red, color: COLORS.paper, padding: SPACE[4] }}>
+                <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, opacity: 0.8, marginBottom: SPACE[2] }}>
+                  TASK {taskIdx + 1}
+                </div>
+                <div style={{ fontFamily: FONT_BODY, fontSize: FONT_SIZE.base, lineHeight: 1.6, fontStyle: 'italic', marginBottom: currentTask.hint ? SPACE[3] : 0 }}>
+                  {currentTask.task}
+                </div>
+                {currentTask.hint && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setHintVisible(v => !v)}
+                      style={{
+                        background: 'transparent',
+                        border: `1px solid ${COLORS.paper}60`,
+                        color: COLORS.paper,
+                        fontFamily: FONTS.mono,
+                        fontSize: FONT_SIZE.tag,
+                        letterSpacing: LETTER_SPACING.wider,
+                        padding: `${SPACE[1]}px ${SPACE[3]}px`,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      {hintVisible ? 'HIDE HINT' : 'SHOW HINT'}
+                    </button>
+                    {hintVisible && (
+                      <div style={{ marginTop: SPACE[3], borderTop: `1px dashed ${COLORS.paper}50`, paddingTop: SPACE[3], fontFamily: FONTS.mono, fontSize: FONT_SIZE.sm, opacity: 0.9 }}>
+                        {currentTask.hint}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-              {currentTask.hint && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => setHintVisible(v => !v)}
-                    style={{
-                      background: 'transparent',
-                      border: `1px solid ${COLORS.paper}60`,
-                      color: COLORS.paper,
-                      fontFamily: FONTS.mono,
-                      fontSize: FONT_SIZE.tag,
-                      letterSpacing: LETTER_SPACING.wider,
-                      padding: `${SPACE[1]}px ${SPACE[3]}px`,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {hintVisible ? 'HIDE HINT' : 'SHOW HINT'}
-                  </button>
-                  {hintVisible && (
-                    <div style={{ marginTop: SPACE[3], borderTop: `1px dashed ${COLORS.paper}50`, paddingTop: SPACE[3], fontFamily: FONTS.mono, fontSize: FONT_SIZE.sm, opacity: 0.9 }}>
-                      {currentTask.hint}
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+            )}
           </div>
         )}
 
