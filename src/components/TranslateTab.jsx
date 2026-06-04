@@ -1,230 +1,423 @@
-import { useState } from 'react';
-import { Volume2, ArrowRight } from 'lucide-react';
-import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from '../lib/theme';
-import { speak } from '../lib/speech';
+import { useState, useEffect, useCallback } from 'react';
+import { ArrowRight, Sparkles, SkipForward } from 'lucide-react';
+import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE, BORDER, BUTTON } from '../lib/theme';
 import { callClaude } from '../lib/claude';
+import { TRANSLATE_SENTENCES_A1, TRANSLATE_SENTENCES_A2, TRANSLATE_SENTENCES_B1 } from '../data/content';
+import { shuffle } from '../lib/utils';
 import { Hero, SectionLabel } from './UI';
 
-export default function TranslateTab() {
-  const [input, setInput] = useState('');
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
+// ─── Shared sub-components ────────────────────────────────────────────────────
 
-  const translate = async () => {
-    if (!input.trim() || loading) return;
-    setLoading(true);
-    setResult(null);
-    try {
-      const systemPrompt = `You are a German-English translator. Respond ONLY with valid JSON, no markdown, no extra text.`;
-      const userMsg = `Translate this text and provide a detailed breakdown. Auto-detect whether it's English or German.
-
-Text: "${input}"
-
-Return JSON in this exact shape:
-{
-  "sourceLang": "en" or "de",
-  "german": "the German version",
-  "english": "the English version",
-  "ipa": "IPA pronunciation of the German",
-  "words": [
-    { "de": "German word", "en": "English meaning", "note": "brief grammar note like 'noun, masculine' or 'verb, 1st person singular' or 'preposition + dative'" }
-  ]
+function ExerciseHeader({ level, idx, total }) {
+  const labels = { a1: 'A1 — WORD TILES', a2: 'A2 — FILL THE BLANKS', b1: 'B1 — FREE TRANSLATION' };
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACE[4] }}>
+      <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.red, textTransform: 'uppercase' }}>
+        {labels[level]}
+      </span>
+      <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.wider, color: COLORS.mute }}>
+        Exercise {idx + 1} / {total}
+      </span>
+    </div>
+  );
 }
 
-Break down EVERY meaningful word in the German version. Keep notes brief and beginner-friendly.`;
-      const raw = await callClaude(systemPrompt, userMsg);
-      const cleaned = raw.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
-      setResult(parsed);
-    } catch (err) {
-      setResult({ error: 'Could not translate — ' + err.message });
+function PromptCard({ text }) {
+  return (
+    <div style={{ border: BORDER.standard, background: COLORS.paper, padding: `${SPACE[5]}px ${SPACE[6]}px`, marginBottom: SPACE[4] }}>
+      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+        TRANSLATE TO GERMAN
+      </div>
+      <div style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE['2xl'], fontWeight: FONT_WEIGHT.semibold, lineHeight: 1.3 }}>
+        {text}
+      </div>
+    </div>
+  );
+}
+
+function FeedbackPanel({ correct, correctText, note, onNext }) {
+  return (
+    <div style={{
+      border: BORDER.standard,
+      background: correct ? COLORS.gold : COLORS.red,
+      color: correct ? COLORS.ink : COLORS.paper,
+      padding: SPACE[5],
+      marginTop: SPACE[4],
+    }}>
+      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, marginBottom: SPACE[2] }}>
+        {correct ? '✓ CORRECT' : '✗ NOT QUITE'}
+      </div>
+      {!correct && (
+        <div style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.semibold, marginBottom: SPACE[2] }}>
+          {correctText}
+        </div>
+      )}
+      {note && (
+        <div style={{ fontFamily: FONTS.body, fontStyle: 'italic', fontSize: FONT_SIZE.base, opacity: 0.85, marginBottom: SPACE[4] }}>
+          {note}
+        </div>
+      )}
+      <button onClick={onNext} style={{ ...BUTTON.primary, background: correct ? COLORS.ink : COLORS.paper, color: correct ? COLORS.paper : COLORS.ink }}>
+        NEXT EXERCISE <ArrowRight size={14} />
+      </button>
+    </div>
+  );
+}
+
+// ─── A1 — Word Tile Exercise ──────────────────────────────────────────────────
+
+function TileExercise({ exercise, onCorrect, onSkip }) {
+  const [bank, setBank] = useState([]);
+  const [placed, setPlaced] = useState([]);
+  const [feedback, setFeedback] = useState(null); // null | 'correct' | 'wrong'
+
+  useEffect(() => {
+    const tiles = [...exercise.words, ...exercise.distractors].map((w, i) => ({ id: i, word: w }));
+    setBank(shuffle(tiles));
+    setPlaced([]);
+    setFeedback(null);
+  }, [exercise]);
+
+  const addTile = (tile) => {
+    setBank(b => b.filter(t => t.id !== tile.id));
+    setPlaced(p => [...p, tile]);
+  };
+
+  const removeTile = (tile) => {
+    setPlaced(p => p.filter(t => t.id !== tile.id));
+    setBank(b => [...b, tile]);
+  };
+
+  const check = () => {
+    const answer = placed.map(t => t.word).join(' ');
+    const correct = exercise.words.join(' ');
+    setFeedback(answer === correct ? 'correct' : 'wrong');
+    if (answer === correct) onCorrect();
+  };
+
+  const tileStyle = (active) => ({
+    padding: `${SPACE[1] + 2}px ${SPACE[3]}px`,
+    fontFamily: FONTS.mono,
+    fontSize: FONT_SIZE.md,
+    border: BORDER.standard,
+    background: active ? COLORS.ink : COLORS.paper,
+    color: active ? COLORS.paper : COLORS.ink,
+    cursor: 'pointer',
+    transition: 'all 0.1s',
+  });
+
+  if (feedback) {
+    return (
+      <FeedbackPanel
+        correct={feedback === 'correct'}
+        correctText={exercise.words.join(' ')}
+        note={exercise.note}
+        onNext={onSkip}
+      />
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+        YOUR ANSWER — click tiles in order
+      </div>
+      <div style={{ minHeight: 52, border: `2px dashed ${COLORS.ink}40`, background: COLORS.card, padding: SPACE[3], display: 'flex', gap: SPACE[2], flexWrap: 'wrap', marginBottom: SPACE[4] }}>
+        {placed.map(tile => (
+          <button key={tile.id} onClick={() => removeTile(tile)} style={tileStyle(true)}>{tile.word}</button>
+        ))}
+      </div>
+
+      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+        WORD BANK
+      </div>
+      <div style={{ display: 'flex', gap: SPACE[2], flexWrap: 'wrap', marginBottom: SPACE[5] }}>
+        {bank.map(tile => (
+          <button key={tile.id} onClick={() => addTile(tile)} style={tileStyle(false)}>{tile.word}</button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: SPACE[3] }}>
+        <button onClick={check} disabled={placed.length === 0} style={{ ...BUTTON.danger, flex: 1, opacity: placed.length === 0 ? 0.4 : 1 }}>
+          CHECK →
+        </button>
+        <button onClick={onSkip} style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}>
+          <SkipForward size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── A2 — Fill-the-Blanks Exercise ───────────────────────────────────────────
+
+function BlankExercise({ exercise, onCorrect, onSkip }) {
+  const [tileBank, setTileBank] = useState([]);
+  const [filled, setFilled] = useState([]);
+  const [feedback, setFeedback] = useState(null);
+
+  useEffect(() => {
+    const allTiles = exercise.blanks.flatMap(b => [b.word, ...b.distractors]);
+    setTileBank(shuffle([...new Set(allTiles)].map((w, i) => ({ id: i, word: w }))));
+    setFilled(Array(exercise.blanks.length).fill(null));
+    setFeedback(null);
+  }, [exercise]);
+
+  const fillNext = (tile) => {
+    const idx = filled.indexOf(null);
+    if (idx === -1) return;
+    const next = [...filled];
+    next[idx] = tile;
+    setFilled(next);
+    setTileBank(b => b.filter(t => t.id !== tile.id));
+  };
+
+  const clearBlank = (idx) => {
+    const tile = filled[idx];
+    if (!tile) return;
+    const next = [...filled];
+    next[idx] = null;
+    setFilled(next);
+    setTileBank(b => [...b, tile]);
+  };
+
+  const check = () => {
+    const correct = filled.every((t, i) => t && t.word === exercise.blanks[i].word);
+    setFeedback(correct ? 'correct' : 'wrong');
+    if (correct) onCorrect();
+  };
+
+  const parts = exercise.template.split('___');
+
+  if (feedback) {
+    return (
+      <FeedbackPanel
+        correct={feedback === 'correct'}
+        correctText={exercise.de}
+        note={exercise.note}
+        onNext={onSkip}
+      />
+    );
+  }
+
+  return (
+    <div>
+      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+        COMPLETE THE SENTENCE
+      </div>
+      <div style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE['2xl'], lineHeight: 2, marginBottom: SPACE[4], border: BORDER.standard, padding: SPACE[4], background: COLORS.card }}>
+        {parts.map((part, i) => (
+          <span key={i}>
+            {part}
+            {i < parts.length - 1 && (
+              <span
+                onClick={() => clearBlank(i)}
+                style={{
+                  display: 'inline-block',
+                  minWidth: 80,
+                  borderBottom: `2px solid ${filled[i] ? COLORS.ink : COLORS.red}`,
+                  marginInline: SPACE[1],
+                  textAlign: 'center',
+                  fontFamily: FONTS.mono,
+                  fontSize: FONT_SIZE.md,
+                  color: filled[i] ? COLORS.ink : COLORS.red,
+                  cursor: filled[i] ? 'pointer' : 'default',
+                  paddingInline: SPACE[2],
+                }}
+              >
+                {filled[i] ? filled[i].word : '___'}
+              </span>
+            )}
+          </span>
+        ))}
+      </div>
+
+      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+        CHOOSE A WORD
+      </div>
+      <div style={{ display: 'flex', gap: SPACE[2], flexWrap: 'wrap', marginBottom: SPACE[5] }}>
+        {tileBank.map(tile => (
+          <button
+            key={tile.id}
+            onClick={() => fillNext(tile)}
+            style={{ padding: `${SPACE[1] + 2}px ${SPACE[3]}px`, fontFamily: FONTS.mono, fontSize: FONT_SIZE.md, border: BORDER.standard, background: COLORS.paper, color: COLORS.ink, cursor: 'pointer' }}
+          >
+            {tile.word}
+          </button>
+        ))}
+      </div>
+
+      <div style={{ display: 'flex', gap: SPACE[3] }}>
+        <button onClick={check} disabled={filled.includes(null)} style={{ ...BUTTON.danger, flex: 1, opacity: filled.includes(null) ? 0.4 : 1 }}>
+          CHECK →
+        </button>
+        <button onClick={onSkip} style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}>
+          <SkipForward size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── B1 — Free Typing + AI Feedback ──────────────────────────────────────────
+
+function TypingExercise({ exercise, onCorrect, onSkip }) {
+  const [input, setInput] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState(null);
+
+  useEffect(() => {
+    setInput('');
+    setFeedback(null);
+  }, [exercise]);
+
+  const check = async () => {
+    if (!input.trim() || loading) return;
+    setLoading(true);
+    try {
+      const system = `You are a German language grader. The learner was asked to translate an English sentence into German.
+Evaluate their answer strictly but fairly. Respond ONLY with valid JSON, no markdown:
+{
+  "correct": true or false,
+  "corrected": "the ideal German translation",
+  "message": "one sentence of feedback in English explaining the main error or praising them"
+}
+Set "correct": true only if the translation is grammatically correct and conveys the full meaning, even if phrasing differs from the ideal.`;
+      const user = `English sentence: "${exercise.en}"\nIdeal German: "${exercise.de}"\nLearner's answer: "${input}"`;
+      const raw = await callClaude(system, user);
+      const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
+      setFeedback(parsed);
+      if (parsed.correct) onCorrect();
+    } catch {
+      setFeedback({ correct: false, corrected: exercise.de, message: 'Could not grade — check your connection.' });
     } finally {
       setLoading(false);
     }
   };
 
+  if (feedback) {
+    return (
+      <FeedbackPanel
+        correct={feedback.correct}
+        correctText={feedback.corrected}
+        note={feedback.message}
+        onNext={onSkip}
+      />
+    );
+  }
+
   return (
     <div>
-      <Hero kicker="Section 04" title="Übersetzer" sub="Type in either language. Get the translation, pronunciation, and a word-by-word breakdown with grammar notes." />
-
-      <div style={{ marginTop: 32, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-        <div>
-          <SectionLabel num="IN" text="Your text" />
-          <textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Type English or German. Press Cmd/Ctrl+Enter to translate."
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) translate();
-            }}
-            style={{
-              width: '100%',
-              minHeight: 200,
-              padding: 20,
-              background: COLORS.paper,
-              border: `2px solid ${COLORS.ink}`,
-              fontFamily: FONT_BODY,
-              fontSize: 18,
-              outline: 'none',
-              resize: 'vertical',
-              color: COLORS.ink,
-              lineHeight: 1.5,
-            }}
-          />
-          <button
-            onClick={translate}
-            disabled={loading || !input.trim()}
-            style={{
-              width: '100%',
-              marginTop: 12,
-              padding: 18,
-              background: loading ? COLORS.mute : COLORS.red,
-              color: COLORS.paper,
-              border: 'none',
-              fontFamily: FONT_MONO,
-              fontWeight: 700,
-              fontSize: 13,
-              letterSpacing: '0.2em',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: 10,
-            }}
-          >
-            {loading ? 'TRANSLATING...' : <>TRANSLATE <ArrowRight size={16} /></>}
-          </button>
-        </div>
-
-        <div>
-          <SectionLabel num="OUT" text="Translation" />
-          <div style={{
-            border: `2px solid ${COLORS.ink}`,
-            background: COLORS.ink,
-            color: COLORS.paper,
-            padding: 24,
-            minHeight: 200,
-          }}>
-            {result?.error && (
-              <div style={{ color: COLORS.red, fontFamily: FONT_MONO, fontSize: 13 }}>{result.error}</div>
-            )}
-            {!result && !loading && (
-              <div style={{ opacity: 0.5, fontStyle: 'italic', fontSize: 16 }}>
-                Translation appears here.
-              </div>
-            )}
-            {loading && (
-              <div style={{ fontFamily: FONT_MONO, fontSize: 13, letterSpacing: '0.15em' }}>
-                ANALYZING<span style={{ animation: 'blink 1.4s infinite' }}>...</span>
-              </div>
-            )}
-            {result && !result.error && (
-              <div className="slide-up">
-                <div style={{ marginBottom: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
-                    <span style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 10,
-                      letterSpacing: '0.2em',
-                      color: COLORS.red,
-                    }}>DEUTSCH</span>
-                    <button
-                      onClick={() => speak(result.german)}
-                      style={{
-                        background: 'transparent',
-                        border: `1px solid ${COLORS.paper}50`,
-                        color: COLORS.paper,
-                        padding: '2px 8px',
-                        fontFamily: FONT_MONO,
-                        fontSize: 9,
-                        letterSpacing: '0.1em',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        gap: 4,
-                      }}
-                    >
-                      <Volume2 size={11} /> HEAR
-                    </button>
-                  </div>
-                  <div style={{ fontFamily: FONT_DISPLAY, fontSize: 26, fontWeight: 600, lineHeight: 1.3 }}>
-                    {result.german}
-                  </div>
-                  <div style={{ fontFamily: FONT_MONO, fontSize: 12, opacity: 0.7, marginTop: 6 }}>
-                    {result.ipa}
-                  </div>
-                </div>
-                <div style={{ borderTop: `1px dashed ${COLORS.paper}40`, paddingTop: 16 }}>
-                  <div style={{
-                    fontFamily: FONT_MONO,
-                    fontSize: 10,
-                    letterSpacing: '0.2em',
-                    opacity: 0.6,
-                    marginBottom: 6,
-                  }}>ENGLISH</div>
-                  <div style={{ fontFamily: FONT_DISPLAY, fontSize: 20, fontWeight: 500, fontStyle: 'italic', opacity: 0.95 }}>
-                    {result.english}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+        YOUR GERMAN TRANSLATION
       </div>
+      <textarea
+        value={input}
+        onChange={e => setInput(e.target.value)}
+        onKeyDown={e => e.key === 'Enter' && (e.metaKey || e.ctrlKey) && check()}
+        placeholder="Type your translation here… (Cmd/Ctrl+Enter to submit)"
+        style={{
+          width: '100%', boxSizing: 'border-box',
+          minHeight: 120, padding: SPACE[4],
+          border: BORDER.standard, background: COLORS.card,
+          fontFamily: FONTS.display, fontSize: FONT_SIZE.xl,
+          resize: 'vertical', outline: 'none', color: COLORS.ink,
+          lineHeight: 1.5, marginBottom: SPACE[4],
+        }}
+      />
+      <div style={{ display: 'flex', gap: SPACE[3] }}>
+        <button onClick={check} disabled={!input.trim() || loading} style={{ ...BUTTON.danger, flex: 1, opacity: !input.trim() || loading ? 0.4 : 1 }}>
+          {loading ? 'GRADING...' : <>CHECK <ArrowRight size={14} /></>}
+        </button>
+        <button onClick={onSkip} style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}>
+          <SkipForward size={16} />
+        </button>
+      </div>
+    </div>
+  );
+}
 
-      {result?.words && (
-        <div className="slide-up" style={{ marginTop: 32 }}>
-          <SectionLabel num="▼" text="Word by word" />
-          <div style={{ border: `2px solid ${COLORS.ink}` }}>
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr 2fr auto',
-              background: COLORS.ink,
-              color: COLORS.paper,
-              padding: '10px 16px',
-              fontFamily: FONT_MONO,
-              fontSize: 10,
-              letterSpacing: '0.2em',
-              gap: 16,
-            }}>
-              <div>GERMAN</div>
-              <div>ENGLISH</div>
-              <div>GRAMMAR NOTE</div>
-              <div style={{ width: 32 }}></div>
-            </div>
-            {result.words.map((w, i) => (
-              <div
-                key={i}
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr 1fr 2fr auto',
-                  padding: '14px 16px',
-                  borderTop: i > 0 ? `1px solid ${COLORS.ink}20` : 'none',
-                  background: i % 2 === 0 ? COLORS.paper : COLORS.paperDeep,
-                  gap: 16,
-                  alignItems: 'center',
-                }}
-              >
-                <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 700, fontSize: 18 }}>{w.de}</div>
-                <div style={{ fontFamily: FONT_BODY, fontStyle: 'italic', fontSize: 15 }}>{w.en}</div>
-                <div style={{ fontFamily: FONT_MONO, fontSize: 11, color: COLORS.mute, letterSpacing: '0.05em' }}>{w.note}</div>
-                <button
-                  onClick={() => speak(w.de)}
-                  style={{
-                    width: 32, height: 32,
-                    background: 'transparent',
-                    border: `1px solid ${COLORS.ink}`,
-                    color: COLORS.ink,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <Volume2 size={14} />
-                </button>
-              </div>
-            ))}
-          </div>
+// ─── AI Sentence Generation ───────────────────────────────────────────────────
+
+async function generateMoreSentences(level) {
+  const levelDesc = { a1: 'A1 beginner (very simple sentences)', a2: 'A2 elementary (focus on articles and prepositions)', b1: 'B1 intermediate (complex grammar)' }[level];
+  const system = `You generate German translation exercises for ${levelDesc} learners. Respond ONLY with valid JSON array, no markdown.`;
+  const user = level === 'b1'
+    ? `Generate 5 English sentences for translation into German at B1 level. Return: [{"en":"...","de":"...","note":"grammar concept"}]`
+    : level === 'a2'
+    ? `Generate 5 English sentences for fill-in-the-blank German exercises at A2 level. Each must have 1-2 blanks targeting articles or prepositions. Return: [{"en":"...","de":"...","template":"German with ___ for blanks","blanks":[{"word":"correct","distractors":["wrong1","wrong2"]}],"note":"..."}]`
+    : `Generate 5 simple English sentences for word-tile German translation at A1 level. Return: [{"en":"...","de":"...","words":["German","tokens","in","order"],"distractors":["wrong1","wrong2"],"note":"..."}]`;
+  const raw = await callClaude(system, user);
+  return JSON.parse(raw.replace(/```json|```/g, '').trim());
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function TranslateTab({ level = 'a1' }) {
+  const bankMap = { a1: TRANSLATE_SENTENCES_A1, a2: TRANSLATE_SENTENCES_A2, b1: TRANSLATE_SENTENCES_B1 };
+  const [exercises, setExercises] = useState(() => shuffle(bankMap[level]));
+  const [idx, setIdx] = useState(0);
+  const [score, setScore] = useState(0);
+  const [generating, setGenerating] = useState(false);
+
+  useEffect(() => {
+    setExercises(shuffle(bankMap[level]));
+    setIdx(0);
+    setScore(0);
+  }, [level]);
+
+  const exercise = exercises[idx];
+
+  const handleCorrect = () => setScore(s => s + 1);
+
+  const handleNext = useCallback(async () => {
+    const next = idx + 1;
+    if (next >= exercises.length) {
+      setGenerating(true);
+      try {
+        const more = await generateMoreSentences(level);
+        setExercises(prev => [...prev, ...more]);
+      } catch {
+        setExercises(shuffle(bankMap[level]));
+        setIdx(0);
+        setGenerating(false);
+        return;
+      }
+      setGenerating(false);
+    }
+    setIdx(next);
+  }, [idx, exercises.length, level]);
+
+  const handleSkip = () => handleNext();
+
+  if (generating) {
+    return (
+      <div style={{ padding: SPACE[8], textAlign: 'center', fontFamily: FONTS.mono, fontSize: FONT_SIZE.base, letterSpacing: LETTER_SPACING.widest, color: COLORS.mute }}>
+        <Sparkles size={24} style={{ marginBottom: SPACE[4], color: COLORS.gold }} />
+        <div>GENERATING NEW EXERCISES...</div>
+      </div>
+    );
+  }
+
+  const SET_SIZE = 10;
+  const setIdx_ = idx % SET_SIZE;
+
+  return (
+    <div>
+      <Hero kicker="Section 04" title="Übersetzen" sub="The app gives you a sentence. You translate it. Three modes depending on your level." />
+      <div style={{ marginTop: SPACE[8], maxWidth: 760 }}>
+        <ExerciseHeader level={level} idx={setIdx_} total={SET_SIZE} />
+
+        <div style={{ height: 4, background: COLORS.paperDeep, border: BORDER.standard, marginBottom: SPACE[5] }}>
+          <div style={{ height: '100%', background: COLORS.gold, width: `${(score / SET_SIZE) * 100}%`, transition: 'width 0.4s ease' }} />
         </div>
-      )}
+
+        <PromptCard text={exercise.en} />
+
+        {level === 'a1' && <TileExercise key={idx} exercise={exercise} onCorrect={handleCorrect} onSkip={handleSkip} />}
+        {level === 'a2' && <BlankExercise key={idx} exercise={exercise} onCorrect={handleCorrect} onSkip={handleSkip} />}
+        {level === 'b1' && <TypingExercise key={idx} exercise={exercise} onCorrect={handleCorrect} onSkip={handleSkip} />}
+      </div>
     </div>
   );
 }
