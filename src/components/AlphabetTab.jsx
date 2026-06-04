@@ -1,121 +1,254 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Volume2 } from 'lucide-react';
-import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from '../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE, BORDER, BUTTON } from '../lib/theme';
 import { speak } from '../lib/speech';
-import { ALPHABET } from '../data/content';
+import { ALPHABET, ALPHABET_QUIZ_GROUPS } from '../data/content';
+import { shuffle } from '../lib/utils';
 import { Hero } from './UI';
 
-export default function AlphabetTab() {
+export default function AlphabetTab({ level }) {
+  // ── Browse mode state ──────────────────────────────────────────
   const [selected, setSelected] = useState(null);
 
-  const handleTap = (letter) => {
+  // ── Quiz mode state ────────────────────────────────────────────
+  const [mode, setMode] = useState('quiz');
+  const [quizRound, setQuizRound] = useState(0);
+  const [quizGroup, setQuizGroup] = useState(null);
+  const [quizTarget, setQuizTarget] = useState(null);
+  const [quizResult, setQuizResult] = useState(null); // null | 'correct' | 'wrong'
+  const [score, setScore] = useState({ correct: 0, total: 0 });
+
+  // Start a quiz round whenever quizRound changes (and mode is quiz)
+  useEffect(() => {
+    if (mode !== 'quiz') return;
+    const group = ALPHABET_QUIZ_GROUPS[quizRound % ALPHABET_QUIZ_GROUPS.length];
+    const target = group.letters[Math.floor(Math.random() * group.letters.length)];
+    setQuizGroup(group);
+    setQuizTarget(target);
+    setQuizResult(null);
+    setTimeout(() => speak(target), 300);
+  }, [mode, quizRound]);
+
+  const handleModeChange = (newMode) => {
+    setMode(newMode);
+    if (newMode === 'quiz') {
+      // Re-trigger the quiz effect for the current round
+      setQuizResult(null);
+      setTimeout(() => {
+        if (quizGroup && quizTarget) speak(quizTarget);
+      }, 300);
+    }
+  };
+
+  const handleLetterGuess = (letter) => {
+    if (quizResult) return; // already answered
+    const correct = letter === quizTarget;
+    setQuizResult(correct ? 'correct' : 'wrong');
+    setScore(s => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }));
+  };
+
+  const handleNextRound = () => {
+    setQuizRound(r => r + 1);
+  };
+
+  const handleBrowseTap = (letter) => {
     setSelected(letter);
     speak(letter.l + '. ' + letter.w);
   };
+
+  // ── Shared styles ──────────────────────────────────────────────
+  const modeToggleBtn = (m) => ({
+    padding: `${SPACE[3]}px ${SPACE[6]}px`,
+    background: mode === m ? COLORS.ink : 'transparent',
+    color: mode === m ? COLORS.paper : COLORS.ink,
+    border: 'none',
+    fontFamily: FONTS.mono,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.bold,
+    letterSpacing: LETTER_SPACING.widest,
+    cursor: 'pointer',
+    textTransform: 'uppercase',
+  });
 
   return (
     <div>
       <Hero
         kicker="Section 02"
         title="Das Alphabet"
-        sub="Twenty-six letters plus four. Tap any letter to hear it spoken and see an example word."
+        sub="Browse all letters or test your ear — can you identify what you heard?"
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 0, border: `2px solid ${COLORS.ink}`, marginTop: 32 }}>
-        {ALPHABET.map((letter, i) => {
-          const isActive = selected?.l === letter.l;
-          const isSpecial = ['Ä', 'Ö', 'Ü', 'ß'].includes(letter.l);
-          return (
-            <button
-              key={letter.l}
-              onClick={() => handleTap(letter)}
-              style={{
-                aspectRatio: '1',
-                background: isActive ? COLORS.red : (isSpecial ? COLORS.paperDeep : COLORS.paper),
-                color: isActive ? COLORS.paper : COLORS.ink,
-                border: 'none',
-                borderRight: (i + 1) % 6 === 0 ? 'none' : `2px solid ${COLORS.ink}`,
-                borderBottom: i >= ALPHABET.length - (ALPHABET.length % 6 || 6) ? 'none' : `2px solid ${COLORS.ink}`,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                position: 'relative',
-                transition: 'all 0.15s',
-                cursor: 'pointer',
-              }}
-            >
-              <span style={{
-                position: 'absolute',
-                top: 8, left: 10,
-                fontFamily: FONT_MONO,
-                fontSize: 10,
-                opacity: 0.5,
-              }}>{String(i + 1).padStart(2, '0')}</span>
-              <span style={{
-                fontFamily: FONT_DISPLAY,
-                fontSize: 64,
-                fontWeight: 700,
-                lineHeight: 1,
-                letterSpacing: '-0.04em',
-              }}>{letter.l}</span>
-              <span style={{
-                fontFamily: FONT_BODY,
-                fontSize: 12,
-                fontStyle: 'italic',
-                marginTop: 4,
-                opacity: 0.8,
-              }}>{letter.w}</span>
-            </button>
-          );
-        })}
+      {/* Mode toggle */}
+      <div style={{ display: 'flex', border: BORDER.standard, width: 'fit-content', marginTop: SPACE[6], marginBottom: SPACE[6] }}>
+        <button type="button" style={modeToggleBtn('quiz')} onClick={() => handleModeChange('quiz')}>
+          🎧 Quiz
+        </button>
+        <button type="button" style={{ ...modeToggleBtn('browse'), borderLeft: BORDER.standard }} onClick={() => handleModeChange('browse')}>
+          📋 Browse
+        </button>
       </div>
 
-      {selected && (
-        <div className="slide-up" style={{
-          marginTop: 32,
-          padding: 32,
-          background: COLORS.ink,
-          color: COLORS.paper,
-          display: 'grid',
-          gridTemplateColumns: '200px 1fr auto',
-          gap: 32,
-          alignItems: 'center',
-        }}>
-          <div style={{
-            fontFamily: FONT_DISPLAY,
-            fontSize: 180,
-            fontWeight: 900,
-            lineHeight: 0.8,
-            letterSpacing: '-0.06em',
-            color: COLORS.red,
-          }}>
-            {selected.l}
+      {/* ── QUIZ MODE ────────────────────────────────────────── */}
+      {mode === 'quiz' && quizGroup && quizTarget && (
+        <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[5] }}>
+            ROUND {quizRound + 1} · SCORE {score.correct}/{score.total} · WHICH LETTER DID YOU HEAR?
           </div>
-          <div>
-            <div style={{ fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.2em', opacity: 0.6, marginBottom: 8 }}>
-              EXAMPLE WORD
-            </div>
-            <div style={{ fontFamily: FONT_DISPLAY, fontSize: 48, fontWeight: 700, letterSpacing: '-0.02em', marginBottom: 8 }}>
-              {selected.w}
-            </div>
-            <div style={{ fontFamily: FONT_BODY, fontStyle: 'italic', fontSize: 18, opacity: 0.7 }}>
-              &quot;{selected.e}&quot;
-            </div>
-          </div>
+
+          {/* Play button */}
           <button
-            onClick={() => speak(selected.w)}
+            type="button"
+            onClick={() => speak(quizTarget)}
             style={{
-              width: 80, height: 80,
-              background: COLORS.red,
-              border: 'none',
-              color: COLORS.paper,
+              width: 100, height: 100, borderRadius: '50%',
+              background: COLORS.gold, border: BORDER.standard,
+              fontSize: 40, cursor: 'pointer',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto',
             }}
           >
-            <Volume2 size={32} />
+            🔊
           </button>
+          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.sm, letterSpacing: LETTER_SPACING.widest, color: COLORS.mute, marginTop: SPACE[3], marginBottom: SPACE[6] }}>
+            TAP TO HEAR AGAIN
+          </div>
+
+          {/* Four letter options */}
+          {!quizResult && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE[3] }}>
+              {quizGroup.letters.map(letter => (
+                <button
+                  key={letter}
+                  type="button"
+                  onClick={() => handleLetterGuess(letter)}
+                  style={{
+                    padding: SPACE[5],
+                    border: BORDER.standard,
+                    background: COLORS.paper,
+                    color: COLORS.ink,
+                    fontFamily: FONTS.display,
+                    fontSize: FONT_SIZE['5xl'],
+                    fontWeight: FONT_WEIGHT.bold,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {letter}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Feedback */}
+          {quizResult && (
+            <div style={{
+              border: BORDER.standard,
+              background: quizResult === 'correct' ? COLORS.gold : COLORS.red,
+              color: quizResult === 'correct' ? COLORS.ink : COLORS.paper,
+              padding: SPACE[5],
+              marginTop: SPACE[4],
+            }}>
+              <div style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE['3xl'], fontWeight: FONT_WEIGHT.bold, marginBottom: SPACE[2] }}>
+                {quizResult === 'correct'
+                  ? `✓ ${quizTarget}`
+                  : `✗ It was: ${quizTarget}`}
+              </div>
+              {quizResult === 'wrong' && (() => {
+                const entry = ALPHABET.find(a => a.l === quizTarget);
+                return entry ? (
+                  <div style={{ fontFamily: FONTS.body, fontStyle: 'italic', fontSize: FONT_SIZE.base, opacity: 0.9, marginBottom: SPACE[4] }}>
+                    Example word: {entry.w} ({entry.e})
+                  </div>
+                ) : null;
+              })()}
+              <button
+                type="button"
+                onClick={handleNextRound}
+                style={{
+                  ...BUTTON.primary,
+                  background: quizResult === 'correct' ? COLORS.ink : COLORS.paper,
+                  color: quizResult === 'correct' ? COLORS.paper : COLORS.ink,
+                }}
+              >
+                NEXT ROUND →
+              </button>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* ── BROWSE MODE ──────────────────────────────────────── */}
+      {mode === 'browse' && (
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 0, border: BORDER.standard }}>
+            {ALPHABET.map((letter, i) => {
+              const isActive = selected?.l === letter.l;
+              const isSpecial = ['Ä', 'Ö', 'Ü', 'ß'].includes(letter.l);
+              return (
+                <button
+                  key={letter.l}
+                  type="button"
+                  onClick={() => handleBrowseTap(letter)}
+                  style={{
+                    aspectRatio: '1',
+                    background: isActive ? COLORS.red : (isSpecial ? COLORS.paperDeep : COLORS.paper),
+                    color: isActive ? COLORS.paper : COLORS.ink,
+                    border: 'none',
+                    borderRight: (i + 1) % 6 === 0 ? 'none' : BORDER.standard,
+                    borderBottom: i >= ALPHABET.length - (ALPHABET.length % 6 || 6) ? 'none' : BORDER.standard,
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                    position: 'relative', transition: 'all 0.15s', cursor: 'pointer',
+                  }}
+                >
+                  <span style={{ position: 'absolute', top: 8, left: 10, fontFamily: FONTS.mono, fontSize: FONT_SIZE.label, opacity: 0.5 }}>
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+                  <span style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE['6xl'], fontWeight: FONT_WEIGHT.bold, lineHeight: 1, letterSpacing: LETTER_SPACING.tight }}>
+                    {letter.l}
+                  </span>
+                  <span style={{ fontFamily: FONTS.body, fontSize: FONT_SIZE.sm, fontStyle: 'italic', marginTop: SPACE[1], opacity: 0.8 }}>
+                    {letter.w}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {selected && (
+            <div style={{
+              marginTop: SPACE[8],
+              padding: SPACE[8],
+              background: COLORS.ink,
+              color: COLORS.paper,
+              display: 'grid',
+              gridTemplateColumns: '200px 1fr auto',
+              gap: SPACE[8],
+              alignItems: 'center',
+            }}>
+              <div style={{ fontFamily: FONTS.display, fontSize: 180, fontWeight: FONT_WEIGHT.black, lineHeight: 0.8, letterSpacing: '-0.06em', color: COLORS.red }}>
+                {selected.l}
+              </div>
+              <div>
+                <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, opacity: 0.6, marginBottom: SPACE[2] }}>
+                  EXAMPLE WORD
+                </div>
+                <div style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE['5xl'], fontWeight: FONT_WEIGHT.bold, letterSpacing: LETTER_SPACING.tight, marginBottom: SPACE[2] }}>
+                  {selected.w}
+                </div>
+                <div style={{ fontFamily: FONTS.body, fontStyle: 'italic', fontSize: FONT_SIZE.xl, opacity: 0.7 }}>
+                  &quot;{selected.e}&quot;
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => speak(selected.w)}
+                style={{ width: 80, height: 80, background: COLORS.red, border: 'none', color: COLORS.paper, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+              >
+                <Volume2 size={32} />
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
