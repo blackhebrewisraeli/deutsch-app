@@ -1,10 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { ArrowRight, Sparkles, SkipForward } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE, BORDER, BUTTON } from '../lib/theme';
 import { callClaude } from '../lib/claude';
 import { TRANSLATE_SENTENCES_A1, TRANSLATE_SENTENCES_A2, TRANSLATE_SENTENCES_B1 } from '../data/content';
 import { shuffle } from '../lib/utils';
-import { Hero, SectionLabel } from './UI';
+import { Hero } from './UI';
+
+// Module-level constant — avoids stale closure in useCallback/useEffect
+const BANK_MAP = {
+  a1: TRANSLATE_SENTENCES_A1,
+  a2: TRANSLATE_SENTENCES_A2,
+  b1: TRANSLATE_SENTENCES_B1,
+};
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
 
@@ -265,6 +272,8 @@ function TypingExercise({ exercise, onCorrect, onSkip }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const mounted = useRef(true);
+  useEffect(() => () => { mounted.current = false; }, []);
 
   useEffect(() => {
     setInput('');
@@ -286,12 +295,14 @@ Set "correct": true only if the translation is grammatically correct and conveys
       const user = `English sentence: "${exercise.en}"\nIdeal German: "${exercise.de}"\nLearner's answer: "${input}"`;
       const raw = await callClaude(system, user);
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
-      setFeedback(parsed);
-      if (parsed.correct) onCorrect();
+      if (mounted.current) {
+        setFeedback(parsed);
+        if (parsed.correct) onCorrect();
+      }
     } catch {
-      setFeedback({ correct: false, corrected: exercise.de, message: 'Could not grade — check your connection.' });
+      if (mounted.current) setFeedback({ correct: false, corrected: exercise.de, message: 'Could not grade — check your connection.' });
     } finally {
-      setLoading(false);
+      if (mounted.current) setLoading(false);
     }
   };
 
@@ -354,14 +365,13 @@ async function generateMoreSentences(level) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function TranslateTab({ level = 'a1' }) {
-  const bankMap = { a1: TRANSLATE_SENTENCES_A1, a2: TRANSLATE_SENTENCES_A2, b1: TRANSLATE_SENTENCES_B1 };
-  const [exercises, setExercises] = useState(() => shuffle(bankMap[level]));
+  const [exercises, setExercises] = useState(() => shuffle(BANK_MAP[level]));
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [generating, setGenerating] = useState(false);
 
   useEffect(() => {
-    setExercises(shuffle(bankMap[level]));
+    setExercises(shuffle(BANK_MAP[level]));
     setIdx(0);
     setScore(0);
   }, [level]);
@@ -379,7 +389,7 @@ export default function TranslateTab({ level = 'a1' }) {
         setExercises(prev => [...prev, ...more]);
         setScore(0);
       } catch {
-        setExercises(shuffle(bankMap[level]));
+        setExercises(shuffle(BANK_MAP[level]));
         setIdx(0);
         setScore(0);
         setGenerating(false);
@@ -389,8 +399,6 @@ export default function TranslateTab({ level = 'a1' }) {
     }
     setIdx(next);
   }, [idx, exercises.length, level]);
-
-  const handleSkip = () => handleNext();
 
   if (generating) {
     return (
@@ -411,14 +419,14 @@ export default function TranslateTab({ level = 'a1' }) {
         <ExerciseHeader level={level} idx={setIdx_} total={SET_SIZE} />
 
         <div style={{ height: 4, background: COLORS.paperDeep, border: BORDER.standard, marginBottom: SPACE[5] }}>
-          <div style={{ height: '100%', background: COLORS.gold, width: `${(score / SET_SIZE) * 100}%`, transition: 'width 0.4s ease' }} />
+          <div style={{ height: '100%', background: COLORS.gold, width: `${Math.min((score / SET_SIZE) * 100, 100)}%`, transition: 'width 0.4s ease' }} />
         </div>
 
         <PromptCard text={exercise.en} />
 
-        {level === 'a1' && <TileExercise key={idx} exercise={exercise} onCorrect={handleCorrect} onSkip={handleSkip} />}
-        {level === 'a2' && <BlankExercise key={idx} exercise={exercise} onCorrect={handleCorrect} onSkip={handleSkip} />}
-        {level === 'b1' && <TypingExercise key={idx} exercise={exercise} onCorrect={handleCorrect} onSkip={handleSkip} />}
+        {level === 'a1' && <TileExercise key={idx} exercise={exercise} onCorrect={handleCorrect} onSkip={handleNext} />}
+        {level === 'a2' && <BlankExercise key={idx} exercise={exercise} onCorrect={handleCorrect} onSkip={handleNext} />}
+        {level === 'b1' && <TypingExercise key={idx} exercise={exercise} onCorrect={handleCorrect} onSkip={handleNext} />}
       </div>
     </div>
   );
