@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { Mic, MicOff, Volume2, Check, ArrowRight } from 'lucide-react';
-import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from '../lib/theme';
+import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY,
+         FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE, BORDER } from '../lib/theme';
 import { speak } from '../lib/speech';
 import { callClaude } from '../lib/claude';
-import { SCENARIOS } from '../data/content';
+import { SCENARIOS, CHAT_TASKS } from '../data/content';
 import { SectionLabel } from './UI';
 
 export default function ChatTab({ level = 'intermediate' }) {
@@ -13,12 +14,22 @@ export default function ChatTab({ level = 'intermediate' }) {
   const [listening, setListening] = useState(false);
   const [thinking, setThinking] = useState(false);
   const [correction, setCorrection] = useState(null);
+  const [taskIdx, setTaskIdx] = useState(0);
+  const [hintVisible, setHintVisible] = useState(false);
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
+
+  const tasks = CHAT_TASKS[scenario]?.[level] ?? [];
+  const currentTask = tasks[taskIdx % Math.max(tasks.length, 1)] ?? null;
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, thinking]);
+
+  useEffect(() => {
+    setTaskIdx(0);
+    setHintVisible(false);
+  }, [scenario, level]);
 
   useEffect(() => {
     const intros = {
@@ -69,11 +80,18 @@ export default function ChatTab({ level = 'intermediate' }) {
     setThinking(true);
 
     const scenarioDesc = SCENARIOS.find((s) => s.id === scenario)?.desc || 'open conversation';
-    const levelInstructions = level === 'beginner'
-      ? `The learner is a BEGINNER (A1-A2). Keep your German very simple: short sentences, common vocabulary only, always provide the English translation. Use lots of encouragement.`
-      : `The learner is INTERMEDIATE (A2-B1). Use natural German, moderate complexity. Provide English translation but push them a little.`;
 
-    const systemPrompt = `You are a friendly German tutor named Anna for a language learner. The current scenario is: ${scenarioDesc}.
+    const taskLine = currentTask
+      ? `The learner's current task is: "${currentTask.task}". Stay in this scenario and guide them toward completing this task. When the task is naturally complete, include "taskComplete": true in your JSON response; otherwise omit it or set it to false.`
+      : '';
+
+    const levelInstructions = level === 'a1'
+      ? `The learner is A1 BEGINNER. Use very simple German, short sentences, common vocabulary only. Always provide English translation. Use lots of encouragement.`
+      : level === 'a2'
+      ? `The learner is A2 ELEMENTARY. Use natural but simple German. Provide English translation. Gently push them.`
+      : `The learner is B1 INTERMEDIATE. Use natural German, moderate complexity. Provide English translation but challenge them.`;
+
+    const systemPrompt = `You are a friendly German tutor named Anna for a language learner. The current scenario is: ${scenarioDesc}. ${taskLine}
 
 ${levelInstructions}
 
@@ -82,10 +100,11 @@ You MUST always respond with strict JSON only (no markdown, no extra text):
   "de": "your reply in German (1-2 sentences)",
   "ipa": "IPA pronunciation of the German",
   "en": "English translation",
-  "correction": null OR { "original": "what they said", "fixed": "corrected German", "explain": "brief friendly explanation in English" }
+  "correction": null OR { "original": "what they said", "fixed": "corrected German", "explain": "brief friendly explanation in English" },
+  "taskComplete": false
 }
 
-Stay in the scenario. Keep German simple (A2-B1). Only provide 'correction' if the user made a real grammar/vocabulary mistake. If they spoke perfectly or just sent a greeting, set correction to null.`;
+Stay in the scenario. Only provide 'correction' if the user made a real grammar/vocabulary mistake.`;
 
     const history = messages.slice(1).map((m) => ({
       role: m.role,
@@ -99,6 +118,10 @@ Stay in the scenario. Keep German simple (A2-B1). Only provide 'correction' if t
       const reply = { role: 'assistant', de: parsed.de, ipa: parsed.ipa, en: parsed.en };
       setMessages((m) => [...m, reply]);
       setCorrection(parsed.correction || null);
+      if (parsed.taskComplete) {
+        setTaskIdx(i => i + 1);
+        setHintVisible(false);
+      }
       setTimeout(() => speak(parsed.de), 200);
     } catch (err) {
       setMessages((m) => [...m, { role: 'assistant', de: 'Entschuldigung, ein Fehler.', ipa: '[ɛntˈʃʊldɪɡʊŋ aɪ̯n ˈfeːlɐ]', en: 'Sorry — ' + err.message }]);
@@ -140,6 +163,47 @@ Stay in the scenario. Keep German simple (A2-B1). Only provide 'correction' if t
             );
           })}
         </div>
+
+        {currentTask && (
+          <div style={{ marginTop: SPACE[5] }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE[2], marginBottom: SPACE[3] }}>
+              <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, letterSpacing: LETTER_SPACING.wider, background: COLORS.red, color: COLORS.paper, padding: `2px ${SPACE[2]}px` }}>B</span>
+              <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.ultra, textTransform: 'uppercase', color: COLORS.mute }}>Your Task</span>
+            </div>
+            <div style={{ border: BORDER.standard, background: COLORS.red, color: COLORS.paper, padding: SPACE[4] }}>
+              <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, opacity: 0.8, marginBottom: SPACE[2] }}>
+                TASK {taskIdx + 1}
+              </div>
+              <div style={{ fontFamily: FONT_BODY, fontSize: FONT_SIZE.base, lineHeight: 1.6, fontStyle: 'italic', marginBottom: currentTask.hint ? SPACE[3] : 0 }}>
+                {currentTask.task}
+              </div>
+              {currentTask.hint && (
+                <>
+                  <button
+                    onClick={() => setHintVisible(v => !v)}
+                    style={{
+                      background: 'transparent',
+                      border: `1px solid ${COLORS.paper}60`,
+                      color: COLORS.paper,
+                      fontFamily: FONTS.mono,
+                      fontSize: FONT_SIZE.tag,
+                      letterSpacing: LETTER_SPACING.wider,
+                      padding: `${SPACE[1]}px ${SPACE[3]}px`,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {hintVisible ? 'HIDE HINT' : 'SHOW HINT'}
+                  </button>
+                  {hintVisible && (
+                    <div style={{ marginTop: SPACE[3], borderTop: `1px dashed ${COLORS.paper}50`, paddingTop: SPACE[3], fontFamily: FONTS.mono, fontSize: FONT_SIZE.sm, opacity: 0.9 }}>
+                      {currentTask.hint}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        )}
 
         <div style={{ marginTop: 24, padding: 16, background: COLORS.paperDeep, border: `2px solid ${COLORS.ink}` }}>
           <div style={{ fontFamily: FONT_MONO, fontSize: 10, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: 8 }}>
