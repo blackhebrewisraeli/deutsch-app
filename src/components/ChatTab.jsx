@@ -7,7 +7,7 @@ import { callClaude } from '../lib/claude';
 import { SCENARIOS, CHAT_TASKS } from '../data/content';
 import { SectionLabel } from './UI';
 
-export default function ChatTab({ level = 'intermediate' }) {
+export default function ChatTab({ level = 'a1' }) {
   const [scenario, setScenario] = useState('free');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -119,7 +119,7 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
       setMessages((m) => [...m, reply]);
       setCorrection(parsed.correction || null);
       if (parsed.taskComplete) {
-        setTaskIdx(i => i + 1);
+        setTaskIdx(i => (i + 1) % Math.max(tasks.length, 1));
         setHintVisible(false);
       }
       setTimeout(() => speak(parsed.de), 200);
@@ -167,7 +167,7 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
         {currentTask && (
           <div style={{ marginTop: SPACE[5] }}>
             <div style={{ display: 'flex', alignItems: 'baseline', gap: SPACE[2], marginBottom: SPACE[3] }}>
-              <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, letterSpacing: LETTER_SPACING.wider, background: COLORS.red, color: COLORS.paper, padding: `2px ${SPACE[2]}px` }}>B</span>
+              <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, letterSpacing: LETTER_SPACING.wider, background: COLORS.red, color: COLORS.paper, padding: `2px ${SPACE[2]}px` }}>C</span>
               <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.ultra, textTransform: 'uppercase', color: COLORS.mute }}>Your Task</span>
             </div>
             <div style={{ border: BORDER.standard, background: COLORS.red, color: COLORS.paper, padding: SPACE[4] }}>
@@ -180,6 +180,7 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
               {currentTask.hint && (
                 <>
                   <button
+                    type="button"
                     onClick={() => setHintVisible(v => !v)}
                     style={{
                       background: 'transparent',
