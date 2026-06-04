@@ -1,36 +1,62 @@
 import { useState, useEffect } from 'react';
-import { Volume2, Check, X, Sparkles } from 'lucide-react';
-import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from '../lib/theme';
+import { Sparkles } from 'lucide-react';
+import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE, BORDER, BUTTON } from '../lib/theme';
 import { speak } from '../lib/speech';
 import { callClaude } from '../lib/claude';
 import { PRESET_DECKS } from '../data/content';
-import { Hero, SectionLabel, btnSecondary } from './UI';
+import { Hero, SectionLabel } from './UI';
+import { shuffle, levenshtein } from '../lib/utils';
 
-export default function VocabTab({ learnedWords, markLearned }) {
+export default function VocabTab({ level, learnedWords, markLearned }) {
   const [deckId, setDeckId]           = useState('greetings');
   const [customCards, setCustomCards] = useState(null);
   const [customTopic, setCustomTopic] = useState('');
   const [generating, setGenerating]   = useState(false);
-  const [cardIdx, setCardIdx]         = useState(0);
-  const [flipped, setFlipped]         = useState(false);
   const [deckComplete, setDeckComplete] = useState(false);
 
+  const [answered, setAnswered]       = useState(false);
+  const [result, setResult]           = useState(null);   // 'correct' | 'almost' | 'wrong'
+  const [typedAnswer, setTypedAnswer] = useState('');
+  const [queue, setQueue]             = useState([]);
+
   const activeDeck = deckId === 'custom' && customCards ? customCards : PRESET_DECKS[deckId] || [];
-  const card = activeDeck[cardIdx];
 
   useEffect(() => {
-    setCardIdx(0);
-    setFlipped(false);
+    setQueue(activeDeck.map((_, i) => i));
+    setAnswered(false);
+    setResult(null);
+    setTypedAnswer('');
     setDeckComplete(false);
   }, [deckId, customCards]);
 
-  const next = () => {
-    setFlipped(false);
-    setTimeout(() => setCardIdx((i) => (i + 1) % activeDeck.length), 150);
+  const currentIdx = queue[0] ?? null;
+  const card = currentIdx !== null ? activeDeck[currentIdx] : null;
+
+  const getChoices = (deck, cardIdx) => {
+    const correct = deck[cardIdx].en;
+    const others = shuffle(deck.filter((_, i) => i !== cardIdx).map(c => c.en));
+    return shuffle([correct, ...others.slice(0, 3)]);
   };
-  const prev = () => {
-    setFlipped(false);
-    setTimeout(() => setCardIdx((i) => (i - 1 + activeDeck.length) % activeDeck.length), 150);
+
+  const advanceQueue = (wasCorrect) => {
+    setAnswered(false);
+    setResult(null);
+    setTypedAnswer('');
+    setQueue(prev => {
+      const [, ...rest] = prev;
+      const next = wasCorrect ? rest : [...rest, prev[0]];
+      if (wasCorrect && rest.length === 0) setDeckComplete(true);
+      return next;
+    });
+  };
+
+  const submitTyped = () => {
+    if (!typedAnswer.trim() || !card) return;
+    const dist = levenshtein(typedAnswer.trim(), card.en);
+    const res = dist === 0 ? 'correct' : dist <= 2 ? 'almost' : 'wrong';
+    setAnswered(true);
+    setResult(res);
+    if (res === 'correct') markLearned(card.de);
   };
 
   const generateDeck = async () => {
@@ -53,18 +79,6 @@ export default function VocabTab({ learnedWords, markLearned }) {
     }
   };
 
-  const handleMarkLearned = (e, word) => {
-    e.stopPropagation();
-    markLearned(word);
-    // Check if this marks the last unlearned card
-    const wasLearned = learnedWords[word];
-    if (!wasLearned) {
-      const updatedLearned = { ...learnedWords, [word]: true };
-      const allDone = activeDeck.every(c => updatedLearned[c.de]);
-      if (allDone) setDeckComplete(true);
-    }
-  };
-
   const decks = [
     { id: 'greetings', name: 'Greetings',   count: 10 },
     { id: 'food',      name: 'Food & Drink', count: 10 },
@@ -72,13 +86,12 @@ export default function VocabTab({ learnedWords, markLearned }) {
     { id: 'numbers',   name: 'Numbers',      count: 10 },
   ];
 
-  const learnedInDeck = activeDeck.filter(c => learnedWords[c.de]).length;
-
   return (
     <div>
       <Hero kicker="Section 03" title="Wortschatz" sub="Flip, listen, learn. Pick a preset or generate a deck on any topic." />
 
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 32, marginTop: 32 }}>
+        {/* ── Left column: deck selector + generate ── */}
         <div>
           <SectionLabel num="A" text="Preset Decks" />
           <div style={{ border: `2px solid ${COLORS.ink}`, marginBottom: 24 }}>
@@ -98,14 +111,15 @@ export default function VocabTab({ learnedWords, markLearned }) {
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
-                    fontFamily: FONT_DISPLAY,
-                    fontSize: 16,
-                    fontWeight: 600,
+                    fontFamily: FONTS.display,
+                    fontSize: FONT_SIZE.lg,
+                    fontWeight: FONT_WEIGHT.semibold,
                     textAlign: 'left',
+                    cursor: 'pointer',
                   }}
                 >
                   <span>{d.name}</span>
-                  <span style={{ fontFamily: FONT_MONO, fontSize: 11, opacity: 0.6 }}>{d.count} cards</span>
+                  <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.6 }}>{d.count} cards</span>
                 </button>
               );
             })}
@@ -122,14 +136,15 @@ export default function VocabTab({ learnedWords, markLearned }) {
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
-                  fontFamily: FONT_DISPLAY,
-                  fontSize: 16,
-                  fontWeight: 600,
+                  fontFamily: FONTS.display,
+                  fontSize: FONT_SIZE.lg,
+                  fontWeight: FONT_WEIGHT.semibold,
                   textAlign: 'left',
+                  cursor: 'pointer',
                 }}
               >
                 <span>✦ Your Deck</span>
-                <span style={{ fontFamily: FONT_MONO, fontSize: 11, opacity: 0.7 }}>{customCards.length} cards</span>
+                <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.7 }}>{customCards.length} cards</span>
               </button>
             )}
           </div>
@@ -144,11 +159,12 @@ export default function VocabTab({ learnedWords, markLearned }) {
               disabled={generating}
               style={{
                 width: '100%',
+                boxSizing: 'border-box',
                 padding: 12,
                 background: COLORS.card,
                 border: `2px solid ${COLORS.ink}`,
-                fontFamily: FONT_BODY,
-                fontSize: 15,
+                fontFamily: FONTS.body,
+                fontSize: FONT_SIZE.md,
                 outline: 'none',
                 marginBottom: 12,
                 color: COLORS.ink,
@@ -163,14 +179,15 @@ export default function VocabTab({ learnedWords, markLearned }) {
                 background: generating ? COLORS.mute : COLORS.red,
                 color: COLORS.card,
                 border: 'none',
-                fontFamily: FONT_MONO,
-                fontWeight: 700,
-                fontSize: 12,
-                letterSpacing: '0.15em',
+                fontFamily: FONTS.mono,
+                fontWeight: FONT_WEIGHT.bold,
+                fontSize: FONT_SIZE.sm,
+                letterSpacing: LETTER_SPACING.widest,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 8,
+                cursor: generating ? 'not-allowed' : 'pointer',
               }}
             >
               {generating ? 'GENERATING...' : <><Sparkles size={14} /> GENERATE 10 CARDS</>}
@@ -178,154 +195,116 @@ export default function VocabTab({ learnedWords, markLearned }) {
           </div>
         </div>
 
+        {/* ── Right column: active recall UI ── */}
         <div>
           {card && (
             <>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 16 }}>
-                <div style={{ fontFamily: FONT_MONO, fontSize: 11, letterSpacing: '0.2em', color: COLORS.mute, textTransform: 'uppercase' }}>
-                  Card {cardIdx + 1} / {activeDeck.length}
+              {/* Progress bar */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: SPACE[4] }}>
+                <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute }}>
+                  {queue.length} card{queue.length !== 1 ? 's' : ''} remaining
                 </div>
                 <div style={{ display: 'flex', gap: 4 }}>
-                  {activeDeck.map((c, i) => (
-                    <div key={i} style={{
-                      width: 24, height: 4,
-                      background: i === cardIdx
-                        ? COLORS.red
-                        : learnedWords[c.de]
-                          ? COLORS.ink
-                          : i === 0 && cardIdx === 0
-                            ? `${COLORS.ink}30`
-                            : COLORS.paperDeep,
-                    }} />
+                  {activeDeck.map((_, i) => (
+                    <div key={i} style={{ width: 24, height: 4, background: learnedWords[activeDeck[i].de] ? COLORS.ink : COLORS.paperDeep, border: `1px solid ${COLORS.ink}20` }} />
                   ))}
                 </div>
               </div>
 
-              {/* ── Deck Completion Banner ── */}
+              {/* Deck complete banner */}
               {deckComplete && (
-                <div className="slide-up" style={{
-                  background: 'linear-gradient(90deg, #F5C518 0%, #FFE44D 50%, #F5C518 100%)',
-                  backgroundSize: '200% auto',
-                  animation: 'shimmer 2s linear infinite',
-                  border: `2px solid ${COLORS.ink}`,
-                  padding: '14px 20px',
-                  marginBottom: 16,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                }}>
-                  <span style={{ fontFamily: FONT_DISPLAY, fontSize: 18, fontWeight: 700, color: COLORS.ink }}>
-                    ✓ Deck complete — {learnedInDeck} words learned
+                <div className="slide-up" style={{ background: 'linear-gradient(90deg, #F5C518 0%, #FFE44D 50%, #F5C518 100%)', backgroundSize: '200% auto', animation: 'shimmer 2s linear infinite', border: `2px solid ${COLORS.ink}`, padding: '14px 20px', marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <span style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.bold, color: COLORS.ink }}>
+                    ✓ Deck complete — {activeDeck.filter(c => learnedWords[c.de]).length} words learned
                   </span>
-                  <button
-                    onClick={() => setDeckComplete(false)}
-                    style={{
-                      background: 'transparent',
-                      border: `1px solid ${COLORS.ink}`,
-                      fontFamily: FONT_MONO,
-                      fontSize: 10,
-                      letterSpacing: '0.15em',
-                      padding: '4px 10px',
-                      cursor: 'pointer',
-                      color: COLORS.ink,
-                    }}
-                  >
+                  <button type="button" onClick={() => setDeckComplete(false)} style={{ background: 'transparent', border: `1px solid ${COLORS.ink}`, fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.widest, padding: '4px 10px', cursor: 'pointer', color: COLORS.ink }}>
                     DISMISS
                   </button>
                 </div>
               )}
 
-              {/* ── Flashcard ── */}
-              <div
-                onClick={() => setFlipped((f) => !f)}
-                style={{
-                  border: `2px solid ${COLORS.ink}`,
-                  background: flipped ? COLORS.ink : COLORS.card,
-                  color: flipped ? COLORS.card : COLORS.ink,
-                  minHeight: 360,
-                  padding: 48,
-                  cursor: 'pointer',
-                  position: 'relative',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  textAlign: 'center',
-                  transition: 'all 0.2s',
-                }}
-              >
-                <div style={{
-                  position: 'absolute',
-                  top: 20, right: 20,
-                  fontFamily: FONT_MONO,
-                  fontSize: 10,
-                  letterSpacing: '0.2em',
-                  opacity: 0.5,
-                }}>
-                  {flipped ? 'ENGLISH' : 'DEUTSCH'} · TAP TO FLIP
-                </div>
+              {/* Card face — always shows German */}
+              <div style={{ border: BORDER.standard, background: COLORS.card, minHeight: 200, padding: SPACE[12], display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', marginBottom: SPACE[4] }}>
                 {learnedWords[card.de] && (
-                  <div style={{
-                    position: 'absolute',
-                    top: 20, left: 20,
-                    background: COLORS.red,
-                    color: COLORS.card,
-                    padding: '4px 10px',
-                    fontFamily: FONT_MONO,
-                    fontSize: 10,
-                    letterSpacing: '0.15em',
-                  }}>✓ LEARNED</div>
+                  <div style={{ position: 'absolute', background: COLORS.red, color: COLORS.card, padding: '4px 10px', fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.widest, alignSelf: 'flex-start', marginBottom: 'auto' }}>
+                    ✓ LEARNED
+                  </div>
                 )}
-
-                {flipped ? (
-                  <div className="slide-up">
-                    <div style={{ fontFamily: FONT_DISPLAY, fontSize: 64, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.1 }}>
-                      {card.en}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="slide-up">
-                    <div style={{ fontFamily: FONT_DISPLAY, fontSize: 64, fontWeight: 700, letterSpacing: '-0.03em', lineHeight: 1.1, marginBottom: 16 }}>
-                      {card.de}
-                    </div>
-                    <div style={{ fontFamily: FONT_MONO, fontSize: 16, opacity: 0.65 }}>
-                      {card.ipa}
-                    </div>
-                  </div>
+                <div style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE['6xl'], fontWeight: FONT_WEIGHT.bold, letterSpacing: LETTER_SPACING.tight, marginBottom: SPACE[4] }}>
+                  {card.de}
+                </div>
+                {card.ipa && (
+                  <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.6 }}>{card.ipa}</div>
                 )}
               </div>
 
-              <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                <button onClick={prev} style={btnSecondary}>← PREV</button>
-                <button
-                  onClick={(e) => { e.stopPropagation(); speak(card.de); }}
-                  style={{ ...btnSecondary, flex: 0, padding: '14px 20px' }}
-                >
-                  <Volume2 size={16} />
-                </button>
-                <button
-                  onClick={(e) => handleMarkLearned(e, card.de)}
-                  style={{
-                    flex: 1,
-                    padding: 14,
-                    background: learnedWords[card.de] ? COLORS.red : COLORS.ink,
-                    color: COLORS.card,
-                    border: 'none',
-                    fontFamily: FONT_MONO,
-                    fontWeight: 700,
-                    fontSize: 12,
-                    letterSpacing: '0.15em',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: 8,
-                  }}
-                >
-                  {learnedWords[card.de] ? <><X size={14} /> UNMARK</> : <><Check size={14} /> MARK LEARNED</>}
-                </button>
-                <button onClick={next} style={btnSecondary}>NEXT →</button>
-              </div>
+              {/* A1/A2 — multiple choice */}
+              {(level === 'a1' || level === 'a2') && !answered && currentIdx !== null && (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE[3] }}>
+                  {getChoices(activeDeck, currentIdx).map(choice => (
+                    <button
+                      key={choice}
+                      type="button"
+                      onClick={() => {
+                        const correct = choice === card.en;
+                        setAnswered(true);
+                        setResult(correct ? 'correct' : 'wrong');
+                        if (correct) markLearned(card.de);
+                      }}
+                      style={{ padding: SPACE[4], border: BORDER.standard, background: COLORS.paper, color: COLORS.ink, fontFamily: FONTS.body, fontSize: FONT_SIZE.lg, fontStyle: 'italic', cursor: 'pointer' }}
+                    >
+                      {choice}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* B1 — type the meaning */}
+              {level === 'b1' && !answered && (
+                <div>
+                  <input
+                    type="text"
+                    value={typedAnswer}
+                    onChange={e => setTypedAnswer(e.target.value)}
+                    onKeyDown={e => { if (e.key === 'Enter') submitTyped(); }}
+                    placeholder="Type the English meaning…"
+                    style={{ width: '100%', boxSizing: 'border-box', padding: SPACE[4], border: BORDER.standard, fontFamily: FONTS.display, fontSize: FONT_SIZE.xl, background: COLORS.card, outline: 'none', marginBottom: SPACE[3], color: COLORS.ink }}
+                  />
+                  <button
+                    type="button"
+                    onClick={submitTyped}
+                    disabled={!typedAnswer.trim()}
+                    style={{ ...BUTTON.danger, width: '100%', opacity: typedAnswer.trim() ? 1 : 0.4 }}
+                  >
+                    CHECK →
+                  </button>
+                </div>
+              )}
+
+              {/* Feedback after answering */}
+              {answered && (
+                <div style={{ border: BORDER.standard, background: result === 'correct' ? COLORS.gold : result === 'almost' ? COLORS.paperDeep : COLORS.red, color: result === 'correct' ? COLORS.ink : result === 'almost' ? COLORS.ink : COLORS.paper, padding: SPACE[4], marginTop: SPACE[3] }}>
+                  <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, marginBottom: SPACE[2] }}>
+                    {result === 'correct' ? '✓ CORRECT' : result === 'almost' ? '≈ ALMOST — CHECK SPELLING' : '✗ NOT QUITE'}
+                  </div>
+                  <div style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE.xl, fontWeight: FONT_WEIGHT.semibold, marginBottom: SPACE[3] }}>
+                    {card.en}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => advanceQueue(result === 'correct')}
+                    style={{ ...BUTTON.primary }}
+                  >
+                    {result === 'correct' ? 'NEXT CARD →' : 'TRY AGAIN LATER →'}
+                  </button>
+                </div>
+              )}
             </>
+          )}
+          {!card && !deckComplete && (
+            <div style={{ padding: SPACE[8], textAlign: 'center', fontFamily: FONTS.mono, fontSize: FONT_SIZE.base, color: COLORS.mute }}>
+              Select a deck to start.
+            </div>
           )}
         </div>
       </div>
