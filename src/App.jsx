@@ -19,9 +19,13 @@ export default function App() {
   const [showSplash, setShowSplash] = useState(
     () => !localStorage.getItem('deutsch-onboarded')
   );
-  const [level, setLevel] = useState(
-    () => localStorage.getItem('deutsch-level') || 'intermediate'
-  );
+  const [level, setLevel] = useState(() => {
+    const stored = localStorage.getItem('deutsch-level');
+    if (stored === 'beginner' || stored === 'a1') return 'a1';
+    if (stored === 'a2') return 'a2';
+    if (stored === 'intermediate' || stored === 'b1') return 'b1';
+    return 'a1';
+  });
 
   const handleSplashComplete = (chosenLevel) => {
     setLevel(chosenLevel);
@@ -205,9 +209,9 @@ export default function App() {
 
       <main style={{ padding: 32, maxWidth: 1400, margin: '0 auto' }}>
         {tab === 'chat'      && <ChatTab level={level} />}
-        {tab === 'alphabet'  && <AlphabetTab />}
-        {tab === 'vocab'     && <VocabTab learnedWords={learnedWords} markLearned={markLearned} />}
-        {tab === 'translate' && <TranslateTab />}
+        {tab === 'alphabet'  && <AlphabetTab level={level} />}
+        {tab === 'vocab'     && <VocabTab learnedWords={learnedWords} markLearned={markLearned} level={level} />}
+        {tab === 'translate' && <TranslateTab level={level} />}
       </main>
 
       <footer style={{
