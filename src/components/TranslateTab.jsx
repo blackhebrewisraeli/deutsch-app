@@ -106,45 +106,45 @@ function TileExercise({ exercise, onCorrect, onSkip }) {
     transition: 'all 0.1s',
   });
 
-  if (feedback) {
-    return (
-      <FeedbackPanel
-        correct={feedback === 'correct'}
-        correctText={exercise.words.join(' ')}
-        note={exercise.note}
-        onNext={onSkip}
-      />
-    );
-  }
-
   return (
     <div>
-      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
-        YOUR ANSWER — click tiles in order
-      </div>
-      <div style={{ minHeight: 52, border: `2px dashed ${COLORS.ink}40`, background: COLORS.card, padding: SPACE[3], display: 'flex', gap: SPACE[2], flexWrap: 'wrap', marginBottom: SPACE[4] }}>
-        {placed.map(tile => (
-          <button key={tile.id} onClick={() => removeTile(tile)} style={tileStyle(true)}>{tile.word}</button>
-        ))}
-      </div>
+      {feedback ? (
+        <FeedbackPanel
+          correct={feedback === 'correct'}
+          correctText={exercise.words.join(' ')}
+          note={exercise.note}
+          onNext={onSkip}
+        />
+      ) : (
+        <>
+          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+            YOUR ANSWER — click tiles in order
+          </div>
+          <div style={{ minHeight: 52, border: `2px dashed ${COLORS.ink}40`, background: COLORS.card, padding: SPACE[3], display: 'flex', gap: SPACE[2], flexWrap: 'wrap', marginBottom: SPACE[4] }}>
+            {placed.map(tile => (
+              <button key={tile.id} onClick={() => removeTile(tile)} style={tileStyle(true)}>{tile.word}</button>
+            ))}
+          </div>
 
-      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
-        WORD BANK
-      </div>
-      <div style={{ display: 'flex', gap: SPACE[2], flexWrap: 'wrap', marginBottom: SPACE[5] }}>
-        {bank.map(tile => (
-          <button key={tile.id} onClick={() => addTile(tile)} style={tileStyle(false)}>{tile.word}</button>
-        ))}
-      </div>
+          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+            WORD BANK
+          </div>
+          <div style={{ display: 'flex', gap: SPACE[2], flexWrap: 'wrap', marginBottom: SPACE[5] }}>
+            {bank.map(tile => (
+              <button key={tile.id} onClick={() => addTile(tile)} style={tileStyle(false)}>{tile.word}</button>
+            ))}
+          </div>
 
-      <div style={{ display: 'flex', gap: SPACE[3] }}>
-        <button onClick={check} disabled={placed.length === 0} style={{ ...BUTTON.danger, flex: 1, opacity: placed.length === 0 ? 0.4 : 1 }}>
-          CHECK →
-        </button>
-        <button onClick={onSkip} style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}>
-          <SkipForward size={16} />
-        </button>
-      </div>
+          <div style={{ display: 'flex', gap: SPACE[3] }}>
+            <button onClick={check} disabled={placed.length === 0} style={{ ...BUTTON.danger, flex: 1, opacity: placed.length === 0 ? 0.4 : 1 }}>
+              CHECK →
+            </button>
+            <button onClick={onSkip} style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}>
+              <SkipForward size={16} />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -189,72 +189,72 @@ function BlankExercise({ exercise, onCorrect, onSkip }) {
 
   const parts = exercise.template.split('___');
 
-  if (feedback) {
-    return (
-      <FeedbackPanel
-        correct={feedback === 'correct'}
-        correctText={exercise.de}
-        note={exercise.note}
-        onNext={onSkip}
-      />
-    );
-  }
-
   return (
     <div>
-      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
-        COMPLETE THE SENTENCE
-      </div>
-      <div style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE['2xl'], lineHeight: 2, marginBottom: SPACE[4], border: BORDER.standard, padding: SPACE[4], background: COLORS.card }}>
-        {parts.map((part, i) => (
-          <span key={i}>
-            {part}
-            {i < parts.length - 1 && (
-              <span
-                onClick={() => clearBlank(i)}
-                style={{
-                  display: 'inline-block',
-                  minWidth: 80,
-                  borderBottom: `2px solid ${filled[i] ? COLORS.ink : COLORS.red}`,
-                  marginInline: SPACE[1],
-                  textAlign: 'center',
-                  fontFamily: FONTS.mono,
-                  fontSize: FONT_SIZE.md,
-                  color: filled[i] ? COLORS.ink : COLORS.red,
-                  cursor: filled[i] ? 'pointer' : 'default',
-                  paddingInline: SPACE[2],
-                }}
-              >
-                {filled[i] ? filled[i].word : '___'}
+      {feedback ? (
+        <FeedbackPanel
+          correct={feedback === 'correct'}
+          correctText={exercise.de}
+          note={exercise.note}
+          onNext={onSkip}
+        />
+      ) : (
+        <>
+          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+            COMPLETE THE SENTENCE
+          </div>
+          <div style={{ fontFamily: FONTS.display, fontSize: FONT_SIZE['2xl'], lineHeight: 2, marginBottom: SPACE[4], border: BORDER.standard, padding: SPACE[4], background: COLORS.card }}>
+            {parts.map((part, i) => (
+              <span key={i}>
+                {part}
+                {i < parts.length - 1 && (
+                  <span
+                    onClick={() => clearBlank(i)}
+                    style={{
+                      display: 'inline-block',
+                      minWidth: 80,
+                      borderBottom: `2px solid ${filled[i] ? COLORS.ink : COLORS.red}`,
+                      marginInline: SPACE[1],
+                      textAlign: 'center',
+                      fontFamily: FONTS.mono,
+                      fontSize: FONT_SIZE.md,
+                      color: filled[i] ? COLORS.ink : COLORS.red,
+                      cursor: filled[i] ? 'pointer' : 'default',
+                      paddingInline: SPACE[2],
+                    }}
+                  >
+                    {filled[i] ? filled[i].word : '___'}
+                  </span>
+                )}
               </span>
-            )}
-          </span>
-        ))}
-      </div>
+            ))}
+          </div>
 
-      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
-        CHOOSE A WORD
-      </div>
-      <div style={{ display: 'flex', gap: SPACE[2], flexWrap: 'wrap', marginBottom: SPACE[5] }}>
-        {tileBank.map(tile => (
-          <button
-            key={tile.id}
-            onClick={() => fillNext(tile)}
-            style={{ padding: `${SPACE[1] + 2}px ${SPACE[3]}px`, fontFamily: FONTS.mono, fontSize: FONT_SIZE.md, border: BORDER.standard, background: COLORS.paper, color: COLORS.ink, cursor: 'pointer' }}
-          >
-            {tile.word}
-          </button>
-        ))}
-      </div>
+          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+            CHOOSE A WORD
+          </div>
+          <div style={{ display: 'flex', gap: SPACE[2], flexWrap: 'wrap', marginBottom: SPACE[5] }}>
+            {tileBank.map(tile => (
+              <button
+                key={tile.id}
+                onClick={() => fillNext(tile)}
+                style={{ padding: `${SPACE[1] + 2}px ${SPACE[3]}px`, fontFamily: FONTS.mono, fontSize: FONT_SIZE.md, border: BORDER.standard, background: COLORS.paper, color: COLORS.ink, cursor: 'pointer' }}
+              >
+                {tile.word}
+              </button>
+            ))}
+          </div>
 
-      <div style={{ display: 'flex', gap: SPACE[3] }}>
-        <button onClick={check} disabled={filled.includes(null)} style={{ ...BUTTON.danger, flex: 1, opacity: filled.includes(null) ? 0.4 : 1 }}>
-          CHECK →
-        </button>
-        <button onClick={onSkip} style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}>
-          <SkipForward size={16} />
-        </button>
-      </div>
+          <div style={{ display: 'flex', gap: SPACE[3] }}>
+            <button onClick={check} disabled={filled.includes(null)} style={{ ...BUTTON.danger, flex: 1, opacity: filled.includes(null) ? 0.4 : 1 }}>
+              CHECK →
+            </button>
+            <button onClick={onSkip} style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}>
+              <SkipForward size={16} />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -295,44 +295,44 @@ Set "correct": true only if the translation is grammatically correct and conveys
     }
   };
 
-  if (feedback) {
-    return (
-      <FeedbackPanel
-        correct={feedback.correct}
-        correctText={feedback.corrected}
-        note={feedback.message}
-        onNext={onSkip}
-      />
-    );
-  }
-
   return (
     <div>
-      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
-        YOUR GERMAN TRANSLATION
-      </div>
-      <textarea
-        value={input}
-        onChange={e => setInput(e.target.value)}
-        onKeyDown={e => e.key === 'Enter' && (e.metaKey || e.ctrlKey) && check()}
-        placeholder="Type your translation here… (Cmd/Ctrl+Enter to submit)"
-        style={{
-          width: '100%', boxSizing: 'border-box',
-          minHeight: 120, padding: SPACE[4],
-          border: BORDER.standard, background: COLORS.card,
-          fontFamily: FONTS.display, fontSize: FONT_SIZE.xl,
-          resize: 'vertical', outline: 'none', color: COLORS.ink,
-          lineHeight: 1.5, marginBottom: SPACE[4],
-        }}
-      />
-      <div style={{ display: 'flex', gap: SPACE[3] }}>
-        <button onClick={check} disabled={!input.trim() || loading} style={{ ...BUTTON.danger, flex: 1, opacity: !input.trim() || loading ? 0.4 : 1 }}>
-          {loading ? 'GRADING...' : <>CHECK <ArrowRight size={14} /></>}
-        </button>
-        <button onClick={onSkip} style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}>
-          <SkipForward size={16} />
-        </button>
-      </div>
+      {feedback ? (
+        <FeedbackPanel
+          correct={feedback.correct}
+          correctText={feedback.corrected}
+          note={feedback.message}
+          onNext={onSkip}
+        />
+      ) : (
+        <>
+          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, letterSpacing: LETTER_SPACING.caps, color: COLORS.mute, marginBottom: SPACE[2] }}>
+            YOUR GERMAN TRANSLATION
+          </div>
+          <textarea
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && (e.metaKey || e.ctrlKey) && check()}
+            placeholder="Type your translation here… (Cmd/Ctrl+Enter to submit)"
+            style={{
+              width: '100%', boxSizing: 'border-box',
+              minHeight: 120, padding: SPACE[4],
+              border: BORDER.standard, background: COLORS.card,
+              fontFamily: FONTS.display, fontSize: FONT_SIZE.xl,
+              resize: 'vertical', outline: 'none', color: COLORS.ink,
+              lineHeight: 1.5, marginBottom: SPACE[4],
+            }}
+          />
+          <div style={{ display: 'flex', gap: SPACE[3] }}>
+            <button onClick={check} disabled={!input.trim() || loading} style={{ ...BUTTON.danger, flex: 1, opacity: !input.trim() || loading ? 0.4 : 1 }}>
+              {loading ? 'GRADING...' : <>CHECK <ArrowRight size={14} /></>}
+            </button>
+            <button onClick={onSkip} style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}>
+              <SkipForward size={16} />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -377,9 +377,11 @@ export default function TranslateTab({ level = 'a1' }) {
       try {
         const more = await generateMoreSentences(level);
         setExercises(prev => [...prev, ...more]);
+        setScore(0);
       } catch {
         setExercises(shuffle(bankMap[level]));
         setIdx(0);
+        setScore(0);
         setGenerating(false);
         return;
       }
