@@ -145,7 +145,7 @@ export const TRANSLATE_SENTENCES_A2 = [
     en: 'We are going to the cinema.',
     de: 'Wir gehen ins Kino.',
     template: 'Wir gehen ___ Kino.',
-    blanks: [{ word: 'ins', distractors: ['in das', 'im'] }],
+    blanks: [{ word: 'ins', distractors: ['im', 'zum'] }],
     note: 'ins = in + das (contraction for neuter accusative)',
   },
   {
@@ -271,6 +271,6 @@ export const ALPHABET_QUIZ_GROUPS = [
   { letters: ['B', 'P', 'D', 'T'] },
   { letters: ['V', 'W', 'F', 'B'] },
   { letters: ['G', 'K', 'J', 'Y'] },
-  { letters: ['Ch', 'Sch', 'St', 'Sp'] },
-  { letters: ['Ei', 'Ie', 'Eu', 'Äu'] },
+  { letters: ['R', 'L', 'N', 'M'] },
+  { letters: ['H', 'X', 'Q', 'C'] },
 ];
