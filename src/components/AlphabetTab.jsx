@@ -17,16 +17,20 @@ export default function AlphabetTab({ level }) {
   const [quizTarget, setQuizTarget] = useState(null);
   const [quizResult, setQuizResult] = useState(null); // null | 'correct' | 'wrong'
   const [score, setScore] = useState({ correct: 0, total: 0 });
+  const [shuffledLetters, setShuffledLetters] = useState([]);
 
   // Start a quiz round whenever quizRound changes (and mode is quiz)
   useEffect(() => {
     if (mode !== 'quiz') return;
     const group = ALPHABET_QUIZ_GROUPS[quizRound % ALPHABET_QUIZ_GROUPS.length];
     const target = group.letters[Math.floor(Math.random() * group.letters.length)];
+    const shuffled = shuffle(group.letters);
     setQuizGroup(group);
     setQuizTarget(target);
     setQuizResult(null);
-    setTimeout(() => speak(target), 300);
+    setShuffledLetters(shuffled);
+    const id = setTimeout(() => speak(target), 300);
+    return () => clearTimeout(id);
   }, [mode, quizRound]);
 
   const handleModeChange = (newMode) => {
@@ -116,7 +120,7 @@ export default function AlphabetTab({ level }) {
           {/* Four letter options */}
           {!quizResult && (
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE[3] }}>
-              {quizGroup.letters.map(letter => (
+              {shuffledLetters.map(letter => (
                 <button
                   key={letter}
                   type="button"
