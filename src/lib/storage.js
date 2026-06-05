@@ -13,5 +13,7 @@ export const loadState = () => {
 export const saveState = (state) => {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch {}
+  } catch {
+    // localStorage unavailable (private browsing or quota exceeded) — fail silently
+  }
 };
