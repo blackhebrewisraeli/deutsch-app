@@ -14,6 +14,7 @@ import {
 import { speak } from '../lib/speech';
 import { callClaude } from '../lib/claude';
 import { SCENARIOS, CHAT_TASKS } from '../data/content';
+import { recordEvent } from '../lib/stats';
 import { SectionLabel } from './UI';
 
 export default function ChatTab({ level = 'a1', mobile = false }) {
@@ -146,6 +147,7 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
       const reply = { role: 'assistant', de: parsed.de, ipa: parsed.ipa, en: parsed.en };
       setMessages((m) => [...m, reply]);
       setCorrection(parsed.correction || null);
+      recordEvent('chat', level, parsed.correction ? 'wrong' : 'correct');
       if (parsed.taskComplete) {
         const nextIdx = (taskIdx + 1) % Math.max(tasks.length, 1);
         if (nextIdx === 0) setTasksCompleted(true);

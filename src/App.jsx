@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Check, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
+import { BarChart3, Check, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { StatBlock } from './components/UI';
@@ -7,6 +7,7 @@ import ChatTab from './components/ChatTab';
 import AlphabetTab from './components/AlphabetTab';
 import VocabTab from './components/VocabTab';
 import TranslateTab from './components/TranslateTab';
+import StatsTab from './components/StatsTab';
 import SplashScreen from './components/SplashScreen';
 import { Analytics } from '@vercel/analytics/react';
 import { useWindowWidth, isMobile } from './lib/useWindowWidth';
@@ -55,7 +56,12 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (stats.lastVisit) saveState({ stats, learnedWords });
+    if (stats.lastVisit) {
+      // Merge into existing state — recordEvent (from stats.js) writes a
+      // `daily` field we must not clobber.
+      const current = loadState() ?? {};
+      saveState({ ...current, stats, learnedWords });
+    }
   }, [stats, learnedWords]);
 
   const markLearned = (word) => {
@@ -72,6 +78,7 @@ export default function App() {
     { id: 'alphabet', label: 'Alphabet', icon: Type, num: '02' },
     { id: 'vocab', label: 'Vocab', icon: BookOpen, num: '03' },
     { id: 'translate', label: 'Translate', icon: Languages, num: '04' },
+    { id: 'stats', label: 'Stats', icon: BarChart3, num: '05' },
   ];
 
   // Streak pulsing: user hasn't visited today yet and has a streak to protect
@@ -269,6 +276,7 @@ export default function App() {
           />
         )}
         {tab === 'translate' && <TranslateTab level={level} mobile={mobile} />}
+        {tab === 'stats' && <StatsTab mobile={mobile} />}
       </main>
 
       {/* ── Footer — hidden on mobile ─────────────────────────── */}

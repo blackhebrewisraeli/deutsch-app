@@ -13,9 +13,10 @@ import {
 import { speak } from '../lib/speech';
 import { ALPHABET, ALPHABET_QUIZ_GROUPS } from '../data/content';
 import { shuffle } from '../lib/utils';
+import { recordEvent } from '../lib/stats';
 import { Hero } from './UI';
 
-export default function AlphabetTab({ level: _level, mobile = false }) {
+export default function AlphabetTab({ level, mobile = false }) {
   // ── Browse mode state ──────────────────────────────────────────
   const [selected, setSelected] = useState(null);
 
@@ -58,6 +59,7 @@ export default function AlphabetTab({ level: _level, mobile = false }) {
     const correct = letter === quizTarget;
     setQuizResult(correct ? 'correct' : 'wrong');
     setScore((s) => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }));
+    recordEvent('alphabet', level, correct ? 'correct' : 'wrong');
   };
 
   const handleNextRound = () => {

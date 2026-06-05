@@ -14,6 +14,7 @@ import { callClaude } from '../lib/claude';
 import { PRESET_DECKS } from '../data/content';
 import { Hero, SectionLabel } from './UI';
 import { shuffle, levenshtein } from '../lib/utils';
+import { recordEvent } from '../lib/stats';
 
 export default function VocabTab({ level, learnedWords, markLearned, mobile = false }) {
   const [deckId, setDeckId] = useState('greetings');
@@ -66,6 +67,7 @@ export default function VocabTab({ level, learnedWords, markLearned, mobile = fa
     setAnswered(true);
     setResult(res);
     if (res === 'correct' || res === 'almost') markLearned(card.de);
+    recordEvent('vocab', level, res);
   };
 
   const generateDeck = async () => {
@@ -377,6 +379,7 @@ export default function VocabTab({ level, learnedWords, markLearned, mobile = fa
                           setAnswered(true);
                           setResult(correct ? 'correct' : 'wrong');
                           if (correct) markLearned(card.de);
+                          recordEvent('vocab', level, correct ? 'correct' : 'wrong');
                         }}
                         style={{
                           padding: SPACE[4],

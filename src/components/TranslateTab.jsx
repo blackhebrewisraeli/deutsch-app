@@ -17,6 +17,7 @@ import {
   TRANSLATE_SENTENCES_B1,
 } from '../data/content';
 import { shuffle } from '../lib/utils';
+import { recordEvent } from '../lib/stats';
 import { Hero } from './UI';
 
 // Module-level constant — avoids stale closure in useCallback/useEffect
@@ -161,7 +162,7 @@ function FeedbackPanel({ correct, correctText, note, onNext }) {
 
 // ─── A1 — Word Tile Exercise ──────────────────────────────────────────────────
 
-function TileExercise({ exercise, onCorrect, onSkip }) {
+function TileExercise({ exercise, level, onCorrect, onSkip }) {
   const [bank, setBank] = useState([]);
   const [placed, setPlaced] = useState([]);
   const [feedback, setFeedback] = useState(null); // null | 'correct' | 'wrong'
@@ -186,8 +187,10 @@ function TileExercise({ exercise, onCorrect, onSkip }) {
   const check = () => {
     const answer = placed.map((t) => t.word).join(' ');
     const correct = exercise.words.join(' ');
-    setFeedback(answer === correct ? 'correct' : 'wrong');
-    if (answer === correct) onCorrect();
+    const isCorrect = answer === correct;
+    setFeedback(isCorrect ? 'correct' : 'wrong');
+    recordEvent('translate', level, isCorrect ? 'correct' : 'wrong');
+    if (isCorrect) onCorrect();
   };
 
   const tileStyle = (active) => ({
@@ -284,7 +287,7 @@ function TileExercise({ exercise, onCorrect, onSkip }) {
 
 // ─── A2 — Fill-the-Blanks Exercise ───────────────────────────────────────────
 
-function BlankExercise({ exercise, onCorrect, onSkip }) {
+function BlankExercise({ exercise, level, onCorrect, onSkip }) {
   const [tileBank, setTileBank] = useState([]);
   const [filled, setFilled] = useState([]);
   const [feedback, setFeedback] = useState(null);
@@ -317,6 +320,7 @@ function BlankExercise({ exercise, onCorrect, onSkip }) {
   const check = () => {
     const correct = filled.every((t, i) => t && t.word === exercise.blanks[i].word);
     setFeedback(correct ? 'correct' : 'wrong');
+    recordEvent('translate', level, correct ? 'correct' : 'wrong');
     if (correct) onCorrect();
   };
 
@@ -435,7 +439,7 @@ function BlankExercise({ exercise, onCorrect, onSkip }) {
 
 // ─── B1 — Free Typing + AI Feedback ──────────────────────────────────────────
 
-function TypingExercise({ exercise, onCorrect, onSkip }) {
+function TypingExercise({ exercise, level, onCorrect, onSkip }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
@@ -469,6 +473,7 @@ Set "correct": true only if the translation is grammatically correct and conveys
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
       if (mounted.current) {
         setFeedback(parsed);
+        recordEvent('translate', level, parsed.correct ? 'correct' : 'wrong');
         if (parsed.correct) onCorrect();
       }
     } catch {
@@ -666,6 +671,7 @@ export default function TranslateTab({ level = 'a1', mobile: _mobile = false }) 
           <TileExercise
             key={idx}
             exercise={exercise}
+            level={level}
             onCorrect={handleCorrect}
             onSkip={handleNext}
           />
@@ -674,6 +680,7 @@ export default function TranslateTab({ level = 'a1', mobile: _mobile = false }) 
           <BlankExercise
             key={idx}
             exercise={exercise}
+            level={level}
             onCorrect={handleCorrect}
             onSkip={handleNext}
           />
@@ -682,6 +689,7 @@ export default function TranslateTab({ level = 'a1', mobile: _mobile = false }) 
           <TypingExercise
             key={idx}
             exercise={exercise}
+            level={level}
             onCorrect={handleCorrect}
             onSkip={handleNext}
           />
