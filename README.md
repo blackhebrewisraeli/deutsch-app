@@ -2,29 +2,32 @@
 
 <br/>
 
-<sup>S P R A C H S C H U L E &nbsp;×&nbsp; E S T .&nbsp; 2 0 2 5</sup>
+<sup>S P R A C H S C H U L E &nbsp;×&nbsp; E S T .&nbsp; 2 0 2 6</sup>
 
 # Deutsch·
 
-### *An editorial-style German learning app — AI tutor, smart flashcards, live translation*
+### *A guided German learning app — AI tutor, exercise-driven practice, installable PWA*
 
 <p>
   <img alt="React" src="https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB"/>
   &nbsp;
   <img alt="Vite" src="https://img.shields.io/badge/Vite_5-646CFF?style=flat-square&logo=vite&logoColor=white"/>
   &nbsp;
-  <img alt="Claude" src="https://img.shields.io/badge/Claude_Sonnet_4-D62828?style=flat-square"/>
+  <img alt="Claude" src="https://img.shields.io/badge/Claude_Haiku_4.5-D62828?style=flat-square"/>
   &nbsp;
-  <img alt="Web Speech API" src="https://img.shields.io/badge/Web_Speech_API-16110B?style=flat-square"/>
+  <img alt="PWA" src="https://img.shields.io/badge/PWA-installable-F5C518?style=flat-square"/>
+  &nbsp;
+  <img alt="Mobile" src="https://img.shields.io/badge/Mobile-responsive-16110B?style=flat-square"/>
   &nbsp;
   <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
 </p>
 
 <p>
+  <a href="#-learning-levels"><b>Levels</b></a> &nbsp;·&nbsp;
   <a href="#-features"><b>Features</b></a> &nbsp;·&nbsp;
+  <a href="#-german-grammar--vocabulary-coverage"><b>Grammar Coverage</b></a> &nbsp;·&nbsp;
+  <a href="#️-tech-stack"><b>Tech Stack</b></a> &nbsp;·&nbsp;
   <a href="#-quick-start"><b>Quick Start</b></a> &nbsp;·&nbsp;
-  <a href="#%EF%B8%8F-tech-stack"><b>Tech Stack</b></a> &nbsp;·&nbsp;
-  <a href="#%EF%B8%8F-how-it-works"><b>How It Works</b></a> &nbsp;·&nbsp;
   <a href="#-deploy-to-production"><b>Deploy</b></a>
 </p>
 
@@ -42,268 +45,440 @@
 
 ## What is this?
 
-**Deutsch · Sprachschule** is a full-featured German language learning app that runs entirely in the browser. It combines four independent learning modules under one editorial, Bauhaus-inspired interface — bold German flag palette (black · red · gold · white), Fraunces serif headings, and monospace labels.
+**Deutsch · Sprachschule** is an exercise-driven German learning app that runs in the browser and installs as a PWA. It does not wait for you to know what to do — it gives you a task, you respond, and it tells you whether you got it right.
 
-On first visit, a dramatic full-screen splash with the German flag colours greets you and asks you to choose your level — **Beginner** (A1–A2) or **Intermediate** (A2–B1). Anna, the AI tutor, adapts her language complexity accordingly.
+The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four learning modules: guided conversation, alphabet recognition, vocabulary active recall, and translation exercises. Every mode adapts to your chosen level automatically.
 
-Every AI-powered feature — the conversation tutor, the vocabulary generator, the smart translator — calls **Claude Sonnet 4** via a secure server-side proxy, keeping your API key out of the browser at all times.
+All AI features call **Claude Haiku 4.5** through a server-side proxy — your API key never touches the browser.
+
+---
+
+## 📊 Learning Levels
+
+Choose your level on the splash screen. It is stored in `localStorage` and drives the exercise mode in every tab.
+
+| Level | CEFR description | Exercise mode |
+|:---:|---|---|
+| **A1 — Beginner** | You know basic vocabulary and can form simple sentences | **Word tiles** — all German words provided; assemble them in the correct order |
+| **A2 — Elementary** | You can handle familiar situations with some grammar knowledge | **Fill the blanks** — sentence shown with 2–3 key words missing; select from a tile bank |
+| **B1 — Intermediate** | You can describe experiences and explain opinions in German | **Free typing + AI grading** — translate the sentence yourself; Claude grades your answer |
+
+You can change your level at any time by clearing the onboarding state (or via returning to the splash screen on first visit to a new device).
 
 ---
 
 ## ✦ Features
 
-<details>
-<summary><b>&nbsp;01 · Chat — Talk to Anna, your AI tutor</b></summary>
-<br/>
+### 01 · Chat — Geführtes Gespräch (Guided Conversation)
 
-![Splash screen](docs/screenshot-splash.png)
+Anna, your AI tutor, does not wait for you to speak. She opens each session with a **task suited to your level** and guides you toward completing it.
 
-*First visit: choose your level on the German flag splash screen*
+**How tasks work:**
 
-![Chat tab](docs/screenshot-chat.png)
+```
+╔══════════════════════════════════╗
+║  C  YOUR TASK                    ║
+║  ─────────────────────────────── ║
+║  TASK 1                          ║
+║  "Order a large coffee and ask   ║
+║   how much it costs."            ║
+║                                  ║
+║  [SHOW HINT]                     ║
+╚══════════════════════════════════╝
+```
 
-Anna is a friendly German tutor who lives inside Claude Sonnet 4. She speaks back to you using the browser's native text-to-speech engine, accepts voice input from your microphone (Chrome / Edge / Arc), corrects your German in real time, and stays in character across four role-play scenarios.
+Hints are available (always visible for A1, toggle for A2, hidden for B1). When Claude detects the task is naturally complete, the panel advances to the next task automatically.
 
-**Scenarios:**
+**Four scenarios, three difficulty levels each:**
 
-| Icon | Name | Setting |
-|:---:|---|---|
-| ◆ | Free Chat | Open conversation — any topic |
-| ☕ | Order Coffee | At a Berlin café |
-| ✶ | Meet Someone | Small talk and introductions |
-| ✈ | At the Airport | Check-in and asking for directions |
+| Scenario | A1 example task | B1 example task |
+|---|---|---|
+| ◆ Free Chat | "Say hello and tell Anna your name." | "Tell Anna about a problem you had recently and how you solved it." |
+| ☕ Order Coffee | "Order a coffee." | "Complain politely that your order is wrong." |
+| ✶ Meet Someone | "Ask Anna her name and where she is from." | "Have a natural small-talk conversation about your week." |
+| ✈ At the Airport | "Ask where the check-in desk is." | "Explain that your flight was cancelled and ask about your options." |
 
-**How corrections work:**
+**Inline grammar correction:**
 
-Every reply you send is evaluated. If you make a mistake, a panel appears on the right side of the screen:
+Every reply is evaluated. If you make a mistake, the correction panel shows:
 
 ```
 ⚠  NEEDS A FIX
-─────────────────────────────────────────────
-YOU SAID   →   Ich bin gehen
-CORRECT    →   Ich gehe            [ HEAR IT ]
+──────────────────────────────────────────────────
+YOU SAID   →   Ich lerne Deutsch seit drei Monat.
+CORRECT    →   Ich lerne Deutsch seit drei Monaten.   [ HEAR IT ]
 
-"gehen" is the infinitive. Use the conjugated
-form "gehe" for "I go."
-─────────────────────────────────────────────
+"After 'seit' (since), use the dative case.
+'Monat' → 'Monaten' (plural dative)."
+──────────────────────────────────────────────────
 ```
 
-If your German is flawless, the same panel shows:  **✓ Alles gut! No mistakes to fix.**
+**Anna's JSON response schema (what Claude returns on every turn):**
 
-**How to use:**
-- Type your message and press `Enter`, **or**
-- Click the **mic button** and speak German directly
-- Click the 🔊 icon on any of Anna's messages to replay her voice
+```json
+{
+  "de": "Willkommen! Was darf ich Ihnen bringen?",
+  "ipa": "[vɪlˈkɔmən vas daʁf ɪç ˈiːnən ˈbʁɪŋən]",
+  "en": "Welcome! What can I bring you?",
+  "correction": null,
+  "taskComplete": false
+}
+```
 
-</details>
-
----
-
-<details>
-<summary><b>&nbsp;02 · Alphabet — Das Alphabet</b></summary>
-<br/>
-
-![Alphabet tab](docs/screenshot-alphabet.png)
-
-An interactive 6-column grid of all **30 German letters** — the standard 26 plus **Ä, Ö, Ü, ß**. The four special characters are displayed on a slightly deeper background so they stand out.
-
-Click any tile to:
-- Hear it **spoken aloud** with a native-quality German TTS voice
-- See an **example word** (*Apfel, Brot, Glück, Straße…*)
-- Read its **English translation**
-
-The selected letter expands into a full-width detail card with the letter rendered at 180px — bold, red, unmissable.
-
-</details>
+When `taskComplete` is `true`, the task panel advances to the next task for the current scenario.
 
 ---
 
-<details>
-<summary><b>&nbsp;03 · Vocab — Wortschatz (Flashcards)</b></summary>
-<br/>
+### 02 · Alphabet — Hören & Erkennen (Listen & Identify)
 
-![Vocab tab](docs/screenshot-vocab.png)
+Two modes behind a toggle:
 
-Flashcard-style vocabulary practice. Four curated decks are built-in, and you can generate any custom deck via Claude.
+**Quiz mode (default):** A letter is spoken aloud by the browser's German TTS voice. Four confusable letter options are shown — tap the one you heard. Score tracked per session.
 
-**Preset decks:**
+```
+ROUND 4 · SCORE 3/3 · WHICH LETTER DID YOU HEAR?
 
-| Deck | Cards | Highlights |
+        🔊   TAP TO HEAR AGAIN
+
+    ┌──────┐  ┌──────┐
+    │  U   │  │  Ü   │ ← correct
+    ├──────┤  ├──────┤
+    │  O   │  │  Ö   │
+    └──────┘  └──────┘
+```
+
+**Letter groups are chosen for maximum confusion value** — letters that German learners commonly mishear:
+
+| Group | Letters | Why confusable |
+|:---:|---|---|
+| 1 | U · Ü · O · Ö | Front/back vowel pairs |
+| 2 | A · Ä · E · I | Short vowel spectrum |
+| 3 | S · ß · Z · W | Sibilants and voiced variants |
+| 4 | B · P · D · T | Voiced/unvoiced pairs |
+| 5 | V · W · F · B | Labial consonants |
+| 6 | G · K · J · Y | Velar and palatal consonants |
+| 7 | R · L · N · M | Liquids and nasals |
+| 8 | H · X · Q · C | Rare / silent letters |
+
+**Browse mode:** The full 30-letter grid (A–Z + Ä · Ö · Ü · ß). Click any letter to hear it spoken, see an example word, and read its English meaning.
+
+---
+
+### 03 · Vocab — Aktives Lernen (Active Recall)
+
+Cards never just flip to reveal the answer — you have to produce it first.
+
+**A1 / A2 — Multiple choice (4 options):**
+
+```
+CARD 4 / 10 · WHAT DOES THIS MEAN?
+
+┌────────────────────────────────────┐
+│                                    │
+│         der Hund                   │
+│     [deːɐ̯ hʊnt]                   │
+│                                    │
+└────────────────────────────────────┘
+
+  ┌──────────┐   ┌──────────┐
+  │   cat    │   │   dog ✓  │  ← gold flash
+  ├──────────┤   ├──────────┤
+  │   horse  │   │   bird   │
+  └──────────┘   └──────────┘
+```
+
+**B1 — Type the meaning:**
+
+```
+CARD 4 / 10 · TRANSLATE THIS WORD
+
+┌────────────────────────────────────┐
+│           der Hund                 │
+└────────────────────────────────────┘
+
+  [ dog                           ]  ← text input
+  [ CHECK → ]
+```
+
+Answers within **Levenshtein distance ≤ 2** (one or two typos) are marked **ALMOST** and advance the card. Wrong answers return to the back of the queue — the deck never completes until every card is answered correctly at least once.
+
+**Preset decks** (same for all levels):
+
+| Deck | Cards | Sample words |
 |---|:---:|---|
-| Greetings | 10 | Hallo, Guten Morgen, Auf Wiedersehen… |
-| Food & Drink | 10 | das Brot, der Kaffee, die Milch… |
-| Travel | 10 | der Bahnhof, links, Wo ist...? |
+| Greetings | 10 | Hallo, Guten Morgen, Tschüss, Wie geht es dir? |
+| Food & Drink | 10 | das Brot, der Kaffee, die Milch, der Apfel |
+| Travel | 10 | der Bahnhof, der Pass, links, geradeaus |
 | Numbers | 10 | eins through zehn |
 
-**AI-generated decks:** Type any topic — *"weather", "animals", "at the doctor's", "colours"* — and Claude builds a 10-card deck on the fly, with German articles for nouns and IPA pronunciation.
-
-**Each card shows:**
-- Front: German word / phrase + IPA pronunciation
-- Back: English translation (click to flip)
-
-**Controls:**
-- Click card → flip
-- 🔊 → hear the word pronounced
-- **MARK LEARNED** → persists to `localStorage` + updates the counter in the header
-- Progress bar at the top: red = current card, dark = learned, light = not yet
-
-</details>
+**AI-generated decks:** Type any topic — *colours, animals, at the doctor's, football* — and Claude generates a 10-card deck with German articles for nouns, IPA, and English meanings.
 
 ---
 
-<details>
-<summary><b>&nbsp;04 · Translate — Übersetzer (Smart Translator)</b></summary>
-<br/>
+### 04 · Translate — Übersetzen (Translation Exercise)
 
-![Translate tab](docs/screenshot-translate.png)
+The app gives you a sentence. You translate it. The exercise mode depends on your level.
 
-A translator that auto-detects whether you're typing **English or German** and returns far more than just a translation.
+**A1 — Word tiles:**
 
-**For every query you get:**
+```
+TRANSLATE TO GERMAN
+"I drink water."
 
-1. The translated text
-2. IPA pronunciation of the German version
-3. A word-by-word grammar breakdown table:
+YOUR ANSWER ─────────────────────────────────
+  [ Ich ] [ trinke ]  ← placed tiles (click to return)
 
-| German | English | Grammar note |
-|---|---|---|
-| Ich | I | personal pronoun, 1st person singular |
-| gehe | go | verb, present tense, 1st person singular |
-| in | into | preposition + accusative |
-| die | the | definite article, feminine accusative |
-| Stadt | city | noun, feminine |
+WORD BANK ───────────────────────────────────
+  [ Wasser. ]  [ esse ]  [ laufe ]
 
-Every word in the table has its own 🔊 speaker button for individual pronunciation.
+[ CHECK → ]  [ ⏭ skip ]
+```
 
-**Keyboard shortcut:** <kbd>⌘ Cmd</kbd> + <kbd>Enter</kbd> (Mac) &nbsp;/&nbsp; <kbd>Ctrl</kbd> + <kbd>Enter</kbd> (Windows)
+**A2 — Fill the blanks:**
 
-</details>
+```
+TRANSLATE TO GERMAN
+"The child plays with the ball."
+
+COMPLETE THE SENTENCE
+  Das Kind spielt mit ___ Ball.
+  
+  [ der ]  [ den ]  [dem] ← correct  [ die ]
+
+[ CHECK → ]  [ ⏭ skip ]
+```
+
+**B1 — Free typing + AI grading:**
+
+```
+TRANSLATE TO GERMAN
+"Despite the rain, we enjoyed the walk."
+
+  ┌────────────────────────────────────────┐
+  │ Trotz des Regens haben wir den        │
+  │ Spaziergang genossen.                  │
+  └────────────────────────────────────────┘
+
+[ CHECK →  ]  [ ⏭ skip ]
+
+✓ CORRECT ───────────────────────────────────
+  "Great use of 'trotz + genitive' and 
+   Perfekt with haben."
+[ NEXT EXERCISE → ]
+```
+
+**B1 grading prompt schema (what Claude returns):**
+
+```json
+{
+  "correct": true,
+  "corrected": "Trotz des Regens haben wir den Spaziergang genossen.",
+  "message": "Perfect. Note: 'trotz' always takes genitive — des Regens, not dem Regen."
+}
+```
+
+When the **built-in sentence bank** (10 sentences per level) is exhausted, Claude generates 5 fresh sentences on demand and appends them — the exercise never runs out.
 
 ---
 
-<details>
-<summary><b>&nbsp;Progress Tracking — Streak & Learned Words</b></summary>
-<br/>
+### Progress tracking
 
-The header always shows two stats:
+The header always shows two stats, persisted in `localStorage`:
 
-- 🔥 **Streak** — increments when you open the app on consecutive days. Skip a day and it resets to 1.
-- ✓ **Learned** — counts how many vocabulary cards you've marked as learned across all decks.
-
-Both are stored in `localStorage` — no account, no server, no sign-up.
-
-</details>
+- 🔥 **Streak** — opens the app on consecutive days → streak increments
+- ✓ **Learned** — counts vocabulary cards answered correctly across all decks
 
 ---
 
-## ⚡ Quick Start
+## 🇩🇪 German Grammar & Vocabulary Coverage
 
-**Prerequisites:** Node.js 18+, an Anthropic API key ([get one here](https://console.anthropic.com) — ~$5 of credit lasts a long time)
+### Grammar topics by level
 
-```bash
-# 1. Clone the repo
-git clone https://github.com/blackhebrewisraeli/deutsch-app.git
-cd deutsch-app
+**A1 — Word order and basic conjugation**
+- Subject–Verb–Object sentence structure
+- Present tense conjugation: `ich bin / habe / gehe / trinke / lese`
+- Nominative articles: `der / die / das` + gender recognition
+- Basic negation and simple adjective agreement
 
-# 2. Install dependencies
-npm install
+**A2 — Cases, prepositions, and adjective endings**
+| Grammar point | Example from exercise bank |
+|---|---|
+| Accusative masculine | *einen großen Hund* (ein → einen; groß → großen) |
+| Movement vs. location | *in die Schule* (acc.) vs. *in der Schule* (dat.) |
+| Dative after prepositions | *mit dem Ball, zu meinem Freund* |
+| Contractions | *ins = in + das, im = in + dem, zum = zu + dem* |
+| Possessives in dative | *ihrem Freund* (dative masculine) |
+| Adjective endings after definite article | *Das rote Auto* (neuter nom. → -e) |
 
-# 3. Create your .env file
-cp .env.example .env
-```
+**B1 — Complex structures and mood**
+| Grammar point | Example from exercise bank |
+|---|---|
+| Perfekt with *sein* | *bin … gegangen* (movement verb) |
+| Perfekt with *haben* | *habe … gekauft, genossen* |
+| Konjunktiv II | *hätte, würde + infinitive* |
+| seit + present tense | *Er wohnt seit drei Jahren …* |
+| Modal verbs | *Ich muss … fertigstellen* (verb-final) |
+| Relative clauses | *Die Frau, deren Tasche …* (genitive *deren*) |
+| trotz + genitive | *Trotz des Regens …* |
+| Indirect speech | *dass … kommen würde* (verb-final) |
+| Conditional perfect | *hätte … angerufen, wenn … gewusst hätte* |
+| Indirect questions | *Könnten Sie sagen, wo … ist?* |
 
-Now open `.env` and replace the placeholder with your real API key:
+### Vocabulary domains
 
-```
-VITE_ANTHROPIC_API_KEY=sk-ant-api03-your-real-key-here
-```
+The built-in content covers these semantic fields across all levels:
 
-```bash
-# 4. Start the development server
-npm run dev
-```
+- **Greetings & social phrases** — Hallo, Auf Wiedersehen, Wie geht es dir?
+- **Food & drink** — das Brot, der Kaffee, die Milch, das Bier
+- **Travel & transport** — der Bahnhof, der Flughafen, links, geradeaus
+- **Numbers** — eins through zehn
+- **Daily objects** — das Haus, die Katze, der Hund, das Buch
+- **Body & feelings** — ich bin müde / hungrig
+- **Time expressions** — jeden Tag, seit, gestern
 
-Open **[http://localhost:5173](http://localhost:5173)** — you're ready.
-
-> 💡 **Running costs:** A 30-minute session (chat + a few translations + a generated deck) typically costs **$0.01–0.03**. Claude Sonnet 4 is very affordable for personal use.
+AI-generated decks expand to any domain on demand.
 
 ---
 
 ## 🛠️ Tech Stack
 
-| Layer | Technology | Why |
+| Layer | Technology | Purpose |
 |---|---|---|
-| Framework | **React 18** | Component model, hooks, state |
-| Build tool | **Vite 5** | Fast dev server + API proxy |
-| AI | **Claude Sonnet 4** | Tutor, deck generation, translation |
-| Speech input | **Web Speech API** | Browser-native, no external service |
-| Text-to-speech | **SpeechSynthesis API** | Browser-native, no external service |
-| Icons | **lucide-react** | Crisp, consistent icon set |
-| Typography | **Fraunces + JetBrains Mono** | Editorial serif + technical mono |
-| Persistence | **localStorage** | No backend needed |
-| Styling | **Inline design tokens** | Zero CSS framework, full control |
+| Framework | **React 18** | Component model, hooks, concurrent state |
+| Build tool | **Vite 5** | Dev server, API proxy, fast HMR |
+| AI | **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`) | Tutor, grading, deck generation, translation |
+| Speech synthesis | **SpeechSynthesis API** | Native German TTS — no external service |
+| Speech recognition | **Web Speech API** | Microphone input in Chat — Chrome/Edge only |
+| Icons | **lucide-react** | Consistent SVG icon set |
+| Typography | **Fraunces** (display) + **JetBrains Mono** (labels) | Editorial serif + technical mono |
+| Design tokens | `src/lib/theme.js` | Centralised colours, type scale, spacing, component composites |
+| Persistence | **localStorage** | Streak, learned words, chosen level — no backend |
+| Linting | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars |
+| Formatting | **Prettier 3** | Consistent code style, enforced on every commit |
+| Pre-commit | **Husky + lint-staged** | Runs ESLint + Prettier automatically before every `git commit` |
+| PWA | **vite-plugin-pwa** + Workbox | Installable on iOS/Android, offline-capable static assets |
+| Responsive | `useWindowWidth` hook | Live viewport width → inline style breakpoints (mobile < 640px) |
+| Deployment | **Vercel** | Static SPA + `/api/chat.js` serverless function |
 
-No database. No authentication. No third-party analytics. The only external call is to the Anthropic API — and even that is proxied through Vite's server so the key never touches the browser.
+**No CSS framework. No database. No authentication. No third-party tracking.** The only external call is to the Anthropic API.
 
 ---
 
 ## ⚙️ How It Works
 
-<details>
-<summary><b>The API proxy — why your key stays safe</b></summary>
-<br/>
+### The API proxy — keeping your key safe
 
-The Anthropic API blocks direct browser requests (CORS policy). This project routes every API call through the **Vite dev server**, which injects your key server-side before forwarding to Anthropic:
+In **development**, Vite proxies `/api/anthropic` → `https://api.anthropic.com` and injects your key server-side:
 
 ```
-Browser                    Vite dev server               Anthropic API
-   │                             │                              │
-   │  POST /api/anthropic/       │                              │
-   │        v1/messages          │                              │
-   │  ────────────────────────► │                              │
-   │                             │  POST /v1/messages           │
-   │                             │  x-api-key: [from .env]      │
-   │                             │  ────────────────────────── ►│
-   │                             │                              │
-   │                             │       200 + JSON             │
-   │                             │ ◄──────────────────────────  │
-   │        200 + JSON           │                              │
-   │ ◄──────────────────────────│                              │
+Browser               Vite dev server              Anthropic API
+   │                        │                            │
+   │  POST /api/anthropic/  │                            │
+   │  v1/messages           │                            │
+   │  ─────────────────────►│                            │
+   │                        │  x-api-key: [from .env]    │
+   │                        │  ──────────────────────── ►│
+   │                        │◄───────────────────────────│
+   │◄───────────────────────│                            │
 ```
 
-Your `VITE_ANTHROPIC_API_KEY` is read from `.env` **on the server**, injected into the proxy request, and never sent to the browser.
+In **production** (Vercel), `/api/chat.js` is a Node.js serverless function that reads `VITE_ANTHROPIC_API_KEY` from Vercel's environment and proxies the request server-side. The key never appears in the browser bundle.
 
-> ⚠️ **For production:** The Vite proxy only works in development. When deploying to Vercel, Netlify, etc., you must add a serverless function that proxies the Anthropic request server-side. See the [Deploy section](#-deploy-to-production).
+### Exercise content flow
 
-</details>
-
-<details>
-<summary><b>Claude prompt design — how each feature talks to the AI</b></summary>
-<br/>
-
-Each of the three AI-powered features uses a different prompt strategy:
-
-**Chat (Anna):**
-Claude is instructed to respond with **strict JSON only** — a `de` field (German reply), `ipa` (pronunciation), `en` (English translation), and an optional `correction` object if the user made a mistake. Conversation history is passed on every request so Anna remembers the context of the session.
-
-```json
-{
-  "de": "Ich möchte einen Kaffee, bitte.",
-  "ipa": "[ɪç ˈmœçtə ˈaɪ̯nən kaˈfeː ˈbɪtə]",
-  "en": "I'd like a coffee, please.",
-  "correction": null
-}
+```
+Component mounts
+      │
+      ▼
+shuffle(BANK_MAP[level])        ← built-in sentences from content.js
+      │
+      ▼
+User works through exercises    ← 10 per set
+      │
+   exhausted?
+      │ yes
+      ▼
+generateMoreSentences(level)    ← Claude generates 5 more, appended
+      │
+      ▼
+Continue                        ← new exercises appended, score resets
 ```
 
-**Vocab generation:**
-A single-shot prompt asking for a JSON array of exactly 10 cards, each with `de`, `en`, and `ipa`. No conversation history. Fast and cheap.
+### How each Claude call is structured
 
-**Translation:**
-A single-shot prompt returning a structured object with `sourceLang`, `german`, `english`, `ipa`, and a `words` array for the grammar table.
+**Chat (Anna)** — returns structured JSON with conversation awareness:
+```
+System: You are Anna, a German tutor. Current scenario: [café].
+        Task: "Order a large coffee and ask the price."
+        Level: A2 — use natural but simple German.
+        Respond ONLY with JSON: { de, ipa, en, correction, taskComplete }
 
-All three features defensively strip markdown code fences (` ```json ... ``` `) before `JSON.parse()`, since Claude occasionally wraps output in them despite instructions.
+User history: [previous turns passed as messages array]
+User: "Ich möchte ein Kaffee groß, bitte."
+```
 
-</details>
+**B1 Translation grading** — single-shot evaluation:
+```
+System: You are a German grader. Respond ONLY with JSON: { correct, corrected, message }
+        Set correct:true if grammatically valid and meaning preserved.
+
+User: English: "…" | Ideal German: "…" | Learner's answer: "…"
+```
+
+**Vocabulary generation** — single-shot JSON array:
+```
+System: Generate German flashcards. Respond ONLY with a JSON array, no markdown.
+
+User: Generate 10 cards on topic: "animals".
+      Return: [{ de, en, ipa }]
+```
+
+**A2 sentence generation** (when bank exhausted):
+```
+System: Generate A2 fill-in-the-blank exercises.
+
+User: Return: [{ en, de, template, blanks: [{ word, distractors }], note }]
+```
+
+All JSON responses strip markdown fences (` ```json ... ``` `) before `JSON.parse()` as a defensive measure.
+
+---
+
+## ⚡ Quick Start
+
+**Prerequisites:** Node.js 18+, an Anthropic API key ([get one here](https://console.anthropic.com))
+
+```bash
+# 1. Clone
+git clone https://github.com/blackhebrewisraeli/deutsch-app.git
+cd deutsch-app
+
+# 2. Install
+npm install
+
+# 3. Add your API key
+cp .env.example .env
+# Edit .env → VITE_ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+
+# 4. Start dev server
+npm run dev
+```
+
+Open **[http://localhost:5173](http://localhost:5173)**.
+
+**Available scripts:**
+
+```bash
+npm run dev          # Start Vite dev server (with API proxy)
+npm run build        # Production build (generates service worker)
+npm run preview      # Preview the production build locally
+npm run lint         # ESLint across src/
+npm run lint:fix     # ESLint with auto-fix
+npm run format       # Prettier across src/
+npm run format:check # Verify formatting without writing
+```
+
+> 💡 **Cost:** A 30-minute session (chat + a few translations + a generated deck) typically costs **$0.01–0.03** with Claude Haiku 4.5.
 
 ---
 
@@ -311,34 +486,38 @@ All three features defensively strip markdown code fences (` ```json ... ``` `) 
 
 | Feature | Chrome / Edge / Arc | Firefox | Safari |
 |---|:---:|:---:|:---:|
-| Text input + Claude | ✅ | ✅ | ✅ |
-| Text-to-speech | ✅ | ✅ | ✅ |
+| All exercises + AI | ✅ | ✅ | ✅ |
+| Text-to-speech (Anna's voice) | ✅ | ✅ | ✅ |
 | Microphone / speech recognition | ✅ | ❌ | ⚠️ partial |
-
-Speech recognition uses `SpeechRecognition` / `webkitSpeechRecognition` — a Chromium feature. Firefox doesn't support it; Safari has partial support.
+| PWA install prompt | ✅ | ❌ | ✅ (Add to Home Screen) |
 
 **German voice quality by OS:**
-- **macOS** → ships with "Anna" and "Petra" (natural, high-quality)
+- **macOS** → "Anna" and "Petra" (natural, neural-quality)
+- **iOS** → German Siri voice
 - **Windows** → "Katja" and "Hedda"
-- **Linux** → may need `espeak-ng` or similar installed
+- **Android** → Google German TTS (install from Play Store if missing)
+- **Linux** → may need `espeak-ng` or `speech-dispatcher` installed
 
 ---
 
 ## 🚀 Deploy to Production
 
-The easiest zero-config option is **Vercel**:
+**Vercel (recommended — zero config):**
 
-1. Push to GitHub *(already done if you're reading this)*
-2. Go to [vercel.com](https://vercel.com) → **Add New Project** → import `deutsch-app`
-3. Under **Environment Variables**, add:
-   ```
-   VITE_ANTHROPIC_API_KEY = sk-ant-api03-...
-   ```
-4. Click **Deploy** — done in ~30 seconds
+```
+1. Push to GitHub
+2. vercel.com → New Project → import deutsch-app
+3. Environment Variables → VITE_ANTHROPIC_API_KEY = sk-ant-api03-...
+4. Deploy
+```
 
-Your app will be live at `https://deutsch-app-xxx.vercel.app`.
+The `vercel.json` at the root configures the Vite framework preset and registers `/api/chat.js` as a serverless function automatically.
 
-> ⚠️ **Security note for public deployments:** Vite's `VITE_*` variables are embedded in the client bundle at build time. This is fine for a personal-use app. If you make it public and want to protect your API key from being extracted from the bundle, add a Vercel serverless function at `/api/chat.js` that holds the key and proxies the request, then update `src/lib/claude.js` to call `/api/chat` instead of `/api/anthropic/v1/messages`.
+**What gets deployed:**
+- `dist/` — compiled React SPA
+- `dist/sw.js` — Workbox service worker (offline caching)
+- `dist/manifest.webmanifest` — PWA manifest
+- `api/chat.js` — Node.js serverless function (Anthropic proxy)
 
 ---
 
@@ -347,28 +526,48 @@ Your app will be live at `https://deutsch-app-xxx.vercel.app`.
 ```
 deutsch-app/
 │
+├── api/
+│   └── chat.js                ← Vercel serverless function (Anthropic proxy)
+│
+├── public/
+│   ├── favicon.svg            ← Browser tab icon
+│   ├── icon-base.svg          ← Source SVG for PWA icons
+│   ├── pwa-192.png            ← PWA icon (Android)
+│   ├── pwa-512.png            ← PWA icon (splash screen)
+│   └── apple-touch-icon.png  ← iOS home screen icon
+│
+├── scripts/
+│   └── gen-icons.js           ← Generates PNG icons from icon-base.svg (node scripts/gen-icons.js)
+│
 ├── src/
 │   ├── components/
-│   │   ├── AlphabetTab.jsx    ← Letter grid + detail card
-│   │   ├── ChatTab.jsx        ← AI tutor, speech I/O, corrections
-│   │   ├── TranslateTab.jsx   ← Smart translator + grammar table
-│   │   ├── UI.jsx             ← Shared: Hero, SectionLabel, StatBlock
-│   │   └── VocabTab.jsx       ← Flashcard decks + AI generator
+│   │   ├── AlphabetTab.jsx    ← Audio quiz mode + browse grid
+│   │   ├── ChatTab.jsx        ← Guided conversation, task panel, speech I/O, corrections
+│   │   ├── SplashScreen.jsx   ← First-visit level picker (A1 / A2 / B1)
+│   │   ├── TranslateTab.jsx   ← Exercise mode: tiles (A1) / blanks (A2) / typing+AI (B1)
+│   │   ├── UI.jsx             ← Shared components: Hero, SectionLabel, StatBlock
+│   │   └── VocabTab.jsx       ← Active recall: multiple choice (A1/A2) / type (B1)
 │   │
 │   ├── data/
-│   │   └── content.js         ← Alphabet data, preset decks, scenarios
+│   │   └── content.js         ← Alphabet, preset decks, scenarios, sentence banks,
+│   │                             task prompts, quiz groups
 │   │
 │   ├── lib/
-│   │   ├── claude.js          ← Anthropic API client
-│   │   ├── speech.js          ← Text-to-speech wrapper
-│   │   ├── storage.js         ← localStorage read/write helpers
-│   │   └── theme.js           ← Design tokens (colors, fonts)
+│   │   ├── claude.js          ← Anthropic API client (dev proxy / prod serverless)
+│   │   ├── speech.js          ← SpeechSynthesis wrapper
+│   │   ├── storage.js         ← localStorage read/write
+│   │   ├── theme.js           ← Design tokens: COLORS, FONTS, FONT_SIZE, BUTTON, CARD, TEXT…
+│   │   ├── useWindowWidth.js  ← Responsive hook: live viewport width + isMobile() / isTablet()
+│   │   └── utils.js           ← shuffle(arr), levenshtein(a, b)
 │   │
-│   ├── App.jsx                ← Root layout, tab navigation, stats
+│   ├── App.jsx                ← Root layout, tab navigation, streak/learned stats
 │   └── main.jsx
 │
-├── .env.example               ← Copy to .env and add your key
-├── vite.config.js             ← Vite config + API proxy setup
+├── .husky/pre-commit          ← Runs lint-staged before every commit
+├── .prettierrc                ← Prettier config
+├── eslint.config.js           ← ESLint flat config (react, react-hooks, react-refresh)
+├── vercel.json                ← Framework config + serverless function registration
+├── vite.config.js             ← Vite config + PWA plugin + dev proxy
 └── package.json
 ```
 
@@ -382,6 +581,6 @@ MIT — see [LICENSE](./LICENSE).
 
 <div align="center">
 
-Built with [Claude Sonnet 4](https://www.anthropic.com) &nbsp;·&nbsp; Typography: [Fraunces](https://fonts.google.com/specimen/Fraunces) + [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono)
+Built with [Claude Haiku 4.5](https://www.anthropic.com) &nbsp;·&nbsp; Typography: [Fraunces](https://fonts.google.com/specimen/Fraunces) + [JetBrains Mono](https://fonts.google.com/specimen/JetBrains+Mono)
 
 </div>
