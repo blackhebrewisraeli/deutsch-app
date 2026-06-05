@@ -32,3 +32,8 @@ dist-ssr
 *.sw?
 .vercel
 .env*
+
+# Playwright test snapshots and screenshots (generated during verification runs)
+.playwright-mcp/
+check-*.png
+audit-*.png

@@ -1,5 +1,9 @@
 // Generates PWA icons from the SVG base using sharp.
-// Run once: node scripts/gen-icons.js
+// sharp is NOT a permanent dev dependency — install it first, then run this script:
+//   npm install -D sharp
+//   node scripts/gen-icons.js
+// The generated PNGs are committed to public/ so you only need to re-run
+// this if you change public/icon-base.svg.
 import sharp from 'sharp';
 import { readFileSync } from 'fs';
 import { join, dirname } from 'path';

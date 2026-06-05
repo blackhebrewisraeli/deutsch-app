@@ -446,7 +446,7 @@ All JSON responses strip markdown fences (` ```json ... ``` `) before `JSON.pars
 
 ## ⚡ Quick Start
 
-**Prerequisites:** Node.js 18+, an Anthropic API key ([get one here](https://console.anthropic.com))
+**Prerequisites:** Node.js 20+ (see `.nvmrc`), an Anthropic API key ([get one here](https://console.anthropic.com))
 
 ```bash
 # 1. Clone
@@ -537,7 +537,7 @@ deutsch-app/
 │   └── apple-touch-icon.png  ← iOS home screen icon
 │
 ├── scripts/
-│   └── gen-icons.js           ← Generates PNG icons from icon-base.svg (node scripts/gen-icons.js)
+│   └── gen-icons.js           ← One-time icon generator (npm i -D sharp && node scripts/gen-icons.js)
 │
 ├── src/
 │   ├── components/
