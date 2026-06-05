@@ -15,7 +15,7 @@ import { PRESET_DECKS } from '../data/content';
 import { Hero, SectionLabel } from './UI';
 import { shuffle, levenshtein } from '../lib/utils';
 
-export default function VocabTab({ level, learnedWords, markLearned }) {
+export default function VocabTab({ level, learnedWords, markLearned, mobile = false }) {
   const [deckId, setDeckId] = useState('greetings');
   const [customCards, setCustomCards] = useState(null);
   const [customTopic, setCustomTopic] = useState('');
@@ -103,7 +103,14 @@ export default function VocabTab({ level, learnedWords, markLearned }) {
         sub="Flip, listen, learn. Pick a preset or generate a deck on any topic."
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 32, marginTop: 32 }}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: mobile ? '1fr' : '320px 1fr',
+          gap: mobile ? 16 : 32,
+          marginTop: 32,
+        }}
+      >
         {/* ── Left column: deck selector + generate ── */}
         <div>
           <SectionLabel num="A" text="Preset Decks" />

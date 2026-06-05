@@ -16,7 +16,7 @@ import { callClaude } from '../lib/claude';
 import { SCENARIOS, CHAT_TASKS } from '../data/content';
 import { SectionLabel } from './UI';
 
-export default function ChatTab({ level = 'a1' }) {
+export default function ChatTab({ level = 'a1', mobile = false }) {
   const [scenario, setScenario] = useState('free');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -172,9 +172,9 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
     <div
       style={{
         display: 'grid',
-        gridTemplateColumns: '280px 1fr 320px',
-        gap: 24,
-        minHeight: 'calc(100vh - 280px)',
+        gridTemplateColumns: mobile ? '1fr' : '280px 1fr 320px',
+        gap: mobile ? 16 : 24,
+        minHeight: mobile ? 'auto' : 'calc(100vh - 280px)',
       }}
     >
       <aside>
@@ -182,9 +182,10 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
         <div
           style={{
             display: 'flex',
-            flexDirection: 'column',
+            flexDirection: mobile ? 'row' : 'column',
             gap: 0,
             border: `2px solid ${COLORS.ink}`,
+            overflowX: mobile ? 'auto' : 'visible',
           }}
         >
           {SCENARIOS.map((s) => {
@@ -194,34 +195,45 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
                 key={s.id}
                 onClick={() => setScenario(s.id)}
                 style={{
-                  padding: 16,
+                  padding: mobile ? '10px 14px' : 16,
                   background: active ? COLORS.ink : COLORS.paper,
                   color: active ? COLORS.paper : COLORS.ink,
                   border: 'none',
-                  borderBottom: `2px solid ${COLORS.ink}`,
+                  borderBottom: mobile ? 'none' : `2px solid ${COLORS.ink}`,
+                  borderRight: mobile ? `2px solid ${COLORS.ink}` : 'none',
                   textAlign: 'left',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: 14,
+                  gap: mobile ? 8 : 14,
                   transition: 'all 0.15s',
+                  flexShrink: mobile ? 0 : 1,
+                  whiteSpace: mobile ? 'nowrap' : 'normal',
                 }}
               >
-                <span style={{ fontSize: 20 }}>{s.icon}</span>
+                <span style={{ fontSize: mobile ? 16 : 20 }}>{s.icon}</span>
                 <div>
-                  <div style={{ fontFamily: FONT_DISPLAY, fontWeight: 600, fontSize: 16 }}>
-                    {s.name}
-                  </div>
                   <div
                     style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 9,
-                      letterSpacing: '0.1em',
-                      textTransform: 'uppercase',
-                      opacity: 0.7,
+                      fontFamily: FONT_DISPLAY,
+                      fontWeight: 600,
+                      fontSize: mobile ? 14 : 16,
                     }}
                   >
-                    {s.desc}
+                    {s.name}
                   </div>
+                  {!mobile && (
+                    <div
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 9,
+                        letterSpacing: '0.1em',
+                        textTransform: 'uppercase',
+                        opacity: 0.7,
+                      }}
+                    >
+                      {s.desc}
+                    </div>
+                  )}
                 </div>
               </button>
             );
@@ -514,7 +526,8 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
         </div>
       </div>
 
-      <aside>
+      {/* Correction panel — hidden on mobile when empty */}
+      <aside style={{ display: mobile && !correction ? 'none' : 'block' }}>
         <SectionLabel num="B" text="Correction" />
         <div
           style={{

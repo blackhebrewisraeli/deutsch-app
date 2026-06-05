@@ -15,7 +15,7 @@ import { ALPHABET, ALPHABET_QUIZ_GROUPS } from '../data/content';
 import { shuffle } from '../lib/utils';
 import { Hero } from './UI';
 
-export default function AlphabetTab({ level: _level }) {
+export default function AlphabetTab({ level: _level, mobile = false }) {
   // ── Browse mode state ──────────────────────────────────────────
   const [selected, setSelected] = useState(null);
 
@@ -251,7 +251,7 @@ export default function AlphabetTab({ level: _level }) {
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: 'repeat(6, 1fr)',
+              gridTemplateColumns: mobile ? 'repeat(4, 1fr)' : 'repeat(6, 1fr)',
               gap: 0,
               border: BORDER.standard,
             }}
@@ -328,7 +328,7 @@ export default function AlphabetTab({ level: _level }) {
                 background: COLORS.ink,
                 color: COLORS.paper,
                 display: 'grid',
-                gridTemplateColumns: '200px 1fr auto',
+                gridTemplateColumns: mobile ? '1fr' : '200px 1fr auto',
                 gap: SPACE[8],
                 alignItems: 'center',
               }}
@@ -336,7 +336,7 @@ export default function AlphabetTab({ level: _level }) {
               <div
                 style={{
                   fontFamily: FONTS.display,
-                  fontSize: 180,
+                  fontSize: mobile ? 80 : 180,
                   fontWeight: FONT_WEIGHT.black,
                   lineHeight: 0.8,
                   letterSpacing: '-0.06em',
