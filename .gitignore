@@ -37,3 +37,6 @@ dist-ssr
 .playwright-mcp/
 check-*.png
 audit-*.png
+
+# Vitest coverage output
+coverage/
