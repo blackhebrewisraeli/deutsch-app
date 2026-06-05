@@ -11,6 +11,10 @@ import {
   getAccuracyByLevel,
   getTodaySnapshot,
   recordEvent,
+  itemKey,
+  applyItemEvent,
+  getReviewItems,
+  recordItem,
 } from './stats';
 import { loadState } from './storage';
 
@@ -315,5 +319,193 @@ describe('recordEvent', () => {
       throw new Error('quota');
     });
     expect(() => recordEvent('chat', 'a1', 'correct')).not.toThrow();
+  });
+});
+
+// ─── itemKey ──────────────────────────────────────────────────
+
+describe('itemKey', () => {
+  it('joins tab, context, label with colons', () => {
+    expect(itemKey('vocab', 'greetings', 'Hallo')).toBe('vocab:greetings:Hallo');
+    expect(itemKey('translate', 'a1', 'I drink water.')).toBe('translate:a1:I drink water.');
+  });
+
+  it('allows an empty context (e.g. alphabet has no deck/level context)', () => {
+    expect(itemKey('alphabet', '', 'O')).toBe('alphabet::O');
+  });
+});
+
+// ─── applyItemEvent ───────────────────────────────────────────
+
+describe('applyItemEvent', () => {
+  it('creates a new item when absent', () => {
+    const next = applyItemEvent({}, 'vocab', 'greetings', 'Hallo', 'Hello', 'wrong', 1000);
+    const k = 'vocab:greetings:Hallo';
+    expect(next[k]).toBeDefined();
+    expect(next[k]).toMatchObject({
+      tab: 'vocab',
+      context: 'greetings',
+      label: 'Hallo',
+      detail: 'Hello',
+      lastVerdict: 'wrong',
+      lastTs: 1000,
+      attempts: 1,
+      wrongCount: 1,
+    });
+  });
+
+  it('updates an existing item — increments attempts and refreshes timestamp', () => {
+    let items = {};
+    items = applyItemEvent(items, 'vocab', 'food', 'das Brot', 'bread', 'wrong', 1000);
+    items = applyItemEvent(items, 'vocab', 'food', 'das Brot', 'bread', 'correct', 2000);
+    const k = 'vocab:food:das Brot';
+    expect(items[k].attempts).toBe(2);
+    expect(items[k].lastVerdict).toBe('correct');
+    expect(items[k].lastTs).toBe(2000);
+    expect(items[k].wrongCount).toBe(1);
+  });
+
+  it('counts both wrong AND almost toward wrongCount (non-correct attempts)', () => {
+    let items = {};
+    items = applyItemEvent(items, 'vocab', 'food', 'der Käse', 'cheese', 'wrong', 1000);
+    items = applyItemEvent(items, 'vocab', 'food', 'der Käse', 'cheese', 'almost', 2000);
+    items = applyItemEvent(items, 'vocab', 'food', 'der Käse', 'cheese', 'correct', 3000);
+    expect(items['vocab:food:der Käse'].wrongCount).toBe(2);
+    expect(items['vocab:food:der Käse'].attempts).toBe(3);
+  });
+
+  it('does not mutate the input items object', () => {
+    const before = {};
+    applyItemEvent(before, 'alphabet', '', 'O', 'Ofen — oven', 'wrong', 1000);
+    expect(before).toEqual({});
+  });
+
+  it('throws on an invalid tab', () => {
+    expect(() => applyItemEvent({}, 'nope', '', 'X', '', 'wrong', 1)).toThrow(/tab/);
+  });
+
+  it('throws on an invalid verdict', () => {
+    expect(() => applyItemEvent({}, 'vocab', 'food', 'X', '', 'maybe', 1)).toThrow(/verdict/);
+  });
+
+  it('enforces an LRU cap, evicting the oldest items by lastTs', () => {
+    let items = {};
+    // Use cap=3 so we can verify eviction behavior with manageable numbers.
+    items = applyItemEvent(items, 'vocab', 'food', 'das Brot', 'bread', 'wrong', 1, 3);
+    items = applyItemEvent(items, 'vocab', 'food', 'der Käse', 'cheese', 'wrong', 2, 3);
+    items = applyItemEvent(items, 'vocab', 'food', 'die Milch', 'milk', 'wrong', 3, 3);
+    items = applyItemEvent(items, 'vocab', 'food', 'das Wasser', 'water', 'wrong', 4, 3);
+    expect(Object.keys(items)).toHaveLength(3);
+    expect(items['vocab:food:das Brot']).toBeUndefined(); // oldest evicted
+    expect(items['vocab:food:das Wasser']).toBeDefined();
+  });
+});
+
+// ─── getReviewItems ───────────────────────────────────────────
+
+describe('getReviewItems', () => {
+  it('returns only items whose lastVerdict is not "correct"', () => {
+    let items = {};
+    items = applyItemEvent(items, 'vocab', 'food', 'das Brot', 'bread', 'wrong', 1000);
+    items = applyItemEvent(items, 'vocab', 'food', 'der Käse', 'cheese', 'correct', 2000);
+    items = applyItemEvent(items, 'vocab', 'food', 'die Milch', 'milk', 'almost', 3000);
+
+    const review = getReviewItems(items);
+    expect(review).toHaveLength(2);
+    const labels = review.map((r) => r.label);
+    expect(labels).toContain('das Brot');
+    expect(labels).toContain('die Milch');
+    expect(labels).not.toContain('der Käse');
+  });
+
+  it('sorts by lastTs descending (most recently failed first)', () => {
+    let items = {};
+    items = applyItemEvent(items, 'vocab', 'food', 'das Brot', 'bread', 'wrong', 1000);
+    items = applyItemEvent(items, 'vocab', 'food', 'die Milch', 'milk', 'wrong', 3000);
+    items = applyItemEvent(items, 'vocab', 'food', 'der Käse', 'cheese', 'wrong', 2000);
+
+    const review = getReviewItems(items);
+    expect(review.map((r) => r.label)).toEqual(['die Milch', 'der Käse', 'das Brot']);
+  });
+
+  it('respects the limit parameter', () => {
+    let items = {};
+    for (let i = 0; i < 20; i++) {
+      items = applyItemEvent(items, 'vocab', 'food', `word-${i}`, '', 'wrong', i + 1);
+    }
+    expect(getReviewItems(items, 5)).toHaveLength(5);
+    expect(getReviewItems(items, 10)).toHaveLength(10);
+    expect(getReviewItems(items)).toHaveLength(10); // default 10
+  });
+
+  it('returns an empty array when no items qualify', () => {
+    let items = {};
+    items = applyItemEvent(items, 'vocab', 'food', 'X', '', 'correct', 1);
+    expect(getReviewItems(items)).toEqual([]);
+  });
+
+  it('includes the key on each returned item (for navigation)', () => {
+    let items = {};
+    items = applyItemEvent(
+      items,
+      'translate',
+      'a1',
+      'I drink water.',
+      'Ich trinke Wasser.',
+      'wrong',
+      1
+    );
+    const [item] = getReviewItems(items);
+    expect(item.key).toBe('translate:a1:I drink water.');
+  });
+});
+
+// ─── recordItem ───────────────────────────────────────────────
+
+describe('recordItem', () => {
+  beforeEach(() => {
+    localStorage.removeItem(STORAGE_KEY);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('persists an item to localStorage under state.items', () => {
+    recordItem('alphabet', '', 'O', 'Ofen — oven', 'wrong');
+    const state = loadState();
+    expect(state.items['alphabet::O']).toMatchObject({
+      tab: 'alphabet',
+      context: '',
+      label: 'O',
+      detail: 'Ofen — oven',
+      lastVerdict: 'wrong',
+      attempts: 1,
+      wrongCount: 1,
+    });
+  });
+
+  it('preserves daily, stats, and learnedWords on the saved state', () => {
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        stats: { streak: 4, learnedCount: 8 },
+        learnedWords: { Hallo: true },
+        daily: { '2026-06-05': { total: 5, byTab: {}, byLevel: {} } },
+      })
+    );
+    recordItem('vocab', 'food', 'das Brot', 'bread', 'wrong');
+    const state = loadState();
+    expect(state.stats.streak).toBe(4);
+    expect(state.learnedWords.Hallo).toBe(true);
+    expect(state.daily['2026-06-05']).toBeDefined();
+    expect(state.items['vocab:food:das Brot']).toBeDefined();
+  });
+
+  it('silently no-ops when storage throws', () => {
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('quota');
+    });
+    expect(() => recordItem('vocab', 'food', 'X', 'x', 'wrong')).not.toThrow();
   });
 });

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Sparkles } from 'lucide-react';
 import {
   COLORS,
@@ -14,9 +14,16 @@ import { callClaude } from '../lib/claude';
 import { PRESET_DECKS } from '../data/content';
 import { Hero, SectionLabel } from './UI';
 import { shuffle, levenshtein } from '../lib/utils';
-import { recordEvent } from '../lib/stats';
+import { recordEvent, recordItem } from '../lib/stats';
 
-export default function VocabTab({ level, learnedWords, markLearned, mobile = false }) {
+export default function VocabTab({
+  level,
+  learnedWords,
+  markLearned,
+  mobile = false,
+  reviewTarget = null,
+  onReviewConsumed,
+}) {
   const [deckId, setDeckId] = useState('greetings');
   const [customCards, setCustomCards] = useState(null);
   const [customTopic, setCustomTopic] = useState('');
@@ -27,10 +34,28 @@ export default function VocabTab({ level, learnedWords, markLearned, mobile = fa
   const [result, setResult] = useState(null); // 'correct' | 'almost' | 'wrong'
   const [typedAnswer, setTypedAnswer] = useState('');
   const [queue, setQueue] = useState([]);
+  // A pending review target — when the deck-reset effect runs, it puts this
+  // card first in the queue instead of starting fresh.
+  const pendingReviewRef = useRef(null);
 
   const activeDeck = deckId === 'custom' && customCards ? customCards : PRESET_DECKS[deckId] || [];
 
   useEffect(() => {
+    const target = pendingReviewRef.current;
+    if (target) {
+      const idx = activeDeck.findIndex((c) => c.de === target);
+      if (idx >= 0) {
+        const rest = activeDeck.map((_, i) => i).filter((i) => i !== idx);
+        setQueue([idx, ...rest]);
+        pendingReviewRef.current = null;
+        setAnswered(false);
+        setResult(null);
+        setTypedAnswer('');
+        setDeckComplete(false);
+        return;
+      }
+      pendingReviewRef.current = null;
+    }
     setQueue(activeDeck.map((_, i) => i));
     setAnswered(false);
     setResult(null);
@@ -38,6 +63,31 @@ export default function VocabTab({ level, learnedWords, markLearned, mobile = fa
     setDeckComplete(false);
     // activeDeck is derived from deckId+customCards which are already in deps — safe to omit
   }, [deckId, customCards, level]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pick up review targets handed in from the Stats Review feed.
+  useEffect(() => {
+    if (!reviewTarget) return;
+    pendingReviewRef.current = reviewTarget.label;
+
+    if (deckId === reviewTarget.context) {
+      // Already on the right deck — the deck-reset effect won't fire, so
+      // manually re-run the same queue-with-target build here.
+      const idx = activeDeck.findIndex((c) => c.de === reviewTarget.label);
+      if (idx >= 0) {
+        const rest = activeDeck.map((_, i) => i).filter((i) => i !== idx);
+        setQueue([idx, ...rest]);
+        setAnswered(false);
+        setResult(null);
+        setTypedAnswer('');
+        pendingReviewRef.current = null;
+      }
+    } else {
+      // Deck change — pendingReviewRef will be consumed by the deck-reset effect.
+      setDeckId(reviewTarget.context);
+    }
+
+    onReviewConsumed?.();
+  }, [reviewTarget, onReviewConsumed]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentIdx = queue[0] ?? null;
   const card = currentIdx !== null ? activeDeck[currentIdx] : null;
@@ -68,6 +118,7 @@ export default function VocabTab({ level, learnedWords, markLearned, mobile = fa
     setResult(res);
     if (res === 'correct' || res === 'almost') markLearned(card.de);
     recordEvent('vocab', level, res);
+    recordItem('vocab', deckId, card.de, card.en, res);
   };
 
   const generateDeck = async () => {
@@ -376,10 +427,12 @@ export default function VocabTab({ level, learnedWords, markLearned, mobile = fa
                         type="button"
                         onClick={() => {
                           const correct = choice === card.en;
+                          const verdict = correct ? 'correct' : 'wrong';
                           setAnswered(true);
-                          setResult(correct ? 'correct' : 'wrong');
+                          setResult(verdict);
                           if (correct) markLearned(card.de);
-                          recordEvent('vocab', level, correct ? 'correct' : 'wrong');
+                          recordEvent('vocab', level, verdict);
+                          recordItem('vocab', deckId, card.de, card.en, verdict);
                         }}
                         style={{
                           padding: SPACE[4],

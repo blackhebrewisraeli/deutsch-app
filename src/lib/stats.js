@@ -148,7 +148,58 @@ export function getTodaySnapshot(daily, stats, dateKey) {
   return { exercises, accuracy, streak: stats?.streak ?? 0 };
 }
 
-// ─── Imperative recorder (uses storage) ──────────────────────
+// ─── Per-item tracking (for the Review feed) ─────────────────
+//
+// Items are keyed by `<tab>:<context>:<label>` so each repeatable exercise has
+// a stable identity. Chat is intentionally excluded — messages aren't
+// reusable, so a review feed for Chat would have nothing to surface.
+
+const ITEMS_CAP = 5000;
+
+export function itemKey(tab, context, label) {
+  return `${tab}:${context}:${label}`;
+}
+
+export function applyItemEvent(items, tab, context, label, detail, verdict, ts, cap = ITEMS_CAP) {
+  if (!TABS.includes(tab)) throw new Error(`Invalid tab: ${tab}`);
+  if (!VERDICTS.includes(verdict)) throw new Error(`Invalid verdict: ${verdict}`);
+
+  const key = itemKey(tab, context, label);
+  const prev = items[key];
+  const isWrong = verdict !== 'correct';
+
+  const updated = {
+    tab,
+    context,
+    label,
+    detail,
+    lastVerdict: verdict,
+    lastTs: ts,
+    attempts: (prev?.attempts ?? 0) + 1,
+    wrongCount: (prev?.wrongCount ?? 0) + (isWrong ? 1 : 0),
+  };
+
+  const next = { ...items, [key]: updated };
+
+  // LRU cap: evict the oldest items by lastTs once we exceed the cap.
+  const keys = Object.keys(next);
+  if (keys.length <= cap) return next;
+
+  const sorted = keys.map((k) => [k, next[k].lastTs]).sort((a, b) => b[1] - a[1]);
+  const trimmed = {};
+  for (let i = 0; i < cap; i++) trimmed[sorted[i][0]] = next[sorted[i][0]];
+  return trimmed;
+}
+
+export function getReviewItems(items, limit = 10) {
+  return Object.entries(items)
+    .filter(([, item]) => item.lastVerdict !== 'correct')
+    .map(([key, item]) => ({ key, ...item }))
+    .sort((a, b) => b.lastTs - a.lastTs)
+    .slice(0, limit);
+}
+
+// ─── Imperative recorders (use storage) ──────────────────────
 
 export function recordEvent(tab, level, verdict) {
   try {
@@ -157,5 +208,23 @@ export function recordEvent(tab, level, verdict) {
     saveState({ ...state, daily });
   } catch {
     // recordEvent is best-effort — never throw into the React tree
+  }
+}
+
+export function recordItem(tab, context, label, detail, verdict) {
+  try {
+    const state = loadState() ?? {};
+    const items = applyItemEvent(
+      state.items ?? {},
+      tab,
+      context,
+      label,
+      detail,
+      verdict,
+      Date.now()
+    );
+    saveState({ ...state, items });
+  } catch {
+    // best-effort, never throw
   }
 }

@@ -16,6 +16,7 @@ export default function App() {
   const [tab, setTab] = useState('chat');
   const [stats, setStats] = useState({ streak: 0, learnedCount: 0, lastVisit: null });
   const [learnedWords, setLearnedWords] = useState({});
+  const [reviewTarget, setReviewTarget] = useState(null);
   const width = useWindowWidth();
   const mobile = isMobile(width);
 
@@ -63,6 +64,23 @@ export default function App() {
       saveState({ ...current, stats, learnedWords });
     }
   }, [stats, learnedWords]);
+
+  // Review feed click handler — switches tab (and level for Translate),
+  // then drops `reviewTarget` so the destination tab can pre-load the item.
+  const handleReview = (item) => {
+    if (item.tab === 'translate' && item.context && item.context !== level) {
+      setLevel(item.context);
+      try {
+        localStorage.setItem('deutsch-level', item.context);
+      } catch {
+        // ignore — best-effort persistence
+      }
+    }
+    setReviewTarget(item);
+    setTab(item.tab);
+  };
+
+  const clearReviewTarget = () => setReviewTarget(null);
 
   const markLearned = (word) => {
     setLearnedWords((prev) => {
@@ -266,17 +284,33 @@ export default function App() {
         }}
       >
         {tab === 'chat' && <ChatTab level={level} mobile={mobile} />}
-        {tab === 'alphabet' && <AlphabetTab level={level} mobile={mobile} />}
+        {tab === 'alphabet' && (
+          <AlphabetTab
+            level={level}
+            mobile={mobile}
+            reviewTarget={reviewTarget?.tab === 'alphabet' ? reviewTarget : null}
+            onReviewConsumed={clearReviewTarget}
+          />
+        )}
         {tab === 'vocab' && (
           <VocabTab
             learnedWords={learnedWords}
             markLearned={markLearned}
             level={level}
             mobile={mobile}
+            reviewTarget={reviewTarget?.tab === 'vocab' ? reviewTarget : null}
+            onReviewConsumed={clearReviewTarget}
           />
         )}
-        {tab === 'translate' && <TranslateTab level={level} mobile={mobile} />}
-        {tab === 'stats' && <StatsTab mobile={mobile} />}
+        {tab === 'translate' && (
+          <TranslateTab
+            level={level}
+            mobile={mobile}
+            reviewTarget={reviewTarget?.tab === 'translate' ? reviewTarget : null}
+            onReviewConsumed={clearReviewTarget}
+          />
+        )}
+        {tab === 'stats' && <StatsTab mobile={mobile} onReview={handleReview} />}
       </main>
 
       {/* ── Footer — hidden on mobile ─────────────────────────── */}

@@ -17,7 +17,7 @@ import {
   TRANSLATE_SENTENCES_B1,
 } from '../data/content';
 import { shuffle } from '../lib/utils';
-import { recordEvent } from '../lib/stats';
+import { recordEvent, recordItem } from '../lib/stats';
 import { Hero } from './UI';
 
 // Module-level constant — avoids stale closure in useCallback/useEffect
@@ -188,8 +188,10 @@ function TileExercise({ exercise, level, onCorrect, onSkip }) {
     const answer = placed.map((t) => t.word).join(' ');
     const correct = exercise.words.join(' ');
     const isCorrect = answer === correct;
-    setFeedback(isCorrect ? 'correct' : 'wrong');
-    recordEvent('translate', level, isCorrect ? 'correct' : 'wrong');
+    const verdict = isCorrect ? 'correct' : 'wrong';
+    setFeedback(verdict);
+    recordEvent('translate', level, verdict);
+    recordItem('translate', level, exercise.en, exercise.de, verdict);
     if (isCorrect) onCorrect();
   };
 
@@ -319,8 +321,10 @@ function BlankExercise({ exercise, level, onCorrect, onSkip }) {
 
   const check = () => {
     const correct = filled.every((t, i) => t && t.word === exercise.blanks[i].word);
-    setFeedback(correct ? 'correct' : 'wrong');
-    recordEvent('translate', level, correct ? 'correct' : 'wrong');
+    const verdict = correct ? 'correct' : 'wrong';
+    setFeedback(verdict);
+    recordEvent('translate', level, verdict);
+    recordItem('translate', level, exercise.en, exercise.de, verdict);
     if (correct) onCorrect();
   };
 
@@ -473,7 +477,9 @@ Set "correct": true only if the translation is grammatically correct and conveys
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
       if (mounted.current) {
         setFeedback(parsed);
-        recordEvent('translate', level, parsed.correct ? 'correct' : 'wrong');
+        const verdict = parsed.correct ? 'correct' : 'wrong';
+        recordEvent('translate', level, verdict);
+        recordItem('translate', level, exercise.en, exercise.de, verdict);
         if (parsed.correct) onCorrect();
       }
     } catch {
@@ -580,7 +586,12 @@ async function generateMoreSentences(level) {
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 // mobile prop accepted for API consistency; TranslateTab layout is already single-column
-export default function TranslateTab({ level = 'a1', mobile: _mobile = false }) {
+export default function TranslateTab({
+  level = 'a1',
+  mobile: _mobile = false,
+  reviewTarget = null,
+  onReviewConsumed,
+}) {
   const [exercises, setExercises] = useState(() => shuffle(BANK_MAP[level]));
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
@@ -591,6 +602,17 @@ export default function TranslateTab({ level = 'a1', mobile: _mobile = false }) 
     setIdx(0);
     setScore(0);
   }, [level]);
+
+  // Pick up review targets handed in from the Stats Review feed.
+  // Level mismatch is handled in App.jsx (it switches level first, which
+  // re-runs the effect above; then this effect locates the exercise).
+  useEffect(() => {
+    if (!reviewTarget) return;
+    if (reviewTarget.context !== level) return; // still mid-level-switch
+    const targetIdx = exercises.findIndex((e) => e.en === reviewTarget.label);
+    if (targetIdx >= 0) setIdx(targetIdx);
+    onReviewConsumed?.();
+  }, [reviewTarget, level, exercises, onReviewConsumed]);
 
   const exercise = exercises[idx];
 

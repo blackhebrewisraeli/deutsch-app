@@ -9,6 +9,7 @@ import {
   getHeatmapData,
   getPerTabBreakdown,
   getAccuracyByLevel,
+  getReviewItems,
 } from '../lib/stats';
 import { Hero, SectionLabel } from './UI';
 
@@ -29,6 +30,13 @@ const TAB_LABELS = {
 };
 
 const LEVEL_LABELS = { a1: 'A1', a2: 'A2', b1: 'B1' };
+
+// Map a stored item back to a short badge for the Review feed.
+const REVIEW_BADGE = {
+  alphabet: 'ALPHABET',
+  vocab: 'VOCAB',
+  translate: 'TRANSLATE',
+};
 
 // ─── Today snapshot ───────────────────────────────────────────
 
@@ -363,9 +371,117 @@ function AccuracyByLevel({ byLevel }) {
   );
 }
 
+// ─── Review feed ──────────────────────────────────────────────
+
+function ReviewFeed({ items, onReview }) {
+  if (items.length === 0) {
+    return (
+      <div
+        style={{
+          fontFamily: FONTS.body,
+          fontStyle: 'italic',
+          color: COLORS.mute,
+          fontSize: FONT_SIZE.base,
+        }}
+      >
+        Nothing to review — keep practicing.
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: BORDER.standard }}>
+      {items.map((item, i) => {
+        const verdictColor = item.lastVerdict === 'almost' ? COLORS.mute : COLORS.red;
+        const verdictGlyph = item.lastVerdict === 'almost' ? '≈' : '✗';
+        const context = item.context ? ` · ${item.context.toUpperCase()}` : '';
+        return (
+          <button
+            key={item.key}
+            type="button"
+            onClick={() => onReview(item)}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'auto 1fr auto',
+              gap: SPACE[4],
+              alignItems: 'center',
+              textAlign: 'left',
+              padding: `${SPACE[3]}px ${SPACE[4]}px`,
+              background: COLORS.paper,
+              border: 'none',
+              borderBottom: i < items.length - 1 ? BORDER.standard : 'none',
+              cursor: 'pointer',
+              transition: 'background 0.12s ease',
+              color: COLORS.ink,
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = COLORS.paperDeep)}
+            onMouseLeave={(e) => (e.currentTarget.style.background = COLORS.paper)}
+          >
+            <span
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: FONT_SIZE.tag,
+                letterSpacing: LETTER_SPACING.caps,
+                color: COLORS.mute,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {REVIEW_BADGE[item.tab]}
+              {context}
+            </span>
+
+            <span style={{ minWidth: 0 }}>
+              <span
+                style={{
+                  fontFamily: FONTS.display,
+                  fontSize: FONT_SIZE.lg,
+                  fontWeight: FONT_WEIGHT.semibold,
+                  color: COLORS.ink,
+                  display: 'block',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {item.label}
+              </span>
+              <span
+                style={{
+                  fontFamily: FONTS.body,
+                  fontStyle: 'italic',
+                  fontSize: FONT_SIZE.base,
+                  color: COLORS.mute,
+                  display: 'block',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                {item.detail}
+              </span>
+            </span>
+
+            <span
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: FONT_SIZE.tag,
+                letterSpacing: LETTER_SPACING.caps,
+                color: verdictColor,
+                whiteSpace: 'nowrap',
+              }}
+            >
+              {verdictGlyph} {item.wrongCount}×
+            </span>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 // ─── Main ─────────────────────────────────────────────────────
 
-export default function StatsTab({ mobile = false }) {
+export default function StatsTab({ mobile = false, onReview }) {
   // Pull state from storage every time the tab renders so today's counters
   // reflect events from the other tabs without app-wide state plumbing.
   const [state, setState] = useState(() => loadState() ?? {});
@@ -378,6 +494,7 @@ export default function StatsTab({ mobile = false }) {
   }, []);
 
   const daily = state.daily ?? {};
+  const items = state.items ?? {};
   const stats = state.stats ?? { streak: 0, learnedCount: 0 };
 
   const today = todayKey();
@@ -385,6 +502,7 @@ export default function StatsTab({ mobile = false }) {
   const heatmap = getHeatmapData(daily, new Date(), 365);
   const perTab = getPerTabBreakdown(daily);
   const accByLevel = getAccuracyByLevel(daily);
+  const review = getReviewItems(items, 10);
 
   return (
     <div>
@@ -423,6 +541,11 @@ export default function StatsTab({ mobile = false }) {
             <AccuracyByLevel byLevel={accByLevel} />
           </section>
         </div>
+
+        <section>
+          <SectionLabel num="E" text="Review — tap to re-attempt" />
+          <ReviewFeed items={review} onReview={onReview ?? (() => {})} />
+        </section>
       </div>
     </div>
   );

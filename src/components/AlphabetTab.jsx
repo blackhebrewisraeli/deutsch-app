@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Volume2 } from 'lucide-react';
 import {
   COLORS,
@@ -13,35 +13,70 @@ import {
 import { speak } from '../lib/speech';
 import { ALPHABET, ALPHABET_QUIZ_GROUPS } from '../data/content';
 import { shuffle } from '../lib/utils';
-import { recordEvent } from '../lib/stats';
+import { recordEvent, recordItem } from '../lib/stats';
 import { Hero } from './UI';
 
-export default function AlphabetTab({ level, mobile = false }) {
+export default function AlphabetTab({
+  level,
+  mobile = false,
+  reviewTarget = null,
+  onReviewConsumed,
+}) {
   // ── Browse mode state ──────────────────────────────────────────
   const [selected, setSelected] = useState(null);
 
   // ── Quiz mode state ────────────────────────────────────────────
   const [mode, setMode] = useState('quiz');
   const [quizRound, setQuizRound] = useState(0);
+  const [quizSeed, setQuizSeed] = useState(0); // bump to force quiz re-setup
   const [quizGroup, setQuizGroup] = useState(null);
   const [quizTarget, setQuizTarget] = useState(null);
   const [quizResult, setQuizResult] = useState(null); // null | 'correct' | 'wrong'
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [shuffledLetters, setShuffledLetters] = useState([]);
+  // A pending review target letter — consumed by the quiz-setup effect below.
+  const forcedTargetRef = useRef(null);
 
-  // Start a quiz round whenever quizRound changes (and mode is quiz)
+  // Start a quiz round whenever quizRound changes (and mode is quiz).
+  // If forcedTargetRef is set (review tap), pick the group containing it
+  // instead of the round-based default.
   useEffect(() => {
     if (mode !== 'quiz') return;
-    const group = ALPHABET_QUIZ_GROUPS[quizRound % ALPHABET_QUIZ_GROUPS.length];
-    const target = group.letters[Math.floor(Math.random() * group.letters.length)];
-    const shuffled = shuffle(group.letters);
+    const forced = forcedTargetRef.current;
+    let group, target;
+    if (forced) {
+      const idx = ALPHABET_QUIZ_GROUPS.findIndex((g) => g.letters.includes(forced));
+      if (idx >= 0) {
+        group = ALPHABET_QUIZ_GROUPS[idx];
+        target = forced;
+      }
+      forcedTargetRef.current = null;
+    }
+    if (!group) {
+      group = ALPHABET_QUIZ_GROUPS[quizRound % ALPHABET_QUIZ_GROUPS.length];
+      target = group.letters[Math.floor(Math.random() * group.letters.length)];
+    }
     setQuizGroup(group);
     setQuizTarget(target);
     setQuizResult(null);
-    setShuffledLetters(shuffled);
+    setShuffledLetters(shuffle(group.letters));
     const id = setTimeout(() => speak(target), 300);
     return () => clearTimeout(id);
-  }, [mode, quizRound]);
+  }, [mode, quizRound, quizSeed]);
+
+  // Pick up review targets handed in from the Stats Review feed.
+  useEffect(() => {
+    if (!reviewTarget) return;
+    const present = ALPHABET_QUIZ_GROUPS.some((g) => g.letters.includes(reviewTarget.label));
+    if (!present) {
+      onReviewConsumed?.();
+      return;
+    }
+    forcedTargetRef.current = reviewTarget.label;
+    setMode('quiz');
+    setQuizSeed((s) => s + 1);
+    onReviewConsumed?.();
+  }, [reviewTarget, onReviewConsumed]);
 
   const handleModeChange = (newMode) => {
     setMode(newMode);
@@ -57,9 +92,12 @@ export default function AlphabetTab({ level, mobile = false }) {
   const handleLetterGuess = (letter) => {
     if (quizResult) return; // already answered
     const correct = letter === quizTarget;
-    setQuizResult(correct ? 'correct' : 'wrong');
+    const verdict = correct ? 'correct' : 'wrong';
+    setQuizResult(verdict);
     setScore((s) => ({ correct: s.correct + (correct ? 1 : 0), total: s.total + 1 }));
-    recordEvent('alphabet', level, correct ? 'correct' : 'wrong');
+    recordEvent('alphabet', level, verdict);
+    const entry = ALPHABET.find((a) => a.l === quizTarget);
+    recordItem('alphabet', '', quizTarget, entry ? `${entry.w} — ${entry.e}` : quizTarget, verdict);
   };
 
   const handleNextRound = () => {
