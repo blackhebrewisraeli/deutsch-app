@@ -11,10 +11,12 @@ import {
   BUTTON,
 } from '../lib/theme';
 import { callClaude } from '../lib/claude';
+import { loadState } from '../lib/storage';
 import { PRESET_DECKS } from '../data/content';
 import { Hero, SectionLabel } from './UI';
 import { shuffle, levenshtein } from '../lib/utils';
 import { recordEvent, recordItem } from '../lib/stats';
+import { getDueCards, recordVocabAnswer } from '../lib/srs';
 
 export default function VocabTab({
   level,
@@ -42,27 +44,40 @@ export default function VocabTab({
 
   useEffect(() => {
     const target = pendingReviewRef.current;
+    const srs = (loadState() ?? {}).srs ?? {};
+    // SRS-derived queue: due first, then new, then over-review.
+    let q = getDueCards(srs, activeDeck, deckId, Date.now());
     if (target) {
       const idx = activeDeck.findIndex((c) => c.de === target);
       if (idx >= 0) {
-        const rest = activeDeck.map((_, i) => i).filter((i) => i !== idx);
-        setQueue([idx, ...rest]);
-        pendingReviewRef.current = null;
-        setAnswered(false);
-        setResult(null);
-        setTypedAnswer('');
-        setDeckComplete(false);
-        return;
+        q = [idx, ...q.filter((i) => i !== idx)];
       }
       pendingReviewRef.current = null;
     }
-    setQueue(activeDeck.map((_, i) => i));
+    setQueue(q);
     setAnswered(false);
     setResult(null);
     setTypedAnswer('');
     setDeckComplete(false);
     // activeDeck is derived from deckId+customCards which are already in deps — safe to omit
   }, [deckId, customCards, level]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Brief lock to swallow the trailing click event that would otherwise pass
+  // through to whatever button mounts at the SRS button's screen position on
+  // the next card (e.g. clicking GOOD also clicking the new card's MC option
+  // at the same coordinates).
+  const clickLockRef = useRef(false);
+
+  // SRS verdict + queue advance, shared by all four buttons in the feedback panel.
+  const handleSrsVerdict = (srsVerdict) => {
+    if (!card || clickLockRef.current) return;
+    clickLockRef.current = true;
+    recordVocabAnswer(deckId, card.de, srsVerdict);
+    advanceQueue(srsVerdict !== 'again');
+    setTimeout(() => {
+      clickLockRef.current = false;
+    }, 200);
+  };
 
   // Pick up review targets handed in from the Stats Review feed.
   useEffect(() => {
@@ -111,7 +126,7 @@ export default function VocabTab({
   };
 
   const submitTyped = () => {
-    if (!typedAnswer.trim() || !card) return;
+    if (!typedAnswer.trim() || !card || clickLockRef.current) return;
     const dist = levenshtein(typedAnswer.trim(), card.en);
     const res = dist === 0 ? 'correct' : dist <= 2 ? 'almost' : 'wrong';
     setAnswered(true);
@@ -426,6 +441,7 @@ export default function VocabTab({
                         key={choice}
                         type="button"
                         onClick={() => {
+                          if (clickLockRef.current) return; // swallow phantom clicks during transition
                           const correct = choice === card.en;
                           const verdict = correct ? 'correct' : 'wrong';
                           setAnswered(true);
@@ -536,13 +552,58 @@ export default function VocabTab({
                   >
                     {card.en}
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => advanceQueue(result === 'correct' || result === 'almost')}
-                    style={{ ...BUTTON.primary }}
-                  >
-                    {result === 'wrong' ? 'TRY AGAIN LATER →' : 'NEXT CARD →'}
-                  </button>
+                  {result === 'wrong' ? (
+                    <button
+                      type="button"
+                      onClick={() => handleSrsVerdict('again')}
+                      style={{ ...BUTTON.primary, width: '100%' }}
+                    >
+                      AGAIN — REVIEW SOON →
+                    </button>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 1fr 1fr',
+                        gap: SPACE[2],
+                      }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => handleSrsVerdict('hard')}
+                        style={{
+                          ...BUTTON.secondary,
+                          background: COLORS.card,
+                          color: COLORS.ink,
+                          border: BORDER.standard,
+                        }}
+                      >
+                        HARD
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSrsVerdict('good')}
+                        style={{
+                          ...BUTTON.primary,
+                          border: BORDER.standard,
+                        }}
+                      >
+                        GOOD
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleSrsVerdict('easy')}
+                        style={{
+                          ...BUTTON.secondary,
+                          background: COLORS.red,
+                          color: COLORS.paper,
+                          border: BORDER.standard,
+                        }}
+                      >
+                        EASY
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </>
