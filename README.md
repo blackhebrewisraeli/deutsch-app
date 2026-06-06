@@ -20,6 +20,8 @@
   <img alt="Mobile" src="https://img.shields.io/badge/Mobile-responsive-16110B?style=flat-square"/>
   &nbsp;
   <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
+  &nbsp;
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-142_passing-16110B?style=flat-square&logo=vitest"/>
 </p>
 
 <p>
@@ -47,7 +49,7 @@
 
 **Deutsch · Sprachschule** is an exercise-driven German learning app that runs in the browser and installs as a PWA. It does not wait for you to know what to do — it gives you a task, you respond, and it tells you whether you got it right.
 
-The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four learning modules: guided conversation, alphabet recognition, vocabulary active recall, and translation exercises. Every mode adapts to your chosen level automatically.
+The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four exercise modules — guided conversation, alphabet recognition, vocabulary active recall, and translation — plus a **Stats tab** that records every interaction and resurfaces what you got wrong. Vocab is backed by a **Leitner spaced-repetition scheduler**, so cards return at the right time, not on every visit.
 
 All AI features call **Claude Haiku 4.5** through a server-side proxy — your API key never touches the browser.
 
@@ -288,6 +290,45 @@ The header always shows two stats, persisted in `localStorage`:
 - 🔥 **Streak** — opens the app on consecutive days → streak increments
 - ✓ **Learned** — counts vocabulary cards answered correctly across all decks
 
+A red badge on the **05 Stats** nav tab shows how many items are waiting for review (wrong answers + due vocab cards), capped at "9+". The Stats tab itself surfaces six dashboards — see the next section.
+
+---
+
+### 05 · Stats — Statistik (Practice Dashboard)
+
+A dedicated tab that records every graded interaction across the four exercise modules and turns them into an at-a-glance picture of practice.
+
+```
+╔══════════════════════════════════════════════════════════════════╗
+║  TODAY                                                            ║
+║  12  exercises    ACCURACY · STREAK 4                             ║
+║                  [████████░░░░██░░] ✓ 8 (67%) ≈ 2 (17%) ✗ 2 (16%) ║
+╚══════════════════════════════════════════════════════════════════╝
+```
+
+**Six sections (A–F):**
+
+| # | Section | Shows |
+|---|---|---|
+| A | **Today** | Today's total exercises, three-way accuracy bar (correct / almost / wrong), streak count |
+| B | **Last 12 months** | GitHub-style heatmap of daily activity (53 weeks × 7 days, 5 intensity buckets) |
+| C | **By section** | Horizontal bars: Chat / Alphabet / Vocab / Translate. Most-practised tab is highlighted red. |
+| D | **Accuracy by level** | Three-way stacked bars per CEFR level (A1 / A2 / B1) |
+| E | **Review — tap to re-attempt** | Up to 10 most-recently-wrong items. Click a row → jump straight to that exercise with the item pre-loaded. |
+| F | **Vocab review queue** | DUE NOW count + mastered progress bar (out of 40 cards) + per-deck breakdown (Greetings / Food & Drink / Travel / Numbers) |
+
+**Storage:** all event data is forward-only — past practice is not backfilled. Schema extends `deutsch-app-state-v1`:
+
+```js
+{
+  daily: { 'YYYY-MM-DD': { total, byTab, byLevel: { a1, a2, b1: { correct, almost, wrong } } } },
+  items: { '<tab>:<context>:<label>': { tab, context, label, detail, lastVerdict, lastTs, attempts, wrongCount } },
+  srs:   { '<deckId>:<de>':           { box, lastReviewed, nextDue, reps } },
+}
+```
+
+**Spaced repetition (Leitner):** Vocab cards live in 5 boxes with intervals 1d / 3d / 7d / 14d / 30d. After each card you pick **Hard / Good / Easy** (or **Again** on a wrong answer) and the system schedules the next review accordingly. Box 5 = mastered. The Vocab queue is ordered _due first → new → over-review_, so you always start with what needs you most.
+
 ---
 
 ## 🇩🇪 German Grammar & Vocabulary Coverage
@@ -355,7 +396,8 @@ AI-generated decks expand to any domain on demand.
 | Persistence | **localStorage** | Streak, learned words, chosen level — no backend |
 | Linting | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars |
 | Formatting | **Prettier 3** | Consistent code style, enforced on every commit |
-| Pre-commit | **Husky + lint-staged** | Runs ESLint + Prettier automatically before every `git commit` |
+| Testing | **Vitest 2** + **jsdom** + `@vitest/coverage-v8` | 142 unit tests across `utils`, `storage`, `content` invariants, `stats`, `srs` |
+| Pre-commit | **Husky + lint-staged** | Runs ESLint + Prettier + the full test suite before every `git commit` |
 | PWA | **vite-plugin-pwa** + Workbox | Installable on iOS/Android, offline-capable static assets |
 | Responsive | `useWindowWidth` hook | Live viewport width → inline style breakpoints (mobile < 640px) |
 | Deployment | **Vercel** | Static SPA + `/api/chat.js` serverless function |
@@ -544,29 +586,39 @@ deutsch-app/
 │   │   ├── AlphabetTab.jsx    ← Audio quiz mode + browse grid
 │   │   ├── ChatTab.jsx        ← Guided conversation, task panel, speech I/O, corrections
 │   │   ├── SplashScreen.jsx   ← First-visit level picker (A1 / A2 / B1)
+│   │   ├── StatsTab.jsx       ← 6-section practice dashboard (today, heatmap, review, SRS queue…)
 │   │   ├── TranslateTab.jsx   ← Exercise mode: tiles (A1) / blanks (A2) / typing+AI (B1)
 │   │   ├── UI.jsx             ← Shared components: Hero, SectionLabel, StatBlock
-│   │   └── VocabTab.jsx       ← Active recall: multiple choice (A1/A2) / type (B1)
+│   │   └── VocabTab.jsx       ← Active recall + SRS queue, Hard/Good/Easy verdicts
 │   │
 │   ├── data/
-│   │   └── content.js         ← Alphabet, preset decks, scenarios, sentence banks,
-│   │                             task prompts, quiz groups
+│   │   ├── content.js         ← Alphabet, preset decks, scenarios, sentence banks,
+│   │   │                         task prompts, quiz groups
+│   │   └── content.test.js    ← Data-shape invariants (38 tests)
 │   │
 │   ├── lib/
 │   │   ├── claude.js          ← Anthropic API client (dev proxy / prod serverless)
 │   │   ├── speech.js          ← SpeechSynthesis wrapper
 │   │   ├── storage.js         ← localStorage read/write
+│   │   ├── storage.test.js    ← Load/save round-trip + quota-exceeded handling (9 tests)
+│   │   ├── stats.js           ← Event log: daily aggregates, items map, review feed helpers
+│   │   ├── stats.test.js      ← Pure helpers + recordEvent + recordItem (51 tests)
+│   │   ├── srs.js             ← Leitner spaced repetition for vocab (Hard/Good/Easy)
+│   │   ├── srs.test.js        ← Transitions, queue derivation, recordVocabAnswer (29 tests)
 │   │   ├── theme.js           ← Design tokens: COLORS, FONTS, FONT_SIZE, BUTTON, CARD, TEXT…
 │   │   ├── useWindowWidth.js  ← Responsive hook: live viewport width + isMobile() / isTablet()
-│   │   └── utils.js           ← shuffle(arr), levenshtein(a, b)
+│   │   ├── utils.js           ← shuffle(arr), levenshtein(a, b)
+│   │   └── utils.test.js      ← Pure-function tests incl. German chars (15 tests)
 │   │
-│   ├── App.jsx                ← Root layout, tab navigation, streak/learned stats
-│   └── main.jsx
+│   ├── App.jsx                ← Root layout, tab navigation, streak/learned stats, Stats badge
+│   ├── main.jsx
+│   └── test-setup.js          ← Vitest setup — shims localStorage for the jsdom env
 │
-├── .husky/pre-commit          ← Runs lint-staged before every commit
+├── .husky/pre-commit          ← Runs lint-staged + `npm test` before every commit
+├── .npmrc                     ← legacy-peer-deps=true (eslint-plugin-react peer-dep workaround)
 ├── .prettierrc                ← Prettier config
 ├── eslint.config.js           ← ESLint flat config (react, react-hooks, react-refresh)
-├── vercel.json                ← Framework config + serverless function registration
+├── vitest.config.js           ← Vitest config (jsdom env, v8 coverage of src/lib + src/data)
 ├── vite.config.js             ← Vite config + PWA plugin + dev proxy
 └── package.json
 ```
