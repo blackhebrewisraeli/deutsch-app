@@ -141,6 +141,15 @@ export default function App() {
         @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,197,24,0.7); } 50% { box-shadow: 0 0 0 10px rgba(245,197,24,0); } }
         @keyframes shimmer    { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
         .slide-up { animation: slide-up 0.3s ease-out; }
+        @keyframes pop      { 0% { transform: scale(0.9); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
+        @keyframes wiggle   { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-4px) rotate(-1.5deg); } 75% { transform: translateX(4px) rotate(1.5deg); } }
+        @keyframes confetti { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), 120px) rotate(var(--rot)); opacity: 0; } }
+        .pop    { animation: pop 0.28s ease-out; }
+        .wiggle { animation: wiggle 0.30s ease-in-out; }
+        @media (prefers-reduced-motion: reduce) {
+          .pop, .wiggle, .slide-up { animation: none !important; }
+          .confetti-layer { display: none !important; }
+        }
       `}</style>
 
       {/* ── Header ───────────────────────────────────────────── */}
