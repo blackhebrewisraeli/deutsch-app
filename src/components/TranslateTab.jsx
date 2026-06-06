@@ -100,13 +100,21 @@ function PromptCard({ text }) {
   );
 }
 
-function FeedbackPanel({ correct, correctText, note, onNext }) {
+function FeedbackPanel({ verdict, correctText, note, onNext }) {
+  const isCorrect = verdict === 'correct';
+  const isAlmost = verdict === 'almost';
+  const bg = isCorrect ? COLORS.gold : isAlmost ? COLORS.paperDeep : COLORS.red;
+  const fg = isCorrect || isAlmost ? COLORS.ink : COLORS.paper;
+  const label = isCorrect ? '✓ CORRECT' : isAlmost ? '≈ ALMOST' : '✗ NOT QUITE';
+  // Show the canonical answer when not fully correct (almost or wrong both
+  // benefit from seeing the intended translation).
+  const showCorrectText = !isCorrect && correctText;
   return (
     <div
       style={{
         border: BORDER.standard,
-        background: correct ? COLORS.gold : COLORS.red,
-        color: correct ? COLORS.ink : COLORS.paper,
+        background: bg,
+        color: fg,
         padding: SPACE[5],
         marginTop: SPACE[4],
       }}
@@ -119,9 +127,9 @@ function FeedbackPanel({ correct, correctText, note, onNext }) {
           marginBottom: SPACE[2],
         }}
       >
-        {correct ? '✓ CORRECT' : '✗ NOT QUITE'}
+        {label}
       </div>
-      {!correct && (
+      {showCorrectText && (
         <div
           style={{
             fontFamily: FONTS.display,
@@ -150,8 +158,8 @@ function FeedbackPanel({ correct, correctText, note, onNext }) {
         onClick={onNext}
         style={{
           ...BUTTON.primary,
-          background: correct ? COLORS.ink : COLORS.paper,
-          color: correct ? COLORS.paper : COLORS.ink,
+          background: isCorrect ? COLORS.ink : COLORS.paper,
+          color: isCorrect ? COLORS.paper : COLORS.ink,
         }}
       >
         NEXT EXERCISE <ArrowRight size={14} />
@@ -210,7 +218,7 @@ function TileExercise({ exercise, level, onCorrect, onSkip }) {
     <div>
       {feedback ? (
         <FeedbackPanel
-          correct={feedback === 'correct'}
+          verdict={feedback}
           correctText={exercise.words.join(' ')}
           note={exercise.note}
           onNext={onSkip}
@@ -334,7 +342,7 @@ function BlankExercise({ exercise, level, onCorrect, onSkip }) {
     <div>
       {feedback ? (
         <FeedbackPanel
-          correct={feedback === 'correct'}
+          verdict={feedback}
           correctText={exercise.de}
           note={exercise.note}
           onNext={onSkip}
@@ -467,25 +475,38 @@ function TypingExercise({ exercise, level, onCorrect, onSkip }) {
       const system = `You are a German language grader. The learner was asked to translate an English sentence into German.
 Evaluate their answer strictly but fairly. Respond ONLY with valid JSON, no markdown:
 {
-  "correct": true or false,
+  "verdict": "correct" | "almost" | "wrong",
   "corrected": "the ideal German translation",
   "message": "one sentence of feedback in English explaining the main error or praising them"
 }
-Set "correct": true only if the translation is grammatically correct and conveys the full meaning, even if phrasing differs from the ideal.`;
+Use "correct" if the translation is grammatically correct and conveys the full meaning, even if phrasing differs from the ideal.
+Use "almost" if there's a minor issue (a typo, a small grammar slip, a slightly off article or case) but the meaning is clearly there.
+Use "wrong" if there's a significant grammar mistake, wrong word choice, or the meaning is not conveyed.`;
       const user = `English sentence: "${exercise.en}"\nIdeal German: "${exercise.de}"\nLearner's answer: "${input}"`;
       const raw = await callClaude(system, user);
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
       if (mounted.current) {
-        setFeedback(parsed);
-        const verdict = parsed.correct ? 'correct' : 'wrong';
+        // Validate verdict; fall back to binary if Claude returns the old shape.
+        const verdict =
+          parsed.verdict === 'correct' || parsed.verdict === 'almost' || parsed.verdict === 'wrong'
+            ? parsed.verdict
+            : parsed.correct
+              ? 'correct'
+              : 'wrong';
+        setFeedback({
+          verdict,
+          corrected: parsed.corrected,
+          message: parsed.message,
+        });
         recordEvent('translate', level, verdict);
         recordItem('translate', level, exercise.en, exercise.de, verdict);
-        if (parsed.correct) onCorrect();
+        // "almost" still advances the exercise — typos shouldn't gate progress.
+        if (verdict === 'correct' || verdict === 'almost') onCorrect();
       }
     } catch {
       if (mounted.current)
         setFeedback({
-          correct: false,
+          verdict: 'wrong',
           corrected: exercise.de,
           message: 'Could not grade — check your connection.',
         });
@@ -498,7 +519,7 @@ Set "correct": true only if the translation is grammatically correct and conveys
     <div>
       {feedback ? (
         <FeedbackPanel
-          correct={feedback.correct}
+          verdict={feedback.verdict}
           correctText={feedback.corrected}
           note={feedback.message}
           onNext={onSkip}

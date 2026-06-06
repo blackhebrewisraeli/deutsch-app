@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { BarChart3, Check, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
+import { getReviewItems } from './lib/stats';
+import { getDueCount } from './lib/srs';
+import { PRESET_DECKS } from './data/content';
 import { StatBlock } from './components/UI';
 import ChatTab from './components/ChatTab';
 import AlphabetTab from './components/AlphabetTab';
@@ -101,6 +104,14 @@ export default function App() {
 
   // Streak pulsing: user hasn't visited today yet and has a streak to protect
   const streakPulsing = stats.streak > 0 && stats.lastVisit !== new Date().toDateString();
+
+  // Stats nav badge — count of wrong items + due vocab cards.
+  // Read fresh from storage on every render so it reflects exercises taken in
+  // other tabs since the last App re-render. Cheap (single localStorage hit).
+  const liveState = loadState() ?? {};
+  const attentionCount =
+    getReviewItems(liveState.items ?? {}).length +
+    getDueCount(liveState.srs ?? {}, PRESET_DECKS, Date.now());
 
   if (showSplash) return <SplashScreen onComplete={handleSplashComplete} />;
 
@@ -255,6 +266,30 @@ export default function App() {
                     {t.label}
                   </span>
                 </>
+              )}
+              {t.id === 'stats' && !active && attentionCount > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: mobile ? 4 : 8,
+                    right: mobile ? 4 : 8,
+                    minWidth: 18,
+                    height: 18,
+                    padding: '0 5px',
+                    background: COLORS.red,
+                    color: COLORS.paper,
+                    fontFamily: FONT_MONO,
+                    fontSize: 10,
+                    fontWeight: 700,
+                    lineHeight: 1,
+                    borderRadius: 9,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {attentionCount > 9 ? '9+' : attentionCount}
+                </span>
               )}
               {active && (
                 <span
