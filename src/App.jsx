@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BarChart3, Check, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
-import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from './lib/theme';
+import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { getReviewItems } from './lib/stats';
 import { getDueCount } from './lib/srs';
@@ -155,7 +155,8 @@ export default function App() {
       {/* ── Header ───────────────────────────────────────────── */}
       <header
         style={{
-          borderBottom: `2px solid ${COLORS.ink}`,
+          borderBottom: 'none',
+          boxShadow: SHADOW.bar,
           padding: mobile ? '12px 16px' : '20px 32px',
           display: 'flex',
           alignItems: 'center',
@@ -201,7 +202,6 @@ export default function App() {
             accent
             pulsing={streakPulsing}
           />
-          <div style={{ width: 1, height: 28, background: COLORS.ink }} />
           <StatBlock
             label="LEARNED"
             value={stats.learnedCount}
@@ -214,11 +214,13 @@ export default function App() {
       <nav
         style={{
           display: 'flex',
-          borderBottom: `2px solid ${COLORS.ink}`,
+          gap: mobile ? 6 : 8,
+          padding: mobile ? '8px 10px' : '12px 16px',
           background: COLORS.paper,
           position: 'sticky',
           top: mobile ? 53 : 81,
           zIndex: 49,
+          boxShadow: SHADOW.bar,
         }}
       >
         {tabs.map((t) => {
@@ -230,11 +232,12 @@ export default function App() {
               onClick={() => setTab(t.id)}
               style={{
                 flex: 1,
-                padding: mobile ? '14px 8px' : '20px 24px',
+                padding: mobile ? '12px 6px' : '14px 18px',
                 background: active ? COLORS.ink : 'transparent',
                 color: active ? COLORS.paper : COLORS.ink,
                 border: 'none',
-                borderRight: `2px solid ${COLORS.ink}`,
+                borderRadius: RADIUS.md,
+                boxShadow: active ? SHADOW.press('#000000') : 'none',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: mobile ? 'center' : 'flex-start',
@@ -299,20 +302,6 @@ export default function App() {
                 >
                   {attentionCount > 9 ? '9+' : attentionCount}
                 </span>
-              )}
-              {active && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    right: mobile ? '50%' : 16,
-                    bottom: mobile ? 4 : 'auto',
-                    transform: mobile ? 'translateX(50%)' : 'none',
-                    width: 6,
-                    height: 6,
-                    background: COLORS.red,
-                    borderRadius: '50%',
-                  }}
-                />
               )}
             </button>
           );

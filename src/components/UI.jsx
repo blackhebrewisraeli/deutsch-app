@@ -6,6 +6,8 @@ import {
   LETTER_SPACING,
   SPACE,
   BORDER,
+  RADIUS,
+  SHADOW,
   TEXT,
 } from '../lib/theme';
 
@@ -13,11 +15,22 @@ import {
 // Header stat pill: streak counter, learned word count.
 export function StatBlock({ label, value, icon, accent, pulsing }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[2] + 2 }}>
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: SPACE[2] + 2,
+        background: COLORS.card,
+        borderRadius: RADIUS.lg,
+        boxShadow: SHADOW.card,
+        padding: '6px 14px 6px 6px',
+      }}
+    >
       <div
         style={{
           width: 36,
           height: 36,
+          borderRadius: RADIUS.pill,
           background: accent ? COLORS.gold : COLORS.ink,
           color: accent ? COLORS.ink : COLORS.card,
           display: 'flex',
