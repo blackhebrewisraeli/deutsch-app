@@ -159,77 +159,73 @@ export const Z = {
 // ─────────────────────────────────────────────────────────────
 
 // ── Buttons ──────────────────────────────────────────────────
+// Resting styles only. The <Button> primitive (components/ui/Button.jsx)
+// adds the press interaction (translateY + lip-shrink) on pointer-down.
+const btnBase = {
+  border: 'none',
+  borderRadius: RADIUS.md,
+  fontFamily: FONTS.mono,
+  fontWeight: FONT_WEIGHT.bold,
+  fontSize: FONT_SIZE.sm,
+  letterSpacing: LETTER_SPACING.widest,
+  textTransform: 'uppercase',
+  padding: `${SPACE[4]}px ${SPACE[6]}px`,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: SPACE[2],
+  transition: 'transform .08s ease, box-shadow .08s ease',
+};
+
 export const BUTTON = {
-  // Solid black — primary action (send, submit, navigate)
+  // Green — the main "correct / go" CTA (Check, Send, continue)
+  go: {
+    ...btnBase,
+    background: COLORS.green,
+    color: COLORS.paper,
+    boxShadow: SHADOW.press(COLORS.greenDeep),
+  },
+  // Ink — neutral primary (Next, nav-style)
   primary: {
+    ...btnBase,
     background: COLORS.ink,
     color: COLORS.paper,
-    border: 'none',
-    fontFamily: FONTS.mono,
-    fontWeight: FONT_WEIGHT.bold,
-    fontSize: FONT_SIZE.sm,
-    letterSpacing: LETTER_SPACING.widest,
-    padding: `${SPACE[4]}px ${SPACE[6]}px`,
-    cursor: 'pointer',
-    transition: TRANSITION.fast,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACE[2],
+    boxShadow: SHADOW.press('#000000'),
   },
-
-  // Solid red — CTA, generate, translate
+  // Red — alert / destructive CTA
   danger: {
+    ...btnBase,
     background: COLORS.red,
     color: COLORS.paper,
-    border: 'none',
-    fontFamily: FONTS.mono,
-    fontWeight: FONT_WEIGHT.bold,
-    fontSize: FONT_SIZE.sm,
-    letterSpacing: LETTER_SPACING.widest,
-    padding: `${SPACE[4]}px ${SPACE[6]}px`,
-    cursor: 'pointer',
-    transition: TRANSITION.fast,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACE[2],
+    boxShadow: SHADOW.press(COLORS.rust),
   },
-
-  // Outlined — secondary / nav actions (PREV, NEXT, DISMISS)
-  secondary: {
-    flex: 1,
-    background: COLORS.paper,
+  // White — answer tiles / multiple choice / word tiles
+  tile: {
+    ...btnBase,
+    background: COLORS.card,
     color: COLORS.ink,
-    border: BORDER.standard,
-    fontFamily: FONTS.mono,
-    fontWeight: FONT_WEIGHT.bold,
-    fontSize: FONT_SIZE.sm,
-    letterSpacing: LETTER_SPACING.widest,
-    padding: SPACE[4],
-    cursor: 'pointer',
-    transition: TRANSITION.fast,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: SPACE[2],
+    boxShadow: SHADOW.press(COLORS.lip),
   },
-
-  // Transparent with border — on dark backgrounds (HEAR IT, correction panel)
+  // White, flex:1 — secondary actions (kept name for back-compat)
+  secondary: {
+    ...btnBase,
+    background: COLORS.card,
+    color: COLORS.ink,
+    boxShadow: SHADOW.press(COLORS.lip),
+    flex: 1,
+  },
+  // Transparent — on dark surfaces (HEAR IT, correction). No lip.
   ghost: {
+    ...btnBase,
     background: 'transparent',
     color: COLORS.paper,
     border: BORDER.ghost,
-    fontFamily: FONTS.mono,
-    fontWeight: FONT_WEIGHT.bold,
+    boxShadow: 'none',
+    textTransform: 'none',
     fontSize: FONT_SIZE.tag,
     letterSpacing: LETTER_SPACING.wider,
     padding: `${SPACE[1]}px ${SPACE[3]}px`,
-    cursor: 'pointer',
-    transition: TRANSITION.fast,
-    display: 'inline-flex',
-    alignItems: 'center',
-    gap: SPACE[2] - 2,
   },
 };
 
@@ -241,30 +237,21 @@ export const CARD = {
   // Default light card — flashcards, info blocks
   base: {
     background: COLORS.card,
-    border: BORDER.standard,
+    borderRadius: RADIUS.xl,
+    boxShadow: SHADOW.card,
     color: COLORS.ink,
   },
-
   // Inverted dark panel — chat output, translation result
-  dark: {
-    background: COLORS.ink,
-    border: BORDER.standard,
-    color: COLORS.paper,
-  },
-
+  dark: { background: COLORS.ink, borderRadius: RADIUS.lg, color: COLORS.paper },
   // Soft/warm panel — sidebars, inset areas, tip boxes
   soft: {
     background: COLORS.paperDeep,
-    border: BORDER.standard,
+    borderRadius: RADIUS.lg,
+    boxShadow: SHADOW.card,
     color: COLORS.ink,
   },
-
   // Alert / correction state
-  alert: {
-    background: COLORS.red,
-    border: BORDER.standard,
-    color: COLORS.paper,
-  },
+  alert: { background: COLORS.red, borderRadius: RADIUS.lg, color: COLORS.paper },
 };
 
 // ── Text styles ──────────────────────────────────────────────
