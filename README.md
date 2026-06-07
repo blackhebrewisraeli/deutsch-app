@@ -9,6 +9,16 @@
 ### *A guided German learning app — AI tutor, exercise-driven practice, installable PWA*
 
 <p>
+  <a href="https://deutsch-app-dusky.vercel.app"><img alt="Live Demo" src="https://img.shields.io/badge/▶_Live_Demo-3FA34D?style=flat-square"/></a>
+  &nbsp;
+  <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
+  &nbsp;
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-163_passing-16110B?style=flat-square&logo=vitest"/>
+  &nbsp;
+  <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
+</p>
+
+<p>
   <img alt="React" src="https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB"/>
   &nbsp;
   <img alt="Vite" src="https://img.shields.io/badge/Vite_5-646CFF?style=flat-square&logo=vite&logoColor=white"/>
@@ -18,10 +28,6 @@
   <img alt="PWA" src="https://img.shields.io/badge/PWA-installable-F5C518?style=flat-square"/>
   &nbsp;
   <img alt="Mobile" src="https://img.shields.io/badge/Mobile-responsive-16110B?style=flat-square"/>
-  &nbsp;
-  <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
-  &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-142_passing-16110B?style=flat-square&logo=vitest"/>
 </p>
 
 <p>
@@ -37,7 +43,13 @@
 
 ![Splash screen — German flag onboarding](docs/screenshot-splash.png)
 
-![Chat tab — AI tutor Anna](docs/screenshot-chat.png)
+<br/>
+
+![Chat — guided conversation with the AI tutor Anna](docs/screenshot-chat.png)
+
+![Vocab — spaced-repetition flashcards with 3D-press answers](docs/screenshot-vocab.png)
+
+![Stats — practice dashboard with heatmap, accuracy, and review queue](docs/screenshot-stats.png)
 
 <br/>
 
@@ -396,7 +408,8 @@ AI-generated decks expand to any domain on demand.
 | Persistence | **localStorage** | Streak, learned words, chosen level — no backend |
 | Linting | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars |
 | Formatting | **Prettier 3** | Consistent code style, enforced on every commit |
-| Testing | **Vitest 2** + **jsdom** + `@vitest/coverage-v8` | 142 unit tests across `utils`, `storage`, `content` invariants, `stats`, `srs` |
+| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **163 tests** — logic/data (`utils`, `storage`, `content`, `stats`, `srs`) + component tests (`ui/Button`, `stats/*`) |
+| CI | **GitHub Actions** | Runs lint + test + build on every push to `main` and every PR |
 | Pre-commit | **Husky + lint-staged** | Runs ESLint + Prettier + the full test suite before every `git commit` |
 | PWA | **vite-plugin-pwa** + Workbox | Installable on iOS/Android, offline-capable static assets |
 | Responsive | `useWindowWidth` hook | Live viewport width → inline style breakpoints (mobile < 640px) |

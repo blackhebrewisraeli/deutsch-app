@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500;700&display=swap');
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1280px; height: 640px; overflow: hidden; }
+      body {
+        font-family: 'Fraunces', Georgia, serif;
+        background: #FDF3C0;
+        background-image: radial-gradient(circle at 1px 1px, rgba(42,34,24,0.06) 1px, transparent 0);
+        background-size: 26px 26px;
+        display: flex;
+        position: relative;
+      }
+      .flag { position: absolute; top: 0; right: 0; bottom: 0; width: 14px; display: flex; flex-direction: column; }
+      .flag > div { flex: 1; }
+      .mono { font-family: 'JetBrains Mono', monospace; }
+      .left { flex: 1; padding: 76px 0 76px 80px; display: flex; flex-direction: column; justify-content: center; }
+      .right { width: 470px; display: flex; flex-direction: column; justify-content: center; gap: 18px; padding-right: 70px; }
+      .pill {
+        display: inline-flex; align-items: center; gap: 8px;
+        background: #fff; border-radius: 999px; padding: 9px 16px;
+        font-family: 'JetBrains Mono', monospace; font-size: 14px; font-weight: 700;
+        letter-spacing: 0.06em; color: #16110b; box-shadow: 0 4px 0 #d9cd9f;
+      }
+      .btn3d {
+        border-radius: 16px; font-family: 'JetBrains Mono', monospace; font-weight: 700;
+        letter-spacing: 0.08em; font-size: 15px; padding: 14px; text-align: center; color: #fff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="left">
+      <div class="mono" style="font-size:15px; letter-spacing:0.34em; color:#7a6e5c; margin-bottom:22px;">
+        S P R A C H S C H U L E &nbsp;×&nbsp; E S T .&nbsp; 2 0 2 6
+      </div>
+      <div style="font-size:128px; font-weight:900; letter-spacing:-0.05em; line-height:0.9; color:#16110b;">
+        Deutsch<span style="color:#D62828;">.</span>
+      </div>
+      <div style="font-family:'Fraunces',serif; font-style:italic; font-size:30px; color:#2a2218; margin-top:18px; max-width:560px; line-height:1.35;">
+        Learn German with an AI tutor — guided chat, spaced-repetition vocab, and translation drills.
+      </div>
+      <div style="display:flex; gap:12px; margin-top:34px; flex-wrap:wrap;">
+        <span class="pill">🗣️ AI TUTOR</span>
+        <span class="pill">🗂️ SRS VOCAB</span>
+        <span class="pill">📊 PROGRESS</span>
+        <span class="pill">📲 PWA</span>
+      </div>
+    </div>
+
+    <div class="right">
+      <!-- mini flashcard -->
+      <div style="background:#fff; border-radius:24px; padding:30px 24px; text-align:center; box-shadow:0 9px 0 rgba(22,17,11,0.12);">
+        <div style="font-size:54px; font-weight:700; color:#16110b; line-height:1;">Hallo</div>
+        <div class="mono" style="font-size:14px; color:#7a6e5c; margin-top:10px;">[ˈhalo]</div>
+      </div>
+      <!-- answer tiles -->
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:13px;">
+        <div class="btn3d" style="background:#fff; color:#16110b; box-shadow:0 4px 0 #d9cd9f;">GOOD EVENING</div>
+        <div class="btn3d" style="background:#3FA34D; box-shadow:0 4px 0 #2f7d3a;">HELLO ✓</div>
+        <div class="btn3d" style="background:#fff; color:#16110b; box-shadow:0 4px 0 #d9cd9f;">PLEASE</div>
+        <div class="btn3d" style="background:#fff; color:#16110b; box-shadow:0 4px 0 #d9cd9f;">GOOD MORNING</div>
+      </div>
+    </div>
+
+    <div class="flag">
+      <div style="background:#16110b;"></div>
+      <div style="background:#D62828;"></div>
+      <div style="background:#F5C518;"></div>
+    </div>
+  </body>
+</html>
