@@ -1,5 +1,14 @@
 import { useState, useEffect } from 'react';
-import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE, BORDER } from '../lib/theme';
+import {
+  COLORS,
+  FONTS,
+  FONT_SIZE,
+  FONT_WEIGHT,
+  LETTER_SPACING,
+  SPACE,
+  RADIUS,
+  SHADOW,
+} from '../lib/theme';
 import { loadState } from '../lib/storage';
 import {
   TABS,
@@ -57,7 +66,8 @@ function TodaySnapshot({ snap }) {
   return (
     <div
       style={{
-        border: BORDER.standard,
+        borderRadius: RADIUS.lg,
+        boxShadow: SHADOW.card,
         background: COLORS.card,
         padding: SPACE[6],
         display: 'grid',
@@ -132,7 +142,7 @@ function TodaySnapshot({ snap }) {
               style={{
                 display: 'flex',
                 height: 24,
-                border: BORDER.standard,
+                borderRadius: RADIUS.pill,
                 overflow: 'hidden',
                 marginBottom: SPACE[2],
               }}
@@ -303,7 +313,7 @@ function PerTabBars({ breakdown }) {
             <div
               style={{
                 height: 14,
-                border: BORDER.standard,
+                borderRadius: RADIUS.pill,
                 background: COLORS.paperDeep,
                 overflow: 'hidden',
               }}
@@ -356,7 +366,7 @@ function AccuracyByLevel({ byLevel }) {
               style={{
                 display: 'flex',
                 height: 14,
-                border: BORDER.standard,
+                borderRadius: RADIUS.pill,
                 background: COLORS.paperDeep,
                 overflow: 'hidden',
               }}
@@ -399,7 +409,16 @@ function ReviewFeed({ items, onReview }) {
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 0, border: BORDER.standard }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 0,
+        borderRadius: RADIUS.lg,
+        boxShadow: SHADOW.card,
+        overflow: 'hidden',
+      }}
+    >
       {items.map((item, i) => {
         const verdictColor = item.lastVerdict === 'almost' ? COLORS.mute : COLORS.red;
         const verdictGlyph = item.lastVerdict === 'almost' ? '≈' : '✗';
@@ -418,7 +437,7 @@ function ReviewFeed({ items, onReview }) {
               padding: `${SPACE[3]}px ${SPACE[4]}px`,
               background: COLORS.paper,
               border: 'none',
-              borderBottom: i < items.length - 1 ? BORDER.standard : 'none',
+              borderBottom: i < items.length - 1 ? `1px solid ${COLORS.ink}10` : 'none',
               cursor: 'pointer',
               transition: 'background 0.12s ease',
               color: COLORS.ink,
@@ -499,7 +518,8 @@ function VocabSrsWidget({ srs, now }) {
     <div>
       <div
         style={{
-          border: BORDER.standard,
+          borderRadius: RADIUS.lg,
+          boxShadow: SHADOW.card,
           background: COLORS.card,
           padding: SPACE[6],
           display: 'grid',
@@ -561,7 +581,7 @@ function VocabSrsWidget({ srs, now }) {
           <div
             style={{
               height: 24,
-              border: BORDER.standard,
+              borderRadius: RADIUS.pill,
               background: COLORS.paperDeep,
               overflow: 'hidden',
             }}
@@ -611,7 +631,7 @@ function VocabSrsWidget({ srs, now }) {
               <div
                 style={{
                   height: 10,
-                  border: BORDER.standard,
+                  borderRadius: RADIUS.pill,
                   background: COLORS.paperDeep,
                   overflow: 'hidden',
                 }}
