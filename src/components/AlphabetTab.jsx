@@ -7,7 +7,8 @@ import {
   FONT_WEIGHT,
   LETTER_SPACING,
   SPACE,
-  BORDER,
+  RADIUS,
+  SHADOW,
   BUTTON,
 } from '../lib/theme';
 import { speak } from '../lib/speech';
@@ -135,7 +136,9 @@ export default function AlphabetTab({
       <div
         style={{
           display: 'flex',
-          border: BORDER.standard,
+          borderRadius: RADIUS.md,
+          boxShadow: SHADOW.card,
+          overflow: 'hidden',
           width: 'fit-content',
           marginTop: SPACE[6],
           marginBottom: SPACE[6],
@@ -150,7 +153,7 @@ export default function AlphabetTab({
         </button>
         <button
           type="button"
-          style={{ ...modeToggleBtn('browse'), borderLeft: BORDER.standard }}
+          style={modeToggleBtn('browse')}
           onClick={() => handleModeChange('browse')}
         >
           📋 Browse
@@ -181,13 +184,15 @@ export default function AlphabetTab({
               height: 100,
               borderRadius: '50%',
               background: COLORS.gold,
-              border: BORDER.standard,
+              border: 'none',
+              boxShadow: SHADOW.press('#caa10f'),
               fontSize: 40,
               cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               margin: '0 auto',
+              transition: 'transform .08s ease, box-shadow .08s ease',
             }}
           >
             🔊
@@ -215,14 +220,16 @@ export default function AlphabetTab({
                   onClick={() => handleLetterGuess(letter)}
                   style={{
                     padding: SPACE[5],
-                    border: BORDER.standard,
-                    background: COLORS.paper,
+                    border: 'none',
+                    borderRadius: RADIUS.lg,
+                    boxShadow: SHADOW.press(COLORS.lip),
+                    background: COLORS.card,
                     color: COLORS.ink,
                     fontFamily: FONTS.display,
                     fontSize: FONT_SIZE['5xl'],
                     fontWeight: FONT_WEIGHT.bold,
                     cursor: 'pointer',
-                    transition: 'all 0.15s',
+                    transition: 'transform .08s ease, box-shadow .08s ease',
                   }}
                 >
                   {letter}
@@ -234,8 +241,10 @@ export default function AlphabetTab({
           {/* Feedback */}
           {quizResult && (
             <div
+              className="pop"
               style={{
-                border: BORDER.standard,
+                borderRadius: RADIUS.lg,
+                boxShadow: SHADOW.card,
                 background: quizResult === 'correct' ? COLORS.gold : COLORS.red,
                 color: quizResult === 'correct' ? COLORS.ink : COLORS.paper,
                 padding: SPACE[5],
@@ -293,7 +302,9 @@ export default function AlphabetTab({
               display: 'grid',
               gridTemplateColumns: mobile ? 'repeat(4, 1fr)' : 'repeat(6, 1fr)',
               gap: 0,
-              border: BORDER.standard,
+              borderRadius: RADIUS.lg,
+              boxShadow: SHADOW.card,
+              overflow: 'hidden',
             }}
           >
             {ALPHABET.map((letter, i) => {
@@ -309,9 +320,11 @@ export default function AlphabetTab({
                     background: isActive ? COLORS.red : isSpecial ? COLORS.paperDeep : COLORS.paper,
                     color: isActive ? COLORS.paper : COLORS.ink,
                     border: 'none',
-                    borderRight: (i + 1) % 6 === 0 ? 'none' : BORDER.standard,
+                    borderRight: (i + 1) % 6 === 0 ? 'none' : `1px solid ${COLORS.ink}12`,
                     borderBottom:
-                      i >= ALPHABET.length - (ALPHABET.length % 6 || 6) ? 'none' : BORDER.standard,
+                      i >= ALPHABET.length - (ALPHABET.length % 6 || 6)
+                        ? 'none'
+                        : `1px solid ${COLORS.ink}12`,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',
@@ -367,6 +380,8 @@ export default function AlphabetTab({
                 padding: SPACE[8],
                 background: COLORS.ink,
                 color: COLORS.paper,
+                borderRadius: RADIUS.lg,
+                boxShadow: SHADOW.card,
                 display: 'grid',
                 gridTemplateColumns: mobile ? '1fr' : '200px 1fr auto',
                 gap: SPACE[8],
