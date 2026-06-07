@@ -241,7 +241,7 @@ export default function AlphabetTab({
           {/* Feedback */}
           {quizResult && (
             <div
-              className="pop"
+              className={quizResult === 'wrong' ? 'wiggle' : 'pop'}
               style={{
                 borderRadius: RADIUS.lg,
                 boxShadow: SHADOW.card,

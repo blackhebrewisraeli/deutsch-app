@@ -24,7 +24,7 @@ export default function FeedbackPanel({ verdict, correctText, note, onNext }) {
   const showCorrectText = !isCorrect && correctText;
   return (
     <div
-      className="pop"
+      className={verdict === 'wrong' ? 'wiggle' : 'pop'}
       style={{
         borderRadius: RADIUS.lg,
         boxShadow: SHADOW.card,

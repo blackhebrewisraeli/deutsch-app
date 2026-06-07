@@ -12,6 +12,7 @@ import VocabTab from './components/VocabTab';
 import TranslateTab from './components/TranslateTab';
 import StatsTab from './components/StatsTab';
 import SplashScreen from './components/SplashScreen';
+import Confetti from './components/ui/Confetti';
 import { Analytics } from '@vercel/analytics/react';
 import { useWindowWidth, isMobile } from './lib/useWindowWidth';
 
@@ -20,6 +21,16 @@ export default function App() {
   const [stats, setStats] = useState({ streak: 0, learnedCount: 0, lastVisit: null });
   const [learnedWords, setLearnedWords] = useState({});
   const [reviewTarget, setReviewTarget] = useState(null);
+  const [streakBurst, setStreakBurst] = useState(false);
+
+  // Celebrate streak milestones (every 7 days) once when stats load for the day.
+  useEffect(() => {
+    if (stats.lastVisit && stats.streak > 0 && stats.streak % 7 === 0) {
+      setStreakBurst(true);
+      const t = setTimeout(() => setStreakBurst(false), 1600);
+      return () => clearTimeout(t);
+    }
+  }, [stats.lastVisit, stats.streak]);
   const width = useWindowWidth();
   const mobile = isMobile(width);
 
@@ -119,6 +130,7 @@ export default function App() {
     <div
       style={{
         minHeight: '100vh',
+        position: 'relative',
         background: COLORS.paper,
         color: COLORS.ink,
         fontFamily: FONT_BODY,
@@ -126,6 +138,11 @@ export default function App() {
         backgroundSize: '24px 24px',
       }}
     >
+      {streakBurst && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 60, pointerEvents: 'none' }}>
+          <Confetti count={40} />
+        </div>
+      )}
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500;700&display=swap');
         * { box-sizing: border-box; }

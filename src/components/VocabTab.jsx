@@ -515,7 +515,7 @@ export default function VocabTab({
               {/* Feedback after answering */}
               {answered && (
                 <div
-                  className="pop"
+                  className={result === 'wrong' ? 'wiggle' : 'pop'}
                   style={{
                     borderRadius: RADIUS.lg,
                     boxShadow: SHADOW.card,
