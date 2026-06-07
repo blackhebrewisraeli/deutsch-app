@@ -184,7 +184,14 @@ export default function VocabTab({
         {/* ── Left column: deck selector + generate ── */}
         <div>
           <SectionLabel num="A" text="Preset Decks" />
-          <div style={{ border: `2px solid ${COLORS.ink}`, marginBottom: 24 }}>
+          <div
+            style={{
+              borderRadius: RADIUS.lg,
+              boxShadow: SHADOW.card,
+              overflow: 'hidden',
+              marginBottom: 24,
+            }}
+          >
             {decks.map((d, i) => {
               const active = deckId === d.id;
               return (
@@ -194,10 +201,10 @@ export default function VocabTab({
                   style={{
                     width: '100%',
                     padding: '14px 16px',
-                    background: active ? COLORS.ink : COLORS.paper,
+                    background: active ? COLORS.ink : COLORS.card,
                     color: active ? COLORS.paper : COLORS.ink,
                     border: 'none',
-                    borderBottom: i < decks.length - 1 ? `2px solid ${COLORS.ink}` : 'none',
+                    borderBottom: i < decks.length - 1 ? `1px solid ${COLORS.ink}12` : 'none',
                     display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
@@ -224,7 +231,7 @@ export default function VocabTab({
                   background: deckId === 'custom' ? COLORS.red : COLORS.paperDeep,
                   color: deckId === 'custom' ? COLORS.paper : COLORS.ink,
                   border: 'none',
-                  borderTop: `2px solid ${COLORS.ink}`,
+                  borderTop: `1px solid ${COLORS.ink}12`,
                   display: 'flex',
                   justifyContent: 'space-between',
                   alignItems: 'center',
@@ -245,7 +252,12 @@ export default function VocabTab({
 
           <SectionLabel num="B" text="Generate Custom" />
           <div
-            style={{ border: `2px solid ${COLORS.ink}`, padding: 16, background: COLORS.paperDeep }}
+            style={{
+              borderRadius: RADIUS.lg,
+              boxShadow: SHADOW.card,
+              padding: 16,
+              background: COLORS.paperDeep,
+            }}
           >
             <input
               value={customTopic}
@@ -258,7 +270,9 @@ export default function VocabTab({
                 boxSizing: 'border-box',
                 padding: 12,
                 background: COLORS.card,
-                border: `2px solid ${COLORS.ink}`,
+                border: 'none',
+                borderRadius: RADIUS.md,
+                boxShadow: 'inset 0 2px 5px rgba(22,17,11,0.06)',
                 fontFamily: FONTS.body,
                 fontSize: FONT_SIZE.md,
                 outline: 'none',
