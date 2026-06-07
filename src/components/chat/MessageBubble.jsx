@@ -1,15 +1,39 @@
 import { Volume2 } from 'lucide-react';
-import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from '../../lib/theme';
+import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from '../../lib/theme';
 import { speak } from '../../lib/speech';
 
-// A single chat message — Anna's (gold, left) or the learner's (ink, right).
+// A single chat message — Anna's (gold, left, with avatar) or the learner's
+// (ink, right).
 export default function MessageBubble({ msg }) {
   const isUser = msg.role === 'user';
   return (
     <div
       className="slide-up"
-      style={{ display: 'flex', justifyContent: isUser ? 'flex-end' : 'flex-start' }}
+      style={{
+        display: 'flex',
+        gap: 10,
+        alignItems: 'flex-start',
+        justifyContent: isUser ? 'flex-end' : 'flex-start',
+      }}
     >
+      {!isUser && (
+        <div
+          style={{
+            width: 40,
+            height: 40,
+            borderRadius: RADIUS.pill,
+            background: COLORS.gold,
+            boxShadow: SHADOW.press('#d9ab10'),
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 20,
+            flexShrink: 0,
+          }}
+        >
+          🧑‍🏫
+        </div>
+      )}
       <div style={{ maxWidth: '78%' }}>
         <div
           style={{
@@ -27,8 +51,9 @@ export default function MessageBubble({ msg }) {
           style={{
             padding: '14px 18px',
             background: isUser ? COLORS.ink : COLORS.gold,
-            color: COLORS.ink,
-            border: `2px solid ${COLORS.ink}`,
+            color: isUser ? COLORS.paper : COLORS.ink,
+            borderRadius: isUser ? '20px 20px 6px 20px' : '20px 20px 20px 6px',
+            boxShadow: SHADOW.press(isUser ? '#000000' : '#d9ab10'),
           }}
         >
           <div

@@ -5,7 +5,8 @@ import {
   FONT_SIZE,
   LETTER_SPACING,
   SPACE,
-  BORDER,
+  RADIUS,
+  SHADOW,
 } from '../../lib/theme';
 
 // Section C — the learner's current task card (red), or the "all tasks done"
@@ -56,10 +57,11 @@ export default function TaskPanel({
       {tasksCompleted ? (
         <div
           style={{
-            border: BORDER.standard,
+            borderRadius: RADIUS.lg,
+            boxShadow: SHADOW.press('#d9ab10'),
             background: COLORS.gold,
             color: COLORS.ink,
-            padding: SPACE[4],
+            padding: SPACE[5],
           }}
         >
           <div
@@ -101,10 +103,11 @@ export default function TaskPanel({
       ) : (
         <div
           style={{
-            border: BORDER.standard,
+            borderRadius: RADIUS.lg,
+            boxShadow: SHADOW.press(COLORS.rust),
             background: COLORS.red,
             color: COLORS.paper,
-            padding: SPACE[4],
+            padding: SPACE[5],
           }}
         >
           <div

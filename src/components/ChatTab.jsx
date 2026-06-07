@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { COLORS, FONT_MONO, FONT_BODY } from '../lib/theme';
+import { COLORS, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from '../lib/theme';
 import { speak } from '../lib/speech';
 import { callClaude } from '../lib/claude';
 import { SCENARIOS, CHAT_TASKS } from '../data/content';
@@ -212,9 +212,10 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
           <div
             style={{
               marginTop: 24,
-              padding: 16,
+              padding: 18,
               background: COLORS.paperDeep,
-              border: `2px solid ${COLORS.ink}`,
+              borderRadius: RADIUS.lg,
+              boxShadow: SHADOW.card,
             }}
           >
             <div
@@ -241,7 +242,9 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
           style={{
             display: 'flex',
             flexDirection: 'column',
-            border: `2px solid ${COLORS.ink}`,
+            borderRadius: RADIUS.lg,
+            boxShadow: SHADOW.card,
+            overflow: 'hidden',
             background: COLORS.paper,
           }}
         >

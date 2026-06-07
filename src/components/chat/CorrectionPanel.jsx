@@ -1,5 +1,5 @@
 import { Volume2, Check } from 'lucide-react';
-import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY } from '../../lib/theme';
+import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from '../../lib/theme';
 import { speak } from '../../lib/speech';
 import { SectionLabel } from '../UI';
 
@@ -12,8 +12,9 @@ export default function CorrectionPanel({ correction, mobile }) {
       <SectionLabel num="B" text="Correction" />
       <div
         style={{
-          border: `2px solid ${COLORS.ink}`,
-          background: correction ? COLORS.red : COLORS.paper,
+          borderRadius: RADIUS.lg,
+          boxShadow: correction ? SHADOW.press(COLORS.rust) : SHADOW.card,
+          background: correction ? COLORS.red : COLORS.card,
           color: correction ? COLORS.paper : COLORS.ink,
           minHeight: 240,
           padding: 20,

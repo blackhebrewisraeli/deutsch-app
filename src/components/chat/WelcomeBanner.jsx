@@ -5,7 +5,8 @@ import {
   FONT_SIZE,
   LETTER_SPACING,
   SPACE,
-  BORDER,
+  RADIUS,
+  SHADOW,
 } from '../../lib/theme';
 
 // One-time first-visit banner explaining the exercise model. Dismissal is
@@ -14,7 +15,8 @@ export default function WelcomeBanner({ mobile, onDismiss }) {
   return (
     <div
       style={{
-        border: BORDER.standard,
+        borderRadius: RADIUS.lg,
+        boxShadow: SHADOW.bar,
         background: COLORS.ink,
         color: COLORS.paper,
         padding: mobile ? SPACE[4] : SPACE[5],
@@ -56,6 +58,7 @@ export default function WelcomeBanner({ mobile, onDismiss }) {
         style={{
           background: 'transparent',
           border: `2px solid ${COLORS.paper}`,
+          borderRadius: RADIUS.md,
           color: COLORS.paper,
           fontFamily: FONT_MONO,
           fontWeight: 700,

@@ -1,4 +1,4 @@
-import { COLORS, FONT_DISPLAY, FONT_MONO } from '../../lib/theme';
+import { COLORS, FONT_DISPLAY, FONT_MONO, RADIUS, SHADOW } from '../../lib/theme';
 import { SCENARIOS } from '../../data/content';
 import { SectionLabel } from '../UI';
 
@@ -13,7 +13,9 @@ export default function ScenarioPicker({ scenario, setScenario, mobile }) {
           display: 'flex',
           flexDirection: mobile ? 'row' : 'column',
           gap: 0,
-          border: `2px solid ${COLORS.ink}`,
+          borderRadius: RADIUS.lg,
+          boxShadow: SHADOW.card,
+          overflow: 'hidden',
           overflowX: mobile ? 'auto' : 'visible',
         }}
       >
@@ -25,11 +27,11 @@ export default function ScenarioPicker({ scenario, setScenario, mobile }) {
               onClick={() => setScenario(s.id)}
               style={{
                 padding: mobile ? '10px 14px' : 16,
-                background: active ? COLORS.ink : COLORS.paper,
+                background: active ? COLORS.ink : COLORS.card,
                 color: active ? COLORS.paper : COLORS.ink,
                 border: 'none',
-                borderBottom: mobile ? 'none' : `2px solid ${COLORS.ink}`,
-                borderRight: mobile ? `2px solid ${COLORS.ink}` : 'none',
+                borderBottom: mobile ? 'none' : `1px solid ${COLORS.ink}12`,
+                borderRight: mobile ? `1px solid ${COLORS.ink}12` : 'none',
                 textAlign: 'left',
                 display: 'flex',
                 alignItems: 'center',
