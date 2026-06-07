@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { ArrowRight, SkipForward } from 'lucide-react';
-import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, BORDER, BUTTON } from '../../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, RADIUS, BUTTON } from '../../lib/theme';
 import { callClaude } from '../../lib/claude';
 import { recordEvent, recordItem } from '../../lib/stats';
 import FeedbackPanel from './FeedbackPanel';
@@ -103,7 +103,9 @@ Use "wrong" if there's a significant grammar mistake, wrong word choice, or the 
               boxSizing: 'border-box',
               minHeight: 120,
               padding: SPACE[4],
-              border: BORDER.standard,
+              border: 'none',
+              borderRadius: RADIUS.md,
+              boxShadow: 'inset 0 2px 5px rgba(22,17,11,0.06)',
               background: COLORS.card,
               fontFamily: FONTS.display,
               fontSize: FONT_SIZE.xl,
@@ -118,7 +120,7 @@ Use "wrong" if there's a significant grammar mistake, wrong word choice, or the 
             <button
               onClick={check}
               disabled={!input.trim() || loading}
-              style={{ ...BUTTON.danger, flex: 1, opacity: !input.trim() || loading ? 0.4 : 1 }}
+              style={{ ...BUTTON.go, flex: 1, opacity: !input.trim() || loading ? 0.4 : 1 }}
             >
               {loading ? (
                 'GRADING...'

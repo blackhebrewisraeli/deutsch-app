@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import { SkipForward } from 'lucide-react';
-import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, BORDER, BUTTON } from '../../lib/theme';
+import {
+  COLORS,
+  FONTS,
+  FONT_SIZE,
+  LETTER_SPACING,
+  SPACE,
+  RADIUS,
+  SHADOW,
+  BUTTON,
+} from '../../lib/theme';
 import { shuffle } from '../../lib/utils';
 import { recordEvent, recordItem } from '../../lib/stats';
 import FeedbackPanel from './FeedbackPanel';
@@ -75,8 +84,9 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
               fontSize: FONT_SIZE['2xl'],
               lineHeight: 2,
               marginBottom: SPACE[4],
-              border: BORDER.standard,
-              padding: SPACE[4],
+              borderRadius: RADIUS.lg,
+              boxShadow: SHADOW.card,
+              padding: SPACE[5],
               background: COLORS.card,
             }}
           >
@@ -123,11 +133,13 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
                 key={tile.id}
                 onClick={() => fillNext(tile)}
                 style={{
-                  padding: `${SPACE[1] + 2}px ${SPACE[3]}px`,
+                  padding: `${SPACE[2]}px ${SPACE[4]}px`,
                   fontFamily: FONTS.mono,
                   fontSize: FONT_SIZE.md,
-                  border: BORDER.standard,
-                  background: COLORS.paper,
+                  border: 'none',
+                  borderRadius: RADIUS.sm,
+                  boxShadow: SHADOW.press(COLORS.lip),
+                  background: COLORS.card,
                   color: COLORS.ink,
                   cursor: 'pointer',
                 }}
@@ -141,7 +153,7 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
             <button
               onClick={check}
               disabled={filled.includes(null)}
-              style={{ ...BUTTON.danger, flex: 1, opacity: filled.includes(null) ? 0.4 : 1 }}
+              style={{ ...BUTTON.go, flex: 1, opacity: filled.includes(null) ? 0.4 : 1 }}
             >
               CHECK →
             </button>

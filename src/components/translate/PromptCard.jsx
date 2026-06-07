@@ -5,7 +5,8 @@ import {
   FONT_WEIGHT,
   LETTER_SPACING,
   SPACE,
-  BORDER,
+  RADIUS,
+  SHADOW,
 } from '../../lib/theme';
 
 // The English sentence the learner must translate to German.
@@ -13,7 +14,8 @@ export default function PromptCard({ text }) {
   return (
     <div
       style={{
-        border: BORDER.standard,
+        borderRadius: RADIUS.lg,
+        boxShadow: SHADOW.card,
         background: COLORS.paper,
         padding: `${SPACE[5]}px ${SPACE[6]}px`,
         marginBottom: SPACE[4],

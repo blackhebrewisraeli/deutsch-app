@@ -6,7 +6,8 @@ import {
   FONT_WEIGHT,
   LETTER_SPACING,
   SPACE,
-  BORDER,
+  RADIUS,
+  SHADOW,
   BUTTON,
 } from '../../lib/theme';
 
@@ -23,8 +24,10 @@ export default function FeedbackPanel({ verdict, correctText, note, onNext }) {
   const showCorrectText = !isCorrect && correctText;
   return (
     <div
+      className="pop"
       style={{
-        border: BORDER.standard,
+        borderRadius: RADIUS.lg,
+        boxShadow: SHADOW.card,
         background: bg,
         color: fg,
         padding: SPACE[5],

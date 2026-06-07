@@ -1,6 +1,15 @@
 import { useState, useEffect } from 'react';
 import { SkipForward } from 'lucide-react';
-import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, BORDER, BUTTON } from '../../lib/theme';
+import {
+  COLORS,
+  FONTS,
+  FONT_SIZE,
+  LETTER_SPACING,
+  SPACE,
+  RADIUS,
+  SHADOW,
+  BUTTON,
+} from '../../lib/theme';
 import { shuffle } from '../../lib/utils';
 import { recordEvent, recordItem } from '../../lib/stats';
 import FeedbackPanel from './FeedbackPanel';
@@ -41,14 +50,16 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
   };
 
   const tileStyle = (active) => ({
-    padding: `${SPACE[1] + 2}px ${SPACE[3]}px`,
+    padding: `${SPACE[2]}px ${SPACE[4]}px`,
     fontFamily: FONTS.mono,
     fontSize: FONT_SIZE.md,
-    border: BORDER.standard,
-    background: active ? COLORS.ink : COLORS.paper,
+    border: 'none',
+    borderRadius: RADIUS.sm,
+    boxShadow: SHADOW.press(active ? '#000000' : COLORS.lip),
+    background: active ? COLORS.ink : COLORS.card,
     color: active ? COLORS.paper : COLORS.ink,
     cursor: 'pointer',
-    transition: 'all 0.1s',
+    transition: 'transform .08s ease, box-shadow .08s ease',
   });
 
   return (
@@ -76,7 +87,8 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
           <div
             style={{
               minHeight: 52,
-              border: `2px dashed ${COLORS.ink}40`,
+              border: `2px dashed ${COLORS.ink}30`,
+              borderRadius: RADIUS.md,
               background: COLORS.card,
               padding: SPACE[3],
               display: 'flex',
@@ -115,7 +127,7 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
             <button
               onClick={check}
               disabled={placed.length === 0}
-              style={{ ...BUTTON.danger, flex: 1, opacity: placed.length === 0 ? 0.4 : 1 }}
+              style={{ ...BUTTON.go, flex: 1, opacity: placed.length === 0 ? 0.4 : 1 }}
             >
               CHECK →
             </button>
