@@ -7,8 +7,9 @@ import {
   FONT_WEIGHT,
   LETTER_SPACING,
   SPACE,
-  BORDER,
   BUTTON,
+  RADIUS,
+  SHADOW,
 } from '../lib/theme';
 import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
@@ -17,6 +18,7 @@ import { Hero, SectionLabel } from './UI';
 import { shuffle, levenshtein } from '../lib/utils';
 import { recordEvent, recordItem } from '../lib/stats';
 import { getDueCards, recordVocabAnswer } from '../lib/srs';
+import Confetti from './ui/Confetti';
 
 export default function VocabTab({
   level,
@@ -318,15 +320,15 @@ export default function VocabTab({
                 >
                   {queue.length} card{queue.length !== 1 ? 's' : ''} remaining
                 </div>
-                <div style={{ display: 'flex', gap: 4 }}>
+                <div style={{ display: 'flex', gap: 5 }}>
                   {activeDeck.map((_, i) => (
                     <div
                       key={i}
                       style={{
-                        width: 24,
-                        height: 4,
-                        background: learnedWords[activeDeck[i].de] ? COLORS.ink : COLORS.paperDeep,
-                        border: `1px solid ${COLORS.ink}20`,
+                        width: 26,
+                        height: 8,
+                        borderRadius: RADIUS.pill,
+                        background: learnedWords[activeDeck[i].de] ? COLORS.green : '#e7dcae',
                       }}
                     />
                   ))}
@@ -336,19 +338,23 @@ export default function VocabTab({
               {/* Deck complete banner */}
               {deckComplete && (
                 <div
-                  className="slide-up"
+                  className="slide-up pop"
                   style={{
+                    position: 'relative',
+                    overflow: 'hidden',
                     background: 'linear-gradient(90deg, #F5C518 0%, #FFE44D 50%, #F5C518 100%)',
                     backgroundSize: '200% auto',
                     animation: 'shimmer 2s linear infinite',
-                    border: `2px solid ${COLORS.ink}`,
-                    padding: '14px 20px',
+                    borderRadius: RADIUS.lg,
+                    boxShadow: SHADOW.card,
+                    padding: '16px 20px',
                     marginBottom: 16,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                   }}
                 >
+                  <Confetti />
                   <span
                     style={{
                       fontFamily: FONTS.display,
@@ -357,7 +363,7 @@ export default function VocabTab({
                       color: COLORS.ink,
                     }}
                   >
-                    ✓ Deck complete — {activeDeck.filter((c) => learnedWords[c.de]).length} words
+                    🎉 Deck complete — {activeDeck.filter((c) => learnedWords[c.de]).length} words
                     learned
                   </span>
                   <button
@@ -366,6 +372,7 @@ export default function VocabTab({
                     style={{
                       background: 'transparent',
                       border: `1px solid ${COLORS.ink}`,
+                      borderRadius: RADIUS.sm,
                       fontFamily: FONTS.mono,
                       fontSize: FONT_SIZE.tag,
                       letterSpacing: LETTER_SPACING.widest,
@@ -382,7 +389,8 @@ export default function VocabTab({
               {/* Card face — always shows German */}
               <div
                 style={{
-                  border: BORDER.standard,
+                  borderRadius: RADIUS.xl,
+                  boxShadow: SHADOW.cardChunk,
                   background: COLORS.card,
                   minHeight: 200,
                   padding: SPACE[12],
@@ -391,7 +399,7 @@ export default function VocabTab({
                   alignItems: 'center',
                   justifyContent: 'center',
                   textAlign: 'center',
-                  marginBottom: SPACE[4],
+                  marginBottom: SPACE[5],
                   position: 'relative',
                 }}
               >
@@ -399,14 +407,15 @@ export default function VocabTab({
                   <div
                     style={{
                       position: 'absolute',
-                      background: COLORS.red,
-                      color: COLORS.card,
+                      top: SPACE[3],
+                      left: SPACE[3],
+                      background: COLORS.green,
+                      color: COLORS.paper,
                       padding: '4px 10px',
+                      borderRadius: RADIUS.pill,
                       fontFamily: FONTS.mono,
                       fontSize: FONT_SIZE.tag,
                       letterSpacing: LETTER_SPACING.widest,
-                      alignSelf: 'flex-start',
-                      marginBottom: 'auto',
                     }}
                   >
                     ✓ LEARNED
@@ -451,14 +460,8 @@ export default function VocabTab({
                           recordItem('vocab', deckId, card.de, card.en, verdict);
                         }}
                         style={{
+                          ...BUTTON.tile,
                           padding: SPACE[4],
-                          border: BORDER.standard,
-                          background: COLORS.paper,
-                          color: COLORS.ink,
-                          fontFamily: FONTS.body,
-                          fontSize: FONT_SIZE.lg,
-                          fontStyle: 'italic',
-                          cursor: 'pointer',
                         }}
                       >
                         {choice}
@@ -483,7 +486,9 @@ export default function VocabTab({
                         width: '100%',
                         boxSizing: 'border-box',
                         padding: SPACE[4],
-                        border: BORDER.standard,
+                        border: 'none',
+                        borderRadius: RADIUS.md,
+                        boxShadow: 'inset 0 2px 5px rgba(22,17,11,0.06)',
                         fontFamily: FONTS.display,
                         fontSize: FONT_SIZE.xl,
                         background: COLORS.card,
@@ -497,7 +502,7 @@ export default function VocabTab({
                       onClick={submitTyped}
                       disabled={!typedAnswer.trim()}
                       style={{
-                        ...BUTTON.danger,
+                        ...BUTTON.go,
                         width: '100%',
                         opacity: typedAnswer.trim() ? 1 : 0.4,
                       }}
@@ -510,8 +515,10 @@ export default function VocabTab({
               {/* Feedback after answering */}
               {answered && (
                 <div
+                  className="pop"
                   style={{
-                    border: BORDER.standard,
+                    borderRadius: RADIUS.lg,
+                    boxShadow: SHADOW.card,
                     background:
                       result === 'correct'
                         ? COLORS.gold
@@ -571,34 +578,21 @@ export default function VocabTab({
                       <button
                         type="button"
                         onClick={() => handleSrsVerdict('hard')}
-                        style={{
-                          ...BUTTON.secondary,
-                          background: COLORS.card,
-                          color: COLORS.ink,
-                          border: BORDER.standard,
-                        }}
+                        style={{ ...BUTTON.tile }}
                       >
                         HARD
                       </button>
                       <button
                         type="button"
                         onClick={() => handleSrsVerdict('good')}
-                        style={{
-                          ...BUTTON.primary,
-                          border: BORDER.standard,
-                        }}
+                        style={{ ...BUTTON.primary }}
                       >
                         GOOD
                       </button>
                       <button
                         type="button"
                         onClick={() => handleSrsVerdict('easy')}
-                        style={{
-                          ...BUTTON.secondary,
-                          background: COLORS.red,
-                          color: COLORS.paper,
-                          border: BORDER.standard,
-                        }}
+                        style={{ ...BUTTON.go }}
                       >
                         EASY
                       </button>
