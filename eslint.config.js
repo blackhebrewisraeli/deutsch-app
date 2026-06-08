@@ -56,6 +56,17 @@ export default [
     },
   },
 
+  // Server-side files: Vercel serverless functions and build/config scripts
+  // run in Node, not the browser — give them Node globals (process, etc.).
+  {
+    files: ['api/**/*.js', '*.config.js', 'scripts/**/*.js'],
+    languageOptions: {
+      globals: {
+        ...globals.node,
+      },
+    },
+  },
+
   // Turn off ESLint rules that conflict with Prettier formatting (must be last)
   prettier,
 ];
