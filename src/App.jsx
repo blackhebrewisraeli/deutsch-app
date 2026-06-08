@@ -1,9 +1,20 @@
-import { useState, useEffect } from 'react';
-import { BarChart3, Check, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
-import { getReviewItems } from './lib/stats';
+import { getReviewItems, todayKey } from './lib/stats';
 import { getDueCount } from './lib/srs';
+import {
+  totalXp,
+  todayXp,
+  levelFromXp,
+  goalProgress,
+  earnedAchievements,
+  gamificationContext,
+  ACHIEVEMENTS,
+  DEFAULT_GOAL,
+} from './lib/gamification';
+import { setSoundEnabled, playLevelUp, playAchievement, playGoalMet } from './lib/sound';
 import { PRESET_DECKS } from './data/content';
 import { StatBlock } from './components/UI';
 import ChatTab from './components/ChatTab';
@@ -13,6 +24,9 @@ import TranslateTab from './components/TranslateTab';
 import StatsTab from './components/StatsTab';
 import SplashScreen from './components/SplashScreen';
 import Confetti from './components/ui/Confetti';
+import ToastStack from './components/ui/Toast';
+import LevelBadge from './components/gamification/LevelBadge';
+import GoalRing from './components/gamification/GoalRing';
 import { Analytics } from '@vercel/analytics/react';
 import { useWindowWidth, isMobile } from './lib/useWindowWidth';
 
@@ -23,6 +37,42 @@ export default function App() {
   const [reviewTarget, setReviewTarget] = useState(null);
   const [streakBurst, setStreakBurst] = useState(false);
 
+  // ── Gamification ──────────────────────────────────────────────
+  // Derived from storage, refreshed on every `deutsch:progress` event.
+  const prevLevelRef = useRef(null);
+  const deriveGame = () => {
+    const s = loadState() ?? {};
+    const daily = s.daily ?? {};
+    return {
+      lvl: levelFromXp(totalXp(daily)),
+      goal: goalProgress(todayXp(daily, todayKey()), s.gamification?.goal),
+    };
+  };
+  const [game, setGame] = useState(deriveGame);
+
+  // Celebration toasts (level-up / achievement / goal-met).
+  const [toasts, setToasts] = useState([]);
+  const toastIdRef = useRef(0);
+  const pushToasts = (items) => {
+    setToasts((cur) => [
+      ...cur,
+      ...items.map((it) => {
+        const id = ++toastIdRef.current;
+        if (it.kind === 'ach') {
+          const a = ACHIEVEMENTS.find((x) => x.id === it.id);
+          return {
+            id,
+            icon: a?.icon ?? '🏅',
+            title: a?.name ?? 'Achievement',
+            sub: 'Achievement freigeschaltet',
+          };
+        }
+        return { id, icon: it.icon, title: it.title, sub: it.sub };
+      }),
+    ]);
+  };
+  const dismissToast = (id) => setToasts((cur) => cur.filter((t) => t.id !== id));
+
   // Celebrate streak milestones (every 7 days) once when stats load for the day.
   useEffect(() => {
     if (stats.lastVisit && stats.streak > 0 && stats.streak % 7 === 0) {
@@ -31,6 +81,86 @@ export default function App() {
       return () => clearTimeout(t);
     }
   }, [stats.lastVisit, stats.streak]);
+
+  // Recompute gamification on every progress event; fire toasts for new wins.
+  // First run silently backfills already-earned badges/level (no toast flood).
+  useEffect(() => {
+    function applyProgress() {
+      const s = loadState() ?? {};
+      const g = s.gamification ?? {
+        goal: DEFAULT_GOAL,
+        soundOn: false,
+        achievements: {},
+        lastGoalMet: null,
+      };
+      const ctx = gamificationContext(s);
+      const lvlInfo = levelFromXp(totalXp(s.daily ?? {}));
+      const earned = earnedAchievements(ctx);
+      const tKey = todayKey();
+      const goal = goalProgress(todayXp(s.daily ?? {}, tKey), g.goal);
+
+      const firstRun = prevLevelRef.current === null;
+      const nextG = { ...g, achievements: { ...g.achievements } };
+      const newToasts = [];
+
+      if (firstRun) {
+        for (const id of earned)
+          if (!(id in nextG.achievements)) nextG.achievements[id] = Date.now();
+        if (goal.met) nextG.lastGoalMet = tKey;
+        prevLevelRef.current = lvlInfo.level;
+      } else {
+        if (lvlInfo.level > prevLevelRef.current) {
+          newToasts.push({
+            kind: 'level',
+            title: `Level ${lvlInfo.level}`,
+            sub: lvlInfo.rankName,
+            icon: '⭐',
+          });
+        }
+        prevLevelRef.current = lvlInfo.level;
+        for (const id of earned) {
+          if (!(id in nextG.achievements)) {
+            nextG.achievements[id] = Date.now();
+            newToasts.push({ kind: 'ach', id });
+          }
+        }
+        if (goal.met && nextG.lastGoalMet !== tKey) {
+          nextG.lastGoalMet = tKey;
+          newToasts.push({
+            kind: 'goal',
+            title: 'Tagesziel erreicht!',
+            sub: `${goal.target} XP`,
+            icon: '🎯',
+          });
+        }
+      }
+
+      saveState({ ...s, gamification: nextG });
+      setSoundEnabled(!!nextG.soundOn);
+      setGame(deriveGame());
+
+      if (newToasts.length) {
+        pushToasts(newToasts);
+        setStreakBurst(true);
+        setTimeout(() => setStreakBurst(false), 1600);
+        if (nextG.soundOn) {
+          newToasts.forEach((t) => {
+            if (t.kind === 'level') playLevelUp();
+            else if (t.kind === 'ach') playAchievement();
+            else if (t.kind === 'goal') playGoalMet();
+          });
+        }
+      }
+    }
+
+    applyProgress();
+    window.addEventListener('deutsch:progress', applyProgress);
+    window.addEventListener('focus', applyProgress);
+    return () => {
+      window.removeEventListener('deutsch:progress', applyProgress);
+      window.removeEventListener('focus', applyProgress);
+    };
+  }, []);
   const width = useWindowWidth();
   const mobile = isMobile(width);
 
@@ -143,6 +273,7 @@ export default function App() {
           <Confetti count={40} />
         </div>
       )}
+      <ToastStack toasts={toasts} onDismiss={dismissToast} />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500;700&display=swap');
         * { box-sizing: border-box; }
@@ -211,7 +342,13 @@ export default function App() {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: mobile ? 12 : 24, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: mobile ? 10 : 16, alignItems: 'center' }}>
+          <LevelBadge
+            level={game.lvl.level}
+            progress={game.lvl.progress}
+            rank={game.lvl.rankName}
+            size={mobile ? 42 : 52}
+          />
           <StatBlock
             label="STREAK"
             value={stats.streak}
@@ -219,11 +356,7 @@ export default function App() {
             accent
             pulsing={streakPulsing}
           />
-          <StatBlock
-            label="LEARNED"
-            value={stats.learnedCount}
-            icon={<Check size={mobile ? 12 : 14} />}
-          />
+          <GoalRing pct={game.goal.pct} met={game.goal.met} size={mobile ? 40 : 48} />
         </div>
       </header>
 

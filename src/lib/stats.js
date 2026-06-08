@@ -206,6 +206,9 @@ export function recordEvent(tab, level, verdict) {
     const state = loadState() ?? {};
     const daily = applyEvent(state.daily ?? {}, todayKey(), tab, level, verdict);
     saveState({ ...state, daily });
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('deutsch:progress'));
+    }
   } catch {
     // recordEvent is best-effort — never throw into the React tree
   }
