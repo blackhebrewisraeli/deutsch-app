@@ -177,9 +177,11 @@ Click **04 Translate**.
 
 | Check | Expected | Pass? |
 |-------|----------|-------|
-| Mark a vocab word as Learned | Header LEARNED counter increments | |
-| Reload page | LEARNED count persists (not reset) | |
-| STREAK shows ≥ 1 | Flame icon with number | |
+| Answer a vocab card correctly | Card shows ✓ LEARNED on the flashcard | |
+| Open **05 Stats** tab | Level card shows LEARNED count ≥ 1 | |
+| Reload page | LEARNED count on Stats tab persists | |
+| STREAK shows ≥ 1 | Flame icon in header with number | |
+| Header level badge | Shows level number and rank after exercises | |
 
 ---
 
@@ -189,8 +191,8 @@ Resize browser to ~375px width (or use DevTools device mode).
 
 | Check | Expected | Pass? |
 |-------|----------|-------|
-| Header: logo visible, tagline hidden | "Deutsch." visible, "Sprachschule × Est." hidden | |
-| Nav: icon-only tabs | Four icons, no text labels | |
+| Header: logo visible, tagline hidden | "Deutsch." visible, "Sprachschule × Est." hidden; level + streak + goal ring visible | |
+| Nav: icon-only tabs | Five icons (Chat–Stats), no text labels | |
 | Chat: scenario bar scrolls horizontally | Single row of scenario buttons | |
 | Vocab: deck list above flashcard | Single-column stacked layout | |
 | Alphabet quiz: 2×2 letter grid | Options visible without horizontal scroll | |
