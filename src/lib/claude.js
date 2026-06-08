@@ -5,9 +5,7 @@
 //
 // The API key is ALWAYS injected server-side — never exposed in the browser bundle.
 
-const API_URL = import.meta.env.PROD
-  ? '/api/chat'
-  : '/api/anthropic/v1/messages';
+const API_URL = import.meta.env.PROD ? '/api/chat' : '/api/anthropic/v1/messages';
 
 export const callClaude = async (systemPrompt, userMessage, conversationHistory = []) => {
   const messages = [...conversationHistory, { role: 'user', content: userMessage }];
