@@ -13,7 +13,7 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-163_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-185_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
   <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
 </p>
@@ -38,18 +38,6 @@
   <a href="#-quick-start"><b>Quick Start</b></a> &nbsp;·&nbsp;
   <a href="#-deploy-to-production"><b>Deploy</b></a>
 </p>
-
-<br/>
-
-![Splash screen — German flag onboarding](docs/screenshot-splash.png)
-
-<br/>
-
-![Chat — guided conversation with the AI tutor Anna](docs/screenshot-chat.png)
-
-![Vocab — spaced-repetition flashcards with 3D-press answers](docs/screenshot-vocab.png)
-
-![Stats — practice dashboard with heatmap, accuracy, and review queue](docs/screenshot-stats.png)
 
 <br/>
 
@@ -285,11 +273,13 @@ TRANSLATE TO GERMAN
 
 ```json
 {
-  "correct": true,
+  "verdict": "correct",
   "corrected": "Trotz des Regens haben wir den Spaziergang genossen.",
   "message": "Perfect. Note: 'trotz' always takes genitive — des Regens, not dem Regen."
 }
 ```
+
+`verdict` is `"correct"`, `"almost"`, or `"wrong"`. Both **correct** and **almost** advance the exercise.
 
 When the **built-in sentence bank** (10 sentences per level) is exhausted, Claude generates 5 fresh sentences on demand and appends them — the exercise never runs out.
 
@@ -297,12 +287,13 @@ When the **built-in sentence bank** (10 sentences per level) is exhausted, Claud
 
 ### Progress tracking
 
-The header always shows two stats, persisted in `localStorage`:
+The header shows **level**, **streak**, and **daily goal** progress (XP-derived), persisted in `localStorage`:
 
-- 🔥 **Streak** — opens the app on consecutive days → streak increments
-- ✓ **Learned** — counts vocabulary cards answered correctly across all decks
+- **Level badge** — XP from all graded exercises; rank names (Anfänger → Fließend, …)
+- 🔥 **Streak** — consecutive days with at least one visit
+- **Goal ring** — today's XP vs. daily target (configurable in Stats)
 
-A red badge on the **05 Stats** nav tab shows how many items are waiting for review (wrong answers + due vocab cards), capped at "9+". The Stats tab itself surfaces six dashboards — see the next section.
+The **05 Stats** tab shows total XP, learned-word count, achievements, and goal/sound settings. A red badge on the Stats nav tab shows how many items are waiting for review (wrong answers + due vocab cards), capped at "9+". Six practice dashboards — see the next section.
 
 ---
 
@@ -333,9 +324,12 @@ A dedicated tab that records every graded interaction across the four exercise m
 
 ```js
 {
-  daily: { 'YYYY-MM-DD': { total, byTab, byLevel: { a1, a2, b1: { correct, almost, wrong } } } },
-  items: { '<tab>:<context>:<label>': { tab, context, label, detail, lastVerdict, lastTs, attempts, wrongCount } },
-  srs:   { '<deckId>:<de>':           { box, lastReviewed, nextDue, reps } },
+  stats:        { streak, learnedCount, lastVisit },
+  learnedWords: { '<de>': bool },
+  daily:        { 'YYYY-MM-DD': { total, byTab, byLevel: { a1, a2, b1: { correct, almost, wrong } } } },
+  items:        { '<tab>:<context>:<label>': { tab, context, label, detail, lastVerdict, lastTs, attempts, wrongCount } },
+  srs:          { '<deckId>:<de>': { box, lastReviewed, nextDue, reps } },
+  gamification: { goal, soundOn, achievements, lastGoalMet },
 }
 ```
 
@@ -408,7 +402,7 @@ AI-generated decks expand to any domain on demand.
 | Persistence | **localStorage** | Streak, learned words, chosen level — no backend |
 | Linting | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars |
 | Formatting | **Prettier 3** | Consistent code style, enforced on every commit |
-| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **163 tests** — logic/data (`utils`, `storage`, `content`, `stats`, `srs`) + component tests (`ui/Button`, `stats/*`) |
+| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **185 tests** — `src/lib/*`, `src/data/content`, and component tests (`ui/*`, `stats/*`, `gamification/*`) |
 | CI | **GitHub Actions** | Runs lint + test + build on every push to `main` and every PR |
 | Pre-commit | **Husky + lint-staged** | Runs ESLint + Prettier + the full test suite before every `git commit` |
 | PWA | **vite-plugin-pwa** + Workbox | Installable on iOS/Android, offline-capable static assets |
@@ -474,8 +468,8 @@ User: "Ich möchte ein Kaffee groß, bitte."
 
 **B1 Translation grading** — single-shot evaluation:
 ```
-System: You are a German grader. Respond ONLY with JSON: { correct, corrected, message }
-        Set correct:true if grammatically valid and meaning preserved.
+System: You are a German grader. Respond ONLY with JSON: { verdict, corrected, message }
+        verdict: "correct" | "almost" | "wrong"
 
 User: English: "…" | Ideal German: "…" | Learner's answer: "…"
 ```
@@ -531,6 +525,9 @@ npm run lint         # ESLint across src/
 npm run lint:fix     # ESLint with auto-fix
 npm run format       # Prettier across src/
 npm run format:check # Verify formatting without writing
+npm test             # Vitest (single run)
+npm run test:watch   # Vitest watch mode
+npm run test:coverage # Vitest with v8 coverage report
 ```
 
 > 💡 **Cost:** A 30-minute session (chat + a few translations + a generated deck) typically costs **$0.01–0.03** with Claude Haiku 4.5.
@@ -596,42 +593,50 @@ deutsch-app/
 │
 ├── src/
 │   ├── components/
-│   │   ├── AlphabetTab.jsx    ← Audio quiz mode + browse grid
-│   │   ├── ChatTab.jsx        ← Guided conversation, task panel, speech I/O, corrections
-│   │   ├── SplashScreen.jsx   ← First-visit level picker (A1 / A2 / B1)
-│   │   ├── StatsTab.jsx       ← 6-section practice dashboard (today, heatmap, review, SRS queue…)
-│   │   ├── TranslateTab.jsx   ← Exercise mode: tiles (A1) / blanks (A2) / typing+AI (B1)
-│   │   ├── UI.jsx             ← Shared components: Hero, SectionLabel, StatBlock
-│   │   └── VocabTab.jsx       ← Active recall + SRS queue, Hard/Good/Easy verdicts
+│   │   ├── AlphabetTab.jsx
+│   │   ├── ChatTab.jsx
+│   │   ├── SplashScreen.jsx
+│   │   ├── StatsTab.jsx
+│   │   ├── TranslateTab.jsx
+│   │   ├── UI.jsx
+│   │   ├── VocabTab.jsx
+│   │   ├── chat/              ← ChatInput, MessageBubble, TaskPanel, …
+│   │   ├── gamification/      ← LevelBadge, GoalRing, BadgeGrid, …
+│   │   ├── stats/             ← Heatmap, ReviewFeed, VocabSrsWidget, …
+│   │   ├── translate/         ← TileExercise, BlankExercise, TypingExercise, …
+│   │   └── ui/                ← Button, Toast, Confetti, Card
 │   │
 │   ├── data/
-│   │   ├── content.js         ← Alphabet, preset decks, scenarios, sentence banks,
-│   │   │                         task prompts, quiz groups
-│   │   └── content.test.js    ← Data-shape invariants (38 tests)
+│   │   ├── content.js         ← ALPHABET, PRESET_DECKS, SCENARIOS, CHAT_TASKS,
+│   │   │                         TRANSLATE_SENTENCES_*, ALPHABET_QUIZ_GROUPS
+│   │   └── content.test.js
 │   │
 │   ├── lib/
 │   │   ├── claude.js          ← Anthropic API client (dev proxy / prod serverless)
+│   │   ├── gamification.js    ← XP, levels, daily goal, achievements
+│   │   ├── gamification.test.js
+│   │   ├── sound.js           ← Web Audio synth effects (correct, level-up, …)
 │   │   ├── speech.js          ← SpeechSynthesis wrapper
-│   │   ├── storage.js         ← localStorage read/write
-│   │   ├── storage.test.js    ← Load/save round-trip + quota-exceeded handling (9 tests)
-│   │   ├── stats.js           ← Event log: daily aggregates, items map, review feed helpers
-│   │   ├── stats.test.js      ← Pure helpers + recordEvent + recordItem (51 tests)
-│   │   ├── srs.js             ← Leitner spaced repetition for vocab (Hard/Good/Easy)
-│   │   ├── srs.test.js        ← Transitions, queue derivation, recordVocabAnswer (29 tests)
-│   │   ├── theme.js           ← Design tokens: COLORS, FONTS, FONT_SIZE, BUTTON, CARD, TEXT…
-│   │   ├── useWindowWidth.js  ← Responsive hook: live viewport width + isMobile() / isTablet()
-│   │   ├── utils.js           ← shuffle(arr), levenshtein(a, b)
-│   │   └── utils.test.js      ← Pure-function tests incl. German chars (15 tests)
+│   │   ├── srs.js             ← Leitner spaced repetition
+│   │   ├── srs.test.js
+│   │   ├── stats.js           ← Event log + review feed helpers
+│   │   ├── stats.test.js
+│   │   ├── storage.js
+│   │   ├── storage.test.js
+│   │   ├── theme.js           ← Design tokens
+│   │   ├── useWindowWidth.js  ← Responsive hook + breakpoint helpers
+│   │   ├── utils.js
+│   │   └── utils.test.js
 │   │
-│   ├── App.jsx                ← Root layout, tab navigation, streak/learned stats, Stats badge
+│   ├── App.jsx
 │   ├── main.jsx
-│   └── test-setup.js          ← Vitest setup — shims localStorage for the jsdom env
+│   └── test-setup.js
 │
 ├── .husky/pre-commit          ← Runs lint-staged + `npm test` before every commit
 ├── .npmrc                     ← legacy-peer-deps=true (eslint-plugin-react peer-dep workaround)
 ├── .prettierrc                ← Prettier config
 ├── eslint.config.js           ← ESLint flat config (react, react-hooks, react-refresh)
-├── vitest.config.js           ← Vitest config (jsdom env, v8 coverage of src/lib + src/data)
+├── vitest.config.js           ← Vitest config (jsdom env, v8 coverage of src/lib + src/data + src/components)
 ├── vite.config.js             ← Vite config + PWA plugin + dev proxy
 └── package.json
 ```
