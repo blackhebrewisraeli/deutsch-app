@@ -4,6 +4,7 @@
 **Status:** Approved design / ready for implementation plan.
 **Phase:** Phase 0 of the multi-language platform refactor.
 **Builds on:** [`2026-06-09-multi-language-platform-design.md`](./2026-06-09-multi-language-platform-design.md) (direction note).
+**Validated against:** [`AUDIT_GERMAN_COUPLING.md`](../../AUDIT_GERMAN_COUPLING.md) — the 48-finding German-coupling audit.
 **Scope:** Define the language-agnostic `LanguagePack` interface and load the existing
 German content through it. German stays the only pack; **the app behaves identically.**
 Latin-script, LTR only (per the direction note).
@@ -22,8 +23,8 @@ a second language) without forcing that work into Phase 0.
 ## Decisions (brainstormed & approved)
 
 1. **Contract scope — full shape now, fill incrementally.** The complete interface
-   (`meta`, `content`, `validation`, `grammar`) is defined now. Phase 0 wires only
-   `content`; `validation`/`grammar` are declared but populated in Phase 1. Rationale:
+   (`meta`, `content`, `validation`, `grammar`, `prompts`) is defined now. Phase 0 wires only
+   `content`; `validation`/`grammar`/`prompts` are declared but populated in Phase 1. Rationale:
    one stable contract consumers code against once.
 2. **Content mapping — faithful, lightly generalized.** One contract field per content
    type; German *item* shapes are preserved unchanged. German-specific *buckets* generalize
@@ -87,11 +88,27 @@ LanguagePack {
     genders,             // article/gender system (der/die/das), engine-neutral data
     notes,               // cultural / usage nuance
   },
+
+  prompts: {                                  // ← declared now, populated in Phase 1
+    chatTutor,           // role-play tutor system prompt (today: hardcoded "German tutor Anna")
+    gradeTranslation,    // rubric for AI-graded typing exercises
+    generateVocab,       // AI deck-generation prompt
+    generateExercises,   // AI sentence-generation prompt
+  },
 }
 ```
 
 Item shapes (`Card`, `Scenario`, `ChatTask`, `Sentence`, `AlphabetEntry`, `QuizGroup`)
 remain **exactly** as today's `content.js`. Only the German-specific buckets generalize.
+
+**AI prompts.** The app calls Claude for chat tutoring, translation grading, and vocab/
+sentence generation — all with German-specific prompts embedded in components today
+(audit #18, #42–44). These move into pack `prompts` in Phase 1.
+
+**Out of scope — UI chrome strings.** Hardcoded interface copy like `Das Alphabet`,
+`Sprich auf Deutsch…`, `Anna tippt` (audit #33–40) is **not** pack content — it's a separate
+**i18n layer**, deferred to Phase 4 with the picker. The `LanguagePack` carries learning
+content + language rules, not interface labels.
 
 ---
 
@@ -115,7 +132,8 @@ Everything else passes through unchanged.
 
 New language-agnostic module wrapping the existing `utils.levenshtein`:
 
-- `exactMatch(expected, given, normalize) => boolean` — used by `translate/TileExercise.jsx`.
+- `exactMatch(expected, given, normalize) => boolean` — used by `translate/TileExercise.jsx`
+  and `translate/BlankExercise.jsx` (audit #16–17).
 - `fuzzyMatch(expected, given, normalize, maxDistance) => { ok, distance }` — used by
   `VocabTab.jsx`.
 
@@ -128,6 +146,10 @@ optional pure-distance tidy of `levenshtein` is deferred to Phase 1.
 For the curated tile data the verdict is unchanged — tiles are the exact answer tokens — so
 this is outcome-identical, with normalization only adding harmless robustness (trim/case).
 
+> A **third** answer-checking mode — AI grading for `TypingExercise` (audit #18) — is *not*
+> local matching; it routes through `prompts.gradeTranslation` (Phase 1), not `matching.js`.
+> Phase 0 leaves `TypingExercise` untouched.
+
 ---
 
 ## Validation model
@@ -139,7 +161,7 @@ this is outcome-identical, with normalization only adding harmless robustness (t
   normalize-then-equals. Declared now for forward-compatibility; German does not need it in
   Phase 0.
 - **Phase 1** enriches `normalize` with the real ß/ä/ö/ü diacritic policy and populates
-  `grammar`.
+  `grammar` and `prompts`.
 
 ---
 
@@ -154,12 +176,19 @@ this is outcome-identical, with normalization only adding harmless robustness (t
 **Guarantees / non-changes:**
 - **Answer-checking outcomes unchanged** for the curated content: vocab fuzzy-match is
   byte-identical; `TileExercise` moves from raw `===` to normalized `exactMatch` but yields
-  the same verdicts (tiles are the exact answer tokens).
-- **Storage untouched:** key stays `'deutsch-app-state-v1'`. Per-language namespacing
-  (prefix by `meta.id`) plus a one-time migration off the old key is **Phase 4** — changing
-  it now would orphan existing users' saved progress.
+  the same verdicts (tiles are the exact answer tokens). `TypingExercise` (AI-graded) and
+  `BlankExercise` flows are untouched in Phase 0.
+- **SRS/stats keys untouched.** The engine currently keys cards by the German surface form
+  `card.de` (audit #10–14). Phase 0 leaves this exactly as-is; re-keying to a stable
+  `card.id` is the **first Phase 1 task** (it changes saved-state shape, so it needs care).
+- **Storage untouched:** all current keys stay as-is — `deutsch-app-state-v1`, plus
+  `deutsch-onboarded` / `deutsch-level` / `deutsch-welcome-dismissed`, and the
+  `deutsch:progress` CustomEvent (audit #23–29). Namespacing + a one-time migration is
+  **Phase 4** — changing them now would orphan existing users' saved progress.
 - **`content.js` stays in place** as the raw German data; `packs/de` wraps it. Physically
   moving it into `packs/de/` is deferred to Phase 1 (lowest risk now).
+- **`gamification.js` German rank/achievement strings** (audit #21–22) stay put in Phase 0;
+  they become an i18n/pack concern later.
 
 ---
 
@@ -170,18 +199,23 @@ this is outcome-identical, with normalization only adding harmless robustness (t
   fields, `content` keys present and correctly typed, `validation.normalize` is a function).
   Pays off when the Spanish pack (Phase 3) drops in, and guards regressions.
 - `matching.js` functions are pure → unit tests (happy path + fuzzy threshold edges).
-- These tests are good candidates to hand to **Cursor** once the contract lands.
+- The full pre-existing suite (now including the lib tests added on `main`) must stay green —
+  that is the primary "behaves identically" guardrail.
 
 ---
 
 ## Deferred to later phases (recorded so nothing is lost)
 
-- **Phase 1** — populate `validation.normalize` (diacritic policy) + `grammar`; physically
-  move `content.js` into `src/packs/de/`; optional `levenshtein` pure-distance tidy.
+- **Phase 1** — populate `validation.normalize` (diacritic policy), `grammar`, and `prompts`
+  (move the AI prompt strings out of components into the pack); **re-key SRS/stats from the
+  German surface form `card.de` to a stable `card.id`** (audit #10–14 — first Phase 1 task);
+  physically move `content.js` into `src/packs/de/`; optional `levenshtein` pure-distance tidy.
 - **Phase 2** — extract theme tokens from components; bind via `meta.themeId`.
 - **Phase 3** — add a second pack (e.g. Spanish) to validate the abstraction (the real proof).
-- **Phase 4** — language-picker UI; per-language storage namespacing (`meta.id` prefix) with a
-  one-time migration off `'deutsch-app-state-v1'`.
+- **Phase 4** — language-picker UI; the **UI-string i18n layer**; per-language namespacing of
+  *all* state keys (`deutsch-app-state-v1`, `deutsch-onboarded`, `deutsch-level`,
+  `deutsch-welcome-dismissed`) and the `deutsch:progress` event (audit #23–29), with a
+  one-time migration off the old keys.
 
 ---
 
