@@ -68,7 +68,9 @@ export default function MessageBubble({ msg }) {
             {msg.de}
             {!isUser && (
               <button
+                type="button"
                 onClick={() => speak(msg.de)}
+                aria-label="Play Anna response audio"
                 style={{
                   marginLeft: 10,
                   background: 'transparent',
@@ -78,7 +80,7 @@ export default function MessageBubble({ msg }) {
                   verticalAlign: 'middle',
                 }}
               >
-                <Volume2 size={16} />
+                <Volume2 size={16} aria-hidden="true" />
               </button>
             )}
           </div>

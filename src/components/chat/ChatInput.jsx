@@ -24,7 +24,9 @@ export default function ChatInput({
       }}
     >
       <button
+        type="button"
         onClick={listening ? onStopListening : onStartListening}
+        aria-label={listening ? 'Stop voice input' : 'Start voice input'}
         style={{
           width: 56,
           height: 56,
@@ -43,6 +45,7 @@ export default function ChatInput({
         {listening ? <MicOff size={22} /> : <Mic size={22} />}
       </button>
       <input
+        aria-label="Chat message in German"
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && onSend()}
@@ -56,13 +59,14 @@ export default function ChatInput({
           padding: '0 18px',
           fontFamily: FONT_BODY,
           fontSize: 16,
-          outline: 'none',
           color: COLORS.ink,
         }}
       />
       <button
+        type="button"
         onClick={() => onSend()}
         disabled={!input.trim() || thinking}
+        aria-label="Send chat message"
         style={{
           padding: '0 24px',
           background: input.trim() && !thinking ? COLORS.green : COLORS.mute,
@@ -79,7 +83,7 @@ export default function ChatInput({
           gap: 8,
         }}
       >
-        SEND <ArrowRight size={14} />
+        SEND <ArrowRight size={14} aria-hidden="true" />
       </button>
     </div>
   );
