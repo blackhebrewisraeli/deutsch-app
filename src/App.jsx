@@ -15,7 +15,8 @@ import {
   DEFAULT_GOAL,
 } from './lib/gamification';
 import { setSoundEnabled, playLevelUp, playAchievement, playGoalMet } from './lib/sound';
-import { PRESET_DECKS } from './data/content';
+import { activePack } from './packs';
+const { decks: PRESET_DECKS } = activePack.content;
 import { StatBlock } from './components/UI';
 import ChatTab from './components/ChatTab';
 import AlphabetTab from './components/AlphabetTab';

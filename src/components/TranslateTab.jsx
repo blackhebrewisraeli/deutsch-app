@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Sparkles } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, BORDER } from '../lib/theme';
-import {
-  TRANSLATE_SENTENCES_A1,
-  TRANSLATE_SENTENCES_A2,
-  TRANSLATE_SENTENCES_B1,
-} from '../data/content';
+import { activePack } from '../packs';
+const {
+  A1: TRANSLATE_SENTENCES_A1,
+  A2: TRANSLATE_SENTENCES_A2,
+  B1: TRANSLATE_SENTENCES_B1,
+} = activePack.content.translateSentences;
 import { shuffle } from '../lib/utils';
 import { Hero } from './UI';
 import ExerciseHeader from './translate/ExerciseHeader';

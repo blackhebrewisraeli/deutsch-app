@@ -9,7 +9,8 @@ import {
   SHADOW,
 } from '../../lib/theme';
 import { getDueCount, getMasteredCount, srsKey, MASTERED_BOX } from '../../lib/srs';
-import { PRESET_DECKS } from '../../data/content';
+import { activePack } from '../../packs';
+const { decks: PRESET_DECKS } = activePack.content;
 
 const DECK_LABELS = {
   greetings: 'Greetings',

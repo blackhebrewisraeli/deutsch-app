@@ -3,7 +3,8 @@
 // running counter, so all past practice counts and there is no migration.
 
 import { getMasteredCount, srsKey, MASTERED_BOX } from './srs';
-import { PRESET_DECKS } from '../data/content';
+import { activePack } from '../packs';
+const { decks: PRESET_DECKS } = activePack.content;
 
 export const XP_PER_VERDICT = { correct: 10, almost: 6, wrong: 3 };
 export const GOAL_PRESETS = { casual: 20, regular: 50, serious: 100 };

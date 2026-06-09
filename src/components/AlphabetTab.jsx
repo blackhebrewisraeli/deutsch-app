@@ -12,7 +12,8 @@ import {
   BUTTON,
 } from '../lib/theme';
 import { speak } from '../lib/speech';
-import { ALPHABET, ALPHABET_QUIZ_GROUPS } from '../data/content';
+import { activePack } from '../packs';
+const { alphabet: ALPHABET, alphabetQuiz: ALPHABET_QUIZ_GROUPS } = activePack.content;
 import { shuffle } from '../lib/utils';
 import { recordEvent, recordItem } from '../lib/stats';
 import { Hero } from './UI';

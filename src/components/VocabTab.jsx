@@ -13,7 +13,8 @@ import {
 } from '../lib/theme';
 import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
-import { PRESET_DECKS } from '../data/content';
+import { activePack } from '../packs';
+const { decks: PRESET_DECKS } = activePack.content;
 import { Hero, SectionLabel } from './UI';
 import { shuffle, levenshtein } from '../lib/utils';
 import { recordEvent, recordItem } from '../lib/stats';
