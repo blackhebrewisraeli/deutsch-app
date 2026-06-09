@@ -70,14 +70,16 @@ export default function FeedbackPanel({ verdict, correctText, note, onNext }) {
         </div>
       )}
       <button
+        type="button"
         onClick={onNext}
+        aria-label="Next exercise"
         style={{
           ...BUTTON.primary,
           background: isCorrect ? COLORS.ink : COLORS.paper,
           color: isCorrect ? COLORS.paper : COLORS.ink,
         }}
       >
-        NEXT EXERCISE <ArrowRight size={14} />
+        NEXT EXERCISE <ArrowRight size={14} aria-hidden="true" />
       </button>
     </div>
   );

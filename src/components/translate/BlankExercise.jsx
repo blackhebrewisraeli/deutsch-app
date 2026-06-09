@@ -94,8 +94,17 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
               <span key={i}>
                 {part}
                 {i < parts.length - 1 && (
-                  <span
+                  <button
+                    type="button"
                     onClick={() => clearBlank(i)}
+                    onKeyDown={(e) => {
+                      if ((e.key === 'Enter' || e.key === ' ') && filled[i]) {
+                        e.preventDefault();
+                        clearBlank(i);
+                      }
+                    }}
+                    aria-label={filled[i] ? `Clear blank ${i + 1}` : `Blank ${i + 1} is empty`}
+                    disabled={!filled[i]}
                     style={{
                       display: 'inline-block',
                       minWidth: 80,
@@ -107,10 +116,14 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
                       color: filled[i] ? COLORS.ink : COLORS.red,
                       cursor: filled[i] ? 'pointer' : 'default',
                       paddingInline: SPACE[2],
+                      background: 'transparent',
+                      borderTop: 'none',
+                      borderLeft: 'none',
+                      borderRight: 'none',
                     }}
                   >
                     {filled[i] ? filled[i].word : '___'}
-                  </span>
+                  </button>
                 )}
               </span>
             ))}
@@ -131,7 +144,9 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
             {tileBank.map((tile) => (
               <button
                 key={tile.id}
+                type="button"
                 onClick={() => fillNext(tile)}
+                aria-label={`Use ${tile.word} for next blank`}
                 style={{
                   padding: `${SPACE[2]}px ${SPACE[4]}px`,
                   fontFamily: FONTS.mono,
@@ -151,6 +166,7 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
 
           <div style={{ display: 'flex', gap: SPACE[3] }}>
             <button
+              type="button"
               onClick={check}
               disabled={filled.includes(null)}
               style={{ ...BUTTON.go, flex: 1, opacity: filled.includes(null) ? 0.4 : 1 }}
@@ -158,10 +174,12 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
               CHECK →
             </button>
             <button
+              type="button"
               onClick={onSkip}
+              aria-label="Skip exercise"
               style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}
             >
-              <SkipForward size={16} />
+              <SkipForward size={16} aria-hidden="true" />
             </button>
           </div>
         </>
