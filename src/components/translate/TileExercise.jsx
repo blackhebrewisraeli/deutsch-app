@@ -12,6 +12,8 @@ import {
 } from '../../lib/theme';
 import { shuffle } from '../../lib/utils';
 import { recordEvent, recordItem } from '../../lib/stats';
+import { activePack } from '../../packs';
+import { exactMatch } from '../../lib/matching';
 import FeedbackPanel from './FeedbackPanel';
 
 // A1 — assemble the German sentence from word tiles (correct words +
@@ -41,7 +43,7 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
   const check = () => {
     const answer = placed.map((t) => t.word).join(' ');
     const correct = exercise.words.join(' ');
-    const isCorrect = answer === correct;
+    const isCorrect = exactMatch(correct, answer, activePack.validation.normalize);
     const verdict = isCorrect ? 'correct' : 'wrong';
     setFeedback(verdict);
     recordEvent('translate', level, verdict);

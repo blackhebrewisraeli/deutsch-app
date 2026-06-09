@@ -1,5 +1,6 @@
 import { COLORS, FONT_DISPLAY, FONT_MONO, RADIUS, SHADOW } from '../../lib/theme';
-import { SCENARIOS } from '../../data/content';
+import { activePack } from '../../packs';
+const { scenarios: SCENARIOS } = activePack.content;
 import { SectionLabel } from '../UI';
 
 // Section A — the scenario list (Free Chat / Coffee / Meet / Airport).

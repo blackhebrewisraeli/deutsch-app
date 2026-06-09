@@ -13,9 +13,11 @@ import {
 } from '../lib/theme';
 import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
-import { PRESET_DECKS } from '../data/content';
+import { activePack } from '../packs';
+const { decks: PRESET_DECKS } = activePack.content;
 import { Hero, SectionLabel } from './UI';
-import { shuffle, levenshtein } from '../lib/utils';
+import { shuffle } from '../lib/utils';
+import { fuzzyMatch } from '../lib/matching';
 import { recordEvent, recordItem } from '../lib/stats';
 import { getDueCards, recordVocabAnswer } from '../lib/srs';
 import Confetti from './ui/Confetti';
@@ -129,7 +131,7 @@ export default function VocabTab({
 
   const submitTyped = () => {
     if (!typedAnswer.trim() || !card || clickLockRef.current) return;
-    const dist = levenshtein(typedAnswer.trim(), card.en);
+    const { distance: dist } = fuzzyMatch(card.en, typedAnswer, activePack.validation.normalize);
     const res = dist === 0 ? 'correct' : dist <= 2 ? 'almost' : 'wrong';
     setAnswered(true);
     setResult(res);
