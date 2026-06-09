@@ -13,7 +13,7 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-185_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-225_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
   <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
 </p>
@@ -35,6 +35,7 @@
   <a href="#-features"><b>Features</b></a> &nbsp;·&nbsp;
   <a href="#-german-grammar--vocabulary-coverage"><b>Grammar Coverage</b></a> &nbsp;·&nbsp;
   <a href="#️-tech-stack"><b>Tech Stack</b></a> &nbsp;·&nbsp;
+  <a href="#-multi-language-architecture"><b>Architecture</b></a> &nbsp;·&nbsp;
   <a href="#-quick-start"><b>Quick Start</b></a> &nbsp;·&nbsp;
   <a href="#-deploy-to-production"><b>Deploy</b></a>
 </p>
@@ -402,11 +403,12 @@ AI-generated decks expand to any domain on demand.
 | Persistence | **localStorage** | Streak, learned words, chosen level — no backend |
 | Linting | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars |
 | Formatting | **Prettier 3** | Consistent code style, enforced on every commit |
-| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **185 tests** — `src/lib/*`, `src/data/content`, and component tests (`ui/*`, `stats/*`, `gamification/*`) |
+| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **225 tests** — `src/lib/*`, `src/packs/*`, `src/data/content`, and component tests (`ui/*`, `stats/*`, `gamification/*`) |
 | CI | **GitHub Actions** | Runs lint + test + build on every push to `main` and every PR |
 | Pre-commit | **Husky + lint-staged** | Runs ESLint + Prettier + the full test suite before every `git commit` |
 | PWA | **vite-plugin-pwa** + Workbox | Installable on iOS/Android, offline-capable static assets |
 | Responsive | `useWindowWidth` hook | Live viewport width → inline style breakpoints (mobile < 640px) |
+| Accessibility | Semantic HTML + ARIA | Labeled icon controls, keyboard-operable widgets, visible focus states |
 | Deployment | **Vercel** | Static SPA + `/api/chat.js` serverless function |
 
 **No CSS framework. No database. No authentication. No third-party tracking.** The only external call is to the Anthropic API.
@@ -490,6 +492,30 @@ User: Return: [{ en, de, template, blanks: [{ word, distractors }], note }]
 ```
 
 All JSON responses strip markdown fences (` ```json ... ``` `) before `JSON.parse()` as a defensive measure.
+
+---
+
+## 🌍 Multi-Language Architecture
+
+Deutsch is being evolved from a single-language app into a **language-agnostic learning platform**: the engine — spaced repetition, exercises, answer-matching, progress, gamification — knows nothing about any specific language, and each language is a **content pack** that plugs into one interface. German is the reference "finished product" that proves the engine end-to-end.
+
+**Three swappable layers:**
+
+| Layer | What it is | Where |
+|---|---|---|
+| **Engine** | SRS, stats, gamification, answer-matching — language-blind | `src/lib/*` |
+| **Content pack** | Per language: vocabulary, scenarios, exercises, validation rules, prompts — behind the `LanguagePack` interface | `src/packs/de/` |
+| **Theme** | Design tokens (colours, fonts) per language/brand | `src/lib/theme.js` (per-pack tokens planned) |
+
+The active pack is a module singleton (`activePack`); the engine matches answers through a pack-supplied `normalize` rather than hardcoding German rules. Adding a language means dropping in a new pack — no engine rewrite.
+
+**Phased roadmap** — German stays fully working at every step:
+
+- ✅ **Phase 0** — the `LanguagePack` interface; German content loads through it *(merged)*
+- 🚧 **Phase 1** — language-neutral card identity, diacritic-aware validation, grammar + AI prompts moved into the pack, content relocated under `src/packs/de/` *(in progress)*
+- ⬜ **Phase 2** extract theme tokens · **Phase 3** add a second pack (e.g. Spanish) to prove the abstraction · **Phase 4** language picker + per-language progress
+
+**Design notes** ([`docs/superpowers/`](./docs/superpowers/)): [multi-language direction](./docs/superpowers/specs/2026-06-09-multi-language-platform-design.md) · [LanguagePack Phase 0 design](./docs/superpowers/specs/2026-06-09-languagepack-contract-design.md) · [Phase 0 plan](./docs/superpowers/plans/2026-06-09-languagepack-phase0.md) · [German coupling audit](./docs/AUDIT_GERMAN_COUPLING.md)
 
 ---
 
@@ -581,6 +607,12 @@ deutsch-app/
 ├── api/
 │   └── chat.js                ← Vercel serverless function (Anthropic proxy)
 │
+├── docs/
+│   ├── superpowers/specs/     ← Architecture design notes (multi-language, LanguagePack, …)
+│   ├── superpowers/plans/     ← Implementation plans
+│   ├── AUDIT_GERMAN_COUPLING.md
+│   └── MAINTENANCE_CHECKLIST.md
+│
 ├── public/
 │   ├── favicon.svg            ← Browser tab icon
 │   ├── icon-base.svg          ← Source SVG for PWA icons
@@ -613,6 +645,7 @@ deutsch-app/
 │   │
 │   ├── lib/
 │   │   ├── claude.js          ← Anthropic API client (dev proxy / prod serverless)
+│   │   ├── matching.js        ← Exact / fuzzy answer matching (language-agnostic)
 │   │   ├── gamification.js    ← XP, levels, daily goal, achievements
 │   │   ├── gamification.test.js
 │   │   ├── sound.js           ← Web Audio synth effects (correct, level-up, …)
@@ -627,6 +660,11 @@ deutsch-app/
 │   │   ├── useWindowWidth.js  ← Responsive hook + breakpoint helpers
 │   │   ├── utils.js
 │   │   └── utils.test.js
+│   │
+│   ├── packs/                ← Multi-language layer (the LanguagePack interface)
+│   │   ├── index.js          ← activePack registry
+│   │   ├── validate.js       ← LanguagePack shape checker
+│   │   └── de/index.js       ← German pack (wraps content.js)
 │   │
 │   ├── App.jsx
 │   ├── main.jsx
