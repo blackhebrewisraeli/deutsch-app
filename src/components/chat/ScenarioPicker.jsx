@@ -10,6 +10,8 @@ export default function ScenarioPicker({ scenario, setScenario, mobile }) {
     <>
       <SectionLabel num="A" text="Scenario" />
       <div
+        role="radiogroup"
+        aria-label="Choose chat scenario"
         style={{
           display: 'flex',
           flexDirection: mobile ? 'row' : 'column',
@@ -25,7 +27,11 @@ export default function ScenarioPicker({ scenario, setScenario, mobile }) {
           return (
             <button
               key={s.id}
+              type="button"
               onClick={() => setScenario(s.id)}
+              role="radio"
+              aria-checked={active}
+              aria-label={`${s.name} scenario`}
               style={{
                 padding: mobile ? '10px 14px' : 16,
                 background: active ? COLORS.ink : COLORS.card,

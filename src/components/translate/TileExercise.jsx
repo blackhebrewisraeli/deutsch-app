@@ -100,7 +100,13 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
             }}
           >
             {placed.map((tile) => (
-              <button key={tile.id} onClick={() => removeTile(tile)} style={tileStyle(true)}>
+              <button
+                key={tile.id}
+                type="button"
+                onClick={() => removeTile(tile)}
+                aria-label={`Remove ${tile.word} from answer`}
+                style={tileStyle(true)}
+              >
                 {tile.word}
               </button>
             ))}
@@ -119,7 +125,13 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
           </div>
           <div style={{ display: 'flex', gap: SPACE[2], flexWrap: 'wrap', marginBottom: SPACE[5] }}>
             {bank.map((tile) => (
-              <button key={tile.id} onClick={() => addTile(tile)} style={tileStyle(false)}>
+              <button
+                key={tile.id}
+                type="button"
+                onClick={() => addTile(tile)}
+                aria-label={`Add ${tile.word} to answer`}
+                style={tileStyle(false)}
+              >
                 {tile.word}
               </button>
             ))}
@@ -127,6 +139,7 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
 
           <div style={{ display: 'flex', gap: SPACE[3] }}>
             <button
+              type="button"
               onClick={check}
               disabled={placed.length === 0}
               style={{ ...BUTTON.go, flex: 1, opacity: placed.length === 0 ? 0.4 : 1 }}
@@ -134,10 +147,12 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
               CHECK →
             </button>
             <button
+              type="button"
               onClick={onSkip}
+              aria-label="Skip exercise"
               style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}
             >
-              <SkipForward size={16} />
+              <SkipForward size={16} aria-hidden="true" />
             </button>
           </div>
         </>

@@ -94,6 +94,7 @@ Use "wrong" if there's a significant grammar mistake, wrong word choice, or the 
             YOUR GERMAN TRANSLATION
           </div>
           <textarea
+            aria-label="Your German translation"
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && (e.metaKey || e.ctrlKey) && check()}
@@ -110,7 +111,6 @@ Use "wrong" if there's a significant grammar mistake, wrong word choice, or the 
               fontFamily: FONTS.display,
               fontSize: FONT_SIZE.xl,
               resize: 'vertical',
-              outline: 'none',
               color: COLORS.ink,
               lineHeight: 1.5,
               marginBottom: SPACE[4],
@@ -118,6 +118,7 @@ Use "wrong" if there's a significant grammar mistake, wrong word choice, or the 
           />
           <div style={{ display: 'flex', gap: SPACE[3] }}>
             <button
+              type="button"
               onClick={check}
               disabled={!input.trim() || loading}
               style={{ ...BUTTON.go, flex: 1, opacity: !input.trim() || loading ? 0.4 : 1 }}
@@ -126,15 +127,17 @@ Use "wrong" if there's a significant grammar mistake, wrong word choice, or the 
                 'GRADING...'
               ) : (
                 <>
-                  CHECK <ArrowRight size={14} />
+                  CHECK <ArrowRight size={14} aria-hidden="true" />
                 </>
               )}
             </button>
             <button
+              type="button"
               onClick={onSkip}
+              aria-label="Skip exercise"
               style={{ ...BUTTON.secondary, flex: 0, padding: `${SPACE[3]}px ${SPACE[4]}px` }}
             >
-              <SkipForward size={16} />
+              <SkipForward size={16} aria-hidden="true" />
             </button>
           </div>
         </>

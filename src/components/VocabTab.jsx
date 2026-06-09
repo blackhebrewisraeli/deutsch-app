@@ -262,6 +262,7 @@ export default function VocabTab({
             }}
           >
             <input
+              aria-label="Custom deck topic"
               value={customTopic}
               onChange={(e) => setCustomTopic(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && generateDeck()}
@@ -277,7 +278,6 @@ export default function VocabTab({
                 boxShadow: 'inset 0 2px 5px rgba(22,17,11,0.06)',
                 fontFamily: FONTS.body,
                 fontSize: FONT_SIZE.md,
-                outline: 'none',
                 marginBottom: 12,
                 color: COLORS.ink,
               }}
@@ -306,7 +306,7 @@ export default function VocabTab({
                 'GENERATING...'
               ) : (
                 <>
-                  <Sparkles size={14} /> GENERATE 10 CARDS
+                  <Sparkles size={14} aria-hidden="true" /> GENERATE 10 CARDS
                 </>
               )}
             </button>
@@ -491,6 +491,7 @@ export default function VocabTab({
                 !answered && (
                   <div>
                     <input
+                      aria-label="Type the English meaning"
                       type="text"
                       value={typedAnswer}
                       onChange={(e) => setTypedAnswer(e.target.value)}
@@ -508,7 +509,6 @@ export default function VocabTab({
                         fontFamily: FONTS.display,
                         fontSize: FONT_SIZE.xl,
                         background: COLORS.card,
-                        outline: 'none',
                         marginBottom: SPACE[3],
                         color: COLORS.ink,
                       }}
