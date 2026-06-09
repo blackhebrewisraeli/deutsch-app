@@ -149,6 +149,7 @@ export default function AlphabetTab({
           type="button"
           style={modeToggleBtn('quiz')}
           onClick={() => handleModeChange('quiz')}
+          aria-pressed={mode === 'quiz'}
         >
           🎧 Quiz
         </button>
@@ -156,6 +157,7 @@ export default function AlphabetTab({
           type="button"
           style={modeToggleBtn('browse')}
           onClick={() => handleModeChange('browse')}
+          aria-pressed={mode === 'browse'}
         >
           📋 Browse
         </button>
@@ -180,6 +182,7 @@ export default function AlphabetTab({
           <button
             type="button"
             onClick={() => speak(quizTarget)}
+            aria-label="Play letter audio again"
             style={{
               width: 100,
               height: 100,
@@ -219,6 +222,7 @@ export default function AlphabetTab({
                   key={letter}
                   type="button"
                   onClick={() => handleLetterGuess(letter)}
+                  aria-label={`Select letter ${letter}`}
                   style={{
                     padding: SPACE[5],
                     border: 'none',
@@ -316,6 +320,7 @@ export default function AlphabetTab({
                   key={letter.l}
                   type="button"
                   onClick={() => handleBrowseTap(letter)}
+                  aria-label={`Select letter ${letter.l} for details`}
                   style={{
                     aspectRatio: '1',
                     background: isActive ? COLORS.red : isSpecial ? COLORS.paperDeep : COLORS.paper,
@@ -438,6 +443,7 @@ export default function AlphabetTab({
               <button
                 type="button"
                 onClick={() => speak(selected.w)}
+                aria-label={`Play pronunciation for ${selected.w}`}
                 style={{
                   width: 80,
                   height: 80,
