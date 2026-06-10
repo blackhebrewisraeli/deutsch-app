@@ -52,7 +52,7 @@ export default function VocabTab({
     // SRS-derived queue: due first, then new, then over-review.
     let q = getDueCards(srs, activeDeck, deckId, Date.now());
     if (target) {
-      const idx = activeDeck.findIndex((c) => c.de === target);
+      const idx = activeDeck.findIndex((c) => c.id === target);
       if (idx >= 0) {
         q = [idx, ...q.filter((i) => i !== idx)];
       }
@@ -76,7 +76,7 @@ export default function VocabTab({
   const handleSrsVerdict = (srsVerdict) => {
     if (!card || clickLockRef.current) return;
     clickLockRef.current = true;
-    recordVocabAnswer(deckId, card.de, srsVerdict);
+    recordVocabAnswer(deckId, card.id, srsVerdict);
     advanceQueue(srsVerdict !== 'again');
     setTimeout(() => {
       clickLockRef.current = false;
@@ -91,7 +91,7 @@ export default function VocabTab({
     if (deckId === reviewTarget.context) {
       // Already on the right deck — the deck-reset effect won't fire, so
       // manually re-run the same queue-with-target build here.
-      const idx = activeDeck.findIndex((c) => c.de === reviewTarget.label);
+      const idx = activeDeck.findIndex((c) => c.id === reviewTarget.label);
       if (idx >= 0) {
         const rest = activeDeck.map((_, i) => i).filter((i) => i !== idx);
         setQueue([idx, ...rest]);
@@ -135,9 +135,9 @@ export default function VocabTab({
     const res = dist === 0 ? 'correct' : dist <= 2 ? 'almost' : 'wrong';
     setAnswered(true);
     setResult(res);
-    if (res === 'correct' || res === 'almost') markLearned(card.de);
+    if (res === 'correct' || res === 'almost') markLearned(card.id);
     recordEvent('vocab', level, res);
-    recordItem('vocab', deckId, card.de, card.en, res);
+    recordItem('vocab', deckId, card.id, card.en, res);
   };
 
   const generateDeck = async () => {
@@ -150,7 +150,7 @@ export default function VocabTab({
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        setCustomCards(parsed);
+        setCustomCards(parsed.map((c) => ({ ...c, id: activePack.cardId(c) })));
         setDeckId('custom');
       }
     } catch (err) {
@@ -344,7 +344,7 @@ export default function VocabTab({
                         width: 26,
                         height: 8,
                         borderRadius: RADIUS.pill,
-                        background: learnedWords[activeDeck[i].de] ? COLORS.green : '#e7dcae',
+                        background: learnedWords[activeDeck[i].id] ? COLORS.green : '#e7dcae',
                       }}
                     />
                   ))}
@@ -379,7 +379,7 @@ export default function VocabTab({
                       color: COLORS.ink,
                     }}
                   >
-                    🎉 Deck complete — {activeDeck.filter((c) => learnedWords[c.de]).length} words
+                    🎉 Deck complete — {activeDeck.filter((c) => learnedWords[c.id]).length} words
                     learned
                   </span>
                   <button
@@ -419,7 +419,7 @@ export default function VocabTab({
                   position: 'relative',
                 }}
               >
-                {learnedWords[card.de] && (
+                {learnedWords[card.id] && (
                   <div
                     style={{
                       position: 'absolute',
@@ -471,9 +471,9 @@ export default function VocabTab({
                           const verdict = correct ? 'correct' : 'wrong';
                           setAnswered(true);
                           setResult(verdict);
-                          if (correct) markLearned(card.de);
+                          if (correct) markLearned(card.id);
                           recordEvent('vocab', level, verdict);
-                          recordItem('vocab', deckId, card.de, card.en, verdict);
+                          recordItem('vocab', deckId, card.id, card.en, verdict);
                         }}
                         style={{
                           ...BUTTON.tile,

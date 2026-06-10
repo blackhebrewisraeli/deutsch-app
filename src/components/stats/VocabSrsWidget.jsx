@@ -115,7 +115,7 @@ export default function VocabSrsWidget({ srs, now }) {
           let mastered = 0;
           let due = 0;
           for (const card of deck) {
-            const entry = srs[srsKey(deckId, card.de)];
+            const entry = srs[srsKey(deckId, card.id)];
             if (entry?.box === MASTERED_BOX) mastered += 1;
             if (!entry || entry.nextDue <= now) due += 1;
           }
