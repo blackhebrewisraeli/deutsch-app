@@ -21,6 +21,7 @@ const validPack = {
     translateSentences: { A1: [] },
   },
   validation: { normalize: (s) => s },
+  cardId: (c) => c.de,
   grammar: {},
   prompts: {},
 };
@@ -31,6 +32,9 @@ describe('validateLanguagePack', () => {
   });
   it('throws when validation.normalize is missing', () => {
     expect(() => validateLanguagePack({ ...validPack, validation: {} })).toThrow(/normalize/);
+  });
+  it('throws when cardId is not a function', () => {
+    expect(() => validateLanguagePack({ ...validPack, cardId: undefined })).toThrow(/cardId/);
   });
   it('throws when a declared cefrLevel has no sentence bank', () => {
     expect(() =>

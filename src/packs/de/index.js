@@ -12,6 +12,12 @@ import {
   TRANSLATE_SENTENCES_B1,
 } from '../../data/content';
 
+// Card identity for German: the surface form is the stable id (Phase 1, sub-project 1).
+const cardId = (card) => card.de;
+const tagDeck = (deck) => deck.map((card) => ({ ...card, id: cardId(card) }));
+const tagDecks = (decks) =>
+  Object.fromEntries(Object.entries(decks).map(([id, deck]) => [id, tagDeck(deck)]));
+
 export const dePack = {
   meta: {
     id: 'de',
@@ -23,10 +29,11 @@ export const dePack = {
     themeId: 'de',
     cefrLevels: ['A1', 'A2', 'B1'],
   },
+  cardId,
   content: {
     alphabet: ALPHABET,
     alphabetQuiz: ALPHABET_QUIZ_GROUPS,
-    decks: PRESET_DECKS,
+    decks: tagDecks(PRESET_DECKS),
     scenarios: SCENARIOS,
     chatTasks: CHAT_TASKS,
     translateSentences: {

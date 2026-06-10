@@ -34,5 +34,8 @@ export function validateLanguagePack(pack) {
   if (!pack.validation || typeof pack.validation.normalize !== 'function') {
     fail('validation.normalize must be a function');
   }
+  if (typeof pack.cardId !== 'function') {
+    fail('cardId must be a function');
+  }
   return true;
 }
