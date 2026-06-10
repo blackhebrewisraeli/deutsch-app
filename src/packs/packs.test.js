@@ -19,9 +19,15 @@ describe('activePack', () => {
     expect(activePack.meta.locale).toBe('de-DE');
     expect(activePack.meta.cefrLevels).toEqual(['A1', 'A2', 'B1']);
   });
-  it('wires content straight from content.js (same references)', () => {
+  it('wires content straight from content.js (same references; decks are id-tagged copies)', () => {
     expect(activePack.content.alphabet).toBe(ALPHABET);
-    expect(activePack.content.decks).toBe(PRESET_DECKS);
+    // decks are derived from PRESET_DECKS: same keys, same card data, plus an id.
+    expect(Object.keys(activePack.content.decks)).toEqual(Object.keys(PRESET_DECKS));
+    for (const [deckId, deck] of Object.entries(PRESET_DECKS)) {
+      expect(activePack.content.decks[deckId]).toEqual(
+        deck.map((card) => ({ ...card, id: card.de }))
+      );
+    }
     expect(activePack.content.scenarios).toBe(SCENARIOS);
     expect(activePack.content.chatTasks).toBe(CHAT_TASKS);
     expect(activePack.content.alphabetQuiz).toBe(ALPHABET_QUIZ_GROUPS);
@@ -32,5 +38,15 @@ describe('activePack', () => {
   });
   it('is resolvable by id via getPack', () => {
     expect(getPack('de')).toBe(activePack);
+  });
+});
+
+describe('cardId + tagged decks', () => {
+  it('cardId returns the German surface form', () => {
+    expect(activePack.cardId({ de: 'der Hund', en: 'dog' })).toBe('der Hund');
+  });
+  it('preset deck cards carry an id equal to de', () => {
+    const card = activePack.content.decks.greetings[0];
+    expect(card.id).toBe(card.de);
   });
 });

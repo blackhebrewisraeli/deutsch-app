@@ -2,7 +2,7 @@
 //
 // Storage shape (extends `deutsch-app-state-v1`):
 //   srs: {
-//     '<deckId>:<de>': {
+//     '<deckId>:<id>': {
 //       box:          1..5,    // current Leitner box (5 = mastered)
 //       lastReviewed: number,  // ms timestamp of last interaction
 //       nextDue:      number,  // ms timestamp when card surfaces again
@@ -32,8 +32,8 @@ export const SRS_VERDICTS = ['again', 'hard', 'good', 'easy'];
 
 // ─── Key helper ───────────────────────────────────────────────
 
-export function srsKey(deckId, de) {
-  return `${deckId}:${de}`;
+export function srsKey(deckId, id) {
+  return `${deckId}:${id}`;
 }
 
 // ─── Pure transition ──────────────────────────────────────────
@@ -53,10 +53,10 @@ function nextBox(prevBox, verdict) {
   }
 }
 
-export function srsApply(srs, deckId, de, verdict, ts) {
+export function srsApply(srs, deckId, id, verdict, ts) {
   if (!SRS_VERDICTS.includes(verdict)) throw new Error(`Invalid verdict: ${verdict}`);
 
-  const key = srsKey(deckId, de);
+  const key = srsKey(deckId, id);
   const prev = srs[key];
   const prevBox = prev?.box ?? 1; // new cards start at Box 1
   const box = nextBox(prevBox, verdict);
@@ -83,7 +83,7 @@ export function getDueCards(srs, deck, deckId, now) {
   const overReview = [];
 
   deck.forEach((card, idx) => {
-    const entry = srs[srsKey(deckId, card.de)];
+    const entry = srs[srsKey(deckId, card.id)];
     if (!entry) {
       fresh.push(idx);
     } else if (entry.nextDue <= now) {
@@ -105,7 +105,7 @@ export function getDueCount(srs, decks, now) {
   let count = 0;
   for (const [deckId, deck] of Object.entries(decks)) {
     for (const card of deck) {
-      const entry = srs[srsKey(deckId, card.de)];
+      const entry = srs[srsKey(deckId, card.id)];
       if (!entry || entry.nextDue <= now) count += 1;
     }
   }
@@ -118,10 +118,10 @@ export function getMasteredCount(srs) {
 
 // ─── Imperative recorder (uses storage) ──────────────────────
 
-export function recordVocabAnswer(deckId, de, verdict) {
+export function recordVocabAnswer(deckId, id, verdict) {
   try {
     const state = loadState() ?? {};
-    const srs = srsApply(state.srs ?? {}, deckId, de, verdict, Date.now());
+    const srs = srsApply(state.srs ?? {}, deckId, id, verdict, Date.now());
     saveState({ ...state, srs });
   } catch {
     // best-effort, never throw into the React tree

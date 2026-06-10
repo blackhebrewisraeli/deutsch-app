@@ -166,7 +166,7 @@ export function totalExercises(daily) {
 export function decksMastered(srs) {
   let n = 0;
   for (const [deckId, deck] of Object.entries(PRESET_DECKS)) {
-    if (deck.every((card) => srs?.[srsKey(deckId, card.de)]?.box === MASTERED_BOX)) n += 1;
+    if (deck.every((card) => srs?.[srsKey(deckId, card.id)]?.box === MASTERED_BOX)) n += 1;
   }
   return n;
 }
