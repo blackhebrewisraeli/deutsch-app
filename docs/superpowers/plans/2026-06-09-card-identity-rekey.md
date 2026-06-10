@@ -32,7 +32,7 @@
 
 **Files:** Modify `src/packs/de/index.js`, `src/packs/validate.js`; Test `src/packs/packs.test.js`, `src/packs/validate.test.js`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `src/packs/packs.test.js` (inside the file, after the existing `describe`s):
 
@@ -67,12 +67,12 @@ and add this test inside the `describe('validateLanguagePack', …)` block:
   });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run src/packs/packs.test.js src/packs/validate.test.js`
 Expected: FAIL — `activePack.cardId is not a function`; `card.id` is `undefined`; the cardId-missing test does not throw yet.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 In `src/packs/de/index.js`, replace the `export const dePack = {` block's opening (keep the `import` lines above it) so the file reads:
 
@@ -133,12 +133,12 @@ with:
   return true;
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run src/packs/packs.test.js src/packs/validate.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/de/index.js src/packs/validate.js src/packs/packs.test.js src/packs/validate.test.js
@@ -151,7 +151,7 @@ git commit -m "feat(packs): add cardId + tag German deck cards with id"
 
 **Files:** Modify `src/lib/srs.js`, `src/lib/gamification.js`; Test `src/lib/srs.test.js`, `src/lib/gamification.test.js`.
 
-- [ ] **Step 1: Write the failing test + update existing test decks**
+- [x] **Step 1: Write the failing test + update existing test decks**
 
 In `src/lib/srs.test.js`, add `id` to the two test decks so they exercise id-keying. Change the `getDueCards` deck to:
 ```js
@@ -186,12 +186,12 @@ Then add a **discriminating** test inside `describe('getDueCount', …)`:
   });
 ```
 
-- [ ] **Step 2: Run to verify the new test fails**
+- [x] **Step 2: Run to verify the new test fails**
 
 Run: `npx vitest run src/lib/srs.test.js`
 Expected: FAIL on "keys on card.id, not the surface form" — current code reads `card.de`, so it returns `1`, not `0`. (Existing tests still pass — cards now carry `id` but the code still reads `de`.)
 
-- [ ] **Step 3: Implement the engine changes**
+- [x] **Step 3: Implement the engine changes**
 
 In `src/lib/srs.js`:
 - Storage-shape comment (line ~5): change `'<deckId>:<de>'` to `'<deckId>:<id>'`.
@@ -234,7 +234,7 @@ In `src/lib/gamification.js`, `decksMastered`:
     if (deck.every((card) => srs?.[srsKey(deckId, card.id)]?.box === MASTERED_BOX)) n += 1;
 ```
 
-- [ ] **Step 4: Add a characterization test for decksMastered, then run**
+- [x] **Step 4: Add a characterization test for decksMastered, then run**
 
 In `src/lib/gamification.test.js`, add these imports after the existing import block:
 ```js
@@ -255,7 +255,7 @@ Add inside `describe('context derivation', …)`:
 Run: `npx vitest run src/lib/srs.test.js src/lib/gamification.test.js`
 Expected: PASS (including the discriminating test and the new characterization test).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/srs.js src/lib/gamification.js src/lib/srs.test.js src/lib/gamification.test.js
@@ -268,7 +268,7 @@ git commit -m "refactor(engine): key SRS/decksMastered on card.id instead of car
 
 **Files:** Modify `src/components/VocabTab.jsx`, `src/components/stats/VocabSrsWidget.jsx`. (No unit tests for these — guarded by the full suite + manual smoke.)
 
-- [ ] **Step 1: `VocabTab.jsx` — the 10 key-usages**
+- [x] **Step 1: `VocabTab.jsx` — the 10 key-usages**
 
 Make these exact replacements (the line numbers are approximate; match on the code). **Leave the display `{card.de}` on the card face unchanged.**
 
@@ -285,7 +285,7 @@ Make these exact replacements (the line numbers are approximate; match on the co
 | MC → learned | `if (correct) markLearned(card.de)` | `if (correct) markLearned(card.id)` |
 | MC → record item | `recordItem('vocab', deckId, card.de, card.en, verdict)` | `recordItem('vocab', deckId, card.id, card.en, verdict)` |
 
-- [ ] **Step 2: `VocabTab.jsx` — tag custom-deck cards**
+- [x] **Step 2: `VocabTab.jsx` — tag custom-deck cards**
 
 In `generateDeck`, replace:
 ```js
@@ -302,7 +302,7 @@ with:
       }
 ```
 
-- [ ] **Step 3: `VocabSrsWidget.jsx` — read `card.id`**
+- [x] **Step 3: `VocabSrsWidget.jsx` — read `card.id`**
 
 Replace line ~118:
 ```js
@@ -313,12 +313,12 @@ with:
             const entry = srs[srsKey(deckId, card.id)];
 ```
 
-- [ ] **Step 4: Run the full suite**
+- [x] **Step 4: Run the full suite**
 
 Run: `npm test`
 Expected: PASS — `Tests 230 passed (230)` (225 prior + 5 new: 3 from Task 1 in packs/validate, 2 from Task 2 in srs/gamification). No regressions.
 
-- [ ] **Step 5: Manual smoke test**
+- [x] **Step 5: Manual smoke test**
 
 Run `npm run dev`, then:
 1. **Vocab (A1/A2)** — answer a card via multiple choice; the ✓ LEARNED badge and the green progress dot appear; finish a deck → "Deck complete — N words learned".
@@ -327,7 +327,7 @@ Run `npm run dev`, then:
 4. **Stats → Vocab SRS widget** — due counts render.
 5. Reload the page — previously-learned cards still show as learned (proves saved state still matches).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/components/VocabTab.jsx src/components/stats/VocabSrsWidget.jsx
@@ -338,10 +338,10 @@ git commit -m "refactor: vocab components key learned/SRS/review on card.id"
 
 ## Task 4: Final verification
 
-- [ ] `npm test` → all green (230, 0 failures).
-- [ ] `npm run lint` → clean.
-- [ ] `git diff origin/main -- src/data/content.js` → empty (content untouched).
-- [ ] No `card.de` key-usages remain: `grep -rn "\.de\b" src --include=*.jsx --include=*.js | grep -v "\.test\." | grep -E "srsKey|markLearned|recordItem\('vocab'|learnedWords\[|=== target|=== reviewTarget"` returns nothing. (The display `{card.de}`, chat `msg.de`, and translate `exercise.de` *detail* usages are expected to remain.)
+- [x] `npm test` → all green (230, 0 failures).
+- [x] `npm run lint` → clean.
+- [x] `git diff origin/main -- src/data/content.js` → empty (content untouched).
+- [x] No `card.de` key-usages remain: `grep -rn "\.de\b" src --include=*.jsx --include=*.js | grep -v "\.test\." | grep -E "srsKey|markLearned|recordItem\('vocab'|learnedWords\[|=== target|=== reviewTarget"` returns nothing. (The display `{card.de}`, chat `msg.de`, and translate `exercise.de` *detail* usages are expected to remain.)
 
 ---
 
