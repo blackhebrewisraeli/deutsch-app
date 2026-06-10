@@ -165,10 +165,10 @@ describe('srsApply', () => {
 
 describe('getDueCards', () => {
   const deck = [
-    { de: 'Hallo', en: 'Hello' },
-    { de: 'Tschüss', en: 'Bye' },
-    { de: 'Danke', en: 'Thanks' },
-    { de: 'Bitte', en: 'Please' },
+    { id: 'Hallo', de: 'Hallo', en: 'Hello' },
+    { id: 'Tschüss', de: 'Tschüss', en: 'Bye' },
+    { id: 'Danke', de: 'Danke', en: 'Thanks' },
+    { id: 'Bitte', de: 'Bitte', en: 'Please' },
   ];
 
   it('treats cards with no SRS entry as new (deck-order, after due cards)', () => {
@@ -216,8 +216,14 @@ describe('getDueCards', () => {
 describe('getDueCount', () => {
   it('counts cards across all decks where nextDue ≤ now', () => {
     const decks = {
-      greetings: [{ de: 'Hallo' }, { de: 'Tschüss' }],
-      food: [{ de: 'das Brot' }, { de: 'der Käse' }],
+      greetings: [
+        { id: 'Hallo', de: 'Hallo' },
+        { id: 'Tschüss', de: 'Tschüss' },
+      ],
+      food: [
+        { id: 'das Brot', de: 'das Brot' },
+        { id: 'der Käse', de: 'der Käse' },
+      ],
     };
     const srs = {
       'greetings:Hallo': { box: 1, nextDue: 100, lastReviewed: 50, reps: 1 },
@@ -230,16 +236,29 @@ describe('getDueCount', () => {
   });
 
   it('counts new cards (no SRS entry) as due', () => {
-    const decks = { greetings: [{ de: 'Hallo' }, { de: 'Tschüss' }] };
+    const decks = {
+      greetings: [
+        { id: 'Hallo', de: 'Hallo' },
+        { id: 'Tschüss', de: 'Tschüss' },
+      ],
+    };
     expect(getDueCount({}, decks, 100)).toBe(2);
   });
 
   it('returns 0 when everything is on a future review', () => {
-    const decks = { greetings: [{ de: 'Hallo' }] };
+    const decks = { greetings: [{ id: 'Hallo', de: 'Hallo' }] };
     const srs = {
       'greetings:Hallo': { box: 5, nextDue: 999999999, lastReviewed: 0, reps: 10 },
     };
     expect(getDueCount(srs, decks, 100)).toBe(0);
+  });
+
+  it('keys on card.id, not the surface form', () => {
+    const deck = [{ id: 'g1', de: 'Hallo', en: 'Hello' }];
+    const srs = { 'greetings:g1': { box: 5, nextDue: 999999999, lastReviewed: 0, reps: 9 } };
+    // Entry exists under id 'g1', far-future → not due → 0.
+    // If the engine keyed on de ('Hallo') it would find no entry and count it as new → 1.
+    expect(getDueCount(srs, { greetings: deck }, 1000)).toBe(0);
   });
 });
 

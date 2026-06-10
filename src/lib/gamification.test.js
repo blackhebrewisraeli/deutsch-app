@@ -14,6 +14,8 @@ import {
   decksMastered,
   gamificationContext,
 } from './gamification';
+import { activePack } from '../packs';
+import { srsKey, MASTERED_BOX } from './srs';
 
 const day = (a1c = 0, a1a = 0, a1w = 0) => ({
   total: a1c + a1a + a1w,
@@ -108,6 +110,18 @@ describe('context derivation', () => {
   });
   it('decksMastered counts fully Box-5 preset decks', () => {
     expect(decksMastered({})).toBe(0);
+  });
+  it('decksMastered counts a preset deck fully mastered by id', () => {
+    const srs = {};
+    for (const card of activePack.content.decks.greetings) {
+      srs[srsKey('greetings', card.id)] = {
+        box: MASTERED_BOX,
+        nextDue: 0,
+        lastReviewed: 0,
+        reps: 9,
+      };
+    }
+    expect(decksMastered(srs)).toBe(1);
   });
   it('gamificationContext assembles from state', () => {
     const state = { stats: { streak: 5 }, daily: { d: { total: 2, byLevel: {} } }, srs: {} };
