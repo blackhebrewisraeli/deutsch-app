@@ -254,10 +254,14 @@ namespacing, prompts stay client-side until Phase 1.3.
 
 - **Now (already requested in session):** `npm i -g vercel && vercel login &&
   vercel link` — unblocks env/log introspection for everything below.
-- **At B0 (before the B0 deploy):** in Vercel env, add `ANTHROPIC_API_KEY`
-  alongside the existing `VITE_`-named key (same value) and set
-  `ALLOWED_ORIGINS`; delete the old `VITE_` name only after the B0 deploy is
-  verified. This ordering keeps prod chat working through the rename.
+- **At B0 (before the B0 deploy):** in Vercel env, add `ANTHROPIC_API_KEY` to
+  **all three environments** (Development included — `vercel dev` injects it
+  for local functions) alongside the existing `VITE_`-named key, and set
+  `ALLOWED_ORIGINS` in **Production only** (Preview URLs vary per deploy and
+  local dev runs on localhost — both stay soft-pass). Delete the old `VITE_`
+  name once the B0 deploy is verified; as verified 2026-06-10 via the linked
+  CLI, it exists only in Preview + Production, and is the project's only env
+  var today. This ordering keeps prod chat working through the rename.
 - **At B1 start:** create the free Supabase project (EU region), enable
   anonymous sign-ins, `brew install supabase/tap/supabase`, `supabase login` +
   `supabase link`; add `SUPABASE_SERVICE_ROLE_KEY` to Vercel env; add
