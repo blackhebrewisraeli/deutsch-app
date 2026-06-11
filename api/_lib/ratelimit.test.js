@@ -1,11 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  createRateLimiter,
-  MemoryStore,
-  SupabaseStore,
-  defaultStore,
-  clientKey,
-} from './ratelimit.js';
+import { createRateLimiter, MemoryStore, SupabaseStore, clientKey } from './ratelimit.js';
 
 const reqFrom = (ip) => ({ headers: ip ? { 'x-forwarded-for': ip } : {} });
 
