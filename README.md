@@ -13,7 +13,7 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-225_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-327_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
   <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
 </p>
@@ -52,7 +52,7 @@
 
 The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four exercise modules — guided conversation, alphabet recognition, vocabulary active recall, and translation — plus a **Stats tab** that records every interaction and resurfaces what you got wrong. Vocab is backed by a **Leitner spaced-repetition scheduler**, so cards return at the right time, not on every visit.
 
-All AI features call **Claude Haiku 4.5** through a server-side proxy — your API key never touches the browser.
+All AI features call **Claude Haiku 4.5** through a versioned server-side API (`/api/v1/ai/*` — validated, rate-limited, [contract-documented](./docs/api/ai.md)) — your API key never touches the browser.
 
 ---
 
@@ -329,7 +329,7 @@ A dedicated tab that records every graded interaction across the four exercise m
   learnedWords: { '<de>': bool },
   daily:        { 'YYYY-MM-DD': { total, byTab, byLevel: { a1, a2, b1: { correct, almost, wrong } } } },
   items:        { '<tab>:<context>:<label>': { tab, context, label, detail, lastVerdict, lastTs, attempts, wrongCount } },
-  srs:          { '<deckId>:<de>': { box, lastReviewed, nextDue, reps } },
+  srs:          { '<deckId>:<id>': { box, lastReviewed, nextDue, reps } },
   gamification: { goal, soundOn, achievements, lastGoalMet },
 }
 ```
@@ -393,25 +393,25 @@ AI-generated decks expand to any domain on demand.
 | Layer | Technology | Purpose |
 |---|---|---|
 | Framework | **React 18** | Component model, hooks, concurrent state |
-| Build tool | **Vite 5** | Dev server, API proxy, fast HMR |
+| Build tool | **Vite 5** | Dev server, fast HMR, PWA build (`npm run dev:full` adds the API via vercel dev) |
 | AI | **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`) | Tutor, grading, deck generation, translation |
 | Speech synthesis | **SpeechSynthesis API** | Native German TTS — no external service |
 | Speech recognition | **Web Speech API** | Microphone input in Chat — Chrome/Edge only |
 | Icons | **lucide-react** | Consistent SVG icon set |
 | Typography | **Fraunces** (display) + **JetBrains Mono** (labels) | Editorial serif + technical mono |
 | Design tokens | `src/lib/theme.js` | Centralised colours, type scale, spacing, component composites |
-| Persistence | **localStorage** | Streak, learned words, chosen level — no backend |
+| Persistence | **localStorage** | Streak, learned words, SRS state — local-first (anonymous-first account sync is designed, phases B1–B3) |
 | Linting | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars |
 | Formatting | **Prettier 3** | Consistent code style, enforced on every commit |
-| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **225 tests** — `src/lib/*`, `src/packs/*`, `src/data/content`, and component tests (`ui/*`, `stats/*`, `gamification/*`) |
+| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **327 tests** — engine (`src/lib/*`), packs, content invariants, the API middleware (`api/_lib/*`), and component tests across every tab (chat, translate, vocab, stats, gamification, ui) |
 | CI | **GitHub Actions** | Runs lint + test + build on every push to `main` and every PR |
 | Pre-commit | **Husky + lint-staged** | Runs ESLint + Prettier + the full test suite before every `git commit` |
 | PWA | **vite-plugin-pwa** + Workbox | Installable on iOS/Android, offline-capable static assets |
 | Responsive | `useWindowWidth` hook | Live viewport width → inline style breakpoints (mobile < 640px) |
 | Accessibility | Semantic HTML + ARIA | Labeled icon controls, keyboard-operable widgets, visible focus states |
-| Deployment | **Vercel** | Static SPA + `/api/chat.js` serverless function |
+| Deployment | **Vercel** | Static SPA + versioned `/api/v1/*` serverless functions (+ legacy `/api/chat` alias) |
 
-**No CSS framework. No database. No authentication. No third-party tracking.** The only external call is to the Anthropic API.
+**No CSS framework. No database or authentication yet — by design.** The only external call is to the Anthropic API. An anonymous-first backend (Supabase data lane: optional accounts + cross-device sync) is fully designed and lands in phases — see the [backend architecture spec](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md).
 
 ---
 
@@ -511,10 +511,12 @@ The active pack is a module singleton (`activePack`); the engine matches answers
 **Phased roadmap** — German stays fully working at every step:
 
 - ✅ **Phase 0** — the `LanguagePack` interface; German content loads through it *(merged)*
-- 🚧 **Phase 1** — language-neutral card identity, diacritic-aware validation, grammar + AI prompts moved into the pack, content relocated under `src/packs/de/` *(in progress)*
+- 🚧 **Phase 1** — ✅ language-neutral card identity *(merged — SRS/stats key on `card.id`)*; next: diacritic-aware validation, grammar + AI prompts moved into the pack, content relocated under `src/packs/de/`
 - ⬜ **Phase 2** extract theme tokens · **Phase 3** add a second pack (e.g. Spanish) to prove the abstraction · **Phase 4** language picker + per-language progress
 
-**Design notes** ([`docs/superpowers/`](./docs/superpowers/)): [multi-language direction](./docs/superpowers/specs/2026-06-09-multi-language-platform-design.md) · [LanguagePack Phase 0 design](./docs/superpowers/specs/2026-06-09-languagepack-contract-design.md) · [Phase 0 plan](./docs/superpowers/plans/2026-06-09-languagepack-phase0.md) · [German coupling audit](./docs/AUDIT_GERMAN_COUPLING.md)
+**Backend arc (parallel track):** the **user interface** (this PWA) and the **developer interface** (versioned REST surface + database contract) are being separated into a two-lane backend. Lane 1 — the AI service (`/api/v1/ai/*`: validation, per-IP rate limiting, error envelope) — is **live**. Lane 2 — Supabase (anonymous-first optional accounts, cross-device progress sync under row-level security) — lands in phases B1–B3, with pack delivery (B4) following the second language pack.
+
+**Design notes** ([`docs/superpowers/`](./docs/superpowers/)): [multi-language direction](./docs/superpowers/specs/2026-06-09-multi-language-platform-design.md) · [LanguagePack Phase 0 design](./docs/superpowers/specs/2026-06-09-languagepack-contract-design.md) · [Phase 0 plan](./docs/superpowers/plans/2026-06-09-languagepack-phase0.md) · [German coupling audit](./docs/AUDIT_GERMAN_COUPLING.md) · [backend architecture](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md) · [B0 plan](./docs/superpowers/plans/2026-06-11-backend-b0-ai-service.md) · [API contract](./docs/api/README.md)
 
 ---
 
