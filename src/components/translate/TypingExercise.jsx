@@ -39,7 +39,7 @@ Use "correct" if the translation is grammatically correct and conveys the full m
 Use "almost" if there's a minor issue (a typo, a small grammar slip, a slightly off article or case) but the meaning is clearly there.
 Use "wrong" if there's a significant grammar mistake, wrong word choice, or the meaning is not conveyed.`;
       const user = `English sentence: "${exercise.en}"\nIdeal German: "${exercise.de}"\nLearner's answer: "${input}"`;
-      const raw = await callClaude(system, user);
+      const raw = await callClaude(system, user, [], { endpoint: 'grade' });
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
       if (mounted.current) {
         // Validate verdict; fall back to binary if Claude returns the old shape.

@@ -16,6 +16,6 @@ export async function generateMoreSentences(level) {
       : level === 'a2'
         ? `Generate 5 English sentences for fill-in-the-blank German exercises at A2 level. Each must have 1-2 blanks targeting articles or prepositions. Return: [{"en":"...","de":"...","template":"German with ___ for blanks","blanks":[{"word":"correct","distractors":["wrong1","wrong2"]}],"note":"..."}]`
         : `Generate 5 simple English sentences for word-tile German translation at A1 level. Return: [{"en":"...","de":"...","words":["German","tokens","in","order"],"distractors":["wrong1","wrong2"],"note":"..."}]`;
-  const raw = await callClaude(system, user);
+  const raw = await callClaude(system, user, [], { endpoint: 'grade' });
   return JSON.parse(raw.replace(/```json|```/g, '').trim());
 }

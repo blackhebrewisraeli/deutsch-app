@@ -146,7 +146,7 @@ export default function VocabTab({
     try {
       const systemPrompt = `You generate German vocabulary flashcards for a beginner. Respond with ONLY a JSON array, no markdown, no extra text.`;
       const userMsg = `Generate exactly 10 German flashcards on the topic: "${customTopic}". Return JSON array of objects with keys: de (German word with article if noun, e.g. "der Hund"), en (English translation), ipa (IPA pronunciation in brackets like "[deːɐ̯ hʊnt]"). No other text.`;
-      const raw = await callClaude(systemPrompt, userMsg);
+      const raw = await callClaude(systemPrompt, userMsg, [], { endpoint: 'deck' });
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed) && parsed.length > 0) {
