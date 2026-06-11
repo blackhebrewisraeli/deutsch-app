@@ -419,21 +419,20 @@ AI-generated decks expand to any domain on demand.
 
 ### The API proxy — keeping your key safe
 
-In **development**, Vite proxies `/api/anthropic` → `https://api.anthropic.com` and injects your key server-side:
+Every environment calls the same versioned serverless endpoints — `/api/v1/ai/chat`, `/api/v1/ai/grade`, `/api/v1/ai/deck` ([contract docs](./docs/api/ai.md)):
 
 ```
-Browser               Vite dev server              Anthropic API
-   │                        │                            │
-   │  POST /api/anthropic/  │                            │
-   │  v1/messages           │                            │
-   │  ─────────────────────►│                            │
-   │                        │  x-api-key: [from .env]    │
-   │                        │  ──────────────────────── ►│
-   │                        │◄───────────────────────────│
-   │◄───────────────────────│                            │
+Browser                Vercel function (/api/v1/ai/*)        Anthropic API
+   │                            │                                  │
+   │  POST /api/v1/ai/chat      │                                  │
+   │  ─────────────────────────►│  validate · rate-limit · rebuild │
+   │                            │  x-api-key: [ANTHROPIC_API_KEY]  │
+   │                            │  ────────────────────────────── ►│
+   │                            │◄─────────────────────────────────│
+   │◄───────────────────────────│                                  │
 ```
 
-In **production** (Vercel), `/api/chat.js` is a Node.js serverless function that reads `VITE_ANTHROPIC_API_KEY` from Vercel's environment and proxies the request server-side. The key never appears in the browser bundle.
+In production the functions read `ANTHROPIC_API_KEY` from Vercel's environment. Locally, `npm run dev:full` (vercel dev) runs the **same functions** with the Development environment injected — the key never appears in the browser bundle, in any environment. Endpoints are rate-limited per IP and reject bodies that fail validation ([error envelope](./docs/api/README.md)).
 
 ### Exercise content flow
 
@@ -531,12 +530,11 @@ cd deutsch-app
 # 2. Install
 npm install
 
-# 3. Add your API key
-cp .env.example .env
-# Edit .env → VITE_ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
+# 3. Link Vercel (serves the API locally; injects the Development env)
+npx vercel link
 
-# 4. Start dev server
-npm run dev
+# 4. Start the full dev server (app + API)
+npm run dev:full     # UI-only work: npm run dev (AI calls disabled)
 ```
 
 Open **[http://localhost:5173](http://localhost:5173)**.
@@ -544,10 +542,11 @@ Open **[http://localhost:5173](http://localhost:5173)**.
 **Available scripts:**
 
 ```bash
-npm run dev          # Start Vite dev server (with API proxy)
+npm run dev          # Vite only — UI work, no API routes (AI calls fail politely)
+npm run dev:full     # vercel dev — app + serverless functions, like production
 npm run build        # Production build (generates service worker)
 npm run preview      # Preview the production build locally
-npm run lint         # ESLint across src/
+npm run lint         # ESLint across src/ and api/
 npm run lint:fix     # ESLint with auto-fix
 npm run format       # Prettier across src/
 npm run format:check # Verify formatting without writing
@@ -585,17 +584,17 @@ npm run test:coverage # Vitest with v8 coverage report
 ```
 1. Push to GitHub
 2. vercel.com → New Project → import deutsch-app
-3. Environment Variables → VITE_ANTHROPIC_API_KEY = sk-ant-api03-...
+3. Environment Variables → ANTHROPIC_API_KEY = sk-ant-api03-...  (+ optional ALLOWED_ORIGINS)
 4. Deploy
 ```
 
-The `vercel.json` at the root configures the Vite framework preset and registers `/api/chat.js` as a serverless function automatically.
+The `vercel.json` at the root configures the Vite framework preset and registers everything under `api/` as serverless functions.
 
 **What gets deployed:**
 - `dist/` — compiled React SPA
 - `dist/sw.js` — Workbox service worker (offline caching)
 - `dist/manifest.webmanifest` — PWA manifest
-- `api/chat.js` — Node.js serverless function (Anthropic proxy)
+- `api/` — Node.js serverless functions (versioned AI endpoints + legacy alias)
 
 ---
 

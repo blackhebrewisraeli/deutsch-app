@@ -32,7 +32,7 @@ describe('callClaude', () => {
     expect(result).toBe('Hallo\n Welt');
     expect(fetch).toHaveBeenCalledTimes(1);
     const [url, options] = fetch.mock.calls[0];
-    expect(url).toMatch(/\/api\//);
+    expect(url).toBe('/api/v1/ai/chat');
     expect(options.method).toBe('POST');
     const body = JSON.parse(options.body);
     expect(body.system).toBe('You are a tutor');
@@ -41,6 +41,17 @@ describe('callClaude', () => {
       { role: 'user', content: 'Wie geht es dir?' },
     ]);
     expect(body.model).toBe('claude-haiku-4-5-20251001');
+  });
+
+  it('routes to the requested endpoint and defaults to chat', async () => {
+    await callClaude('sys', 'msg');
+    expect(fetch.mock.calls[0][0]).toBe('/api/v1/ai/chat');
+
+    await callClaude('sys', 'msg', [], { endpoint: 'grade' });
+    expect(fetch.mock.calls[1][0]).toBe('/api/v1/ai/grade');
+
+    await callClaude('sys', 'msg', [], { endpoint: 'deck' });
+    expect(fetch.mock.calls[2][0]).toBe('/api/v1/ai/deck');
   });
 
   it('throws with API status and message on non-OK response', async () => {

@@ -1,16 +1,24 @@
-// Claude API client.
-//
-// In development:  requests go to /api/anthropic (Vite proxy → api.anthropic.com)
-// In production:   requests go to /api/chat (Vercel serverless function)
-//
-// The API key is ALWAYS injected server-side — never exposed in the browser bundle.
+// Claude API client. Every environment calls our versioned serverless API —
+// the key never exists in the browser. Locally, `npm run dev:full`
+// (vercel dev) serves the same functions that run in production;
+// plain `npm run dev` has no /api routes, so AI features fail politely.
+// Contract: docs/api/ai.md.
 
-const API_URL = import.meta.env.PROD ? '/api/chat' : '/api/anthropic/v1/messages';
+const ENDPOINTS = {
+  chat: '/api/v1/ai/chat',
+  grade: '/api/v1/ai/grade',
+  deck: '/api/v1/ai/deck',
+};
 
-export const callClaude = async (systemPrompt, userMessage, conversationHistory = []) => {
+export const callClaude = async (
+  systemPrompt,
+  userMessage,
+  conversationHistory = [],
+  { endpoint = 'chat' } = {}
+) => {
   const messages = [...conversationHistory, { role: 'user', content: userMessage }];
 
-  const response = await fetch(API_URL, {
+  const response = await fetch(ENDPOINTS[endpoint], {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
