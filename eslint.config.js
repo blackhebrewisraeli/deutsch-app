@@ -59,7 +59,7 @@ export default [
   // Server-side files: Vercel serverless functions and build/config scripts
   // run in Node, not the browser — give them Node globals (process, etc.).
   {
-    files: ['api/**/*.js', '*.config.js', 'scripts/**/*.js'],
+    files: ['api/**/*.js', '*.config.js', 'scripts/**/*.js', 'supabase/tests/**/*.js'],
     languageOptions: {
       globals: {
         ...globals.node,

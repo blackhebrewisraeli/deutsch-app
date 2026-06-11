@@ -9,8 +9,9 @@
     "dev:full": "vercel dev",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint src/ api/",
-    "lint:fix": "eslint src/ api/ --fix",
+    "lint": "eslint src/ api/ supabase/",
+    "lint:fix": "eslint src/ api/ supabase/ --fix",
+    "test:rls": "vitest run --config vitest.rls.config.js",
     "format": "prettier --write src/",
     "format:check": "prettier --check src/",
     "test": "vitest run",
@@ -19,6 +20,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.108.1",
     "@vercel/analytics": "^2.0.1",
     "@vercel/speed-insights": "^2.0.0",
     "lucide-react": "^0.460.0",
@@ -31,6 +33,10 @@
       "prettier --write"
     ],
     "api/**/*.js": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "supabase/**/*.js": [
       "eslint --fix",
       "prettier --write"
     ],
