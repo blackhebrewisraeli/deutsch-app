@@ -35,3 +35,37 @@ jobs:
 
       - name: Build
         run: npm run build
+
+  rls-policy-tests:
+    name: RLS Policy Tests
+    runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Set up Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start local Supabase (applies migrations)
+        run: supabase start
+
+      - name: Run RLS adversarial suite
+        run: |
+          eval "$(supabase status -o env)"
+          export SUPABASE_URL="${SUPABASE_URL:-$API_URL}"
+          export SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-$ANON_KEY}"
+          export SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SERVICE_ROLE_KEY}"
+          npm run test:rls
