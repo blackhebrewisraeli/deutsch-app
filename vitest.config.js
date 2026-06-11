@@ -11,12 +11,12 @@ export default defineConfig({
     environment: 'jsdom',
     globals: false,
     setupFiles: ['./src/test-setup.js'],
-    include: ['src/**/*.test.{js,jsx}'],
+    include: ['src/**/*.test.{js,jsx}', 'api/**/*.test.js'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/lib/**', 'src/data/**', 'src/components/**'],
-      exclude: ['src/**/*.test.{js,jsx}'],
+      include: ['src/lib/**', 'src/data/**', 'src/components/**', 'api/**'],
+      exclude: ['src/**/*.test.{js,jsx}', 'api/**/*.test.js'],
     },
   },
 });
