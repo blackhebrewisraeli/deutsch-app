@@ -227,7 +227,7 @@ At the end of the full checklist run:
 | Symptom | First thing to check |
 |---------|---------------------|
 | API call failed (404) | Vercel dashboard → Functions → check `api/chat` is deployed |
-| API call failed (401/403) | Vercel → Settings → Environment Variables → `VITE_ANTHROPIC_API_KEY` set |
+| API call failed (401/403) | Vercel → Settings → Environment Variables → `ANTHROPIC_API_KEY` set |
 | API call failed (model not found) | `src/lib/claude.js` → model ID may be retired; update to current Haiku |
 | App blank on load | Browser console for JS errors; Vercel deployment logs |
 | Splash screen never goes away | localStorage: `deutsch-onboarded` key should be set after level pick |
