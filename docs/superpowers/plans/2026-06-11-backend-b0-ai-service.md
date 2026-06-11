@@ -1,6 +1,6 @@
 # Backend B0 — AI Service Lane Hardening: Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 > **For Cursor:** ignore the line above — execute the tasks in order, checking off checkboxes, committing at each task's commit step.
 
 **Goal:** Replace the single raw Anthropic proxy (`api/chat.js`) with three versioned, rate-limited, contract-documented endpoints (`/api/v1/ai/chat|grade|deck`) sharing one middleware chain, rename the server secret to `ANTHROPIC_API_KEY`, and unify dev/prod on the same serverless code path.
@@ -58,7 +58,7 @@
 - Modify: `vitest.config.js`
 - Modify: `package.json`
 
-- [ ] **Step 1: Extend vitest to pick up api tests and cover api code**
+- [x] **Step 1: Extend vitest to pick up api tests and cover api code**
 
 In `vitest.config.js`, change the `include` line and the coverage `include`/`exclude` arrays:
 
@@ -72,7 +72,7 @@ In `vitest.config.js`, change the `include` line and the coverage `include`/`exc
     },
 ```
 
-- [ ] **Step 2: Extend lint + scripts in package.json**
+- [x] **Step 2: Extend lint + scripts in package.json**
 
 In `package.json`, change these four script lines (leave the rest untouched):
 
@@ -103,12 +103,12 @@ And in the `lint-staged` block, add an entry for api files (keep the two existin
   },
 ```
 
-- [ ] **Step 3: Verify nothing changed behaviorally**
+- [x] **Step 3: Verify nothing changed behaviorally**
 
 Run: `npm test` → same counts as baseline (no api tests exist yet).
 Run: `npm run lint` → exit 0 (existing `api/chat.js` already lints under the flat config's Node-globals block).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add vitest.config.js package.json
@@ -123,7 +123,7 @@ git commit -m "chore(b0): vitest + lint + scripts reach api/"
 - Create: `api/_lib/respond.js`
 - Test: `api/_lib/respond.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 import { describe, it, expect } from 'vitest';
@@ -174,12 +174,12 @@ describe('sendError', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/_lib/respond.test.js`
 Expected: FAIL — cannot find module `./respond.js`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```js
 // The error envelope — the single definition of machine codes → HTTP status.
@@ -203,12 +203,12 @@ export function sendError(res, code, message, extraHeaders = {}) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/_lib/respond.test.js`
 Expected: PASS (2 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/_lib/respond.js api/_lib/respond.test.js
@@ -223,7 +223,7 @@ git commit -m "feat(b0): shared error envelope for the AI lane"
 - Create: `api/_lib/origin.js`
 - Test: `api/_lib/origin.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 import { describe, it, expect } from 'vitest';
@@ -256,12 +256,12 @@ describe('originAllowed', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/_lib/origin.test.js`
 Expected: FAIL — cannot find module `./origin.js`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```js
 // Origin allow-list (mandatory in production via the ALLOWED_ORIGINS env var,
@@ -283,12 +283,12 @@ export function originAllowed(req, allowed = parseAllowedOrigins(process.env.ALL
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/_lib/origin.test.js`
 Expected: PASS (4 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/_lib/origin.js api/_lib/origin.test.js
@@ -303,7 +303,7 @@ git commit -m "feat(b0): origin allow-list helper"
 - Create: `api/_lib/validate.js`
 - Test: `api/_lib/validate.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 import { describe, it, expect } from 'vitest';
@@ -378,12 +378,12 @@ describe('validateAiBody', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/_lib/validate.test.js`
 Expected: FAIL — cannot find module `./validate.js`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 (Constraint values are carried over unchanged from the pre-B0 `api/chat.js`.)
 
@@ -453,12 +453,12 @@ export function validateAiBody(rawBody) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/_lib/validate.test.js`
 Expected: PASS (9 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/_lib/validate.js api/_lib/validate.test.js
@@ -473,7 +473,7 @@ git commit -m "feat(b0): AI request validation with rebuilt clean body"
 - Create: `api/_lib/ratelimit.js`
 - Test: `api/_lib/ratelimit.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 import { describe, it, expect } from 'vitest';
@@ -521,12 +521,12 @@ describe('createRateLimiter', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/_lib/ratelimit.test.js`
 Expected: FAIL — cannot find module `./ratelimit.js`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```js
 // Fixed-window rate limiter with a pluggable store.
@@ -569,12 +569,12 @@ export function createRateLimiter({ windowMs, max, store = new MemoryStore(), no
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/_lib/ratelimit.test.js`
 Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/_lib/ratelimit.js api/_lib/ratelimit.test.js
@@ -590,7 +590,7 @@ git commit -m "feat(b0): fixed-window rate limiter with pluggable store"
 - Create: `api/_lib/handler.js`
 - Test: `api/_lib/handler.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -734,12 +734,12 @@ describe('createAiHandler', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/_lib/handler.test.js`
 Expected: FAIL — cannot find module `./handler.js`.
 
-- [ ] **Step 3: Write `api/_lib/anthropic.js`**
+- [x] **Step 3: Write `api/_lib/anthropic.js`**
 
 ```js
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
@@ -761,7 +761,7 @@ export async function forwardToAnthropic(safeBody, apiKey) {
 }
 ```
 
-- [ ] **Step 4: Write `api/_lib/handler.js`**
+- [x] **Step 4: Write `api/_lib/handler.js`**
 
 ```js
 import { sendError } from './respond.js';
@@ -812,12 +812,12 @@ export function createAiHandler({ rate }) {
 }
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run api/_lib/handler.test.js`
 Expected: PASS (8 tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add api/_lib/anthropic.js api/_lib/handler.js api/_lib/handler.test.js
@@ -834,7 +834,7 @@ git commit -m "feat(b0): AI endpoint handler factory with full middleware chain"
 - Modify: `vercel.json`
 - Test: `api/_lib/endpoints.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```js
 import { describe, it, expect } from 'vitest';
@@ -857,12 +857,12 @@ describe('AI endpoints', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/_lib/endpoints.test.js`
 Expected: FAIL — cannot find module `../v1/ai/chat.js`.
 
-- [ ] **Step 3: Create the three endpoint files**
+- [x] **Step 3: Create the three endpoint files**
 
 `api/v1/ai/chat.js` (quota: 20 requests / 5 minutes — spec §Lane 1):
 
@@ -891,7 +891,7 @@ import { createAiHandler } from '../../_lib/handler.js';
 export default createAiHandler({ rate: { windowMs: 60 * 60 * 1000, max: 5 } });
 ```
 
-- [ ] **Step 4: Rewrite `api/chat.js` as the legacy shim**
+- [x] **Step 4: Rewrite `api/chat.js` as the legacy shim**
 
 Replace the entire file with:
 
@@ -904,7 +904,7 @@ Replace the entire file with:
 export { default } from './v1/ai/chat.js';
 ```
 
-- [ ] **Step 5: Update `vercel.json` so nested functions get the duration cap**
+- [x] **Step 5: Update `vercel.json` so nested functions get the duration cap**
 
 Replace the `functions` block key:
 
@@ -921,14 +921,14 @@ Replace the `functions` block key:
 }
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run: `npx vitest run api/_lib/endpoints.test.js`
 Expected: PASS (2 tests).
 Run: `npm test`
 Expected: PASS — baseline + 30 new api tests, zero failures.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add api/v1 api/chat.js vercel.json api/_lib/endpoints.test.js
@@ -946,7 +946,7 @@ git commit -m "feat(b0): versioned /api/v1/ai endpoints + legacy /api/chat shim"
 - Modify: `src/components/translate/generateSentences.js` (line ~19)
 - Modify: `src/components/VocabTab.jsx` (line ~149)
 
-- [ ] **Step 1: Add the failing endpoint-routing test**
+- [x] **Step 1: Add the failing endpoint-routing test**
 
 In `src/lib/claude.test.js`, inside the existing `describe('callClaude', ...)` block, add:
 
@@ -966,12 +966,12 @@ In `src/lib/claude.test.js`, inside the existing `describe('callClaude', ...)` b
 Also tighten the URL assertion in the first existing test — replace
 `expect(url).toMatch(/\/api\//);` with `expect(url).toBe('/api/v1/ai/chat');`.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/lib/claude.test.js`
 Expected: FAIL — `callClaude` does not accept an options argument yet, URLs differ.
 
-- [ ] **Step 3: Rewrite `src/lib/claude.js`**
+- [x] **Step 3: Rewrite `src/lib/claude.js`**
 
 ```js
 // Claude API client. Every environment calls our versioned serverless API —
@@ -1020,7 +1020,7 @@ export const callClaude = async (
 };
 ```
 
-- [ ] **Step 4: Route the three non-chat call sites**
+- [x] **Step 4: Route the three non-chat call sites**
 
 In `src/components/translate/TypingExercise.jsx`, find
 `const raw = await callClaude(system, user);` and change to:
@@ -1046,13 +1046,13 @@ In `src/components/VocabTab.jsx`, find
 (Indentation: keep each line's existing indentation. `ChatTab.jsx` keeps the
 default `chat` endpoint — do not modify it.)
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: PASS — all tests green, including A7's translate component tests
 (they mock the claude module, so the extra argument is compatible).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib/claude.js src/lib/claude.test.js src/components/translate/TypingExercise.jsx src/components/translate/generateSentences.js src/components/VocabTab.jsx
@@ -1067,7 +1067,7 @@ git commit -m "feat(b0): client routes per-feature AI endpoints"
 - Rewrite: `vite.config.js`
 - Rewrite: `.env.example`
 
-- [ ] **Step 1: Rewrite `vite.config.js`** (drop `loadEnv` + the `server.proxy` block; the PWA config is byte-identical to before):
+- [x] **Step 1: Rewrite `vite.config.js`** (drop `loadEnv` + the `server.proxy` block; the PWA config is byte-identical to before):
 
 ```js
 import { defineConfig } from 'vite';
@@ -1123,7 +1123,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 2: Rewrite `.env.example`**
+- [x] **Step 2: Rewrite `.env.example`**
 
 ```
 # Server-side secret — read by the Vercel functions (api/), never by the
@@ -1138,13 +1138,13 @@ ANTHROPIC_API_KEY=sk-ant-api03-your-key-here
 # ALLOWED_ORIGINS=https://deutsch-app-dusky.vercel.app
 ```
 
-- [ ] **Step 3: Verify build + suite**
+- [x] **Step 3: Verify build + suite**
 
 Run: `npm run build` → completes without errors.
 Run: `npm test` → all green.
 Run: `grep -rn "VITE_ANTHROPIC_API_KEY" src/ api/ vite.config.js .env.example` → **no matches** (README still matches until Task 10).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add vite.config.js .env.example
@@ -1159,7 +1159,7 @@ git commit -m "feat(b0): one code path for dev and prod — vercel dev, no Vite 
 - Create: `docs/api/README.md`, `docs/api/ai.md`, `docs/api/packs.md`
 - Modify: `README.md` (four spots)
 
-- [ ] **Step 1: Create `docs/api/README.md`**
+- [x] **Step 1: Create `docs/api/README.md`**
 
 ```markdown
 # deutsch-app API — conventions
@@ -1193,7 +1193,7 @@ contract, arriving in phase B1). Spec:
   fixed windows, best-effort per function instance until B1's durable store.
 ```
 
-- [ ] **Step 2: Create `docs/api/ai.md`**
+- [x] **Step 2: Create `docs/api/ai.md`**
 
 ```markdown
 # AI endpoints — `/api/v1/ai/*`
@@ -1238,7 +1238,7 @@ through with their status.
 PWA bundles; scheduled for removal one release cycle after B0 ships.
 ```
 
-- [ ] **Step 3: Create `docs/api/packs.md`**
+- [x] **Step 3: Create `docs/api/packs.md`**
 
 ```markdown
 # Pack delivery — `/api/v1/packs` (reserved, NOT implemented)
@@ -1255,7 +1255,7 @@ ship bundled in the build and these routes do not exist.
 Do not implement, stub, or route these in B0–B3.
 ```
 
-- [ ] **Step 4: Update `README.md` — four spot-edits**
+- [x] **Step 4: Update `README.md` — four spot-edits**
 
 **(a)** Replace the section body under `### The API proxy — keeping your key safe`
 (the paragraph starting "In **development**, Vite proxies", the ASCII diagram,
@@ -1306,7 +1306,7 @@ npm run lint         # ESLint across src/ and api/
 
 and in the sentence below it, change "registers `/api/chat.js` as a serverless function" to "registers everything under `api/` as serverless functions"; in **What gets deployed**, change the last bullet to "`api/` — Node.js serverless functions (versioned AI endpoints + legacy alias)".
 
-- [ ] **Step 5: Verify and commit**
+- [x] **Step 5: Verify and commit**
 
 Run: `npm test` → green. Run: `npm run lint` → exit 0.
 Run: `grep -rn "VITE_ANTHROPIC_API_KEY" . --include="*.md" --include="*.js" --exclude-dir=node_modules --exclude-dir=dist --exclude-dir=.vercel` → **no matches**.
@@ -1320,21 +1320,21 @@ git commit -m "docs(b0): API contract pages + README dev/deploy flow"
 
 ### Task 11: Final verification + PR
 
-- [ ] **Step 1: Full gate**
+- [x] **Step 1: Full gate**
 
 Run all three, expect all green:
 ```bash
 npm test && npm run lint && npm run format:check
 ```
 
-- [ ] **Step 2: Push and open the PR**
+- [x] **Step 2: Push and open the PR**
 
 ```bash
 git push -u origin feature/backend-b0-ai-service
 gh pr create --title "feat: B0 — versioned AI service lane (/api/v1/ai/*)" --body "Implements the B0 phase of docs/superpowers/specs/2026-06-10-backend-architecture-design.md: versioned endpoints, shared middleware (origin allow-list, validation, per-IP rate limiting, error envelope), ANTHROPIC_API_KEY rename, vercel dev story, legacy /api/chat shim, docs/api contract pages. Plan: docs/superpowers/plans/2026-06-11-backend-b0-ai-service.md"
 ```
 
-- [ ] **Step 3: Report back** to Claude Code with the template from `CURSOR_TASKS.md` for review before merge. Do **not** merge.
+- [x] **Step 3: Report back** to Claude Code with the template from `CURSOR_TASKS.md` for review before merge. Do **not** merge.
 
 ---
 
