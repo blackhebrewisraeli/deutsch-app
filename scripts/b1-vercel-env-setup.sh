@@ -36,7 +36,11 @@ fi
 
 if [[ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
   echo "error: SUPABASE_SERVICE_ROLE_KEY is required." >&2
-  echo "  Copy it from: https://supabase.com/dashboard/project/xcnnlczvxmuwcqwychox/settings/api" >&2
+  echo "  Do NOT create a new key named 'service_role' — that name is reserved." >&2
+  echo "  Instead, open Settings → API Keys:" >&2
+  echo "    https://supabase.com/dashboard/project/xcnnlczvxmuwcqwychox/settings/api-keys" >&2
+  echo "  Option A (easiest): tab 'Legacy anon, service_role API keys' → Reveal service_role → Copy." >&2
+  echo "  Option B: tab 'Publishable and secret API keys' → Create secret key named e.g. vercel_b1 → Copy sb_secret_..." >&2
   echo "  Then: export SUPABASE_SERVICE_ROLE_KEY='...'" >&2
   exit 1
 fi
