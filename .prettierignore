@@ -2,3 +2,6 @@ dist
 node_modules
 .superpowers
 docs/superpowers
+# Third-party agent skill content installed by `npx skills add` — keep verbatim
+.agents
+.claude
