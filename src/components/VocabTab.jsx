@@ -199,7 +199,9 @@ export default function VocabTab({
               return (
                 <button
                   key={d.id}
+                  type="button"
                   onClick={() => setDeckId(d.id)}
+                  aria-pressed={active}
                   style={{
                     width: '100%',
                     padding: '14px 16px',
@@ -226,7 +228,9 @@ export default function VocabTab({
             })}
             {customCards && (
               <button
+                type="button"
                 onClick={() => setDeckId('custom')}
+                aria-pressed={deckId === 'custom'}
                 style={{
                   width: '100%',
                   padding: '14px 16px',

@@ -73,6 +73,7 @@ export default function CorrectionPanel({ correction, mobile }) {
                 {correction.fixed}
               </div>
               <button
+                type="button"
                 onClick={() => speak(correction.fixed)}
                 style={{
                   marginTop: 8,
@@ -88,7 +89,7 @@ export default function CorrectionPanel({ correction, mobile }) {
                   gap: 6,
                 }}
               >
-                <Volume2 size={12} /> HEAR IT
+                <Volume2 size={12} aria-hidden="true" /> HEAR IT
               </button>
             </div>
             <div

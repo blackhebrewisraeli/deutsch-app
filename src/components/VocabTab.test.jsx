@@ -73,6 +73,23 @@ describe('VocabTab', () => {
       expect(screen.getByText(`${DECKS.travel.length} cards remaining`)).toBeInTheDocument();
     });
 
+    it('marks only the selected deck as pressed', async () => {
+      renderTab();
+      expect(screen.getByRole('button', { name: /Greetings/ })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      await userEvent.click(screen.getByRole('button', { name: /Travel/ }));
+      expect(screen.getByRole('button', { name: /Travel/ })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(screen.getByRole('button', { name: /Greetings/ })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+    });
+
     it('does not offer a custom deck button before one is generated', () => {
       renderTab();
       expect(screen.queryByRole('button', { name: /Your Deck/ })).not.toBeInTheDocument();
