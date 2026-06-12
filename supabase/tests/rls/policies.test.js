@@ -95,20 +95,26 @@ describe('RLS: profiles', () => {
 });
 
 describe('RLS: anonymous access', () => {
-  it('a bare anon client sees zero rows in every user table', async () => {
+  it('a bare anon client is denied at the privilege layer on every user table', async () => {
+    // anon holds no table grants at all (see the data_api_explicit_grants
+    // migration), so the request fails before RLS is consulted.
     const anon = anonClient();
     for (const table of ['profiles', 'srs_state', 'stats_daily', 'decks', 'settings']) {
       const { data, error } = await anon.from(table).select('*');
-      expect(error, `table ${table}`).toBeNull();
-      expect(data, `table ${table}`).toEqual([]);
+      expect(error, `table ${table}`).not.toBeNull();
+      expect(error.code, `table ${table}`).toBe('42501'); // permission denied
+      expect(data, `table ${table}`).toBeNull();
     }
   });
 });
 
 describe('RLS: rate_limits', () => {
-  it('is invisible to authenticated users', async () => {
+  it('is denied to authenticated users at the privilege layer', async () => {
+    // rate_limits is service-role only: no grants for authenticated, on top
+    // of its deliberately policy-free RLS.
     const { data, error } = await A.client.from('rate_limits').select('*');
-    expect(error).toBeNull();
-    expect(data).toEqual([]);
+    expect(error).not.toBeNull();
+    expect(error.code).toBe('42501'); // permission denied
+    expect(data).toBeNull();
   });
 });
