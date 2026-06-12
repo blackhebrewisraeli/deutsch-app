@@ -24,12 +24,9 @@ SUPABASE_URL="${SUPABASE_URL:-https://xcnnlczvxmuwcqwychox.supabase.co}"
 ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-https://deutsch-app-dusky.vercel.app}"
 ENVS=(production preview development)
 
-if ! command -v vercel >/dev/null 2>&1; then
-  echo "error: vercel CLI not found. Run: npm i -g vercel  OR  npx vercel <cmd>" >&2
-  exit 1
-fi
+VERCEL="${VERCEL_CMD:-npx vercel}"
 
-if [[ -z "${VERCEL_TOKEN:-}" ]] && ! vercel whoami >/dev/null 2>&1; then
+if [[ -z "${VERCEL_TOKEN:-}" ]] && ! $VERCEL whoami >/dev/null 2>&1; then
   echo "error: not logged in. Run: vercel login  OR  export VERCEL_TOKEN=..." >&2
   exit 1
 fi
@@ -47,7 +44,7 @@ fi
 
 if [[ ! -d .vercel ]]; then
   echo "→ linking Vercel project ${PROJECT_NAME} (team ${TEAM_SLUG})"
-  vercel link --yes --project "$PROJECT_NAME" --scope "$TEAM_SLUG"
+  $VERCEL link --yes --project "$PROJECT_NAME" --scope "$TEAM_SLUG"
 fi
 
 upsert_env() {
@@ -59,11 +56,11 @@ upsert_env() {
 
   for target in "${targets[@]}"; do
     echo "→ ${name} (${target})"
-    vercel env rm "$name" "$target" --yes 2>/dev/null || true
+    $VERCEL env rm "$name" "$target" --yes 2>/dev/null || true
     if [[ "$sensitive" == "1" ]]; then
-      printf '%s' "$value" | vercel env add "$name" "$target" --sensitive
+      printf '%s' "$value" | $VERCEL env add "$name" "$target" --sensitive
     else
-      printf '%s' "$value" | vercel env add "$name" "$target"
+      printf '%s' "$value" | $VERCEL env add "$name" "$target"
     fi
   done
 }
@@ -79,8 +76,8 @@ upsert_env ALLOWED_ORIGINS "$ALLOWED_ORIGINS" production
 
 if [[ "${REMOVE_LEGACY_VITE_KEY:-}" == "1" ]]; then
   echo "→ removing legacy VITE_ANTHROPIC_API_KEY from preview + production"
-  vercel env rm VITE_ANTHROPIC_API_KEY preview --yes 2>/dev/null || true
-  vercel env rm VITE_ANTHROPIC_API_KEY production --yes 2>/dev/null || true
+  $VERCEL env rm VITE_ANTHROPIC_API_KEY preview --yes 2>/dev/null || true
+  $VERCEL env rm VITE_ANTHROPIC_API_KEY production --yes 2>/dev/null || true
 fi
 
 cat <<EOF
@@ -93,7 +90,7 @@ Next:
        SUPABASE_SERVICE_ROLE_KEY=<same value you exported>
 
   2. Redeploy production so functions pick up the new vars:
-       vercel redeploy deutsch-app-dusky.vercel.app --prod
+       npx vercel redeploy deutsch-app-dusky.vercel.app --target production
      Or push any commit to main.
 
   3. Verify:
@@ -106,5 +103,5 @@ EOF
 
 if [[ "${REDEPLOY:-}" == "1" ]]; then
   echo "→ redeploying production"
-  vercel redeploy deutsch-app-dusky.vercel.app --prod --yes
+  $VERCEL redeploy deutsch-app-dusky.vercel.app --target production
 fi
