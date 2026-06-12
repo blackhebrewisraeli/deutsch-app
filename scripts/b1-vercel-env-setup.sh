@@ -2,11 +2,11 @@
 # B1 Task 11 — wire Supabase + origin allow-list into Vercel env.
 #
 # Prerequisites:
-#   - vercel login   OR   export VERCEL_TOKEN=<personal-access-token>
+#   - npx vercel login   OR   export VERCEL_TOKEN=<personal-access-token>
 #   - export SUPABASE_SERVICE_ROLE_KEY=<from Supabase dashboard → Settings → API>
 #
 # Usage (from repo root):
-#   export SUPABASE_SERVICE_ROLE_KEY='eyJ...'
+#   export SUPABASE_SERVICE_ROLE_KEY='eyJ...'   # no leading/trailing spaces
 #   ./scripts/b1-vercel-env-setup.sh
 #
 # Optional:
@@ -22,12 +22,18 @@ TEAM_SLUG="${VERCEL_TEAM_SLUG:-blackhebrewisraelis-projects}"
 PROJECT_NAME="${VERCEL_PROJECT_NAME:-deutsch-app}"
 SUPABASE_URL="${SUPABASE_URL:-https://xcnnlczvxmuwcqwychox.supabase.co}"
 ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-https://deutsch-app-dusky.vercel.app}"
-ENVS=(production preview development)
 
 VERCEL="${VERCEL_CMD:-npx vercel}"
 
+trim() {
+  local v="$1"
+  v="${v#"${v%%[![:space:]]*}"}"
+  v="${v%"${v##*[![:space:]]}"}"
+  printf '%s' "$v"
+}
+
 if [[ -z "${VERCEL_TOKEN:-}" ]] && ! $VERCEL whoami >/dev/null 2>&1; then
-  echo "error: not logged in. Run: vercel login  OR  export VERCEL_TOKEN=..." >&2
+  echo "error: not logged in. Run: npx vercel login  OR  export VERCEL_TOKEN=..." >&2
   exit 1
 fi
 
@@ -42,37 +48,37 @@ if [[ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
   exit 1
 fi
 
+SUPABASE_SERVICE_ROLE_KEY="$(trim "$SUPABASE_SERVICE_ROLE_KEY")"
+
 if [[ ! -d .vercel ]]; then
   echo "→ linking Vercel project ${PROJECT_NAME} (team ${TEAM_SLUG})"
   $VERCEL link --yes --project "$PROJECT_NAME" --scope "$TEAM_SLUG"
 fi
 
+# Non-interactive upsert: --value + --yes + --force (no branch prompts).
 upsert_env() {
   local name="$1"
   local value="$2"
-  shift 2
+  local sensitive_flag="$3"
+  shift 3
   local targets=("$@")
-  local sensitive="${SENSITIVE:-0}"
 
   for target in "${targets[@]}"; do
     echo "→ ${name} (${target})"
     $VERCEL env rm "$name" "$target" --yes 2>/dev/null || true
-    if [[ "$sensitive" == "1" ]]; then
-      printf '%s' "$value" | $VERCEL env add "$name" "$target" --sensitive
-    else
-      printf '%s' "$value" | $VERCEL env add "$name" "$target"
-    fi
+    $VERCEL env add "$name" "$target" --value "$value" --yes --force $sensitive_flag
   done
 }
 
-echo "→ setting SUPABASE_URL (all environments)"
-upsert_env SUPABASE_URL "$SUPABASE_URL" "${ENVS[@]}"
+echo "→ setting SUPABASE_URL (production, preview, development)"
+upsert_env SUPABASE_URL "$SUPABASE_URL" "" production preview development
 
-echo "→ setting SUPABASE_SERVICE_ROLE_KEY (all environments, sensitive)"
-SENSITIVE=1 upsert_env SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY" "${ENVS[@]}"
+echo "→ setting SUPABASE_SERVICE_ROLE_KEY (production + preview: sensitive; development: plain)"
+upsert_env SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY" --sensitive production preview
+upsert_env SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY" --no-sensitive development
 
 echo "→ setting ALLOWED_ORIGINS (production only)"
-upsert_env ALLOWED_ORIGINS "$ALLOWED_ORIGINS" production
+upsert_env ALLOWED_ORIGINS "$ALLOWED_ORIGINS" "" production
 
 if [[ "${REMOVE_LEGACY_VITE_KEY:-}" == "1" ]]; then
   echo "→ removing legacy VITE_ANTHROPIC_API_KEY from preview + production"
@@ -91,7 +97,6 @@ Next:
 
   2. Redeploy production so functions pick up the new vars:
        npx vercel redeploy deutsch-app-dusky.vercel.app --target production
-     Or push any commit to main.
 
   3. Verify:
        ./scripts/verify-b1-production.sh
