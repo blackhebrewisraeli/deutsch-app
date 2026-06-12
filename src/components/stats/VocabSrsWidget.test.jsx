@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import VocabSrsWidget from './VocabSrsWidget';
 import { srsKey } from '../../lib/srs';
-import { PRESET_DECKS } from '../../data/content';
+import { activePack } from '../../packs';
 
-const CARD_TOTAL = Object.values(PRESET_DECKS).reduce((sum, d) => sum + d.length, 0); // 40
+const { decks } = activePack.content;
+const CARD_TOTAL = Object.values(decks).reduce((sum, d) => sum + d.length, 0); // 40
 
 describe('VocabSrsWidget', () => {
   it('counts every card as due when there is no SRS history', () => {
