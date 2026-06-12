@@ -381,6 +381,8 @@ export default function App() {
             <button
               key={t.id}
               onClick={() => setTab(t.id)}
+              aria-label={t.label}
+              aria-current={active ? 'page' : undefined}
               style={{
                 flex: 1,
                 padding: mobile ? '12px 6px' : '14px 18px',
