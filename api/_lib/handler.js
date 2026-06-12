@@ -1,14 +1,14 @@
 import { sendError } from './respond.js';
 import { originAllowed } from './origin.js';
 import { validateAiBody } from './validate.js';
-import { createRateLimiter } from './ratelimit.js';
+import { createRateLimiter, defaultStore } from './ratelimit.js';
 import { forwardToAnthropic } from './anthropic.js';
 
 // One factory builds every AI endpoint: same chain, per-endpoint quotas.
 // Rate limiting runs before validation on purpose — malformed requests
 // still consume quota, so garbage cannot be free.
 export function createAiHandler({ rate }) {
-  const checkRate = createRateLimiter(rate);
+  const checkRate = createRateLimiter({ ...rate, store: defaultStore() });
 
   return async function handler(req, res) {
     if (req.method !== 'POST') {
