@@ -32,21 +32,30 @@ describe('speak', () => {
     lastUtterance = null;
   });
 
-  it('cancels pending speech and speaks with default de-DE locale', async () => {
+  it('cancels pending speech and defaults to the active pack locale', async () => {
     const { speak } = await import('./speech');
+    const { activePack } = await import('../packs');
     speak('Guten Tag');
     expect(cancel).toHaveBeenCalled();
     expect(speakFn).toHaveBeenCalledWith(lastUtterance);
     expect(lastUtterance.text).toBe('Guten Tag');
-    expect(lastUtterance.lang).toBe('de-DE');
+    expect(lastUtterance.lang).toBe(activePack.meta.locale);
     expect(lastUtterance.rate).toBe(0.9);
-    expect(lastUtterance.voice?.lang).toBe('de-DE');
+    expect(lastUtterance.voice?.lang).toBe(activePack.meta.locale);
   });
 
-  it('does not assign a German voice when lang is not German', async () => {
+  it('picks a voice matching the requested language, not the pack default', async () => {
     const { speak } = await import('./speech');
     speak('Hello', 'en-US');
     expect(lastUtterance.lang).toBe('en-US');
+    expect(lastUtterance.voice?.lang).toBe('en-US');
+  });
+
+  it('leaves the voice unset when no voice matches the language', async () => {
+    getVoices.mockReturnValue([{ lang: 'fr-FR', name: 'French' }]);
+    const { speak } = await import('./speech');
+    speak('Hola', 'es-ES');
+    expect(lastUtterance.lang).toBe('es-ES');
     expect(lastUtterance.voice).toBeNull();
   });
 
