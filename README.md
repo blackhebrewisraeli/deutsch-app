@@ -13,7 +13,9 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-327_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-372_passing-16110B?style=flat-square&logo=vitest"/>
+  &nbsp;
+  <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-30_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
   &nbsp;
   <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
 </p>
@@ -400,10 +402,11 @@ AI-generated decks expand to any domain on demand.
 | Icons | **lucide-react** | Consistent SVG icon set |
 | Typography | **Fraunces** (display) + **JetBrains Mono** (labels) | Editorial serif + technical mono |
 | Design tokens | `src/lib/theme.js` | Centralised colours, type scale, spacing, component composites |
-| Persistence | **localStorage** | Streak, learned words, SRS state — local-first (anonymous-first account sync is designed, phases B1–B3) |
+| Persistence | **localStorage** | Streak, learned words, SRS state — local-first (account sync UI lands in B2–B3) |
+| Backend data | **Supabase** (Postgres + RLS) | Live (B1): durable per-IP rate quotas via an atomic RPC; user tables with adversarial-tested row-level security and explicit revoked-by-default Data API grants, deployed and waiting for the sync lane |
 | Linting | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars |
 | Formatting | **Prettier 3** | Consistent code style, enforced on every commit |
-| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **327 tests** — engine (`src/lib/*`), packs, content invariants, the API middleware (`api/_lib/*`), and component tests across every tab (chat, translate, vocab, stats, gamification, ui) |
+| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **372 tests** — engine (`src/lib/*`), packs, content invariants, the API middleware and per-route quota contracts (`api/`), and component tests across every tab — plus a separate **30-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
 | CI | **GitHub Actions** | Runs lint + test + build on every push to `main` and every PR |
 | Pre-commit | **Husky + lint-staged** | Runs ESLint + Prettier + the full test suite before every `git commit` |
 | PWA | **vite-plugin-pwa** + Workbox | Installable on iOS/Android, offline-capable static assets |
@@ -411,7 +414,7 @@ AI-generated decks expand to any domain on demand.
 | Accessibility | Semantic HTML + ARIA | Labeled icon controls, keyboard-operable widgets, visible focus states |
 | Deployment | **Vercel** | Static SPA + versioned `/api/v1/*` serverless functions (+ legacy `/api/chat` alias) |
 
-**No CSS framework. No database or authentication yet — by design.** The only external call is to the Anthropic API. An anonymous-first backend (Supabase data lane: optional accounts + cross-device sync) is fully designed and lands in phases — see the [backend architecture spec](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md).
+**No CSS framework. No login required — by design.** The browser's only external call is to the app's own API. Server-side, the backend now has two lanes: the **AI service** (`/api/v1/ai/*` → Anthropic) and the **Supabase data lane** (B1, live) carrying durable rate limiting today and the schema + row-level security for anonymous-first accounts and cross-device sync tomorrow — see the [backend architecture spec](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md) and the [B1 design](./docs/superpowers/specs/2026-06-12-backend-b1-data-lane-design.md).
 
 ---
 
@@ -432,7 +435,7 @@ Browser                Vercel function (/api/v1/ai/*)        Anthropic API
    │◄───────────────────────────│                                  │
 ```
 
-In production the functions read `ANTHROPIC_API_KEY` from Vercel's environment. Locally, `npm run dev:full` (vercel dev) runs the **same functions** with the Development environment injected — the key never appears in the browser bundle, in any environment. Endpoints are rate-limited per IP and reject bodies that fail validation ([error envelope](./docs/api/README.md)).
+In production the functions read `ANTHROPIC_API_KEY` from Vercel's environment. Locally, `npm run dev:full` (vercel dev) runs the **same functions** with the Development environment injected — the key never appears in the browser bundle, in any environment. Endpoints reject bodies that fail validation ([error envelope](./docs/api/README.md)) and are rate-limited per IP with **per-route quotas** (chat 20/5 min · deck 5/hour · grade 60/5 min). Quota counters live **durably in Supabase** via an atomic `increment_rate_limit` RPC — surviving cold starts and shared across function instances — with a per-instance in-memory fallback when `SUPABASE_*` is unset. Malformed requests still consume quota: garbage is not free.
 
 ### Exercise content flow
 
@@ -511,12 +514,12 @@ The active pack is a module singleton (`activePack`); the engine matches answers
 **Phased roadmap** — German stays fully working at every step:
 
 - ✅ **Phase 0** — the `LanguagePack` interface; German content loads through it *(merged)*
-- 🚧 **Phase 1** — ✅ language-neutral card identity *(merged — SRS/stats key on `card.id`)*; next: diacritic-aware validation, grammar + AI prompts moved into the pack, content relocated under `src/packs/de/`
+- 🚧 **Phase 1** — ✅ language-neutral card identity *(merged — SRS/stats key on `card.id`)* · ✅ all translate exercises grade through pack-supplied `normalize` *(merged)* · ✅ TTS voice/locale picked from the pack, not hardcoded `de-DE` *(merged)*; next: diacritic-aware validation, grammar + AI prompts moved into the pack, content relocated under `src/packs/de/`
 - ⬜ **Phase 2** extract theme tokens · **Phase 3** add a second pack (e.g. Spanish) to prove the abstraction · **Phase 4** language picker + per-language progress
 
-**Backend arc (parallel track):** the **user interface** (this PWA) and the **developer interface** (versioned REST surface + database contract) are being separated into a two-lane backend. Lane 1 — the AI service (`/api/v1/ai/*`: validation, per-IP rate limiting, error envelope) — is **live**. Lane 2 — Supabase (anonymous-first optional accounts, cross-device progress sync under row-level security) — lands in phases B1–B3, with pack delivery (B4) following the second language pack.
+**Backend arc (parallel track):** the **user interface** (this PWA) and the **developer interface** (versioned REST surface + database contract) are being separated into a two-lane backend. Lane 1 — the AI service (`/api/v1/ai/*`: validation, per-IP quotas, error envelope) — is **live**. Lane 2 — Supabase — is **live through B1**: durable rate limiting runs on it in production, and the sync schema (five user-owned tables under adversarially-tested row-level security, with explicit revoked-by-default Data API grants — `anon` can touch nothing) is deployed and waiting. Optional accounts + cross-device sync UI land in B2–B3, with pack delivery (B4) following the second language pack.
 
-**Design notes** ([`docs/superpowers/`](./docs/superpowers/)): [multi-language direction](./docs/superpowers/specs/2026-06-09-multi-language-platform-design.md) · [LanguagePack Phase 0 design](./docs/superpowers/specs/2026-06-09-languagepack-contract-design.md) · [Phase 0 plan](./docs/superpowers/plans/2026-06-09-languagepack-phase0.md) · [German coupling audit](./docs/AUDIT_GERMAN_COUPLING.md) · [backend architecture](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md) · [B0 plan](./docs/superpowers/plans/2026-06-11-backend-b0-ai-service.md) · [API contract](./docs/api/README.md)
+**Design notes** ([`docs/superpowers/`](./docs/superpowers/)): [multi-language direction](./docs/superpowers/specs/2026-06-09-multi-language-platform-design.md) · [LanguagePack Phase 0 design](./docs/superpowers/specs/2026-06-09-languagepack-contract-design.md) · [Phase 0 plan](./docs/superpowers/plans/2026-06-09-languagepack-phase0.md) · [German coupling audit](./docs/AUDIT_GERMAN_COUPLING.md) · [backend architecture](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md) · [B0 plan](./docs/superpowers/plans/2026-06-11-backend-b0-ai-service.md) · [B1 design](./docs/superpowers/specs/2026-06-12-backend-b1-data-lane-design.md) · [B1 plan](./docs/superpowers/plans/2026-06-12-backend-b1-data-lane.md) · [API contract](./docs/api/README.md) · [data contract](./docs/api/data.md)
 
 ---
 
@@ -555,6 +558,7 @@ npm run format:check # Verify formatting without writing
 npm test             # Vitest (single run)
 npm run test:watch   # Vitest watch mode
 npm run test:coverage # Vitest with v8 coverage report
+npm run test:rls     # Adversarial RLS suite — needs Docker: `supabase start` first
 ```
 
 > 💡 **Cost:** A 30-minute session (chat + a few translations + a generated deck) typically costs **$0.01–0.03** with Claude Haiku 4.5.
@@ -586,8 +590,10 @@ npm run test:coverage # Vitest with v8 coverage report
 ```
 1. Push to GitHub
 2. vercel.com → New Project → import deutsch-app
-3. Environment Variables → ANTHROPIC_API_KEY = sk-ant-api03-...  (+ optional ALLOWED_ORIGINS)
-4. Deploy
+3. Environment Variables → ANTHROPIC_API_KEY = sk-ant-api03-...
+   (+ SUPABASE_URL & SUPABASE_SERVICE_ROLE_KEY for durable rate limiting,
+    + ALLOWED_ORIGINS in Production — scripts/b1-vercel-env-setup.sh automates all of it)
+4. Deploy — then ./scripts/verify-b1-production.sh runs the live contract battery
 ```
 
 The `vercel.json` at the root configures the Vite framework preset and registers everything under `api/` as serverless functions.
@@ -606,10 +612,29 @@ The `vercel.json` at the root configures the Vite framework preset and registers
 deutsch-app/
 │
 ├── api/
-│   └── chat.js                ← Vercel serverless function (Anthropic proxy)
+│   ├── _lib/                  ← Shared middleware, each with co-located tests:
+│   │   ├── handler.js         ← createAiHandler() — the factory every route composes
+│   │   ├── validate.js        ← Body validation (model allow-list, shape checks)
+│   │   ├── origin.js          ← Origin allow-list (mandatory in production)
+│   │   ├── ratelimit.js       ← Per-IP quotas — Supabase-durable, in-memory fallback
+│   │   ├── supabase.js        ← Service-role client (server lane only)
+│   │   ├── respond.js         ← The error envelope
+│   │   └── anthropic.js       ← The upstream forwarder
+│   ├── v1/ai/
+│   │   ├── chat.js            ← 20 req / 5 min per IP
+│   │   ├── deck.js            ← 5 req / hour per IP (strict — deck generation)
+│   │   └── grade.js           ← 60 req / 5 min per IP (high-throughput grading)
+│   └── chat.js                ← Legacy alias → v1 chat
+│
+├── supabase/
+│   ├── config.toml            ← Local stack config (revoked-by-default Data API)
+│   ├── migrations/            ← rate_limits + atomic RPC · five user tables + RLS policies ·
+│   │                            explicit Data API grants (anon: nothing; authenticated: own rows)
+│   └── tests/rls/             ← Adversarial RLS suite (npm run test:rls)
 │
 ├── docs/
-│   ├── superpowers/specs/     ← Architecture design notes (multi-language, LanguagePack, …)
+│   ├── api/                   ← Contracts: ai.md (AI lane) · data.md (data lane) · packs.md
+│   ├── superpowers/specs/     ← Architecture design notes (multi-language, LanguagePack, backend, …)
 │   ├── superpowers/plans/     ← Implementation plans
 │   ├── AUDIT_GERMAN_COUPLING.md
 │   └── MAINTENANCE_CHECKLIST.md
@@ -622,7 +647,9 @@ deutsch-app/
 │   └── apple-touch-icon.png  ← iOS home screen icon
 │
 ├── scripts/
-│   └── gen-icons.js           ← One-time icon generator (npm i -D sharp && node scripts/gen-icons.js)
+│   ├── gen-icons.js           ← One-time icon generator (npm i -D sharp && node scripts/gen-icons.js)
+│   ├── b1-vercel-env-setup.sh ← Owner-run: wires SUPABASE_* + ALLOWED_ORIGINS into Vercel
+│   └── verify-b1-production.sh ← Post-deploy battery: 200s, foreign-Origin 403, 400 envelope
 │
 ├── src/
 │   ├── components/
@@ -671,11 +698,15 @@ deutsch-app/
 │   ├── main.jsx
 │   └── test-setup.js
 │
+├── AGENTS.md                  ← Shared rules for every AI coding agent (Cursor, Claude Code, …)
+├── .mcp.json                  ← Project-scoped Supabase MCP server (mirrored in .cursor/mcp.json)
 ├── .husky/pre-commit          ← Runs lint-staged + `npm test` before every commit
 ├── .npmrc                     ← legacy-peer-deps=true (eslint-plugin-react peer-dep workaround)
 ├── .prettierrc                ← Prettier config
+├── .vercelignore              ← Keeps api/**/*.test.js from deploying as functions
 ├── eslint.config.js           ← ESLint flat config (react, react-hooks, react-refresh)
 ├── vitest.config.js           ← Vitest config (jsdom env, v8 coverage of src/lib + src/data + src/components)
+├── vitest.rls.config.js       ← Separate config for the RLS suite (needs Docker — never in pre-commit)
 ├── vite.config.js             ← Vite config + PWA plugin + dev proxy
 └── package.json
 ```
