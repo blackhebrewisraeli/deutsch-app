@@ -1,0 +1,5 @@
+# Keep test files out of the deployment: vercel.json's `api/**/*.js` functions
+# glob would otherwise deploy them as serverless functions, which 500 at
+# runtime importing vitest (api/_lib/ is already protected by the underscore
+# rule; this covers test files co-located with the routes).
+api/**/*.test.js
