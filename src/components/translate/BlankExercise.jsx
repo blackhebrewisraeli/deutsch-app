@@ -12,6 +12,8 @@ import {
 } from '../../lib/theme';
 import { shuffle } from '../../lib/utils';
 import { recordEvent, recordItem } from '../../lib/stats';
+import { activePack } from '../../packs';
+import { exactMatch } from '../../lib/matching';
 import FeedbackPanel from './FeedbackPanel';
 
 // A2 — fill the 1–2 blanks in a German sentence by picking tiles from a bank.
@@ -46,7 +48,9 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
   };
 
   const check = () => {
-    const correct = filled.every((t, i) => t && t.word === exercise.blanks[i].word);
+    const correct = filled.every(
+      (t, i) => t && exactMatch(exercise.blanks[i].word, t.word, activePack.validation.normalize)
+    );
     const verdict = correct ? 'correct' : 'wrong';
     setFeedback(verdict);
     recordEvent('translate', level, verdict);

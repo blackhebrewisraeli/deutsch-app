@@ -71,6 +71,21 @@ describe('BlankExercise', () => {
     expect(screen.getByText('Ich bin müde')).toBeInTheDocument();
   });
 
+  it('accepts a word that matches after pack normalization (case-insensitive)', async () => {
+    const onCorrect = vi.fn();
+    const cased = {
+      en: 'I am tired',
+      de: 'Ich bin müde',
+      template: 'Ich ___ müde',
+      blanks: [{ word: 'bin', distractors: ['Bin'] }],
+    };
+    render(<BlankExercise exercise={cased} level="a2" onCorrect={onCorrect} onSkip={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Use Bin for next blank' }));
+    await userEvent.click(screen.getByRole('button', { name: 'CHECK →' }));
+    expect(onCorrect).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('✓ CORRECT')).toBeInTheDocument();
+  });
+
   it('fills blanks in order for a two-blank template', async () => {
     const twoBlanks = {
       en: 'I am very tired',
