@@ -18,3 +18,33 @@ export function mergeSrs(local, remote) {
   }
   return out;
 }
+
+// Deep zero-filled merge over the daily counter shape. We walk the union of
+// keys so a missing side counts as 0 and the shape is preserved.
+function combine(a, b, op) {
+  if (typeof a === 'number' || typeof b === 'number') {
+    return op(a ?? 0, b ?? 0);
+  }
+  const out = {};
+  const keys = new Set([...Object.keys(a ?? {}), ...Object.keys(b ?? {})]);
+  for (const k of keys) out[k] = combine(a?.[k], b?.[k], op);
+  return out;
+}
+
+export function addCounters(a, b) {
+  return combine(a, b, (x, y) => x + y);
+}
+export function subCounters(a, b) {
+  return combine(a, b, (x, y) => x - y);
+}
+
+// Delta-sync for one day's counters. Push the change since last sync so a
+// repeated sync is a no-op and guest data (lastSynced absent → delta = whole
+// local value) folds in exactly once.
+export function mergeDailyAdditive({ local, server, lastSynced }) {
+  const delta = subCounters(local, lastSynced); // lastSynced undefined → delta = local
+  return {
+    server: addCounters(server, delta),
+    lastSynced: local, // advance the baseline to what we just pushed
+  };
+}
