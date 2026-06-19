@@ -26,7 +26,14 @@ import AccountSection from './stats/AccountSection';
 // Section 05 — practice dashboard. Reads the forward-only event log from
 // storage and composes six widgets (A–F). All aggregation lives in lib/stats
 // + lib/srs; the widgets are pure presentation.
-export default function StatsTab({ mobile = false, onReview, user, onSignIn, onSignOut }) {
+export default function StatsTab({
+  mobile = false,
+  onReview,
+  user,
+  onSignIn,
+  onSignOut,
+  lastSyncedAt = null,
+}) {
   // Pull state from storage every render so today's counters reflect events
   // from the other tabs without app-wide state plumbing.
   const [state, setState] = useState(() => loadState() ?? {});
@@ -69,7 +76,12 @@ export default function StatsTab({ mobile = false, onReview, user, onSignIn, onS
           />
           <div style={{ marginTop: SPACE[5] }}>
             <SectionLabel num="·" text="Account & sync" />
-            <AccountSection user={user} onSignIn={onSignIn} onSignOut={onSignOut} />
+            <AccountSection
+              user={user}
+              onSignIn={onSignIn}
+              onSignOut={onSignOut}
+              lastSyncedAt={lastSyncedAt}
+            />
           </div>
           <div style={{ marginTop: SPACE[5] }}>
             <SectionLabel num="·" text="Daily goal" />

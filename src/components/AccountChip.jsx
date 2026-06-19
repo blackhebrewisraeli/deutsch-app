@@ -4,7 +4,7 @@ import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW } from '../lib/theme';
 // Header account affordance. Guest: a quiet "Sign in" link. Signed-in: an
 // initial-in-a-circle that opens a small sheet (email · sign out). Full
 // management lives in the Stats AccountSection; this is the glance + escape.
-export default function AccountChip({ user, onSignIn, onSignOut }) {
+export default function AccountChip({ user, onSignIn, onSignOut, pending = false }) {
   const [open, setOpen] = useState(false);
 
   if (!user) {
@@ -30,6 +30,22 @@ export default function AccountChip({ user, onSignIn, onSignOut }) {
   const initial = (user.email?.[0] ?? '?').toUpperCase();
   return (
     <div style={{ position: 'relative' }}>
+      {pending && (
+        <span
+          aria-label="Sync pending"
+          style={{
+            position: 'absolute',
+            top: -2,
+            right: -2,
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            background: COLORS.red,
+            border: `2px solid ${COLORS.paper}`,
+            zIndex: 1,
+          }}
+        />
+      )}
       <button
         aria-label="Account"
         aria-haspopup="true"

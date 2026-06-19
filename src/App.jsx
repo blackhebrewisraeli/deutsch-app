@@ -29,6 +29,8 @@ import WelcomeGate from './components/WelcomeGate';
 import MagicLinkForm from './components/auth/MagicLinkForm';
 import AccountChip from './components/AccountChip';
 import { useAuth, signOut } from './lib/auth';
+import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
+import { useSyncStatus } from './lib/useSyncStatus';
 import Confetti from './components/ui/Confetti';
 import ToastStack from './components/ui/Toast';
 import LevelBadge from './components/gamification/LevelBadge';
@@ -172,6 +174,7 @@ export default function App() {
 
   // Auth
   const { user } = useAuth();
+  const syncStatus = useSyncStatus();
   const [showGate, setShowGate] = useState(() => !localStorage.getItem('deutsch-onboarded'));
   const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
 
@@ -188,6 +191,22 @@ export default function App() {
     setShowGate(true);
     setAuthModal('signin');
   };
+
+  useEffect(() => {
+    if (!SYNC_ENABLED || !user?.id) {
+      stop();
+      return;
+    }
+    start(user.id);
+    return () => stop();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!SYNC_ENABLED || !user?.id) return;
+    const onProgress = () => markDirty();
+    window.addEventListener('deutsch:progress', onProgress);
+    return () => window.removeEventListener('deutsch:progress', onProgress);
+  }, [user?.id]);
 
   // Onboarding + level
   const [showSplash, setShowSplash] = useState(() => !localStorage.getItem('deutsch-onboarded'));
@@ -428,7 +447,12 @@ export default function App() {
             pulsing={streakPulsing}
           />
           <GoalRing pct={game.goal.pct} met={game.goal.met} size={mobile ? 40 : 48} />
-          <AccountChip user={user} onSignIn={requestSignIn} onSignOut={() => signOut()} />
+          <AccountChip
+            user={user}
+            onSignIn={requestSignIn}
+            onSignOut={() => signOut()}
+            pending={syncStatus.pending}
+          />
         </div>
       </header>
 
@@ -574,6 +598,7 @@ export default function App() {
             user={user}
             onSignIn={requestSignIn}
             onSignOut={() => signOut()}
+            lastSyncedAt={syncStatus.lastSyncedAt}
           />
         )}
       </main>
