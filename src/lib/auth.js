@@ -22,3 +22,26 @@ function getClient() {
   }
   return client;
 }
+
+const NOT_CONFIGURED = { error: { message: 'Sign-in is not available right now.' } };
+
+export async function signInWithMagicLink(email) {
+  const c = getClient();
+  if (!c) return NOT_CONFIGURED;
+  return c.auth.signInWithOtp({
+    email,
+    options: { emailRedirectTo: window.location.origin },
+  });
+}
+
+export async function verifyCode(email, token) {
+  const c = getClient();
+  if (!c) return NOT_CONFIGURED;
+  return c.auth.verifyOtp({ email, token, type: 'email' });
+}
+
+export async function signOut() {
+  const c = getClient();
+  if (!c) return { error: null };
+  return c.auth.signOut();
+}
