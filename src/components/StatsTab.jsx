@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, RADIUS } from '../lib/theme';
 import { loadState, saveState } from '../lib/storage';
+import { stampSettings } from '../lib/settingsStamp';
 import {
   todayKey,
   getTodaySnapshot,
@@ -81,6 +82,7 @@ export default function StatsTab({ mobile = false, onReview, user, onSignIn, onS
                   goal: xp,
                 };
                 saveState({ ...s, gamification: g });
+                stampSettings();
                 setState(loadState() ?? {});
                 window.dispatchEvent(new CustomEvent('deutsch:progress'));
               }}
@@ -96,6 +98,7 @@ export default function StatsTab({ mobile = false, onReview, user, onSignIn, onS
                 };
                 const g = { ...cur, soundOn: !cur.soundOn };
                 saveState({ ...s, gamification: g });
+                stampSettings();
                 setState(loadState() ?? {});
                 window.dispatchEvent(new CustomEvent('deutsch:progress'));
               }}

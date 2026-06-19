@@ -7,10 +7,12 @@ import {
   RADIUS,
   SHADOW,
 } from '../lib/theme';
+import { stampSettings } from '../lib/settingsStamp';
 
 export default function SplashScreen({ onComplete }) {
   const handleSelect = (level) => {
     localStorage.setItem('deutsch-level', level);
+    stampSettings();
     localStorage.setItem('deutsch-onboarded', '1');
     onComplete(level);
   };

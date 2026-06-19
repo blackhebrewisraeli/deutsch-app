@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
+import { stampSettings } from './lib/settingsStamp';
 import { getReviewItems, todayKey } from './lib/stats';
 import { getDueCount } from './lib/srs';
 import {
@@ -240,6 +241,7 @@ export default function App() {
       setLevel(item.context);
       try {
         localStorage.setItem('deutsch-level', item.context);
+        stampSettings();
       } catch {
         // ignore — best-effort persistence
       }
@@ -257,6 +259,7 @@ export default function App() {
       setStats((s) => ({ ...s, learnedCount: count }));
       return next;
     });
+    stampSettings();
   };
 
   const tabs = [
