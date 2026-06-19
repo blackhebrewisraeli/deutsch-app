@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { mergeSrs, addCounters, subCounters, mergeDailyAdditive } from './merge.js';
+import { mergeSrs, addCounters, subCounters, mergeDailyAdditive, mergeSettings } from './merge.js';
 
 describe('mergeSrs', () => {
   const card = (lastReviewed, box) => ({ box, lastReviewed, nextDue: lastReviewed + 1, reps: 1 });
@@ -81,5 +81,24 @@ describe('mergeDailyAdditive (delta sync)', () => {
     const r = mergeDailyAdditive({ local: day(8), server, lastSynced: day(5) });
     expect(r.server.total).toBe(13); // 10 + (8-5)
     expect(r.lastSynced.total).toBe(8);
+  });
+});
+
+describe('mergeSettings', () => {
+  it('whole-object LWW by settingsUpdatedAt; tie → remote', () => {
+    const local = { settingsUpdatedAt: 200, goal: 50, level: 'b1' };
+    const remote = { settingsUpdatedAt: 100, goal: 30, level: 'a1' };
+    expect(mergeSettings(local, remote).goal).toBe(50); // local newer
+    expect(mergeSettings({ ...local, settingsUpdatedAt: 100 }, remote)).toEqual(remote); // tie → remote
+  });
+
+  it('a missing remote means local wins (first push)', () => {
+    const local = { settingsUpdatedAt: 5, goal: 50 };
+    expect(mergeSettings(local, null)).toEqual(local);
+  });
+
+  it('a missing local means remote wins (fresh device pull)', () => {
+    const remote = { settingsUpdatedAt: 5, goal: 30 };
+    expect(mergeSettings(null, remote)).toEqual(remote);
   });
 });

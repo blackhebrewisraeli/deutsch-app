@@ -48,3 +48,13 @@ export function mergeDailyAdditive({ local, server, lastSynced }) {
     lastSynced: local, // advance the baseline to what we just pushed
   };
 }
+
+// Settings is one jsonb blob per user → whole-object LWW by settingsUpdatedAt.
+// Missing side loses; exact tie resolves to remote (server).
+export function mergeSettings(local, remote) {
+  if (!local) return remote;
+  if (!remote) return local;
+  const lt = local.settingsUpdatedAt ?? -Infinity;
+  const rt = remote.settingsUpdatedAt ?? -Infinity;
+  return lt > rt ? local : remote;
+}
