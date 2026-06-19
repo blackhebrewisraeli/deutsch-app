@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { COLORS, FONTS, FONT_SIZE, RADIUS, BORDER } from '../../lib/theme';
 import { signInWithMagicLink, verifyCode } from '../../lib/auth.js';
 import Button from '../ui/Button';
@@ -12,6 +12,29 @@ export default function MagicLinkForm({ heading, onSuccess }) {
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
+  const intervalRef = useRef(null);
+
+  // Start a 1-second interval each time the cooldown is set to a positive value
+  // via resend(). The functional updater means we never need resendCooldown in
+  // the dep array — the interval clears itself when it decrements to 0, and the
+  // cleanup fires on unmount.
+  const startCooldown = (seconds) => {
+    clearInterval(intervalRef.current);
+    setResendCooldown(seconds);
+    intervalRef.current = setInterval(() => {
+      setResendCooldown((s) => {
+        if (s <= 1) {
+          clearInterval(intervalRef.current);
+          return 0;
+        }
+        return s - 1;
+      });
+    }, 1000);
+  };
+
+  // Clear interval on unmount.
+  useEffect(() => () => clearInterval(intervalRef.current), []);
 
   // BORDER.standard = "2px solid #16110b" — no .width property exists in theme.
   const input = {
@@ -33,6 +56,16 @@ export default function MagicLinkForm({ heading, onSuccess }) {
     setBusy(false);
     if (e) setError(e.message);
     else setSent(true);
+  };
+
+  const resend = async () => {
+    if (busy || resendCooldown > 0) return;
+    setBusy(true);
+    setError('');
+    const { error: e } = await signInWithMagicLink(email.trim());
+    setBusy(false);
+    if (e) setError(e.message);
+    else startCooldown(30);
   };
 
   const verify = async () => {
@@ -79,6 +112,9 @@ export default function MagicLinkForm({ heading, onSuccess }) {
           />
           <Button onClick={verify} disabled={busy || code.length < 6}>
             Verify code
+          </Button>
+          <Button onClick={resend} disabled={busy || resendCooldown > 0} style={{ marginTop: 8 }}>
+            {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend email'}
           </Button>
         </>
       )}
