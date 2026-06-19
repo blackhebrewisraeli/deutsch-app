@@ -32,6 +32,8 @@ export default function AccountChip({ user, onSignIn, onSignOut }) {
     <div style={{ position: 'relative' }}>
       <button
         aria-label="Account"
+        aria-haspopup="true"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
         style={{
           width: 32,
