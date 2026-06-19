@@ -6,18 +6,18 @@
 import { createClient } from '@supabase/supabase-js';
 import { useState, useEffect } from 'react';
 
-const URL = import.meta.env.VITE_SUPABASE_URL || '';
-const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
 
 export function isAuthConfigured() {
-  return Boolean(URL && ANON_KEY);
+  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 }
 
 let client = null;
 function getClient() {
   if (!isAuthConfigured()) return null;
   if (!client) {
-    client = createClient(URL, ANON_KEY, {
+    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       auth: { persistSession: true, autoRefreshToken: true },
     });
   }
@@ -43,6 +43,8 @@ export async function verifyCode(email, token) {
 
 export async function signOut() {
   const c = getClient();
+  // No client → already effectively signed out; report success, not an error
+  // (unlike signIn/verify, which genuinely cannot proceed).
   if (!c) return { error: null };
   return c.auth.signOut();
 }
@@ -67,6 +69,7 @@ export function useAuth() {
       setStatus(data.session ? 'authenticated' : 'anonymous');
     });
     const { data: sub } = c.auth.onAuthStateChange((_event, next) => {
+      if (!active) return;
       setSession(next);
       setStatus(next ? 'authenticated' : 'anonymous');
     });

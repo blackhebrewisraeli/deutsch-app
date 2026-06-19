@@ -54,6 +54,16 @@ describe('auth actions', () => {
     expect(error).toBeTruthy();
     expect(mockAuth.signInWithOtp).not.toHaveBeenCalled();
   });
+
+  it('signOut reports success (not an error) when auth is not configured', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
+    vi.resetModules();
+    const { signOut } = await import('./auth.js');
+    const { error } = await signOut();
+    expect(error).toBeNull();
+    expect(mockAuth.signOut).not.toHaveBeenCalled();
+  });
 });
 
 describe('useAuth', () => {
@@ -89,6 +99,7 @@ describe('isAuthConfigured', () => {
   it('is false when the Supabase env vars are absent', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', '');
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
+    vi.resetModules();
     const { isAuthConfigured } = await import('./auth.js');
     expect(isAuthConfigured()).toBe(false);
   });
