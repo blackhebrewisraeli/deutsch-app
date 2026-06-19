@@ -20,11 +20,12 @@ import VocabSrsWidget from './stats/VocabSrsWidget';
 import LevelCard from './gamification/LevelCard';
 import GoalPicker from './gamification/GoalPicker';
 import BadgeGrid from './gamification/BadgeGrid';
+import AccountSection from './stats/AccountSection';
 
 // Section 05 — practice dashboard. Reads the forward-only event log from
 // storage and composes six widgets (A–F). All aggregation lives in lib/stats
 // + lib/srs; the widgets are pure presentation.
-export default function StatsTab({ mobile = false, onReview }) {
+export default function StatsTab({ mobile = false, onReview, user, onSignIn, onSignOut }) {
   // Pull state from storage every render so today's counters reflect events
   // from the other tabs without app-wide state plumbing.
   const [state, setState] = useState(() => loadState() ?? {});
@@ -65,6 +66,10 @@ export default function StatsTab({ mobile = false, onReview }) {
             totalXp={totalXp(daily)}
             learnedCount={stats.learnedCount ?? 0}
           />
+          <div style={{ marginTop: SPACE[5] }}>
+            <SectionLabel num="·" text="Account & sync" />
+            <AccountSection user={user} onSignIn={onSignIn} onSignOut={onSignOut} />
+          </div>
           <div style={{ marginTop: SPACE[5] }}>
             <SectionLabel num="·" text="Daily goal" />
             <GoalPicker

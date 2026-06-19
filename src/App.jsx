@@ -24,6 +24,10 @@ import VocabTab from './components/VocabTab';
 import TranslateTab from './components/TranslateTab';
 import StatsTab from './components/StatsTab';
 import SplashScreen from './components/SplashScreen';
+import WelcomeGate from './components/WelcomeGate';
+import MagicLinkForm from './components/auth/MagicLinkForm';
+import AccountChip from './components/AccountChip';
+import { useAuth, signOut } from './lib/auth';
 import Confetti from './components/ui/Confetti';
 import ToastStack from './components/ui/Toast';
 import LevelBadge from './components/gamification/LevelBadge';
@@ -165,6 +169,22 @@ export default function App() {
   const width = useWindowWidth();
   const mobile = isMobile(width);
 
+  // Auth
+  const { user } = useAuth();
+  const [showGate, setShowGate] = useState(() => !localStorage.getItem('deutsch-onboarded'));
+  const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
+
+  const handleGuest = () => setShowGate(false);
+  const handleAuthDone = () => {
+    setAuthModal(null);
+    setShowGate(false);
+    localStorage.setItem('deutsch-onboarded', '1');
+  };
+  const requestSignIn = () => {
+    setShowGate(true);
+    setAuthModal('signin');
+  };
+
   // Onboarding + level
   const [showSplash, setShowSplash] = useState(() => !localStorage.getItem('deutsch-onboarded'));
   const [level, setLevel] = useState(() => {
@@ -254,6 +274,45 @@ export default function App() {
   const attentionCount =
     getReviewItems(liveState.items ?? {}).length +
     getDueCount(liveState.srs ?? {}, PRESET_DECKS, Date.now());
+
+  if (showGate && !user) {
+    return (
+      <>
+        <WelcomeGate onGuest={handleGuest} onAuth={(intent) => setAuthModal(intent)} />
+        {authModal && (
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              background: '#0008',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 70,
+              padding: 24,
+            }}
+            onClick={() => setAuthModal(null)}
+          >
+            <div
+              style={{
+                background: COLORS.paper,
+                borderRadius: 16,
+                padding: 24,
+                maxWidth: 400,
+                width: '100%',
+              }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              <MagicLinkForm
+                heading={authModal === 'create' ? 'Create your account' : 'Sign in'}
+                onSuccess={handleAuthDone}
+              />
+            </div>
+          </div>
+        )}
+      </>
+    );
+  }
 
   if (showSplash) return <SplashScreen onComplete={handleSplashComplete} />;
 
@@ -358,6 +417,7 @@ export default function App() {
             pulsing={streakPulsing}
           />
           <GoalRing pct={game.goal.pct} met={game.goal.met} size={mobile ? 40 : 48} />
+          <AccountChip user={user} onSignIn={requestSignIn} onSignOut={() => signOut()} />
         </div>
       </header>
 
@@ -496,7 +556,15 @@ export default function App() {
             onReviewConsumed={clearReviewTarget}
           />
         )}
-        {tab === 'stats' && <StatsTab mobile={mobile} onReview={handleReview} />}
+        {tab === 'stats' && (
+          <StatsTab
+            mobile={mobile}
+            onReview={handleReview}
+            user={user}
+            onSignIn={requestSignIn}
+            onSignOut={() => signOut()}
+          />
+        )}
       </main>
 
       {/* ── Footer — hidden on mobile ─────────────────────────── */}
