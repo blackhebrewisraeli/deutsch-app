@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
 
 const mockAuth = {
   signInWithOtp: vi.fn(() => Promise.resolve({ data: {}, error: null })),
@@ -52,6 +53,33 @@ describe('auth actions', () => {
     const { error } = await signInWithMagicLink('a@b.com');
     expect(error).toBeTruthy();
     expect(mockAuth.signInWithOtp).not.toHaveBeenCalled();
+  });
+});
+
+describe('useAuth', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://x.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
+    vi.resetModules();
+    Object.values(mockAuth).forEach((fn) => fn.mockClear?.());
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('starts unauthenticated and subscribes to auth changes', async () => {
+    const { useAuth } = await import('./auth.js');
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.status).not.toBe('loading'));
+    expect(result.current.session).toBeNull();
+    expect(mockAuth.onAuthStateChange).toHaveBeenCalled();
+  });
+
+  it('reports status "anonymous" when auth is not configured', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
+    vi.resetModules();
+    const { useAuth } = await import('./auth.js');
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.status).toBe('anonymous'));
   });
 });
 

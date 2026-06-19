@@ -4,6 +4,7 @@
 // (CI, or any environment before B2.3 wires them), the module no-ops and
 // isAuthConfigured() is false, so the app behaves exactly as it does today.
 import { createClient } from '@supabase/supabase-js';
+import { useState, useEffect } from 'react';
 
 const URL = import.meta.env.VITE_SUPABASE_URL || '';
 const ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -44,4 +45,36 @@ export async function signOut() {
   const c = getClient();
   if (!c) return { error: null };
   return c.auth.signOut();
+}
+
+// React hook exposing { session, user, status }. status ∈
+// 'loading' | 'authenticated' | 'anonymous'. When auth is not configured the
+// hook settles on 'anonymous' immediately and never subscribes.
+export function useAuth() {
+  const [session, setSession] = useState(null);
+  const [status, setStatus] = useState('loading');
+
+  useEffect(() => {
+    const c = getClient();
+    if (!c) {
+      setStatus('anonymous');
+      return;
+    }
+    let active = true;
+    c.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSession(data.session);
+      setStatus(data.session ? 'authenticated' : 'anonymous');
+    });
+    const { data: sub } = c.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+      setStatus(next ? 'authenticated' : 'anonymous');
+    });
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  return { session, user: session?.user ?? null, status };
 }
