@@ -22,6 +22,18 @@ describe('srs adapter', () => {
     const srs = { x: { box: 1, lastReviewed: null, nextDue: null, reps: 0 } };
     expect(srsFromRows(srsToRows(srs))).toEqual(srs);
   });
+
+  it('a NaN timestamp maps to null instead of throwing', () => {
+    const srs = { x: { box: 1, lastReviewed: NaN, nextDue: NaN, reps: 0 } };
+    const rows = srsToRows(srs); // must not throw
+    expect(rows[0].last_reviewed).toBeNull();
+    expect(rows[0].next_due).toBeNull();
+  });
+
+  it('a corrupt ISO timestamp from a row maps to null', () => {
+    const rows = [{ srs_key: 'x', box: 1, last_reviewed: 'not-a-date', next_due: null, reps: 0 }];
+    expect(srsFromRows(rows).x.lastReviewed).toBeNull();
+  });
 });
 
 describe('daily adapter', () => {

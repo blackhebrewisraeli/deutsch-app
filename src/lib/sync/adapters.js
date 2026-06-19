@@ -1,8 +1,12 @@
 // Map the local blob slices ↔ Supabase row shapes. pack_id is always 'de' for
 // now; the engine adds user_id. These are pure transforms — no I/O.
 
-const toIso = (ms) => (ms == null ? null : new Date(ms).toISOString());
-const toMs = (iso) => (iso == null ? null : new Date(iso).getTime());
+const toIso = (ms) => (ms == null || Number.isNaN(ms) ? null : new Date(ms).toISOString());
+const toMs = (iso) => {
+  if (iso == null) return null;
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? null : ms;
+};
 
 export function srsToRows(srs) {
   return Object.entries(srs).map(([srs_key, c]) => ({
