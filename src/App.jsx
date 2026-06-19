@@ -180,6 +180,9 @@ export default function App() {
     setShowGate(false);
     localStorage.setItem('deutsch-onboarded', '1');
   };
+  // Re-surfaces the WelcomeGate with the sign-in modal open — the gate is the
+  // only host for the auth modal, so signing in from within the app routes back
+  // through it. (B2.2: an in-app modal host would avoid the gate round-trip.)
   const requestSignIn = () => {
     setShowGate(true);
     setAuthModal('signin');
@@ -294,6 +297,9 @@ export default function App() {
             onClick={() => setAuthModal(null)}
           >
             <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={authModal === 'create' ? 'Create your account' : 'Sign in'}
               style={{
                 background: COLORS.paper,
                 borderRadius: 16,
