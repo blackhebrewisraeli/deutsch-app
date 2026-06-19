@@ -228,7 +228,9 @@ export default function App() {
   useEffect(() => {
     if (stats.lastVisit) {
       // Merge into existing state — recordEvent (from stats.js) writes a
-      // `daily` field we must not clobber.
+      // `daily` field we must not clobber, and `markLearned` stamps
+      // `settingsUpdatedAt`. The `{ ...current }` spread preserves both, so
+      // this must stay a merge (never a replacement) or settings LWW breaks.
       const current = loadState() ?? {};
       saveState({ ...current, stats, learnedWords });
     }
