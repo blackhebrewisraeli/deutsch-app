@@ -287,7 +287,7 @@ export default function App() {
             style={{
               position: 'fixed',
               inset: 0,
-              background: '#0008',
+              background: `${COLORS.ink}aa`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
