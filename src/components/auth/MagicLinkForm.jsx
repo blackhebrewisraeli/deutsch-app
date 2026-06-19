@@ -26,6 +26,7 @@ export default function MagicLinkForm({ heading, onSuccess }) {
   };
 
   const send = async () => {
+    if (busy) return;
     setBusy(true);
     setError('');
     const { error: e } = await signInWithMagicLink(email.trim());
@@ -35,6 +36,7 @@ export default function MagicLinkForm({ heading, onSuccess }) {
   };
 
   const verify = async () => {
+    if (busy) return;
     setBusy(true);
     setError('');
     const { error: e } = await verifyCode(email.trim(), code.trim());
@@ -54,7 +56,6 @@ export default function MagicLinkForm({ heading, onSuccess }) {
           <input
             id="ml-email"
             type="email"
-            aria-label="Email"
             style={input}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -72,7 +73,6 @@ export default function MagicLinkForm({ heading, onSuccess }) {
           <input
             id="ml-code"
             inputMode="numeric"
-            aria-label="Code"
             style={input}
             value={code}
             onChange={(e) => setCode(e.target.value)}

@@ -45,4 +45,14 @@ describe('MagicLinkForm', () => {
     await userEvent.click(screen.getByRole('button', { name: /send/i }));
     expect(await screen.findByText(/too many attempts/i)).toBeInTheDocument();
   });
+
+  it('surfaces a verify error', async () => {
+    verifyCode.mockResolvedValueOnce({ error: { message: 'Invalid code' } });
+    render(<MagicLinkForm heading="Sign in" onSuccess={() => {}} />);
+    await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'a@b.com');
+    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+    await userEvent.type(await screen.findByRole('textbox', { name: /code/i }), '123456');
+    await userEvent.click(screen.getByRole('button', { name: /verify/i }));
+    expect(await screen.findByText(/invalid code/i)).toBeInTheDocument();
+  });
 });
