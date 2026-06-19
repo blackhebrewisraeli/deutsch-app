@@ -38,6 +38,9 @@ export default function WelcomeGate({ onGuest, onAuth }) {
       >
         Learn German with an AI tutor
       </p>
+      {/* Inline styles can't express :focus-visible; a scoped rule gives the
+          bare guest button a visible focus ring on the dark background. */}
+      <style>{`.welcome-guest:focus-visible { outline: 2px solid ${COLORS.paper}; outline-offset: 2px; border-radius: 4px; }`}</style>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 260 }}>
         {authOn && (
           <>
@@ -48,6 +51,7 @@ export default function WelcomeGate({ onGuest, onAuth }) {
           </>
         )}
         <button
+          className="welcome-guest"
           onClick={onGuest}
           style={{
             background: 'none',
