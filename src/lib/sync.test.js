@@ -131,4 +131,34 @@ describe('sync engine', () => {
     const afterResume = seeded._tables.stats_daily.find((r) => r.day === DAY);
     expect(afterResume.counters.total).toBe(3);
   });
+
+  it('does not clobber local activity recorded during the reconcile (no lost answers)', async () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ daily: { [DAY]: counters(3, 3) } })
+    );
+    // A client whose FIRST select() simulates the user answering one more card
+    // mid-reconcile: today's counter goes 3 -> 4 while pullAndMerge is awaiting.
+    const seeded = makeFakeClient({}, { persist: true });
+    const realFrom = seeded.from.bind(seeded);
+    let injected = false;
+    seeded.from = (table) => {
+      const api = realFrom(table);
+      const realSelect = api.select;
+      api.select = () => {
+        if (!injected) {
+          injected = true;
+          const blob = JSON.parse(localStorage.getItem('deutsch-app-state-v1'));
+          blob.daily[DAY] = counters(4, 4);
+          localStorage.setItem('deutsch-app-state-v1', JSON.stringify(blob));
+        }
+        return realSelect();
+      };
+      return api;
+    };
+    __setClientForTest(seeded);
+    await pullAndMerge('user-1');
+    const after = JSON.parse(localStorage.getItem('deutsch-app-state-v1'));
+    expect(after.daily[DAY].total).toBe(4); // the concurrently-recorded 4th answer must survive
+  });
 });

@@ -11,7 +11,13 @@ import {
   settingsToRow,
   settingsFromRow,
 } from './sync/adapters.js';
-import { mergeSrs, mergeSettings, mergeDailyAdditive } from './sync/merge.js';
+import {
+  mergeSrs,
+  mergeSettings,
+  mergeDailyAdditive,
+  addCounters,
+  subCounters,
+} from './sync/merge.js';
 
 export const SYNC_ENABLED = import.meta.env.VITE_SYNC_ENABLED === 'true';
 
@@ -69,15 +75,36 @@ export async function pullAndMerge(userId) {
     await c.from('stats_daily').upsert(withUser(dailyToRows(serverWrites), userId));
   }
 
+  // Re-read at write time: the user can record activity (answer a card, toggle a
+  // setting) during the awaits above. Spreading the stale `s` would clobber it.
+  // Recover any concurrent daily delta (it pushes on the next reconcile), and
+  // re-merge srs/settings against the current blob so nothing local is lost.
+  const cur = loadState() ?? {};
+  const curDaily = cur.daily ?? {};
+  const adoptedDaily = {};
+  for (const day of new Set([...Object.keys(serverWrites), ...Object.keys(curDaily)])) {
+    const concurrent = subCounters(curDaily[day], local[day]); // activity since the snapshot
+    adoptedDaily[day] = addCounters(serverWrites[day], concurrent);
+  }
+  const curSettings = {
+    gamification: cur.gamification,
+    learnedWords: cur.learnedWords,
+    level: localStorage.getItem('deutsch-level') ?? undefined,
+    settingsUpdatedAt: cur.settingsUpdatedAt,
+  };
+  const adoptedSettings = mergeSettings(
+    curSettings,
+    setMerged.settingsUpdatedAt == null ? null : setMerged
+  );
   saveState({
-    ...s,
-    srs: srsMerged,
-    daily: serverWrites,
-    gamification: setMerged.gamification ?? s.gamification,
-    learnedWords: setMerged.learnedWords ?? s.learnedWords,
-    settingsUpdatedAt: setMerged.settingsUpdatedAt ?? s.settingsUpdatedAt,
+    ...cur,
+    srs: mergeSrs(cur.srs ?? {}, srsMerged),
+    daily: adoptedDaily,
+    gamification: adoptedSettings.gamification ?? cur.gamification,
+    learnedWords: adoptedSettings.learnedWords ?? cur.learnedWords,
+    settingsUpdatedAt: adoptedSettings.settingsUpdatedAt ?? cur.settingsUpdatedAt,
   });
-  if (setMerged.level) localStorage.setItem('deutsch-level', setMerged.level);
+  if (adoptedSettings.level) localStorage.setItem('deutsch-level', adoptedSettings.level);
   saveSyncMeta({ lastSyncedCounters: nextLastSynced, lastSyncedAt: Date.now() });
 
   if (Object.keys(srsMerged).length) {
