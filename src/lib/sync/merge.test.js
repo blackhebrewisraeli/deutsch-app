@@ -82,6 +82,17 @@ describe('mergeDailyAdditive (delta sync)', () => {
     expect(r.server.total).toBe(13); // 10 + (8-5)
     expect(r.lastSynced.total).toBe(8);
   });
+
+  it('floors a negative delta — a cleared/desynced local never decrements the server', () => {
+    // local fell to 0 but its baseline still says 5 (storage cleared mid-session)
+    expect(
+      mergeDailyAdditive({ local: day(0), server: day(5), lastSynced: day(5) }).server.total
+    ).toBe(5);
+    // and the shared total never goes negative
+    expect(
+      mergeDailyAdditive({ local: day(0), server: day(0), lastSynced: day(5) }).server.total
+    ).toBe(0);
+  });
 });
 
 describe('mergeSettings', () => {

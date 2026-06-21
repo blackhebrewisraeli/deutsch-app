@@ -17,6 +17,7 @@ import {
   mergeDailyAdditive,
   addCounters,
   subCounters,
+  clampCounters,
 } from './sync/merge.js';
 
 export const SYNC_ENABLED = import.meta.env.VITE_SYNC_ENABLED === 'true';
@@ -83,7 +84,9 @@ export async function pullAndMerge(userId) {
   const curDaily = cur.daily ?? {};
   const adoptedDaily = {};
   for (const day of new Set([...Object.keys(serverWrites), ...Object.keys(curDaily)])) {
-    const concurrent = subCounters(curDaily[day], local[day]); // activity since the snapshot
+    // Floor at 0: a negative here means local was cleared during the reconcile,
+    // not genuine activity — adopt the server value rather than subtracting.
+    const concurrent = clampCounters(subCounters(curDaily[day], local[day]));
     adoptedDaily[day] = addCounters(serverWrites[day], concurrent);
   }
   const curSettings = {
