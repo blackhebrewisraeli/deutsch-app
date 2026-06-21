@@ -84,4 +84,34 @@ describe('scrubEvent', () => {
     expect(out.request.cookies).toBeUndefined();
     expect(out.request.url).toBe('https://app.example/auth/callback');
   });
+
+  it('strips the URL hash fragment (implicit-flow tokens)', async () => {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://abc@o1.ingest.sentry.io/123');
+    const { scrubEvent } = await import('./observability.js');
+    const out = scrubEvent({
+      request: { url: 'https://app.example/#access_token=secret&type=magiclink' },
+    });
+    expect(out.request.url).toBe('https://app.example/');
+  });
+
+  it('drops request.query_string', async () => {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://abc@o1.ingest.sentry.io/123');
+    const { scrubEvent } = await import('./observability.js');
+    const out = scrubEvent({ request: { query_string: 'token=abc' } });
+    expect(out.request.query_string).toBeUndefined();
+  });
+
+  it('strips query/hash from breadcrumb URLs', async () => {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://abc@o1.ingest.sentry.io/123');
+    const { scrubEvent } = await import('./observability.js');
+    const out = scrubEvent({
+      breadcrumbs: [
+        { category: 'navigation', data: { from: '/a?code=1', to: '/b#access_token=2' } },
+        { category: 'fetch', data: { url: 'https://api.example/x?key=secret' } },
+      ],
+    });
+    expect(out.breadcrumbs[0].data.from).toBe('/a');
+    expect(out.breadcrumbs[0].data.to).toBe('/b');
+    expect(out.breadcrumbs[1].data.url).toBe('https://api.example/x');
+  });
 });

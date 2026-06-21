@@ -17,14 +17,30 @@ export function isMonitoringConfigured() {
 }
 
 // Drop anything potentially identifying before an event leaves the browser.
-// Anonymous-first app: no user identity, no cookies, and magic-link URLs can
-// carry tokens in the query string — strip those too.
+// Anonymous-first app: no user identity, no cookies, and auth tokens can ride in
+// a URL's query string (PKCE `?code=`) OR its hash fragment (implicit-flow
+// `#access_token=`) — strip both, on the request URL and on breadcrumb URLs.
+function stripUrl(url) {
+  return url.split(/[?#]/)[0];
+}
+
 export function scrubEvent(event) {
   delete event.user;
   if (event.request) {
     delete event.request.cookies;
+    delete event.request.query_string;
     if (typeof event.request.url === 'string') {
-      event.request.url = event.request.url.split('?')[0];
+      event.request.url = stripUrl(event.request.url);
+    }
+  }
+  if (Array.isArray(event.breadcrumbs)) {
+    for (const crumb of event.breadcrumbs) {
+      if (!crumb || !crumb.data) continue;
+      for (const key of ['url', 'to', 'from']) {
+        if (typeof crumb.data[key] === 'string') {
+          crumb.data[key] = stripUrl(crumb.data[key]);
+        }
+      }
     }
   }
   return event;
