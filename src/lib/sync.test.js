@@ -62,7 +62,7 @@ vi.mock('./auth.js', () => ({
   isAuthConfigured: () => true,
 }));
 
-import { pushAll, pullAndMerge, __setClientForTest } from './sync.js';
+import { pushAll, pullAndMerge, __setClientForTest, __reconcileNowForTest } from './sync.js';
 
 describe('sync engine', () => {
   beforeEach(() => {
@@ -160,5 +160,22 @@ describe('sync engine', () => {
     await pullAndMerge('user-1');
     const after = JSON.parse(localStorage.getItem('deutsch-app-state-v1'));
     expect(after.daily[DAY].total).toBe(4); // the concurrently-recorded 4th answer must survive
+  });
+
+  it('serializes overlapping reconciles so concurrent triggers cannot double-count', async () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ daily: { [DAY]: counters(5, 5) } })
+    );
+    const seeded = makeFakeClient({}, { persist: true });
+    __setClientForTest(seeded);
+
+    // Two triggers race — e.g. a visibilitychange firing while the debounced
+    // reconcile is mid-flight. Without an in-flight guard the two pullAndMerge
+    // runs interleave and re-add the day's delta (runaway double-count).
+    await Promise.all([__reconcileNowForTest('user-1'), __reconcileNowForTest('user-1')]);
+
+    const row = seeded._tables.stats_daily.find((r) => r.day === DAY);
+    expect(row.counters.total).toBe(5); // folded in exactly once
   });
 });

@@ -137,6 +137,8 @@ let activeUserId = null;
 let debounceTimer = null;
 let visibilityHandler = null;
 let forceEnabledForTest = false;
+let reconciling = false;
+let rerunRequested = false;
 
 function syncEnabled() {
   return forceEnabledForTest || import.meta.env.VITE_SYNC_ENABLED === 'true';
@@ -161,14 +163,34 @@ export function subscribeSyncStatus(fn) {
 }
 
 async function reconcileNow(userId) {
+  // Serialize reconciles. visibilitychange (every tab switch), the markDirty
+  // debounce, and start() all trigger this; pullAndMerge has multiple awaits, so
+  // overlapping runs interleave and re-add the additive daily delta from a stale
+  // baseline (runaway double-count). If one is in flight, request a single rerun
+  // instead of starting a concurrent one.
+  if (reconciling) {
+    rerunRequested = true;
+    return;
+  }
+  reconciling = true;
   setStatus({ ...status, pending: true });
   try {
-    await pullAndMerge(userId);
+    do {
+      rerunRequested = false;
+      await pullAndMerge(userId);
+    } while (rerunRequested);
     const meta = loadSyncMeta();
     setStatus({ pending: false, lastSyncedAt: meta.lastSyncedAt });
   } catch {
     setStatus({ pending: false, lastSyncedAt: status.lastSyncedAt });
+  } finally {
+    reconciling = false;
   }
+}
+
+// Test seam: drive a reconcile directly to exercise the in-flight guard.
+export function __reconcileNowForTest(userId) {
+  return reconcileNow(userId);
 }
 
 export function markDirty() {
@@ -219,6 +241,8 @@ export function __resetSyncState({ enabled, userId } = {}) {
     visibilityHandler = null;
   }
   activeUserId = userId ?? null;
+  reconciling = false;
+  rerunRequested = false;
   setStatus({ pending: false, lastSyncedAt: null });
   testClient = null;
 }
