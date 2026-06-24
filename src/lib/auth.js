@@ -81,3 +81,7 @@ export function useAuth() {
 
   return { session, user: session?.user ?? null, status };
 }
+
+export function getSupabase() {
+  return getClient();
+}

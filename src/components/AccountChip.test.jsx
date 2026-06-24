@@ -23,4 +23,16 @@ describe('AccountChip', () => {
     await userEvent.click(screen.getByRole('button', { name: /sign out/i }));
     expect(onSignOut).toHaveBeenCalled();
   });
+
+  it('shows a pending-sync dot when sync is queued', () => {
+    render(
+      <AccountChip
+        user={{ email: 'sam@example.com' }}
+        onSignIn={() => {}}
+        onSignOut={() => {}}
+        pending
+      />
+    );
+    expect(screen.getByLabelText(/sync pending/i)).toBeInTheDocument();
+  });
 });

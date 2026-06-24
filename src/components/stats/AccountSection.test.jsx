@@ -24,4 +24,16 @@ describe('AccountSection', () => {
     await userEvent.click(screen.getByRole('button', { name: /sign out/i }));
     expect(onSignOut).toHaveBeenCalled();
   });
+
+  it('shows last synced when a timestamp is provided', () => {
+    render(
+      <AccountSection
+        user={{ email: 'sam@example.com' }}
+        onSignIn={() => {}}
+        onSignOut={() => {}}
+        lastSyncedAt={Date.now() - 120_000}
+      />
+    );
+    expect(screen.getByText(/last synced · 2m ago/i)).toBeInTheDocument();
+  });
 });

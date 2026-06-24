@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
+import { stampSettings } from './lib/settingsStamp';
 import { getReviewItems, todayKey } from './lib/stats';
 import { getDueCount } from './lib/srs';
 import {
@@ -28,6 +29,8 @@ import WelcomeGate from './components/WelcomeGate';
 import MagicLinkForm from './components/auth/MagicLinkForm';
 import AccountChip from './components/AccountChip';
 import { useAuth, signOut } from './lib/auth';
+import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
+import { useSyncStatus } from './lib/useSyncStatus';
 import Confetti from './components/ui/Confetti';
 import ToastStack from './components/ui/Toast';
 import LevelBadge from './components/gamification/LevelBadge';
@@ -171,6 +174,7 @@ export default function App() {
 
   // Auth
   const { user } = useAuth();
+  const syncStatus = useSyncStatus();
   const [showGate, setShowGate] = useState(() => !localStorage.getItem('deutsch-onboarded'));
   const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
 
@@ -187,6 +191,22 @@ export default function App() {
     setShowGate(true);
     setAuthModal('signin');
   };
+
+  useEffect(() => {
+    if (!SYNC_ENABLED || !user?.id) {
+      stop();
+      return;
+    }
+    start(user.id);
+    return () => stop();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (!SYNC_ENABLED || !user?.id) return;
+    const onProgress = () => markDirty();
+    window.addEventListener('deutsch:progress', onProgress);
+    return () => window.removeEventListener('deutsch:progress', onProgress);
+  }, [user?.id]);
 
   // Onboarding + level
   const [showSplash, setShowSplash] = useState(() => !localStorage.getItem('deutsch-onboarded'));
@@ -227,7 +247,9 @@ export default function App() {
   useEffect(() => {
     if (stats.lastVisit) {
       // Merge into existing state — recordEvent (from stats.js) writes a
-      // `daily` field we must not clobber.
+      // `daily` field we must not clobber, and `markLearned` stamps
+      // `settingsUpdatedAt`. The `{ ...current }` spread preserves both, so
+      // this must stay a merge (never a replacement) or settings LWW breaks.
       const current = loadState() ?? {};
       saveState({ ...current, stats, learnedWords });
     }
@@ -240,6 +262,7 @@ export default function App() {
       setLevel(item.context);
       try {
         localStorage.setItem('deutsch-level', item.context);
+        stampSettings();
       } catch {
         // ignore — best-effort persistence
       }
@@ -257,6 +280,7 @@ export default function App() {
       setStats((s) => ({ ...s, learnedCount: count }));
       return next;
     });
+    stampSettings();
   };
 
   const tabs = [
@@ -423,7 +447,12 @@ export default function App() {
             pulsing={streakPulsing}
           />
           <GoalRing pct={game.goal.pct} met={game.goal.met} size={mobile ? 40 : 48} />
-          <AccountChip user={user} onSignIn={requestSignIn} onSignOut={() => signOut()} />
+          <AccountChip
+            user={user}
+            onSignIn={requestSignIn}
+            onSignOut={() => signOut()}
+            pending={syncStatus.pending}
+          />
         </div>
       </header>
 
@@ -569,6 +598,7 @@ export default function App() {
             user={user}
             onSignIn={requestSignIn}
             onSignOut={() => signOut()}
+            lastSyncedAt={syncStatus.lastSyncedAt}
           />
         )}
       </main>
