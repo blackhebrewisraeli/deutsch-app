@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Sparkles } from 'lucide-react';
 import {
   COLORS,
@@ -116,6 +116,16 @@ export default function VocabTab({
     const others = shuffle(deck.filter((_, i) => i !== cardIdx).map((c) => c.en));
     return shuffle([correct, ...others.slice(0, 3)]);
   };
+
+  // Build the four multiple-choice options once per card. getChoices() reshuffles
+  // on every call, so calling it inline in render let any unrelated re-render
+  // (e.g. a parent sync-status update) reorder the buttons under the user's
+  // finger — registering the wrong answer. Memoizing per card keeps the order
+  // stable until the displayed card actually changes.
+  const choices = useMemo(
+    () => (currentIdx !== null && activeDeck.length >= 4 ? getChoices(activeDeck, currentIdx) : []),
+    [deckId, currentIdx, card?.id, activeDeck.length] // eslint-disable-line react-hooks/exhaustive-deps
+  );
 
   const advanceQueue = (wasCorrect) => {
     setAnswered(false);
@@ -465,7 +475,7 @@ export default function VocabTab({
                 currentIdx !== null &&
                 activeDeck.length >= 4 && (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE[3] }}>
-                    {getChoices(activeDeck, currentIdx).map((choice) => (
+                    {choices.map((choice) => (
                       <button
                         key={choice}
                         type="button"
