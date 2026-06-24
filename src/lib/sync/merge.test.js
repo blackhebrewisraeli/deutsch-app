@@ -112,4 +112,19 @@ describe('mergeSettings', () => {
     const remote = { settingsUpdatedAt: 5, goal: 30 };
     expect(mergeSettings(null, remote)).toEqual(remote);
   });
+
+  it('unions learnedWords so cross-device LWW never drops a learned mark (#41)', () => {
+    // local is newer (wins the scalar LWW) but has fewer learned words
+    const local = { settingsUpdatedAt: 200, goal: 50, learnedWords: { hallo: true } };
+    const remote = { settingsUpdatedAt: 100, goal: 30, learnedWords: { hallo: true, danke: true } };
+    const out = mergeSettings(local, remote);
+    expect(out.goal).toBe(50); // scalar settings still LWW (local newer)
+    expect(out.learnedWords).toEqual({ hallo: true, danke: true }); // remote's 'danke' survives
+  });
+
+  it('a word stays learned if either side has it (OR union)', () => {
+    const a = { settingsUpdatedAt: 1, learnedWords: { x: true, y: false } };
+    const b = { settingsUpdatedAt: 2, learnedWords: { x: false, y: true } };
+    expect(mergeSettings(a, b).learnedWords).toEqual({ x: true, y: true });
+  });
 });
