@@ -59,12 +59,23 @@ export function mergeDailyAdditive({ local, server, lastSynced }) {
   };
 }
 
-// Settings is one jsonb blob per user → whole-object LWW by settingsUpdatedAt.
-// Missing side loses; exact tie resolves to remote (server).
+// Settings is one jsonb blob per user → whole-object LWW by settingsUpdatedAt
+// (missing side loses; exact tie → remote) — EXCEPT learnedWords, which is
+// accumulative like SRS, so we union it (a word stays learned if either device
+// has it). That keeps whole-object LWW from dropping a learned mark across
+// devices (#41). The union is skipped when neither side tracks learnedWords.
 export function mergeSettings(local, remote) {
   if (!local) return remote;
   if (!remote) return local;
   const lt = local.settingsUpdatedAt ?? -Infinity;
   const rt = remote.settingsUpdatedAt ?? -Infinity;
-  return lt > rt ? local : remote;
+  const winner = lt > rt ? local : remote;
+  const lw = local.learnedWords;
+  const rw = remote.learnedWords;
+  if (lw === undefined && rw === undefined) return winner;
+  const learnedWords = {};
+  for (const word of new Set([...Object.keys(lw ?? {}), ...Object.keys(rw ?? {})])) {
+    learnedWords[word] = Boolean(lw?.[word] || rw?.[word]);
+  }
+  return { ...winner, learnedWords };
 }
