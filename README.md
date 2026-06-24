@@ -13,7 +13,7 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-372_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-455_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
   <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-30_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
   &nbsp;
@@ -402,11 +402,14 @@ AI-generated decks expand to any domain on demand.
 | Icons | **lucide-react** | Consistent SVG icon set |
 | Typography | **Fraunces** (display) + **JetBrains Mono** (labels) | Editorial serif + technical mono |
 | Design tokens | `src/lib/theme.js` | Centralised colours, type scale, spacing, component composites |
-| Persistence | **localStorage** | Streak, learned words, SRS state — local-first (account sync UI lands in B2–B3) |
-| Backend data | **Supabase** (Postgres + RLS) | Live (B1): durable per-IP rate quotas via an atomic RPC; user tables with adversarial-tested row-level security and explicit revoked-by-default Data API grants, deployed and waiting for the sync lane |
+| Persistence | **localStorage** (local-first) | Streak, learned words, SRS + stats, gamification — kept in `deutsch-app-state-v1` |
+| Sync | **localStorage ↔ Supabase** engine | Built + merged (B2.2): folds local state into per-user rows via LWW / additive-delta / union merges, behind the `VITE_SYNC_ENABLED` build flag — **off in prod** pending B2.3 go-live |
+| Auth | **Supabase Auth** (magic-link + OTP) | Passwordless, anonymous-first sign-in UI; gates the sync engine |
+| Backend data | **Supabase** (Postgres + RLS) | Live: durable per-IP rate quotas via an atomic RPC; five user-owned tables under adversarially-tested row-level security (revoked-by-default Data API grants) backing the sync engine |
+| Error monitoring | **Sentry** (errors-only) | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay |
 | Linting | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars |
 | Formatting | **Prettier 3** | Consistent code style, enforced on every commit |
-| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **372 tests** — engine (`src/lib/*`), packs, content invariants, the API middleware and per-route quota contracts (`api/`), and component tests across every tab — plus a separate **30-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
+| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **455 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **30-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
 | CI | **GitHub Actions** | Runs lint + test + build on every push to `main` and every PR |
 | Pre-commit | **Husky + lint-staged** | Runs ESLint + Prettier + the full test suite before every `git commit` |
 | PWA | **vite-plugin-pwa** + Workbox | Installable on iOS/Android, offline-capable static assets |
@@ -414,7 +417,7 @@ AI-generated decks expand to any domain on demand.
 | Accessibility | Semantic HTML + ARIA | Labeled icon controls, keyboard-operable widgets, visible focus states |
 | Deployment | **Vercel** | Static SPA + versioned `/api/v1/*` serverless functions (+ legacy `/api/chat` alias) |
 
-**No CSS framework. No login required — by design.** The browser's only external call is to the app's own API. Server-side, the backend now has two lanes: the **AI service** (`/api/v1/ai/*` → Anthropic) and the **Supabase data lane** (B1, live) carrying durable rate limiting today and the schema + row-level security for anonymous-first accounts and cross-device sync tomorrow — see the [backend architecture spec](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md) and the [B1 design](./docs/superpowers/specs/2026-06-12-backend-b1-data-lane-design.md).
+**No CSS framework. Accounts are optional — anonymous-first by design.** The browser's only external call is to the app's own API. Server-side, the backend has two lanes: the **AI service** (`/api/v1/ai/*` → Anthropic) and the **Supabase data lane** (live) carrying durable rate limiting plus the schema + row-level security behind a now-merged localStorage↔Supabase **sync engine** (flag-gated, off in prod pending go-live) — see the [backend architecture spec](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md) and the [B1 design](./docs/superpowers/specs/2026-06-12-backend-b1-data-lane-design.md).
 
 ---
 
@@ -517,7 +520,7 @@ The active pack is a module singleton (`activePack`); the engine matches answers
 - 🚧 **Phase 1** — ✅ language-neutral card identity *(merged — SRS/stats key on `card.id`)* · ✅ all translate exercises grade through pack-supplied `normalize` *(merged)* · ✅ TTS voice/locale picked from the pack, not hardcoded `de-DE` *(merged)*; next: diacritic-aware validation, grammar + AI prompts moved into the pack, content relocated under `src/packs/de/`
 - ⬜ **Phase 2** extract theme tokens · **Phase 3** add a second pack (e.g. Spanish) to prove the abstraction · **Phase 4** language picker + per-language progress
 
-**Backend arc (parallel track):** the **user interface** (this PWA) and the **developer interface** (versioned REST surface + database contract) are being separated into a two-lane backend. Lane 1 — the AI service (`/api/v1/ai/*`: validation, per-IP quotas, error envelope) — is **live**. Lane 2 — Supabase — is **live through B1**: durable rate limiting runs on it in production, and the sync schema (five user-owned tables under adversarially-tested row-level security, with explicit revoked-by-default Data API grants — `anon` can touch nothing) is deployed and waiting. Optional accounts + cross-device sync UI land in B2–B3, with pack delivery (B4) following the second language pack.
+**Backend arc (parallel track):** the **user interface** (this PWA) and the **developer interface** (versioned REST surface + database contract) are being separated into a two-lane backend. Lane 1 — the AI service (`/api/v1/ai/*`: validation, per-IP quotas, error envelope) — is **live**. Lane 2 — Supabase — is **live**: durable rate limiting runs on it in production, and the sync schema (five user-owned tables under adversarially-tested row-level security, with explicit revoked-by-default Data API grants — `anon` can touch nothing) is deployed. The **localStorage↔Supabase sync engine + magic-link auth (B2.2) are built and merged**, behind the `VITE_SYNC_ENABLED` flag — **off in prod** pending B2.3 go-live (prod env + flag flip). Pack delivery (B4) follows the second language pack.
 
 **Design notes** ([`docs/superpowers/`](./docs/superpowers/)): [multi-language direction](./docs/superpowers/specs/2026-06-09-multi-language-platform-design.md) · [LanguagePack Phase 0 design](./docs/superpowers/specs/2026-06-09-languagepack-contract-design.md) · [Phase 0 plan](./docs/superpowers/plans/2026-06-09-languagepack-phase0.md) · [German coupling audit](./docs/AUDIT_GERMAN_COUPLING.md) · [backend architecture](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md) · [B0 plan](./docs/superpowers/plans/2026-06-11-backend-b0-ai-service.md) · [B1 design](./docs/superpowers/specs/2026-06-12-backend-b1-data-lane-design.md) · [B1 plan](./docs/superpowers/plans/2026-06-12-backend-b1-data-lane.md) · [API contract](./docs/api/README.md) · [data contract](./docs/api/data.md)
 
@@ -559,6 +562,9 @@ npm test             # Vitest (single run)
 npm run test:watch   # Vitest watch mode
 npm run test:coverage # Vitest with v8 coverage report
 npm run test:rls     # Adversarial RLS suite — needs Docker: `supabase start` first
+npm run where -- X   # Dev toolkit — locate module X + who depends on it (also: /component)
+npm run audit:dead   # Dev toolkit — list orphan modules (dead code)
+npm run clean        # Dev toolkit — wipe stale build/dev caches
 ```
 
 > 💡 **Cost:** A 30-minute session (chat + a few translations + a generated deck) typically costs **$0.01–0.03** with Claude Haiku 4.5.
@@ -634,10 +640,11 @@ deutsch-app/
 │
 ├── docs/
 │   ├── api/                   ← Contracts: ai.md (AI lane) · data.md (data lane) · packs.md
-│   ├── superpowers/specs/     ← Architecture design notes (multi-language, LanguagePack, backend, …)
+│   ├── superpowers/specs/     ← Architecture design notes (multi-language, LanguagePack, backend, streak, …)
 │   ├── superpowers/plans/     ← Implementation plans
 │   ├── AUDIT_GERMAN_COUPLING.md
-│   └── MAINTENANCE_CHECKLIST.md
+│   ├── MAINTENANCE_CHECKLIST.md
+│   └── dev-toolkit.md         ← /component shortcut + audit:dead / clean hygiene
 │
 ├── public/
 │   ├── favicon.svg            ← Browser tab icon
@@ -647,24 +654,32 @@ deutsch-app/
 │   └── apple-touch-icon.png  ← iOS home screen icon
 │
 ├── scripts/
+│   ├── lib/                   ← Dev-toolkit internals: moduleGraph (pure, tested) + collect
+│   ├── where.js               ← `npm run where -- <name>` — locate a module + its dependents (also /component)
+│   ├── audit-dead.js          ← `npm run audit:dead` — orphan modules (dead code)
+│   ├── clean.js               ← `npm run clean` — wipe stale build/dev caches
 │   ├── gen-icons.js           ← One-time icon generator (npm i -D sharp && node scripts/gen-icons.js)
 │   ├── b1-vercel-env-setup.sh ← Owner-run: wires SUPABASE_* + ALLOWED_ORIGINS into Vercel
 │   └── verify-b1-production.sh ← Post-deploy battery: 200s, foreign-Origin 403, 400 envelope
 │
 ├── src/
 │   ├── components/
+│   │   ├── AccountChip.jsx    ← Header sign-in / account chip
 │   │   ├── AlphabetTab.jsx
 │   │   ├── ChatTab.jsx
+│   │   ├── ErrorBoundary.jsx
 │   │   ├── SplashScreen.jsx
 │   │   ├── StatsTab.jsx
 │   │   ├── TranslateTab.jsx
 │   │   ├── UI.jsx
 │   │   ├── VocabTab.jsx
+│   │   ├── WelcomeGate.jsx    ← Anonymous-first onboarding gate
+│   │   ├── auth/              ← MagicLinkForm
 │   │   ├── chat/              ← ChatInput, MessageBubble, TaskPanel, …
 │   │   ├── gamification/      ← LevelBadge, GoalRing, BadgeGrid, …
 │   │   ├── stats/             ← Heatmap, ReviewFeed, VocabSrsWidget, …
 │   │   ├── translate/         ← TileExercise, BlankExercise, TypingExercise, …
-│   │   └── ui/                ← Button, Toast, Confetti, Card
+│   │   └── ui/                ← Button, Toast, Confetti
 │   │
 │   ├── data/
 │   │   ├── content.js         ← ALPHABET, PRESET_DECKS, SCENARIOS, CHAT_TASKS,
@@ -672,22 +687,23 @@ deutsch-app/
 │   │   └── content.test.js
 │   │
 │   ├── lib/
+│   │   ├── auth.js            ← Supabase Auth (magic-link / OTP) — sole @supabase/supabase-js importer
 │   │   ├── claude.js          ← Anthropic API client (dev proxy / prod serverless)
-│   │   ├── matching.js        ← Exact / fuzzy answer matching (language-agnostic)
 │   │   ├── gamification.js    ← XP, levels, daily goal, achievements
-│   │   ├── gamification.test.js
+│   │   ├── matching.js        ← Exact / fuzzy answer matching (language-agnostic)
+│   │   ├── observability.js   ← Sentry init (errors-only)
+│   │   ├── settingsStamp.js   ← settingsUpdatedAt stamping (sync LWW)
 │   │   ├── sound.js           ← Web Audio synth effects (correct, level-up, …)
 │   │   ├── speech.js          ← SpeechSynthesis wrapper
 │   │   ├── srs.js             ← Leitner spaced repetition
-│   │   ├── srs.test.js
 │   │   ├── stats.js           ← Event log + review feed helpers
-│   │   ├── stats.test.js
-│   │   ├── storage.js
-│   │   ├── storage.test.js
+│   │   ├── storage.js         ← localStorage read/write
+│   │   ├── sync.js            ← Sync orchestrator (flag-gated by VITE_SYNC_ENABLED)
+│   │   ├── sync/              ← adapters · merge (LWW / additive / union) · syncMeta
 │   │   ├── theme.js           ← Design tokens
+│   │   ├── useSyncStatus.js   ← Sync status hook (pending · lastSyncedAt)
 │   │   ├── useWindowWidth.js  ← Responsive hook + breakpoint helpers
-│   │   ├── utils.js
-│   │   └── utils.test.js
+│   │   └── utils.js           ← (+ co-located *.test.js throughout)
 │   │
 │   ├── packs/                ← Multi-language layer (the LanguagePack interface)
 │   │   ├── index.js          ← activePack registry
