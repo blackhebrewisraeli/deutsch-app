@@ -17,6 +17,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "where": "node scripts/where.js",
+    "audit:dead": "node scripts/audit-dead.js",
+    "clean": "node scripts/clean.js",
     "prepare": "husky"
   },
   "dependencies": {
