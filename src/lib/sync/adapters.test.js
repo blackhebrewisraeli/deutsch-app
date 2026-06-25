@@ -72,4 +72,21 @@ describe('settings adapter', () => {
     expect(back.learnedWords.hallo).toBe(true);
     expect(back.settingsUpdatedAt).toBe(123);
   });
+
+  it('carries frozenDays / bestStreak / lastReconcileDay round-trip', () => {
+    const local = {
+      gamification: {
+        goal: 50,
+        frozenDays: { '2026-06-08': true },
+        bestStreak: 9,
+        lastReconcileDay: '2026-06-10',
+      },
+      learnedWords: {},
+      settingsUpdatedAt: 1,
+    };
+    const back = settingsFromRow(settingsToRow(local, 'a1'));
+    expect(back.gamification.frozenDays).toEqual({ '2026-06-08': true });
+    expect(back.gamification.bestStreak).toBe(9);
+    expect(back.gamification.lastReconcileDay).toBe('2026-06-10');
+  });
 });
