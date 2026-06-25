@@ -23,6 +23,7 @@ export default function GoalRing({ pct, met, size = 48 }) {
           strokeLinecap="round"
           strokeDasharray={c}
           strokeDashoffset={c * (1 - clamped)}
+          style={{ transition: 'stroke-dashoffset 0.5s ease, stroke 0.3s ease' }}
         />
       </svg>
       <div
@@ -33,6 +34,7 @@ export default function GoalRing({ pct, met, size = 48 }) {
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: size * 0.34,
+          ...(met ? { animation: 'pop 0.4s ease-out' } : {}),
         }}
       >
         {met ? '✓' : '🎯'}
