@@ -7,3 +7,6 @@ export const DEFAULT_GOAL = 50;
 
 // A day counts toward the streak when its XP reaches the daily goal.
 export const QUALIFYING_DAY = 'goal';
+
+// Streak lengths that earn a celebration (replaces the old every-7-days burst).
+export const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100];

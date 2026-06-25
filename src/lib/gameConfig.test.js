@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { XP_PER_VERDICT, GOAL_PRESETS, DEFAULT_GOAL, QUALIFYING_DAY } from './gameConfig';
+import {
+  XP_PER_VERDICT,
+  GOAL_PRESETS,
+  DEFAULT_GOAL,
+  QUALIFYING_DAY,
+  STREAK_MILESTONES,
+} from './gameConfig';
 
 describe('gameConfig', () => {
   it('exposes XP per verdict', () => {
@@ -11,5 +17,8 @@ describe('gameConfig', () => {
   });
   it('uses a goal-based qualifying-day rule', () => {
     expect(QUALIFYING_DAY).toBe('goal');
+  });
+  it('defines streak milestones', () => {
+    expect(STREAK_MILESTONES).toEqual([3, 7, 14, 30, 50, 100]);
   });
 });

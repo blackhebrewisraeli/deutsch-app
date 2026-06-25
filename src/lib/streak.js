@@ -1,6 +1,7 @@
 // Streak derivation — pure, I/O-free. The streak is DERIVED from the daily log
 // (consistent with how XP/levels work), never stored as a running counter.
 import { xpForDay } from './gamification';
+import { STREAK_MILESTONES } from './gameConfig';
 
 // A calendar day qualifies toward the streak once its XP reaches the goal.
 export function qualifies(day, goal) {
@@ -43,4 +44,11 @@ export function bestStreakFromHistory(daily, goal) {
     prev = key;
   }
   return best;
+}
+
+// The highest milestone in (prev, next], or null. Fires a celebration the moment
+// a streak reaches 3 / 7 / 14 / ….
+export function crossedMilestone(prev, next) {
+  const hit = STREAK_MILESTONES.filter((m) => m > prev && m <= next);
+  return hit.length ? Math.max(...hit) : null;
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { qualifies, currentStreak, bestStreakFromHistory } from './streak';
+import { qualifies, currentStreak, bestStreakFromHistory, crossedMilestone } from './streak';
 
 // 5 correct = 50 XP; 4 correct = 40 XP
 const day = (correct) => ({ byLevel: { a1: { correct, almost: 0, wrong: 0 } } });
@@ -49,5 +49,19 @@ describe('bestStreakFromHistory', () => {
   });
   it('is 0 with no qualifying days', () => {
     expect(bestStreakFromHistory({ '2026-06-01': miss }, 50)).toBe(0);
+  });
+});
+
+describe('crossedMilestone', () => {
+  it('returns the milestone just reached', () => {
+    expect(crossedMilestone(2, 3)).toBe(3);
+    expect(crossedMilestone(6, 7)).toBe(7);
+  });
+  it('returns null when no milestone is crossed', () => {
+    expect(crossedMilestone(3, 4)).toBeNull();
+    expect(crossedMilestone(7, 7)).toBeNull();
+  });
+  it('returns the highest milestone when several are crossed at once', () => {
+    expect(crossedMilestone(1, 8)).toBe(7);
   });
 });
