@@ -21,7 +21,7 @@ export function xpForDay(day) {
       (lv.almost ?? 0) * XP_PER_VERDICT.almost +
       (lv.wrong ?? 0) * XP_PER_VERDICT.wrong;
   }
-  return xp;
+  return xp + (day.bonusXp ?? 0);
 }
 
 export function totalXp(daily) {

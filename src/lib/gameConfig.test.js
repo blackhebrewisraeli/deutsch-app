@@ -6,6 +6,7 @@ import {
   QUALIFYING_DAY,
   STREAK_MILESTONES,
   FREEZE,
+  MULTIPLIER_TIERS,
 } from './gameConfig';
 
 describe('gameConfig', () => {
@@ -24,5 +25,9 @@ describe('gameConfig', () => {
   });
   it('defines the freeze economy', () => {
     expect(FREEZE).toEqual({ earnEveryDays: 7, maxHeld: 2 });
+  });
+  it('defines multiplier tiers', () => {
+    expect(MULTIPLIER_TIERS[0]).toEqual({ minStreak: 0, mult: 1.0 });
+    expect(MULTIPLIER_TIERS.at(-1)).toEqual({ minStreak: 30, mult: 2.0 });
   });
 });

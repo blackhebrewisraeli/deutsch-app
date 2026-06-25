@@ -23,6 +23,7 @@ import {
   crossedMilestone,
   reconcile,
   freezesAvailable,
+  multiplier,
 } from './lib/streak';
 import { activePack } from './packs';
 const { decks: PRESET_DECKS } = activePack.content;
@@ -63,11 +64,13 @@ export default function App() {
     const daily = s.daily ?? {};
     const goalXp = s.gamification?.goal ?? DEFAULT_GOAL;
     const frozenDays = s.gamification?.frozenDays ?? {};
+    const streakNow = currentStreak(daily, goalXp, todayKey(), frozenDays);
     return {
       lvl: levelFromXp(totalXp(daily)),
       goal: goalProgress(todayXp(daily, todayKey()), goalXp),
-      streak: currentStreak(daily, goalXp, todayKey(), frozenDays),
+      streak: streakNow,
       freezes: freezesAvailable(s, todayKey()),
+      mult: multiplier(streakNow),
     };
   };
   const [game, setGame] = useState(deriveGame);
@@ -208,6 +211,15 @@ export default function App() {
               icon: '⚡',
             });
           }
+          const boost = multiplier(tStreak);
+          if (boost > multiplier(prevStreak)) {
+            newToasts.push({
+              kind: 'boost',
+              title: `×${boost} XP-Boost!`,
+              sub: 'Multiplikator',
+              icon: '🚀',
+            });
+          }
         }
         prevStreakRef.current = tStreak;
       }
@@ -230,7 +242,8 @@ export default function App() {
               t.kind === 'streak' ||
               t.kind === 'record' ||
               t.kind === 'milestone' ||
-              t.kind === 'freeze'
+              t.kind === 'freeze' ||
+              t.kind === 'boost'
             )
               playGoalMet();
           });
@@ -645,7 +658,12 @@ export default function App() {
         }}
       >
         {(tab === 'translate' || tab === 'vocab') && (
-          <GoalStrip streak={game.streak} current={game.goal.current} target={game.goal.target} />
+          <GoalStrip
+            streak={game.streak}
+            current={game.goal.current}
+            target={game.goal.target}
+            mult={game.mult}
+          />
         )}
         {tab === 'chat' && <ChatTab level={level} mobile={mobile} />}
         {tab === 'alphabet' && (

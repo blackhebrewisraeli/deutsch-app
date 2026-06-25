@@ -8,4 +8,9 @@ describe('GoalStrip', () => {
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.getByText('30 / 50 XP')).toBeInTheDocument();
   });
+
+  it('shows the multiplier badge when above 1', () => {
+    render(<GoalStrip streak={7} current={10} target={50} mult={1.5} />);
+    expect(screen.getByText('×1.5')).toBeInTheDocument();
+  });
 });

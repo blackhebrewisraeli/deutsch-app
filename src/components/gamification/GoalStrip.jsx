@@ -3,7 +3,7 @@ import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, RADIUS, BORDER } from 
 
 // Slim in-play strip: current streak + today's XP filling toward the daily goal.
 // Shown above the exercise tabs so the goal climb lives where you play.
-export default function GoalStrip({ streak, current, target }) {
+export default function GoalStrip({ streak, current, target, mult = 1 }) {
   const pct = target > 0 ? Math.min(1, current / target) : 0;
   return (
     <div
@@ -29,6 +29,7 @@ export default function GoalStrip({ streak, current, target }) {
         }}
       >
         <Flame size={14} aria-hidden="true" /> {streak}
+        {mult > 1 && <span style={{ marginLeft: 6, color: COLORS.gold }}>×{mult}</span>}
       </span>
       <div
         style={{

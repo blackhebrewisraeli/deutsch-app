@@ -7,6 +7,7 @@ import {
   simulateFreezes,
   reconcile,
   freezesAvailable,
+  multiplier,
 } from './streak';
 
 // 5 correct = 50 XP; 4 correct = 40 XP
@@ -129,5 +130,17 @@ describe('reconcile + freezesAvailable', () => {
   it('freezesAvailable reflects the earned balance', () => {
     const state = { daily: week(), gamification: { goal: 50 } };
     expect(freezesAvailable(state, '2026-06-08')).toBe(1);
+  });
+});
+
+describe('multiplier', () => {
+  it('steps up by streak tier', () => {
+    expect(multiplier(0)).toBe(1.0);
+    expect(multiplier(2)).toBe(1.0);
+    expect(multiplier(3)).toBe(1.2);
+    expect(multiplier(7)).toBe(1.5);
+    expect(multiplier(14)).toBe(1.75);
+    expect(multiplier(30)).toBe(2.0);
+    expect(multiplier(100)).toBe(2.0);
   });
 });

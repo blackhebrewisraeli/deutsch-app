@@ -60,6 +60,9 @@ describe('emptyDayAggregate', () => {
   it('returns total: 0', () => {
     expect(emptyDayAggregate().total).toBe(0);
   });
+  it('seeds bonusXp: 0', () => {
+    expect(emptyDayAggregate().bonusXp).toBe(0);
+  });
 
   it('returns zero counts for every tab', () => {
     const day = emptyDayAggregate();
@@ -92,6 +95,12 @@ describe('applyEvent', () => {
     const next = applyEvent({}, '2026-06-06', 'chat', 'a1', 'correct');
     expect(next['2026-06-06']).toBeDefined();
     expect(next['2026-06-06'].total).toBe(1);
+  });
+
+  it('accumulates bonus XP from the streak multiplier', () => {
+    let daily = applyEvent({}, '2026-06-06', 'chat', 'a1', 'correct', 5);
+    daily = applyEvent(daily, '2026-06-06', 'chat', 'a1', 'correct', 3);
+    expect(daily['2026-06-06'].bonusXp).toBe(8);
   });
 
   it('increments total, byTab, and byLevel together', () => {

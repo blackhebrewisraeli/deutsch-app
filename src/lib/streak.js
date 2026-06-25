@@ -1,7 +1,7 @@
 // Streak derivation — pure, I/O-free. The streak is DERIVED from the daily log
 // (consistent with how XP/levels work), never stored as a running counter.
 import { xpForDay } from './gamification';
-import { STREAK_MILESTONES, FREEZE, DEFAULT_GOAL } from './gameConfig';
+import { STREAK_MILESTONES, FREEZE, DEFAULT_GOAL, MULTIPLIER_TIERS } from './gameConfig';
 
 // A calendar day qualifies toward the streak once its XP reaches the goal.
 export function qualifies(day, goal) {
@@ -111,4 +111,11 @@ export function freezesAvailable(state, today) {
   const daily = state.daily ?? {};
   const goal = state.gamification?.goal ?? DEFAULT_GOAL;
   return simulateFreezes(daily, goal, today).freezes;
+}
+
+// XP multiplier for a streak length — the highest tier it reaches.
+export function multiplier(streakLen) {
+  let m = 1;
+  for (const tier of MULTIPLIER_TIERS) if (streakLen >= tier.minStreak) m = tier.mult;
+  return m;
 }

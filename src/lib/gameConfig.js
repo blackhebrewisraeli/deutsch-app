@@ -13,3 +13,13 @@ export const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100];
 
 // Freeze economy: earn one freeze per N-day run, hold at most `maxHeld`.
 export const FREEZE = { earnEveryDays: 7, maxHeld: 2 };
+
+// XP multiplier by current streak length — the longer the streak, the bigger
+// every "+XP". The highest matching tier (minStreak ≤ streak) wins.
+export const MULTIPLIER_TIERS = [
+  { minStreak: 0, mult: 1.0 },
+  { minStreak: 3, mult: 1.2 },
+  { minStreak: 7, mult: 1.5 },
+  { minStreak: 14, mult: 1.75 },
+  { minStreak: 30, mult: 2.0 },
+];
