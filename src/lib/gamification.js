@@ -4,11 +4,12 @@
 
 import { getMasteredCount, srsKey, MASTERED_BOX } from './srs';
 import { activePack } from '../packs';
+import { XP_PER_VERDICT, GOAL_PRESETS, DEFAULT_GOAL } from './gameConfig';
 const { decks: PRESET_DECKS } = activePack.content;
 
-export const XP_PER_VERDICT = { correct: 10, almost: 6, wrong: 3 };
-export const GOAL_PRESETS = { casual: 20, regular: 50, serious: 100 };
-export const DEFAULT_GOAL = 50;
+// Balance constants now live in gameConfig; re-exported for back-compat so
+// existing importers (App, GoalPicker, tests) keep working unchanged.
+export { XP_PER_VERDICT, GOAL_PRESETS, DEFAULT_GOAL };
 
 // ─── XP ───────────────────────────────────────────────────────
 export function xpForDay(day) {
