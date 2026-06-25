@@ -16,6 +16,7 @@ import {
   DEFAULT_GOAL,
 } from './lib/gamification';
 import { setSoundEnabled, playLevelUp, playAchievement, playGoalMet } from './lib/sound';
+import { currentStreak, bestStreakFromHistory, qualifies } from './lib/streak';
 import { activePack } from './packs';
 const { decks: PRESET_DECKS } = activePack.content;
 import { StatBlock } from './components/UI';
@@ -100,6 +101,7 @@ export default function App() {
         soundOn: false,
         achievements: {},
         lastGoalMet: null,
+        bestStreak: 0,
       };
       const ctx = gamificationContext(s);
       const lvlInfo = levelFromXp(totalXp(s.daily ?? {}));
@@ -142,6 +144,15 @@ export default function App() {
           });
         }
       }
+
+      const tStreak = currentStreak(s.daily ?? {}, g.goal, tKey);
+      const histBest = bestStreakFromHistory(s.daily ?? {}, g.goal);
+      // First run seeds the record from history or the prior (login-era) streak
+      // so it isn't "lost" when the streak switches to practice-based.
+      nextG.bestStreak = firstRun
+        ? Math.max(g.bestStreak ?? 0, histBest, s.stats?.streak ?? 0)
+        : Math.max(g.bestStreak ?? 0, histBest, tStreak);
+      setStats((prev) => ({ ...prev, streak: tStreak }));
 
       saveState({ ...s, gamification: nextG });
       setSoundEnabled(!!nextG.soundOn);
@@ -227,20 +238,13 @@ export default function App() {
     const s = loadState();
     if (s) {
       setLearnedWords(s.learnedWords || {});
-      const today = new Date().toDateString();
-      const last = s.stats?.lastVisit;
-      let streak = s.stats?.streak || 0;
-      if (last !== today) {
-        const yesterday = new Date(Date.now() - 86400000).toDateString();
-        if (last === yesterday) streak += 1;
-        else if (last) streak = 1;
-        else streak = 1;
-      }
+      const today = todayKey();
+      const goal = s.gamification?.goal ?? DEFAULT_GOAL;
+      const streak = currentStreak(s.daily ?? {}, goal, today);
       const learnedCount = Object.values(s.learnedWords || {}).filter(Boolean).length;
       setStats({ streak, learnedCount, lastVisit: today });
     } else {
-      const today = new Date().toDateString();
-      setStats({ streak: 1, learnedCount: 0, lastVisit: today });
+      setStats({ streak: 0, learnedCount: 0, lastVisit: todayKey() });
     }
   }, []);
 
@@ -291,9 +295,6 @@ export default function App() {
     { id: 'stats', label: 'Stats', icon: BarChart3, num: '05' },
   ];
 
-  // Streak pulsing: user hasn't visited today yet and has a streak to protect
-  const streakPulsing = stats.streak > 0 && stats.lastVisit !== new Date().toDateString();
-
   // Stats nav badge — count of wrong items + due vocab cards.
   // Read fresh from storage on every render so it reflects exercises taken in
   // other tabs since the last App re-render. Cheap (single localStorage hit).
@@ -301,6 +302,11 @@ export default function App() {
   const attentionCount =
     getReviewItems(liveState.items ?? {}).length +
     getDueCount(liveState.srs ?? {}, PRESET_DECKS, Date.now());
+
+  // Streak at risk: user has a run going but today hasn't qualified yet.
+  const goalNow = liveState.gamification?.goal ?? DEFAULT_GOAL;
+  const streakPulsing =
+    stats.streak > 0 && !qualifies((liveState.daily ?? {})[todayKey()], goalNow);
 
   if (showGate && !user) {
     return (
