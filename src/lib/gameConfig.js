@@ -10,3 +10,6 @@ export const QUALIFYING_DAY = 'goal';
 
 // Streak lengths that earn a celebration (replaces the old every-7-days burst).
 export const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100];
+
+// Freeze economy: earn one freeze per N-day run, hold at most `maxHeld`.
+export const FREEZE = { earnEveryDays: 7, maxHeld: 2 };

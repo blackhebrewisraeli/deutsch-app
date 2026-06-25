@@ -5,6 +5,7 @@ import {
   DEFAULT_GOAL,
   QUALIFYING_DAY,
   STREAK_MILESTONES,
+  FREEZE,
 } from './gameConfig';
 
 describe('gameConfig', () => {
@@ -20,5 +21,8 @@ describe('gameConfig', () => {
   });
   it('defines streak milestones', () => {
     expect(STREAK_MILESTONES).toEqual([3, 7, 14, 30, 50, 100]);
+  });
+  it('defines the freeze economy', () => {
+    expect(FREEZE).toEqual({ earnEveryDays: 7, maxHeld: 2 });
   });
 });
