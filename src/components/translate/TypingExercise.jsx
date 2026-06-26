@@ -11,6 +11,7 @@ export default function TypingExercise({ exercise, level, onCorrect, onSkip }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [feedback, setFeedback] = useState(null);
+  const [reward, setReward] = useState({ xp: 0, mult: 1 });
   const mounted = useRef(true);
   useEffect(
     () => () => {
@@ -54,7 +55,8 @@ Use "wrong" if there's a significant grammar mistake, wrong word choice, or the 
           corrected: parsed.corrected,
           message: parsed.message,
         });
-        recordEvent('translate', level, verdict);
+        const r = recordEvent('translate', level, verdict);
+        setReward(r);
         recordItem('translate', level, exercise.en, exercise.de, verdict);
         // "almost" still advances the exercise — typos shouldn't gate progress.
         if (verdict === 'correct' || verdict === 'almost') onCorrect();
@@ -78,6 +80,8 @@ Use "wrong" if there's a significant grammar mistake, wrong word choice, or the 
           verdict={feedback.verdict}
           correctText={feedback.corrected}
           note={feedback.message}
+          xp={reward.xp}
+          mult={reward.mult}
           onNext={onSkip}
         />
       ) : (

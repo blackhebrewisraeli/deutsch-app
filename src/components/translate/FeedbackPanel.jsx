@@ -13,15 +13,16 @@ import {
 
 // Three-way result panel shown after an answer: correct (gold) / almost
 // (paperDeep) / wrong (red). Shows the canonical answer when not fully correct.
-export default function FeedbackPanel({ verdict, correctText, note, onNext }) {
+// xp + mult: when provided and verdict is correct/almost, shows a +N XP ×M🔥
+// flourish (mult badge omitted when mult === 1).
+export default function FeedbackPanel({ verdict, correctText, note, xp, mult, onNext }) {
   const isCorrect = verdict === 'correct';
   const isAlmost = verdict === 'almost';
   const bg = isCorrect ? COLORS.gold : isAlmost ? COLORS.paperDeep : COLORS.red;
   const fg = isCorrect || isAlmost ? COLORS.ink : COLORS.paper;
   const label = isCorrect ? '✓ CORRECT' : isAlmost ? '≈ ALMOST' : '✗ NOT QUITE';
-  // Show the canonical answer when not fully correct (almost or wrong both
-  // benefit from seeing the intended translation).
   const showCorrectText = !isCorrect && correctText;
+  const showFlourish = (isCorrect || isAlmost) && xp > 0;
   return (
     <div
       className={verdict === 'wrong' ? 'wiggle' : 'pop'}
@@ -44,6 +45,19 @@ export default function FeedbackPanel({ verdict, correctText, note, onNext }) {
       >
         {label}
       </div>
+      {showFlourish && (
+        <div
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: FONT_SIZE.sm,
+            fontWeight: FONT_WEIGHT.bold,
+            opacity: 0.8,
+            marginBottom: SPACE[2],
+          }}
+        >
+          +{xp} XP{mult > 1 ? ` ×${mult}🔥` : ''}
+        </div>
+      )}
       {showCorrectText && (
         <div
           style={{

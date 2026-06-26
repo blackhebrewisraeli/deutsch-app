@@ -21,6 +21,7 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
   const [tileBank, setTileBank] = useState([]);
   const [filled, setFilled] = useState([]);
   const [feedback, setFeedback] = useState(null);
+  const [reward, setReward] = useState({ xp: 0, mult: 1 });
 
   useEffect(() => {
     const allTiles = exercise.blanks.flatMap((b) => [b.word, ...b.distractors]);
@@ -53,7 +54,8 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
     );
     const verdict = correct ? 'correct' : 'wrong';
     setFeedback(verdict);
-    recordEvent('translate', level, verdict);
+    const r = recordEvent('translate', level, verdict);
+    setReward(r);
     recordItem('translate', level, exercise.en, exercise.de, verdict);
     if (correct) onCorrect();
   };
@@ -67,6 +69,8 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
           verdict={feedback}
           correctText={exercise.de}
           note={exercise.note}
+          xp={reward.xp}
+          mult={reward.mult}
           onNext={onSkip}
         />
       ) : (
