@@ -85,3 +85,11 @@ export function useAuth() {
 export function getSupabase() {
   return getClient();
 }
+
+/** Returns the current session's JWT, or null if not signed in. */
+export async function getAccessToken() {
+  const c = getClient();
+  if (!c) return null;
+  const { data } = await c.auth.getSession();
+  return data?.session?.access_token ?? null;
+}

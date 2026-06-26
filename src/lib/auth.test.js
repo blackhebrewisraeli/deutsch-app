@@ -64,6 +64,28 @@ describe('auth actions', () => {
     expect(error).toBeNull();
     expect(mockAuth.signOut).not.toHaveBeenCalled();
   });
+
+  it('getAccessToken returns the access token from the current session', async () => {
+    const sessionMock = vi.fn().mockResolvedValue({
+      data: { session: { access_token: 'tok-abc' } },
+    });
+    mockAuth.getSession = sessionMock;
+
+    const { getAccessToken } = await import('./auth.js');
+    const token = await getAccessToken();
+    expect(token).toBe('tok-abc');
+    expect(sessionMock).toHaveBeenCalled();
+  });
+
+  it('getAccessToken returns null when no session exists', async () => {
+    const sessionMock = vi.fn().mockResolvedValue({ data: { session: null } });
+    mockAuth.getSession = sessionMock;
+
+    const { getAccessToken } = await import('./auth.js');
+    const token = await getAccessToken();
+    expect(token).toBeNull();
+    expect(sessionMock).toHaveBeenCalled();
+  });
 });
 
 describe('useAuth', () => {
