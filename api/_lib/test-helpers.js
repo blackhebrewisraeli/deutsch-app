@@ -33,3 +33,12 @@ export const postReq = (ip, overrides = {}) => ({
   body: validAiBody(),
   ...overrides,
 });
+
+export const getReq = (ip, token = 'test-token', overrides = {}) => ({
+  method: 'GET',
+  headers: {
+    'x-forwarded-for': ip,
+    ...(token ? { authorization: `Bearer ${token}` } : {}),
+  },
+  ...overrides,
+});
