@@ -60,22 +60,50 @@ export function mergeDailyAdditive({ local, server, lastSynced }) {
 }
 
 // Settings is one jsonb blob per user → whole-object LWW by settingsUpdatedAt
-// (missing side loses; exact tie → remote) — EXCEPT learnedWords, which is
-// accumulative like SRS, so we union it (a word stays learned if either device
-// has it). That keeps whole-object LWW from dropping a learned mark across
-// devices (#41). The union is skipped when neither side tracks learnedWords.
+// (missing side loses; exact tie → remote) — EXCEPT accumulative fields that LWW
+// must never drop across devices: learnedWords (union, #41), and the streak
+// freeze state — gamification.frozenDays (union) + gamification.bestStreak (max).
 export function mergeSettings(local, remote) {
   if (!local) return remote;
   if (!remote) return local;
   const lt = local.settingsUpdatedAt ?? -Infinity;
   const rt = remote.settingsUpdatedAt ?? -Infinity;
   const winner = lt > rt ? local : remote;
+  const out = { ...winner };
+
+  // learnedWords: union — a word stays learned if either device has it (#41).
   const lw = local.learnedWords;
   const rw = remote.learnedWords;
-  if (lw === undefined && rw === undefined) return winner;
-  const learnedWords = {};
-  for (const word of new Set([...Object.keys(lw ?? {}), ...Object.keys(rw ?? {})])) {
-    learnedWords[word] = Boolean(lw?.[word] || rw?.[word]);
+  if (lw !== undefined || rw !== undefined) {
+    const learnedWords = {};
+    for (const word of new Set([...Object.keys(lw ?? {}), ...Object.keys(rw ?? {})])) {
+      learnedWords[word] = Boolean(lw?.[word] || rw?.[word]);
+    }
+    out.learnedWords = learnedWords;
   }
-  return { ...winner, learnedWords };
+
+  // gamification.frozenDays union + bestStreak max — a freeze or record earned
+  // on one device can't be dropped by the other device's older LWW write.
+  const lg = local.gamification;
+  const rg = remote.gamification;
+  if (
+    lg?.frozenDays !== undefined ||
+    rg?.frozenDays !== undefined ||
+    lg?.bestStreak !== undefined ||
+    rg?.bestStreak !== undefined
+  ) {
+    const lf = lg?.frozenDays ?? {};
+    const rf = rg?.frozenDays ?? {};
+    const frozenDays = {};
+    for (const day of new Set([...Object.keys(lf), ...Object.keys(rf)])) {
+      frozenDays[day] = Boolean(lf[day] || rf[day]);
+    }
+    out.gamification = {
+      ...(winner.gamification ?? {}),
+      frozenDays,
+      bestStreak: Math.max(lg?.bestStreak ?? 0, rg?.bestStreak ?? 0),
+    };
+  }
+
+  return out;
 }

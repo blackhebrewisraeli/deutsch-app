@@ -16,6 +16,8 @@
 // Pure helpers (testable in isolation): everything except `recordEvent`.
 
 import { loadState, saveState } from './storage';
+import { currentStreak, multiplier } from './streak';
+import { DEFAULT_GOAL, XP_PER_VERDICT } from './gameConfig';
 
 export const TABS = ['chat', 'alphabet', 'vocab', 'translate'];
 export const LEVELS = ['a1', 'a2', 'b1'];
@@ -48,12 +50,12 @@ export function emptyDayAggregate() {
     for (const verdict of VERDICTS) byLevel[level][verdict] = 0;
   }
 
-  return { total: 0, byTab, byLevel };
+  return { total: 0, bonusXp: 0, byTab, byLevel };
 }
 
 // ─── Event application ───────────────────────────────────────
 
-export function applyEvent(daily, dateKey, tab, level, verdict) {
+export function applyEvent(daily, dateKey, tab, level, verdict, bonus = 0) {
   if (!TABS.includes(tab)) throw new Error(`Invalid tab: ${tab}`);
   if (!LEVELS.includes(level)) throw new Error(`Invalid level: ${level}`);
   if (!VERDICTS.includes(verdict)) throw new Error(`Invalid verdict: ${verdict}`);
@@ -61,6 +63,7 @@ export function applyEvent(daily, dateKey, tab, level, verdict) {
   const prev = daily[dateKey] ?? emptyDayAggregate();
   const next = {
     total: prev.total + 1,
+    bonusXp: (prev.bonusXp ?? 0) + bonus,
     byTab: { ...prev.byTab, [tab]: prev.byTab[tab] + 1 },
     byLevel: {
       ...prev.byLevel,
@@ -204,13 +207,22 @@ export function getReviewItems(items, limit = 10) {
 export function recordEvent(tab, level, verdict) {
   try {
     const state = loadState() ?? {};
-    const daily = applyEvent(state.daily ?? {}, todayKey(), tab, level, verdict);
+    const today = todayKey();
+    const goal = state.gamification?.goal ?? DEFAULT_GOAL;
+    const frozenDays = state.gamification?.frozenDays ?? {};
+    const streakLen = currentStreak(state.daily ?? {}, goal, today, frozenDays);
+    const mult = multiplier(streakLen);
+    const base = XP_PER_VERDICT[verdict] ?? 0;
+    const bonus = Math.round(base * (mult - 1));
+    const daily = applyEvent(state.daily ?? {}, today, tab, level, verdict, bonus);
     saveState({ ...state, daily });
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('deutsch:progress'));
     }
+    return { xp: base + bonus, mult };
   } catch {
     // recordEvent is best-effort — never throw into the React tree
+    return { xp: 0, mult: 1 };
   }
 }
 

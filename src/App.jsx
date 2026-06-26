@@ -16,7 +16,15 @@ import {
   DEFAULT_GOAL,
 } from './lib/gamification';
 import { setSoundEnabled, playLevelUp, playAchievement, playGoalMet } from './lib/sound';
-import { currentStreak, bestStreakFromHistory, qualifies } from './lib/streak';
+import {
+  currentStreak,
+  bestStreakFromHistory,
+  qualifies,
+  crossedMilestone,
+  reconcile,
+  freezesAvailable,
+  multiplier,
+} from './lib/streak';
 import { activePack } from './packs';
 const { decks: PRESET_DECKS } = activePack.content;
 import { StatBlock } from './components/UI';
@@ -36,6 +44,7 @@ import Confetti from './components/ui/Confetti';
 import ToastStack from './components/ui/Toast';
 import LevelBadge from './components/gamification/LevelBadge';
 import GoalRing from './components/gamification/GoalRing';
+import GoalStrip from './components/gamification/GoalStrip';
 import { Analytics } from '@vercel/analytics/react';
 import { useWindowWidth, isMobile } from './lib/useWindowWidth';
 
@@ -49,12 +58,19 @@ export default function App() {
   // ── Gamification ──────────────────────────────────────────────
   // Derived from storage, refreshed on every `deutsch:progress` event.
   const prevLevelRef = useRef(null);
+  const prevStreakRef = useRef(null);
   const deriveGame = () => {
     const s = loadState() ?? {};
     const daily = s.daily ?? {};
+    const goalXp = s.gamification?.goal ?? DEFAULT_GOAL;
+    const frozenDays = s.gamification?.frozenDays ?? {};
+    const streakNow = currentStreak(daily, goalXp, todayKey(), frozenDays);
     return {
       lvl: levelFromXp(totalXp(daily)),
-      goal: goalProgress(todayXp(daily, todayKey()), s.gamification?.goal),
+      goal: goalProgress(todayXp(daily, todayKey()), goalXp),
+      streak: streakNow,
+      freezes: freezesAvailable(s, todayKey()),
+      mult: multiplier(streakNow),
     };
   };
   const [game, setGame] = useState(deriveGame);
@@ -81,15 +97,6 @@ export default function App() {
     ]);
   };
   const dismissToast = (id) => setToasts((cur) => cur.filter((t) => t.id !== id));
-
-  // Celebrate streak milestones (every 7 days) once when stats load for the day.
-  useEffect(() => {
-    if (stats.lastVisit && stats.streak > 0 && stats.streak % 7 === 0) {
-      setStreakBurst(true);
-      const t = setTimeout(() => setStreakBurst(false), 1600);
-      return () => clearTimeout(t);
-    }
-  }, [stats.lastVisit, stats.streak]);
 
   // Recompute gamification on every progress event; fire toasts for new wins.
   // First run silently backfills already-earned badges/level (no toast flood).
@@ -145,13 +152,77 @@ export default function App() {
         }
       }
 
-      const tStreak = currentStreak(s.daily ?? {}, g.goal, tKey);
-      const histBest = bestStreakFromHistory(s.daily ?? {}, g.goal);
+      // Day-rollover reconcile: spend freezes to bridge missed days (once/day).
+      const prevFrozen = g.frozenDays ?? {};
+      const hadReconciled = g.lastReconcileDay != null;
+      if (g.lastReconcileDay !== tKey) {
+        const rec = reconcile(s, tKey);
+        nextG.frozenDays = rec.frozenDays;
+        nextG.lastReconcileDay = rec.lastReconcileDay;
+      } else {
+        nextG.frozenDays = prevFrozen;
+      }
+      const frozenDays = nextG.frozenDays;
+      const freezeSpent =
+        hadReconciled && Object.keys(frozenDays).length > Object.keys(prevFrozen).length;
+
+      const tStreak = currentStreak(s.daily ?? {}, g.goal, tKey, frozenDays);
+      const histBest = bestStreakFromHistory(s.daily ?? {}, g.goal, frozenDays);
+      const prevBest = g.bestStreak ?? 0;
       // First run seeds the record from history or the prior (login-era) streak
       // so it isn't "lost" when the streak switches to practice-based.
       nextG.bestStreak = firstRun
-        ? Math.max(g.bestStreak ?? 0, histBest, s.stats?.streak ?? 0)
-        : Math.max(g.bestStreak ?? 0, histBest, tStreak);
+        ? Math.max(prevBest, histBest, s.stats?.streak ?? 0)
+        : Math.max(prevBest, histBest, tStreak);
+      if (freezeSpent) {
+        newToasts.push({
+          kind: 'freeze',
+          title: 'Freeze genutzt',
+          sub: 'Streak gerettet',
+          icon: '❄️',
+        });
+      }
+
+      if (firstRun) {
+        prevStreakRef.current = tStreak;
+      } else {
+        const prevStreak = prevStreakRef.current ?? 0;
+        if (tStreak > prevStreak) {
+          newToasts.push({
+            kind: 'streak',
+            title: `Streak → ${tStreak}`,
+            sub: 'gesichert!',
+            icon: '🔥',
+          });
+          if (tStreak > prevBest) {
+            newToasts.push({
+              kind: 'record',
+              title: 'Neuer Rekord!',
+              sub: `${tStreak} Tage`,
+              icon: '🏆',
+            });
+          }
+          const milestone = crossedMilestone(prevStreak, tStreak);
+          if (milestone) {
+            newToasts.push({
+              kind: 'milestone',
+              title: `${milestone}-Tage-Streak!`,
+              sub: 'Meilenstein',
+              icon: '⚡',
+            });
+          }
+          const boost = multiplier(tStreak);
+          if (boost > multiplier(prevStreak)) {
+            newToasts.push({
+              kind: 'boost',
+              title: `×${boost} XP-Boost!`,
+              sub: 'Multiplikator',
+              icon: '🚀',
+            });
+          }
+        }
+        prevStreakRef.current = tStreak;
+      }
       setStats((prev) => ({ ...prev, streak: tStreak }));
 
       saveState({ ...s, gamification: nextG });
@@ -167,6 +238,14 @@ export default function App() {
             if (t.kind === 'level') playLevelUp();
             else if (t.kind === 'ach') playAchievement();
             else if (t.kind === 'goal') playGoalMet();
+            else if (
+              t.kind === 'streak' ||
+              t.kind === 'record' ||
+              t.kind === 'milestone' ||
+              t.kind === 'freeze' ||
+              t.kind === 'boost'
+            )
+              playGoalMet();
           });
         }
       }
@@ -452,6 +531,14 @@ export default function App() {
             accent
             pulsing={streakPulsing}
           />
+          {game.freezes > 0 && (
+            <span
+              title={`${game.freezes} streak freeze${game.freezes > 1 ? 's' : ''} held`}
+              style={{ fontSize: mobile ? 14 : 16 }}
+            >
+              ❄️{game.freezes}
+            </span>
+          )}
           <GoalRing pct={game.goal.pct} met={game.goal.met} size={mobile ? 40 : 48} />
           <AccountChip
             user={user}
@@ -570,6 +657,14 @@ export default function App() {
           margin: '0 auto',
         }}
       >
+        {(tab === 'translate' || tab === 'vocab') && (
+          <GoalStrip
+            streak={game.streak}
+            current={game.goal.current}
+            target={game.goal.target}
+            mult={game.mult}
+          />
+        )}
         {tab === 'chat' && <ChatTab level={level} mobile={mobile} />}
         {tab === 'alphabet' && (
           <AlphabetTab

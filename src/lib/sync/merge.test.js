@@ -127,4 +127,19 @@ describe('mergeSettings', () => {
     const b = { settingsUpdatedAt: 2, learnedWords: { x: false, y: true } };
     expect(mergeSettings(a, b).learnedWords).toEqual({ x: true, y: true });
   });
+
+  it('unions frozenDays and maxes bestStreak across devices (sync-safe)', () => {
+    const local = {
+      settingsUpdatedAt: 200,
+      gamification: { goal: 50, frozenDays: { '2026-06-08': true }, bestStreak: 5 },
+    };
+    const remote = {
+      settingsUpdatedAt: 100,
+      gamification: { goal: 30, frozenDays: { '2026-06-10': true }, bestStreak: 9 },
+    };
+    const out = mergeSettings(local, remote);
+    expect(out.gamification.frozenDays).toEqual({ '2026-06-08': true, '2026-06-10': true });
+    expect(out.gamification.bestStreak).toBe(9); // max wins even though remote is older
+    expect(out.gamification.goal).toBe(50); // scalar gamification still LWW (local newer)
+  });
 });

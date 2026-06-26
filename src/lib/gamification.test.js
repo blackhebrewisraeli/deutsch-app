@@ -36,6 +36,9 @@ describe('XP', () => {
     expect(xpForDay(undefined)).toBe(0);
     expect(xpForDay({})).toBe(0);
   });
+  it('xpForDay adds the day bonus XP', () => {
+    expect(xpForDay({ byLevel: { a1: { correct: 5, almost: 0, wrong: 0 } }, bonusXp: 7 })).toBe(57);
+  });
   it('totalXp sums all days; todayXp reads one', () => {
     const daily = { '2026-06-01': day(1, 0, 0), '2026-06-02': day(0, 0, 2) };
     expect(totalXp(daily)).toBe(10 + 6);

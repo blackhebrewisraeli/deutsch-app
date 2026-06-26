@@ -1,10 +1,30 @@
 import { describe, it, expect } from 'vitest';
-import { qualifies, currentStreak, bestStreakFromHistory } from './streak';
+import {
+  qualifies,
+  currentStreak,
+  bestStreakFromHistory,
+  crossedMilestone,
+  simulateFreezes,
+  reconcile,
+  freezesAvailable,
+  multiplier,
+} from './streak';
 
 // 5 correct = 50 XP; 4 correct = 40 XP
 const day = (correct) => ({ byLevel: { a1: { correct, almost: 0, wrong: 0 } } });
 const qual = { byLevel: { a1: { correct: 5, almost: 0, wrong: 0 } } }; // 50 XP
 const miss = { byLevel: { a1: { correct: 0, almost: 0, wrong: 0 } } }; // 0 XP
+const days = (...keys) => Object.fromEntries(keys.map((k) => [k, qual]));
+const week = () =>
+  days(
+    '2026-06-01',
+    '2026-06-02',
+    '2026-06-03',
+    '2026-06-04',
+    '2026-06-05',
+    '2026-06-06',
+    '2026-06-07'
+  );
 
 describe('qualifies', () => {
   it('is true when the day reaches the goal XP', () => {
@@ -49,5 +69,78 @@ describe('bestStreakFromHistory', () => {
   });
   it('is 0 with no qualifying days', () => {
     expect(bestStreakFromHistory({ '2026-06-01': miss }, 50)).toBe(0);
+  });
+});
+
+describe('crossedMilestone', () => {
+  it('returns the milestone just reached', () => {
+    expect(crossedMilestone(2, 3)).toBe(3);
+    expect(crossedMilestone(6, 7)).toBe(7);
+  });
+  it('returns null when no milestone is crossed', () => {
+    expect(crossedMilestone(3, 4)).toBeNull();
+    expect(crossedMilestone(7, 7)).toBeNull();
+  });
+  it('returns the highest milestone when several are crossed at once', () => {
+    expect(crossedMilestone(1, 8)).toBe(7);
+  });
+});
+
+describe('freeze bridging', () => {
+  it('currentStreak bridges a missed day that was frozen', () => {
+    const d = { '2026-06-08': qual, '2026-06-09': miss, '2026-06-10': qual };
+    expect(currentStreak(d, 50, '2026-06-10')).toBe(1);
+    expect(currentStreak(d, 50, '2026-06-10', { '2026-06-09': true })).toBe(3);
+  });
+  it('bestStreakFromHistory bridges frozen days', () => {
+    const d = { '2026-06-01': qual, '2026-06-02': miss, '2026-06-03': qual };
+    expect(bestStreakFromHistory(d, 50, { '2026-06-02': true })).toBe(3);
+  });
+});
+
+describe('simulateFreezes', () => {
+  it('earns one freeze after a 7-day run', () => {
+    const r = simulateFreezes(week(), 50, '2026-06-08');
+    expect(r.freezes).toBe(1);
+    expect(r.frozenDays).toEqual({});
+  });
+  it('spends a freeze to bridge a single missed day', () => {
+    const r = simulateFreezes(week(), 50, '2026-06-09'); // 06-08 is a miss
+    expect(r.frozenDays).toEqual({ '2026-06-08': true });
+    expect(r.freezes).toBe(0);
+  });
+  it('breaks the run when a miss has no freeze to spend', () => {
+    const r = simulateFreezes(days('2026-06-01', '2026-06-02'), 50, '2026-06-05');
+    expect(r.frozenDays).toEqual({});
+    expect(r.freezes).toBe(0);
+  });
+});
+
+describe('reconcile + freezesAvailable', () => {
+  it('reconcile produces frozenDays + bestStreak + lastReconcileDay', () => {
+    const state = {
+      daily: week(),
+      gamification: { goal: 50, frozenDays: {}, bestStreak: 0, lastReconcileDay: '2026-06-07' },
+    };
+    const r = reconcile(state, '2026-06-09');
+    expect(r.frozenDays).toEqual({ '2026-06-08': true });
+    expect(r.lastReconcileDay).toBe('2026-06-09');
+    expect(r.bestStreak).toBeGreaterThanOrEqual(7);
+  });
+  it('freezesAvailable reflects the earned balance', () => {
+    const state = { daily: week(), gamification: { goal: 50 } };
+    expect(freezesAvailable(state, '2026-06-08')).toBe(1);
+  });
+});
+
+describe('multiplier', () => {
+  it('steps up by streak tier', () => {
+    expect(multiplier(0)).toBe(1.0);
+    expect(multiplier(2)).toBe(1.0);
+    expect(multiplier(3)).toBe(1.2);
+    expect(multiplier(7)).toBe(1.5);
+    expect(multiplier(14)).toBe(1.75);
+    expect(multiplier(30)).toBe(2.0);
+    expect(multiplier(100)).toBe(2.0);
   });
 });
