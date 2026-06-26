@@ -138,7 +138,17 @@ export default function AccountSection({
               Are you sure? This will erase all your progress.
             </p>
             <div style={{ display: 'flex', gap: SPACE[2] }}>
-              <Button variant="danger" aria-label="Yes, delete everything" onClick={onDelete}>
+              <Button
+                variant="danger"
+                aria-label="Yes, delete everything"
+                onClick={async () => {
+                  try {
+                    await onDelete?.();
+                  } catch {
+                    setConfirmDelete(false);
+                  }
+                }}
+              >
                 Yes, delete everything
               </Button>
               <Button

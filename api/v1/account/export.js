@@ -28,6 +28,7 @@ export default async function handler(req, res) {
     if (dailyRes.error) throw dailyRes.error;
     if (settingsRes.error) throw settingsRes.error;
 
+    res.setHeader('Content-Disposition', 'attachment; filename="sprachschule-export.json"');
     return res.status(200).json({
       email: auth.email,
       exportedAt: new Date().toISOString(),
