@@ -37,7 +37,7 @@ import SplashScreen from './components/SplashScreen';
 import WelcomeGate from './components/WelcomeGate';
 import MagicLinkForm from './components/auth/MagicLinkForm';
 import AccountChip from './components/AccountChip';
-import { useAuth, signOut } from './lib/auth';
+import { useAuth, signOut, getAccessToken } from './lib/auth';
 import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
 import { useSyncStatus } from './lib/useSyncStatus';
 import Confetti from './components/ui/Confetti';
@@ -280,6 +280,50 @@ export default function App() {
   const requestSignIn = () => {
     setShowGate(true);
     setAuthModal('signin');
+  };
+
+  const showToast = (title) => pushToasts([{ kind: 'info', title, sub: '', icon: 'ℹ️' }]);
+
+  const handleExport = async () => {
+    const token = await getAccessToken();
+    if (!token) {
+      showToast('Please sign in again.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/v1/account/export', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'sprachschule-export.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      showToast('Export failed — try again.');
+    }
+  };
+
+  const handleDelete = async () => {
+    const token = await getAccessToken();
+    if (!token) {
+      showToast('Please sign in again.');
+      return;
+    }
+    try {
+      const res = await fetch('/api/v1/account/delete', {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) throw new Error();
+      localStorage.clear();
+      await signOut();
+    } catch {
+      showToast('Could not delete account — try again.');
+    }
   };
 
   useEffect(() => {
@@ -699,6 +743,8 @@ export default function App() {
             user={user}
             onSignIn={requestSignIn}
             onSignOut={() => signOut()}
+            onExport={handleExport}
+            onDelete={handleDelete}
             lastSyncedAt={syncStatus.lastSyncedAt}
           />
         )}

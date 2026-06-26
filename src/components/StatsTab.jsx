@@ -32,6 +32,8 @@ export default function StatsTab({
   user,
   onSignIn,
   onSignOut,
+  onExport,
+  onDelete,
   lastSyncedAt = null,
 }) {
   // Pull state from storage every render so today's counters reflect events
@@ -80,6 +82,8 @@ export default function StatsTab({
               user={user}
               onSignIn={onSignIn}
               onSignOut={onSignOut}
+              onExport={onExport}
+              onDelete={onDelete}
               lastSyncedAt={lastSyncedAt}
             />
           </div>
