@@ -18,6 +18,9 @@ export function createRes() {
       this.body = payload;
       return this;
     },
+    end() {
+      return this;
+    },
   };
 }
 
