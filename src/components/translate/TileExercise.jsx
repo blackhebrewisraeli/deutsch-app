@@ -22,6 +22,7 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
   const [bank, setBank] = useState([]);
   const [placed, setPlaced] = useState([]);
   const [feedback, setFeedback] = useState(null); // null | 'correct' | 'wrong'
+  const [reward, setReward] = useState({ xp: 0, mult: 1 });
 
   useEffect(() => {
     const tiles = [...exercise.words, ...exercise.distractors].map((w, i) => ({ id: i, word: w }));
@@ -46,7 +47,8 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
     const isCorrect = exactMatch(correct, answer, activePack.validation.normalize);
     const verdict = isCorrect ? 'correct' : 'wrong';
     setFeedback(verdict);
-    recordEvent('translate', level, verdict);
+    const r = recordEvent('translate', level, verdict);
+    setReward(r);
     recordItem('translate', level, exercise.en, exercise.de, verdict);
     if (isCorrect) onCorrect();
   };
@@ -71,6 +73,8 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
           verdict={feedback}
           correctText={exercise.words.join(' ')}
           note={exercise.note}
+          xp={reward.xp}
+          mult={reward.mult}
           onNext={onSkip}
         />
       ) : (
