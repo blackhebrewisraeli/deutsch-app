@@ -5,6 +5,7 @@
 import { getMasteredCount, srsKey, MASTERED_BOX } from './srs';
 import { activePack } from '../packs';
 import { XP_PER_VERDICT, GOAL_PRESETS, DEFAULT_GOAL } from './gameConfig';
+import { xpForDay } from './xpCore';
 const { decks: PRESET_DECKS } = activePack.content;
 
 // Balance constants now live in gameConfig; re-exported for back-compat so
@@ -12,17 +13,7 @@ const { decks: PRESET_DECKS } = activePack.content;
 export { XP_PER_VERDICT, GOAL_PRESETS, DEFAULT_GOAL };
 
 // ─── XP ───────────────────────────────────────────────────────
-export function xpForDay(day) {
-  if (!day || !day.byLevel) return 0;
-  let xp = 0;
-  for (const lv of Object.values(day.byLevel)) {
-    xp +=
-      (lv.correct ?? 0) * XP_PER_VERDICT.correct +
-      (lv.almost ?? 0) * XP_PER_VERDICT.almost +
-      (lv.wrong ?? 0) * XP_PER_VERDICT.wrong;
-  }
-  return xp + (day.bonusXp ?? 0);
-}
+export { xpForDay };
 
 export function totalXp(daily) {
   return Object.values(daily ?? {}).reduce((sum, d) => sum + xpForDay(d), 0);
