@@ -107,7 +107,9 @@ export default function StatsTab({
         </div>
       )}
 
-      {selectedUser && <ProfileCard userId={selectedUser} onClose={() => setSelectedUser(null)} />}
+      {LEAGUES_ENABLED && selectedUser && (
+        <ProfileCard userId={selectedUser} onClose={() => setSelectedUser(null)} />
+      )}
 
       {LEAGUES_ENABLED && activeView === 'leagues' ? (
         <div>

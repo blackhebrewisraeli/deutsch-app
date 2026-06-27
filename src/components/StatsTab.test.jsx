@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import StatsTab from './StatsTab';
 
@@ -54,6 +54,18 @@ vi.mock('../lib/leagues.js', () => ({
   LEAGUES_ENABLED: true,
   TIER_NAMES: ['Bronze'],
 }));
+
+describe('StatsTab — Leagues flag OFF', () => {
+  it('hides Leagues nav button when LEAGUES_ENABLED is false', async () => {
+    vi.resetModules();
+    vi.doMock('../lib/leagues.js', () => ({ LEAGUES_ENABLED: false, TIER_NAMES: ['Bronze'] }));
+    const { default: StatsTabOff } = await import('./StatsTab.jsx');
+    const { render: renderOff, screen: screenOff } = await import('@testing-library/react');
+    renderOff(<StatsTabOff />);
+    expect(screenOff.queryByRole('button', { name: /leagues/i })).toBeNull();
+    vi.resetModules();
+  });
+});
 
 describe('StatsTab — Leagues view', () => {
   it('shows Leagues nav tab when LEAGUES_ENABLED', () => {
