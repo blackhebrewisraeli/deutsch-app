@@ -40,6 +40,7 @@ import AccountChip from './components/AccountChip';
 import { useAuth, signOut, getAccessToken } from './lib/auth';
 import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
 import { useSyncStatus } from './lib/useSyncStatus';
+import { useLeagueRewards } from './lib/useLeagueRewards';
 import Confetti from './components/ui/Confetti';
 import ToastStack from './components/ui/Toast';
 import LevelBadge from './components/gamification/LevelBadge';
@@ -265,6 +266,8 @@ export default function App() {
   // Auth
   const { user } = useAuth();
   const syncStatus = useSyncStatus();
+  // Claim any league-winner rewards on load (not just when the Leagues tab opens).
+  useLeagueRewards(user?.id);
   const [showGate, setShowGate] = useState(() => !localStorage.getItem('deutsch-onboarded'));
   const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
 

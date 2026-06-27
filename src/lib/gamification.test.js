@@ -91,9 +91,9 @@ describe('achievements', () => {
     level: 1,
     ...o,
   });
-  it('has 11 with unique ids', () => {
-    expect(ACHIEVEMENTS).toHaveLength(11);
-    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(11);
+  it('has 12 with unique ids', () => {
+    expect(ACHIEVEMENTS).toHaveLength(12);
+    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(12);
   });
   it('streak/volume/mastery rules fire at thresholds', () => {
     expect(earnedAchievements(ctx({ streak: 2 }))).not.toContain('streak3');
@@ -104,6 +104,11 @@ describe('achievements', () => {
     expect(earnedAchievements(ctx({ decksMastered: 4 }))).toEqual(
       expect.arrayContaining(['deck1', 'allDecks'])
     );
+  });
+  it('leagueChampion fires at leagueWins >= 1', () => {
+    expect(earnedAchievements(ctx({ leagueWins: 0 }))).not.toContain('leagueChampion');
+    expect(earnedAchievements(ctx({ leagueWins: 1 }))).toContain('leagueChampion');
+    expect(earnedAchievements(ctx({ leagueWins: 3 }))).toContain('leagueChampion');
   });
 });
 

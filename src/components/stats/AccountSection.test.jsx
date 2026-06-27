@@ -3,6 +3,11 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AccountSection from './AccountSection';
 
+vi.mock('../../lib/leagues', async (importOriginal) => {
+  const actual = await importOriginal();
+  return { ...actual, LEAGUES_ENABLED: true, updateHandle: vi.fn().mockResolvedValue({}) };
+});
+
 const signedIn = { email: 'sam@example.com' };
 
 describe('AccountSection', () => {
@@ -94,6 +99,21 @@ describe('AccountSection', () => {
       screen.queryByRole('button', { name: /yes, delete everything/i })
     ).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /delete account/i })).toBeInTheDocument();
+  });
+
+  it('calls updateHandle with the typed handle when Save is clicked', async () => {
+    const { updateHandle } = await import('../../lib/leagues');
+    render(
+      <AccountSection
+        user={signedIn}
+        onSignIn={() => {}}
+        onSignOut={() => {}}
+        onDelete={() => {}}
+      />
+    );
+    await userEvent.type(screen.getByRole('textbox', { name: /handle/i }), 'MyHandle42');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    expect(updateHandle).toHaveBeenCalledWith(expect.objectContaining({ handle: 'MyHandle42' }));
   });
 
   it('calls onDelete when Yes delete everything is clicked', async () => {

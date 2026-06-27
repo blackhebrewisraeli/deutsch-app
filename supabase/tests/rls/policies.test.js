@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { anonClient, createSignedInUser } from './helpers.js';
+import { adminClient, anonClient, createSignedInUser } from './helpers.js';
 
 // Adversarial RLS suite: authenticated as user A, attempt every cross-user
 // operation against user B through real PostgREST. Any success = RLS hole.
@@ -91,6 +91,110 @@ describe('RLS: profiles', () => {
       .select();
     expect(error).toBeNull();
     expect(data).toEqual([]);
+  });
+});
+
+describe('RLS: leagues + league_members', () => {
+  // Service-role fixtures: league LA holds A, league LB holds B. Clients are
+  // read-only and RLS-scoped to leagues they belong to.
+  let LA;
+  let LB;
+
+  beforeAll(async () => {
+    const admin = adminClient();
+    const { data: la, error: laErr } = await admin
+      .from('leagues')
+      .insert({ tier: 0, period_start: '2026-06-22' })
+      .select('id')
+      .single();
+    if (laErr) throw new Error(laErr.message);
+    LA = la.id;
+    const { error: maErr } = await admin
+      .from('league_members')
+      .insert({ league_id: LA, user_id: A.id, handle: 'AAA01' });
+    if (maErr) throw new Error(maErr.message);
+
+    const { data: lb, error: lbErr } = await admin
+      .from('leagues')
+      .insert({ tier: 0, period_start: '2026-06-22' })
+      .select('id')
+      .single();
+    if (lbErr) throw new Error(lbErr.message);
+    LB = lb.id;
+    const { error: mbErr } = await admin
+      .from('league_members')
+      .insert({ league_id: LB, user_id: B.id, handle: 'BBB01' });
+    if (mbErr) throw new Error(mbErr.message);
+  });
+
+  it('A can read members of their own league (grant + RLS allow)', async () => {
+    const { data, error } = await A.client.from('league_members').select('*').eq('league_id', LA);
+    expect(error).toBeNull();
+    expect(data).toHaveLength(1);
+    expect(data[0].user_id).toBe(A.id);
+  });
+
+  it('A can read their own league row', async () => {
+    const { data, error } = await A.client.from('leagues').select('*').eq('id', LA);
+    expect(error).toBeNull();
+    expect(data).toHaveLength(1);
+    expect(data[0].id).toBe(LA);
+  });
+
+  it("A cannot read another league's members (RLS denies)", async () => {
+    const { data, error } = await A.client.from('league_members').select('*').eq('league_id', LB);
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it('A cannot read a league they do not belong to', async () => {
+    const { data, error } = await A.client.from('leagues').select('*').eq('id', LB);
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it('A cannot insert a league_members row (no client write grant)', async () => {
+    const { error } = await A.client
+      .from('league_members')
+      .insert({ league_id: LA, user_id: A.id, handle: 'HACK' });
+    expect(error).not.toBeNull();
+    expect(error.code).toBe('42501'); // permission denied — no insert grant
+  });
+
+  it('A cannot insert a league (no client write grant)', async () => {
+    const { error } = await A.client
+      .from('leagues')
+      .insert({ tier: 1, period_start: '2026-06-22' });
+    expect(error).not.toBeNull();
+    expect(error.code).toBe('42501');
+  });
+
+  it('A cannot update or delete their own league_members row (read-only grant)', async () => {
+    const { error: updErr } = await A.client
+      .from('league_members')
+      .update({ weekly_xp: 9999 })
+      .eq('league_id', LA)
+      .eq('user_id', A.id);
+    expect(updErr).not.toBeNull();
+    expect(updErr.code).toBe('42501');
+
+    const { error: delErr } = await A.client
+      .from('league_members')
+      .delete()
+      .eq('league_id', LA)
+      .eq('user_id', A.id);
+    expect(delErr).not.toBeNull();
+    expect(delErr.code).toBe('42501');
+  });
+
+  it('anon is denied on both league tables at the privilege layer', async () => {
+    const anon = anonClient();
+    for (const table of ['leagues', 'league_members']) {
+      const { data, error } = await anon.from(table).select('*');
+      expect(error, `table ${table}`).not.toBeNull();
+      expect(error.code, `table ${table}`).toBe('42501');
+      expect(data, `table ${table}`).toBeNull();
+    }
   });
 });
 
