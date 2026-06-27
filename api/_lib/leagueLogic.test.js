@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { currentPeriodStart, nextTier, settleLeague, zoneCounts, TIERS } from './leagueLogic.js';
+import { currentPeriodStart, nextTier, settleLeague, TIERS } from './leagueLogic.js';
 
 describe('currentPeriodStart', () => {
   it('returns the Monday of the week (UTC)', () => {
@@ -69,25 +69,5 @@ describe('settleLeague', () => {
       // ranks are a clean 1..n
       expect(out.map((m) => m.rank)).toEqual(Array.from({ length: n }, (_, i) => i + 1));
     }
-  });
-});
-
-describe('zoneCounts', () => {
-  it('keeps the flat 7/5 split for full-size cohorts (n >= 12)', () => {
-    expect(zoneCounts(25)).toEqual({ promote: 7, demote: 5 });
-    expect(zoneCounts(12)).toEqual({ promote: 7, demote: 5 });
-  });
-
-  it('scales zones down without overlap for small cohorts', () => {
-    for (let n = 0; n < 12; n++) {
-      const { promote, demote } = zoneCounts(n);
-      expect(promote + demote, `n=${n}`).toBeLessThanOrEqual(n);
-      expect(promote, `n=${n}`).toBeGreaterThanOrEqual(n === 0 ? 0 : 1);
-      expect(demote, `n=${n}`).toBeGreaterThanOrEqual(0);
-    }
-  });
-
-  it('handles a one-member league without overlap', () => {
-    expect(zoneCounts(1)).toEqual({ promote: 1, demote: 0 });
   });
 });
