@@ -32,6 +32,22 @@ describe('useLeagueRewards', () => {
     expect(saved.gamification.leagueClaimed).toContain('L1');
   });
 
+  it('fires onClaimed with count and xp when a win is claimed', async () => {
+    fetchMyResults.mockResolvedValue([{ league_id: 'L1', rank: 1, result: 'promoted' }]);
+    const onClaimed = vi.fn();
+    renderHook(() => useLeagueRewards('me', onClaimed));
+    await waitFor(() => expect(onClaimed).toHaveBeenCalled());
+    expect(onClaimed).toHaveBeenCalledWith(1, 50); // WINNER_BONUS_XP = 50
+  });
+
+  it('does not fire onClaimed when there is nothing to claim', async () => {
+    fetchMyResults.mockResolvedValue([{ league_id: 'L1', rank: 4, result: 'held' }]);
+    const onClaimed = vi.fn();
+    renderHook(() => useLeagueRewards('me', onClaimed));
+    await waitFor(() => expect(fetchMyResults).toHaveBeenCalled());
+    expect(onClaimed).not.toHaveBeenCalled();
+  });
+
   it('does not save when there is nothing to claim', async () => {
     fetchMyResults.mockResolvedValue([{ league_id: 'L1', rank: 4, result: 'held' }]);
     renderHook(() => useLeagueRewards('me'));

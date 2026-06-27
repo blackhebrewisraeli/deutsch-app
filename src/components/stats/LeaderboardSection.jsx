@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Fragment } from 'react';
 import { useAuth, getSupabase } from '../../lib/auth.js';
 import {
   joinLeague,
@@ -7,10 +7,31 @@ import {
   TIER_NAMES,
   LEAGUES_ENABLED,
 } from '../../lib/leagues.js';
+import { zoneCounts } from '../../lib/leagueZones.js';
+import { weekRemaining } from '../../lib/leagueCountdown.js';
 import { COLORS, SPACE } from '../../lib/theme.js';
 
-const PROMOTE_ZONE = 7;
-const DEMOTE_ZONE = 5;
+const SPARSE_BELOW = 5; // show the "still filling up" note under this many members
+
+function ZoneLabel({ text, color }) {
+  return (
+    <li
+      aria-hidden="true"
+      style={{
+        borderTop: `2px solid ${color}`,
+        margin: `${SPACE[1]}px 0`,
+        padding: `${SPACE[1]}px ${SPACE[2]}px 0`,
+        fontSize: 11,
+        fontWeight: 700,
+        letterSpacing: '0.05em',
+        textTransform: 'uppercase',
+        color,
+      }}
+    >
+      {text}
+    </li>
+  );
+}
 
 export default function LeaderboardSection({ onSelectUser }) {
   const { user } = useAuth();
@@ -54,44 +75,64 @@ export default function LeaderboardSection({ onSelectUser }) {
   }
 
   const n = state.rows.length;
+  // Promotion/relegation zones come from the SAME logic the settle job uses, so
+  // the dividers reflect exactly who will advance/drop this week.
+  const { promote, demote } = zoneCounts(n);
+  const relegationStart = n - demote; // index of the first relegated row
+  const countdown = weekRemaining(state.league.period_start);
+
   return (
     <div style={{ padding: SPACE[4] }}>
-      <h3 style={{ margin: `0 0 ${SPACE[2]}px`, color: COLORS.ink }}>
-        <span>{TIER_NAMES[state.league.tier]}</span>
-        {' League'}
-      </h3>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'baseline',
+          marginBottom: SPACE[2],
+        }}
+      >
+        <h3 style={{ margin: 0, color: COLORS.ink }}>{TIER_NAMES[state.league.tier]} League</h3>
+        <span style={{ fontSize: 13, color: COLORS.mute }}>
+          {countdown.ended ? 'Settling soon' : `Ends in ${countdown.label}`}
+        </span>
+      </div>
+
       <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {state.rows.map((row, i) => {
           const isMe = row.user_id === user.id;
-          const zoneBorder =
-            i === PROMOTE_ZONE - 1
-              ? `2px solid ${COLORS.green}`
-              : i === n - DEMOTE_ZONE
-                ? `2px solid ${COLORS.red}`
-                : 'none';
+          const showPromote = promote > 0 && promote < n && i === promote;
+          const showRelegate = demote > 0 && relegationStart > promote && i === relegationStart;
           return (
-            <li
-              key={row.user_id}
-              onClick={() => onSelectUser(row.user_id)}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                cursor: 'pointer',
-                padding: SPACE[2],
-                borderBottom: zoneBorder,
-                background: isMe ? COLORS.paperDeep : 'transparent',
-                fontWeight: isMe ? 700 : 400,
-                color: COLORS.ink,
-              }}
-            >
-              <span>
-                {i + 1}. <span>{row.handle}</span>
-              </span>
-              <span>{row.weekly_xp} XP</span>
-            </li>
+            <Fragment key={row.user_id}>
+              {showPromote && <ZoneLabel text="↑ Promotion" color={COLORS.green} />}
+              {showRelegate && <ZoneLabel text="↓ Relegation" color={COLORS.red} />}
+              <li
+                onClick={() => onSelectUser(row.user_id)}
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  cursor: 'pointer',
+                  padding: SPACE[2],
+                  background: isMe ? COLORS.paperDeep : 'transparent',
+                  fontWeight: isMe ? 700 : 400,
+                  color: COLORS.ink,
+                }}
+              >
+                <span>
+                  {i + 1}. <span>{row.handle}</span>
+                </span>
+                <span>{row.weekly_xp} XP</span>
+              </li>
+            </Fragment>
           );
         })}
       </ol>
+
+      {n < SPARSE_BELOW && (
+        <p style={{ margin: `${SPACE[3]}px 0 0`, fontSize: 13, color: COLORS.mute }}>
+          Your league is still filling up — more learners will join this week.
+        </p>
+      )}
     </div>
   );
 }

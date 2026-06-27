@@ -266,8 +266,18 @@ export default function App() {
   // Auth
   const { user } = useAuth();
   const syncStatus = useSyncStatus();
-  // Claim any league-winner rewards on load (not just when the Leagues tab opens).
-  useLeagueRewards(user?.id);
+  // Claim any league-winner rewards on load (not just when the Leagues tab
+  // opens), and celebrate a fresh win with a toast.
+  useLeagueRewards(user?.id, (count, xp) =>
+    pushToasts([
+      {
+        kind: 'league',
+        title: count > 1 ? `${count} Ligen gewonnen!` : 'Liga gewonnen!',
+        sub: `+${xp} XP · Liga-Meister`,
+        icon: '🥇',
+      },
+    ])
+  );
   const [showGate, setShowGate] = useState(() => !localStorage.getItem('deutsch-onboarded'));
   const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
 

@@ -12,6 +12,8 @@ vi.mock('../../lib/leagues.js', () => ({
   refreshLeague: vi.fn(),
   fetchStandings: vi.fn(),
 }));
+// leagueZones + leagueCountdown are pure — left un-mocked so the UI exercises
+// the same zone logic the settle job uses.
 
 import LeaderboardSection from './LeaderboardSection.jsx';
 import { useAuth } from '../../lib/auth.js';
@@ -22,26 +24,42 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+const signIn = (rows, tier = 0) => {
+  useAuth.mockReturnValue({ user: { id: 'me' } });
+  joinLeague.mockResolvedValue({ league_id: 'L1', tier, period_start: '2026-06-22', handle: 'Me' });
+  refreshLeague.mockResolvedValue({ weekly_xp: 0 });
+  fetchStandings.mockResolvedValue(rows);
+};
+
 it('shows the sign-in teaser when signed out', () => {
   useAuth.mockReturnValue({ user: null });
   render(<LeaderboardSection onSelectUser={() => {}} />);
   expect(screen.getByText(/sign in to join/i)).toBeTruthy();
 });
 
-it('renders standings when signed in', async () => {
-  useAuth.mockReturnValue({ user: { id: 'me' } });
-  joinLeague.mockResolvedValue({
-    league_id: 'L1',
-    tier: 0,
-    period_start: '2026-06-22',
-    handle: 'Me',
-  });
-  refreshLeague.mockResolvedValue({ weekly_xp: 30 });
-  fetchStandings.mockResolvedValue([
+it('renders standings, tier, a countdown, and the sparse note for a small league', async () => {
+  signIn([
     { user_id: 'me', handle: 'Me', weekly_xp: 30, rank: null },
     { user_id: 'x', handle: 'Rival', weekly_xp: 10, rank: null },
   ]);
   render(<LeaderboardSection onSelectUser={() => {}} />);
   await waitFor(() => expect(screen.getByText('Rival')).toBeTruthy());
-  expect(screen.getByText('Bronze')).toBeTruthy();
+  expect(screen.getByText(/Bronze League/)).toBeTruthy();
+  expect(screen.getByText(/Ends in/)).toBeTruthy();
+  expect(screen.getByText(/still filling up/i)).toBeTruthy();
+});
+
+it('shows promotion and relegation zone labels in a full league (no sparse note)', async () => {
+  const rows = Array.from({ length: 14 }, (_, i) => ({
+    user_id: `u${i}`,
+    handle: `User${i}`,
+    weekly_xp: 100 - i,
+    rank: null,
+  }));
+  signIn(rows);
+  render(<LeaderboardSection onSelectUser={() => {}} />);
+  await waitFor(() => expect(screen.getByText('User0')).toBeTruthy());
+  expect(screen.getByText(/Promotion/)).toBeTruthy();
+  expect(screen.getByText(/Relegation/)).toBeTruthy();
+  expect(screen.queryByText(/still filling up/i)).toBeNull();
 });
