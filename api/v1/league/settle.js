@@ -25,27 +25,39 @@ export default async function handler(req, res) {
     if (error) throw error;
 
     let settled = 0;
+    let failed = 0;
     for (const league of leagues ?? []) {
-      // Idempotency: skip if any member already has a rank.
-      const { data: members } = await db
-        .from('league_members')
-        .select('user_id, weekly_xp, updated_at')
-        .eq('league_id', league.id)
-        .is('rank', null);
-      if (!members || members.length === 0) continue;
-
-      const results = settleLeague(members);
-      for (const r of results) {
-        const { error: upErr } = await db
+      // Each league settles independently: one league's write failure must not
+      // abort the rest of the run. A failed league is left for the next cron —
+      // re-settlement is idempotent because we re-rank the FULL member set, so a
+      // partial prior write is simply overwritten with the same deterministic
+      // ranks rather than re-ranked among the leftovers.
+      try {
+        const { data: members, error: mErr } = await db
           .from('league_members')
-          .update({ rank: r.rank, result: r.result })
-          .match({ league_id: league.id, user_id: r.user_id });
-        if (upErr) throw upErr;
+          .select('user_id, weekly_xp, updated_at, rank')
+          .eq('league_id', league.id);
+        if (mErr) throw mErr;
+        if (!members || members.length === 0) continue;
+
+        // Idempotency: already fully settled (every member ranked) → skip.
+        if (members.every((m) => m.rank != null)) continue;
+
+        const results = settleLeague(members);
+        for (const r of results) {
+          const { error: upErr } = await db
+            .from('league_members')
+            .update({ rank: r.rank, result: r.result })
+            .match({ league_id: league.id, user_id: r.user_id });
+          if (upErr) throw upErr;
+        }
+        settled += 1;
+      } catch {
+        failed += 1;
       }
-      settled += 1;
     }
 
-    return res.status(200).json({ settled });
+    return res.status(200).json({ settled, failed });
   } catch {
     return sendError(res, 'server_error', 'Failed to settle leagues.');
   }
