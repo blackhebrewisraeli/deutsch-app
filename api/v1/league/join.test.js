@@ -135,3 +135,56 @@ it('returns existing membership without creating a new one (idempotent)', async 
   expect(res.body.league_id).toBe('L1');
   expect(insertSpy).not.toHaveBeenCalled();
 });
+
+it('recovers idempotently when the membership insert races (23505 → returns existing)', async () => {
+  requireAuth.mockResolvedValue(USER);
+  const raced = {
+    league_id: 'L-raced',
+    handle: 'Me',
+    leagues: { tier: 0, period_start: '2026-06-22' },
+  };
+  // step 1 (no existing) → step 3 (no last result) → recovery (raced row won)
+  const lmMaybeSingle = vi
+    .fn()
+    .mockResolvedValueOnce({ data: null, error: null })
+    .mockResolvedValueOnce({ data: null, error: null })
+    .mockResolvedValue({ data: raced, error: null });
+  const membersInsert = vi.fn().mockResolvedValue({ error: { code: '23505' } });
+  const db = {
+    from: vi.fn((table) => {
+      if (table === 'profiles') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          maybeSingle: vi.fn().mockResolvedValue({ data: { handle: 'Me' }, error: null }),
+          update: vi.fn().mockReturnThis(),
+        };
+      }
+      if (table === 'leagues') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ data: [], error: null }) }),
+          insert: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnThis(),
+            single: vi.fn().mockResolvedValue({ data: { id: 'L-new' }, error: null }),
+          }),
+        };
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: lmMaybeSingle,
+        insert: membersInsert,
+      };
+    }),
+  };
+  serviceClient.mockReturnValue(db);
+  const res = createRes();
+  await handler(req(), res);
+  expect(membersInsert).toHaveBeenCalled();
+  expect(res.statusCode).toBe(200);
+  expect(res.body.league_id).toBe('L-raced');
+});

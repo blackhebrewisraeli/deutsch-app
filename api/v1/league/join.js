@@ -4,6 +4,23 @@ import { requireAuth } from '../../_lib/auth-middleware.js';
 import { currentPeriodStart, LEAGUE_SIZE, TIERS } from '../../_lib/leagueLogic.js';
 import { generateHandle } from '../../_lib/handle.js';
 
+// The caller's membership for a period, formatted for the response (or null).
+async function findMembership(db, userId, period) {
+  const { data } = await db
+    .from('league_members')
+    .select('league_id, handle, leagues!inner(tier, period_start)')
+    .eq('user_id', userId)
+    .eq('leagues.period_start', period)
+    .maybeSingle();
+  if (!data) return null;
+  return {
+    league_id: data.league_id,
+    tier: data.leagues.tier,
+    period_start: period,
+    handle: data.handle,
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') return sendError(res, 'method_not_allowed', 'Method not allowed');
 
@@ -21,21 +38,8 @@ export default async function handler(req, res) {
 
   try {
     // 1. Idempotency: already a member this period?
-    const { data: existing } = await db
-      .from('league_members')
-      .select('league_id, handle, leagues!inner(tier, period_start)')
-      .eq('user_id', auth.userId)
-      .eq('leagues.period_start', period)
-      .maybeSingle();
-
-    if (existing) {
-      return res.status(200).json({
-        league_id: existing.league_id,
-        tier: existing.leagues.tier,
-        period_start: period,
-        handle: existing.handle,
-      });
-    }
+    const existing = await findMembership(db, auth.userId, period);
+    if (existing) return res.status(200).json(existing);
 
     // 2. Ensure a handle on the profile.
     const { data: profile } = await db
@@ -83,11 +87,26 @@ export default async function handler(req, res) {
       leagueId = created.id;
     }
 
-    // 5. Insert membership.
+    // 5. Insert membership. period_start is denormalized and carries a unique
+    //    (user_id, period_start) constraint: if a concurrent join already created
+    //    the membership, the insert fails with 23505 — recover idempotently by
+    //    returning the membership that won the race instead of 500'ing.
     const { error: mErr } = await db
       .from('league_members')
-      .insert({ league_id: leagueId, user_id: auth.userId, handle, weekly_xp: 0 });
-    if (mErr) throw mErr;
+      .insert({
+        league_id: leagueId,
+        user_id: auth.userId,
+        handle,
+        weekly_xp: 0,
+        period_start: period,
+      });
+    if (mErr) {
+      if (mErr.code === '23505') {
+        const raced = await findMembership(db, auth.userId, period);
+        if (raced) return res.status(200).json(raced);
+      }
+      throw mErr;
+    }
 
     return res.status(200).json({ league_id: leagueId, tier, period_start: period, handle });
   } catch {

@@ -35,10 +35,14 @@ function ZoneLabel({ text, color }) {
 
 export default function LeaderboardSection({ onSelectUser }) {
   const { user } = useAuth();
+  const userId = user?.id;
   const [state, setState] = useState({ status: 'idle', league: null, rows: [] });
 
+  // Depend on the stable id, not the user object — a fresh object identity on
+  // re-render would otherwise re-fire join/refresh and could double-create a
+  // membership.
   useEffect(() => {
-    if (!LEAGUES_ENABLED || !user) return;
+    if (!LEAGUES_ENABLED || !userId) return;
     let cancelled = false;
     (async () => {
       try {
@@ -55,7 +59,7 @@ export default function LeaderboardSection({ onSelectUser }) {
     return () => {
       cancelled = true;
     };
-  }, [user]);
+  }, [userId]);
 
   if (!LEAGUES_ENABLED) return null;
 
@@ -99,7 +103,7 @@ export default function LeaderboardSection({ onSelectUser }) {
 
       <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {state.rows.map((row, i) => {
-          const isMe = row.user_id === user.id;
+          const isMe = row.user_id === userId;
           const showPromote = promote > 0 && promote < n && i === promote;
           const showRelegate = demote > 0 && relegationStart > promote && i === relegationStart;
           return (
