@@ -9,6 +9,7 @@ import {
   RADIUS,
 } from '../../lib/theme';
 import Button from '../ui/Button';
+import { LEAGUES_ENABLED, updateHandle } from '../../lib/leagues';
 
 function formatRelativeSync(ms) {
   if (!ms) return null;
@@ -34,6 +35,9 @@ export default function AccountSection({
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [handle, setHandle] = useState('');
+  const [avatar, setAvatar] = useState('');
+  const [handleMsg, setHandleMsg] = useState(null); // { ok: bool, text: string }
 
   if (!user) {
     return (
@@ -86,6 +90,81 @@ export default function AccountSection({
           {exporting ? 'Exporting…' : 'Export my data'}
         </Button>
       </div>
+
+      {/* Handle / avatar editing */}
+      {LEAGUES_ENABLED && (
+        <div style={{ marginBottom: SPACE[4] }}>
+          <div
+            style={{
+              fontFamily: FONTS.mono,
+              fontSize: FONT_SIZE.tag,
+              fontWeight: FONT_WEIGHT.bold,
+              letterSpacing: LETTER_SPACING.caps,
+              color: COLORS.mute,
+              marginBottom: SPACE[2],
+            }}
+          >
+            PROFILE
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[2] }}>
+            <input
+              aria-label="Handle"
+              placeholder="Handle"
+              value={handle}
+              onChange={(e) => setHandle(e.target.value)}
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: FONT_SIZE.base,
+                padding: `${SPACE[1]}px ${SPACE[2]}px`,
+                borderRadius: RADIUS.sm,
+                border: `1px solid ${COLORS.mute}`,
+                background: 'transparent',
+                color: COLORS.ink,
+              }}
+            />
+            <input
+              aria-label="Avatar emoji"
+              placeholder="Avatar emoji"
+              value={avatar}
+              onChange={(e) => setAvatar(e.target.value)}
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: FONT_SIZE.base,
+                padding: `${SPACE[1]}px ${SPACE[2]}px`,
+                borderRadius: RADIUS.sm,
+                border: `1px solid ${COLORS.mute}`,
+                background: 'transparent',
+                color: COLORS.ink,
+              }}
+            />
+            <Button
+              variant="secondary"
+              onClick={async () => {
+                setHandleMsg(null);
+                try {
+                  await updateHandle({ handle, avatar_emoji: avatar });
+                  setHandleMsg({ ok: true, text: 'Saved!' });
+                } catch (err) {
+                  setHandleMsg({ ok: false, text: err.message ?? 'Failed to save.' });
+                }
+              }}
+            >
+              Save
+            </Button>
+            {handleMsg && (
+              <div
+                style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: FONT_SIZE.tag,
+                  color: handleMsg.ok ? COLORS.green : COLORS.red,
+                }}
+              >
+                {handleMsg.text}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Danger Zone */}
       <div

@@ -30,6 +30,17 @@ export async function fetchProfile(userId) {
   return res.json();
 }
 
+export async function updateHandle(body) {
+  const token = await getAccessToken();
+  const res = await fetch('/api/v1/league/handle', {
+    method: 'PATCH',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`handle update failed: ${res.status}`);
+  return res.json();
+}
+
 // Standings via the RLS-scoped Supabase client (reads only the caller's league).
 export async function fetchStandings(supabase, leagueId) {
   const { data, error } = await supabase
