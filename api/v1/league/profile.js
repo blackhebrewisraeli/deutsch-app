@@ -1,6 +1,7 @@
 import { sendError } from '../../_lib/respond.js';
 import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
+import { currentPeriodStart } from '../../_lib/leagueLogic.js';
 import { xpForDay } from '../../../src/lib/xpCore.js';
 
 // Longest run of consecutive calendar days present in the sorted key list.
@@ -35,9 +36,15 @@ export default async function handler(req, res) {
   const db = serviceClient();
   if (!db) return sendError(res, 'server_error', 'Server is not configured.');
 
+  const period = currentPeriodStart();
+
   try {
     if (target !== auth.userId) {
-      const { data: shares } = await db.rpc('shares_league', { p_a: auth.userId, p_b: target });
+      const { data: shares } = await db.rpc('shares_league', {
+        p_a: auth.userId,
+        p_b: target,
+        p_period: period,
+      });
       if (!shares) return sendError(res, 'forbidden', 'Not in your league.');
     }
 
@@ -48,7 +55,7 @@ export default async function handler(req, res) {
         .from('league_members')
         .select('leagues!inner(tier, period_start)')
         .eq('user_id', target)
-        .order('updated_at', { ascending: false })
+        .order('period_start', { ascending: false, foreignTable: 'leagues' })
         .limit(1)
         .maybeSingle(),
     ]);

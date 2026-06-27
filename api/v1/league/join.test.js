@@ -26,6 +26,88 @@ it('returns 401 when auth fails', async () => {
   expect(res.statusCode).toBe(401);
 });
 
+it('creates a new league when no open league exists (create path)', async () => {
+  requireAuth.mockResolvedValue(USER);
+
+  const leaguesInsertSpy = vi.fn().mockReturnValue({
+    select: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({ data: { id: 'L-new' }, error: null }),
+  });
+  const membersInsertSpy = vi.fn().mockResolvedValue({ error: null });
+
+  // Build a mock chain that returns null for all lookups then delegates to spies
+  let memberCallCount = 0;
+  const db = {
+    from: vi.fn((table) => {
+      if (table === 'leagues') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          eq: vi.fn().mockReturnThis(),
+          // open-league search returns empty array
+          // (the chain ends with just .eq().eq() — resolve via Proxy or explicit)
+          insert: leaguesInsertSpy,
+          // We need this object to be "thenable" for the .eq().eq() open-league query
+          then: undefined, // not a promise itself
+        };
+      }
+      // league_members table
+      memberCallCount += 1;
+      const base = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        not: vi.fn().mockReturnThis(),
+        order: vi.fn().mockReturnThis(),
+        limit: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        insert: membersInsertSpy,
+      };
+      return base;
+    }),
+    // profiles table
+  };
+
+  // Override: profiles and open-league query need special handling
+  db.from = vi.fn((table) => {
+    if (table === 'profiles') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        update: vi.fn().mockReturnThis(),
+      };
+    }
+    if (table === 'leagues') {
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnValue({
+          eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+        }),
+        insert: leaguesInsertSpy,
+      };
+    }
+    // league_members
+    return {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      not: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+      insert: membersInsertSpy,
+    };
+  });
+
+  serviceClient.mockReturnValue(db);
+
+  const res = createRes();
+  await handler(req(), res);
+
+  expect(leaguesInsertSpy).toHaveBeenCalled();
+  expect(membersInsertSpy).toHaveBeenCalled();
+  expect(res.statusCode).toBe(200);
+  expect(res.body.league_id).toBe('L-new');
+});
+
 it('returns existing membership without creating a new one (idempotent)', async () => {
   requireAuth.mockResolvedValue(USER);
   const existing = {

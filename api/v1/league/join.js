@@ -52,10 +52,10 @@ export default async function handler(req, res) {
     // 3. Determine tier from last settled result.
     const { data: last } = await db
       .from('league_members')
-      .select('result, leagues!inner(tier)')
+      .select('result, leagues!inner(tier, period_start)')
       .eq('user_id', auth.userId)
       .not('result', 'is', null)
-      .order('updated_at', { ascending: false })
+      .order('period_start', { ascending: false, foreignTable: 'leagues' })
       .limit(1)
       .maybeSingle();
     let tier = TIERS.MIN;
@@ -70,7 +70,9 @@ export default async function handler(req, res) {
       .select('id, league_members(count)')
       .eq('tier', tier)
       .eq('period_start', period);
-    let leagueId = (open ?? []).find((l) => (l.league_members?.[0]?.count ?? 0) < LEAGUE_SIZE)?.id;
+    let leagueId = (open ?? []).find(
+      (l) => Number(l.league_members?.[0]?.count ?? 0) < LEAGUE_SIZE
+    )?.id;
     if (!leagueId) {
       const { data: created, error: cErr } = await db
         .from('leagues')

@@ -29,7 +29,6 @@ it('settles past leagues and writes ranks/results', async () => {
     { user_id: 'a', weekly_xp: 50, updated_at: 't1' },
     { user_id: 'b', weekly_xp: 10, updated_at: 't2' },
   ];
-  const updateEq2 = vi.fn().mockResolvedValue({ error: null });
   const updates = [];
   const db = {
     from: vi.fn((table) => {
@@ -63,4 +62,37 @@ it('settles past leagues and writes ranks/results', async () => {
   // winner 'a' got rank 1
   const winner = updates.find((u) => u.m.user_id === 'a');
   expect(winner.vals.rank).toBe(1);
+});
+
+it('returns 500 and does not count settled when a member update fails', async () => {
+  const past = [{ id: 'L2', period_start: '2026-06-15' }];
+  const members = [
+    { user_id: 'x', weekly_xp: 30, updated_at: 't1' },
+    { user_id: 'y', weekly_xp: 10, updated_at: 't2' },
+  ];
+  const db = {
+    from: vi.fn((table) => {
+      if (table === 'leagues') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          lt: vi.fn().mockResolvedValue({ data: past, error: null }),
+        };
+      }
+      // league_members
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockResolvedValue({ data: members, error: null }),
+        update: vi.fn(() => ({
+          match: vi.fn().mockResolvedValue({ error: { message: 'DB write failed' } }),
+        })),
+      };
+    }),
+  };
+  serviceClient.mockReturnValue(db);
+
+  const res = createRes();
+  await handler(req('secret'), res);
+  expect(res.statusCode).toBe(500);
+  expect(res.body.error.code).toBe('server_error');
 });

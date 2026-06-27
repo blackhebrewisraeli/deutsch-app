@@ -36,10 +36,11 @@ export default async function handler(req, res) {
 
       const results = settleLeague(members);
       for (const r of results) {
-        await db
+        const { error: upErr } = await db
           .from('league_members')
           .update({ rank: r.rank, result: r.result })
           .match({ league_id: league.id, user_id: r.user_id });
+        if (upErr) throw upErr;
       }
       settled += 1;
     }
