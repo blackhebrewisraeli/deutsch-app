@@ -29,10 +29,22 @@ export default async function handler(req, res) {
 
     const weekly = weeklyXpFromRows(rows ?? [], period);
 
+    const { data: membership } = await db
+      .from('league_members')
+      .select('league_id, leagues!inner(period_start)')
+      .eq('user_id', auth.userId)
+      .eq('leagues.period_start', period)
+      .maybeSingle();
+
+    if (!membership) {
+      return res.status(200).json({ weekly_xp: weekly });
+    }
+
     const { error: uErr } = await db
       .from('league_members')
       .update({ weekly_xp: weekly, updated_at: new Date().toISOString() })
-      .eq('user_id', auth.userId);
+      .eq('user_id', auth.userId)
+      .eq('league_id', membership.league_id);
     if (uErr) throw uErr;
 
     return res.status(200).json({ weekly_xp: weekly });
