@@ -144,6 +144,13 @@ export const ACHIEVEMENTS = [
     icon: '🏆',
     test: (c) => c.decksMastered >= 4,
   },
+  {
+    id: 'leagueChampion',
+    category: 'mastery',
+    name: 'Liga-Meister',
+    icon: '🥇',
+    test: (c) => c.leagueWins >= 1,
+  },
 ];
 
 export function earnedAchievements(ctx) {
@@ -172,5 +179,6 @@ export function gamificationContext(state) {
     masteredCount: getMasteredCount(srs),
     decksMastered: decksMastered(srs),
     level: levelFromXp(totalXp(daily)).level,
+    leagueWins: state.stats?.leagueWins ?? 0,
   };
 }

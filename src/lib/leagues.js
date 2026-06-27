@@ -41,6 +41,17 @@ export async function updateHandle(body) {
   return res.json();
 }
 
+// The caller's own settled results (RLS lets you read your own league_member rows).
+export async function fetchMyResults(supabase, userId) {
+  const { data, error } = await supabase
+    .from('league_members')
+    .select('league_id, rank, result')
+    .eq('user_id', userId)
+    .not('result', 'is', null);
+  if (error) throw error;
+  return data ?? [];
+}
+
 // Standings via the RLS-scoped Supabase client (reads only the caller's league).
 export async function fetchStandings(supabase, leagueId) {
   const { data, error } = await supabase

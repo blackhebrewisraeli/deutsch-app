@@ -4,9 +4,13 @@ import {
   joinLeague,
   refreshLeague,
   fetchStandings,
+  fetchMyResults,
   TIER_NAMES,
   LEAGUES_ENABLED,
 } from '../../lib/leagues.js';
+import { loadState, saveState } from '../../lib/storage.js';
+import { claimWinnerRewards } from '../../lib/leagueRewards.js';
+import { todayKey } from '../../lib/stats.js';
 import { COLORS, SPACE } from '../../lib/theme.js';
 
 const PROMOTE_ZONE = 7;
@@ -25,6 +29,14 @@ export default function LeaderboardSection({ onSelectUser }) {
         await refreshLeague();
         const rows = await fetchStandings(getSupabase(), league.league_id);
         if (!cancelled) setState({ status: 'ready', league, rows });
+        try {
+          const results = await fetchMyResults(getSupabase(), user.id);
+          const cur = loadState() ?? {};
+          const { state: nextState, claimedCount } = claimWinnerRewards(cur, results, todayKey());
+          if (claimedCount > 0) saveState(nextState);
+        } catch {
+          // reward claim failure must never block standings rendering
+        }
       } catch {
         if (!cancelled) setState({ status: 'error', league: null, rows: [] });
       }
