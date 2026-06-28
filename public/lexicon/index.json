@@ -1,0 +1,8 @@
+[
+  { "id": "n:brot", "rank": 142, "cefr": "A1", "tags": ["food"], "chunk": 0 },
+  { "id": "n:wasser", "rank": 88, "cefr": "A1", "tags": ["food"], "chunk": 0 },
+  { "id": "n:haus", "rank": 60, "cefr": "A1", "tags": ["home"], "chunk": 0 },
+  { "id": "n:bahnhof", "rank": 1200, "cefr": "A2", "tags": ["travel"], "chunk": 1 },
+  { "id": "n:freund", "rank": 300, "cefr": "A1", "tags": ["people"], "chunk": 1 },
+  { "id": "n:arbeit", "rank": 1500, "cefr": "A2", "tags": ["work"], "chunk": 1 }
+]
