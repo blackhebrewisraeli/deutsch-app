@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('../../_lib/supabase.js', () => ({ serviceClient: vi.fn() }));
 vi.mock('../../_lib/auth-middleware.js', () => ({ requireAuth: vi.fn() }));
@@ -13,14 +13,41 @@ const req = (body, method = 'PATCH') => ({ method, headers: { authorization: 'Be
 
 afterEach(() => vi.clearAllMocks());
 
-it('updates handle and returns it', async () => {
+// Records the patch applied to each table: from(table).update(patch).eq(...)
+function trackingDb(updateError = null) {
+  const updates = {};
+  return {
+    updates,
+    from: vi.fn((table) => ({
+      update: vi.fn((patch) => {
+        updates[table] = patch;
+        return { eq: vi.fn().mockResolvedValue({ error: updateError }) };
+      }),
+    })),
+  };
+}
+
+it('updates handle on profiles AND denormalized league_members, then returns it', async () => {
   requireAuth.mockResolvedValue(USER);
-  const eq = vi.fn().mockResolvedValue({ error: null });
-  serviceClient.mockReturnValue({ from: vi.fn(() => ({ update: vi.fn(() => ({ eq })) })) });
+  const db = trackingDb();
+  serviceClient.mockReturnValue(db);
   const res = createRes();
   await handler(req({ handle: 'NewName07' }), res);
   expect(res.statusCode).toBe(200);
   expect(res.body.handle).toBe('NewName07');
+  expect(db.updates.profiles).toEqual({ handle: 'NewName07' });
+  expect(db.updates.league_members).toEqual({ handle: 'NewName07' });
+});
+
+it('does not touch league_members when only the avatar changes', async () => {
+  requireAuth.mockResolvedValue(USER);
+  const db = trackingDb();
+  serviceClient.mockReturnValue(db);
+  const res = createRes();
+  await handler(req({ avatar_emoji: '🦊' }), res);
+  expect(res.statusCode).toBe(200);
+  expect(db.updates.profiles).toEqual({ avatar_emoji: '🦊' });
+  expect(db.updates.league_members).toBeUndefined();
 });
 
 it('rejects a duplicate handle as bad_request', async () => {
