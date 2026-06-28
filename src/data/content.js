@@ -31,57 +31,6 @@ export const ALPHABET = [
   { l: 'ß', w: 'Straße', e: 'street' },
 ];
 
-export const PRESET_DECKS = {
-  greetings: [
-    { de: 'Hallo', en: 'Hello', ipa: '[ˈhalo]' },
-    { de: 'Guten Morgen', en: 'Good morning', ipa: '[ˈɡuːtn̩ ˈmɔʁɡn̩]' },
-    { de: 'Guten Tag', en: 'Good day', ipa: '[ˈɡuːtn̩ taːk]' },
-    { de: 'Guten Abend', en: 'Good evening', ipa: '[ˈɡuːtn̩ ˈaːbn̩t]' },
-    { de: 'Auf Wiedersehen', en: 'Goodbye', ipa: '[aʊ̯f ˈviːdɐzeːən]' },
-    { de: 'Tschüss', en: 'Bye', ipa: '[tʃʏs]' },
-    { de: 'Wie geht es dir?', en: 'How are you?', ipa: '[viː ɡeːt ɛs diːɐ̯]' },
-    { de: 'Mir geht es gut', en: "I'm well", ipa: '[miːɐ̯ ɡeːt ɛs ɡuːt]' },
-    { de: 'Bitte', en: 'Please', ipa: '[ˈbɪtə]' },
-    { de: 'Danke', en: 'Thank you', ipa: '[ˈdaŋkə]' },
-  ],
-  food: [
-    { de: 'das Brot', en: 'bread', ipa: '[das bʁoːt]' },
-    { de: 'der Käse', en: 'cheese', ipa: '[deːɐ̯ ˈkɛːzə]' },
-    { de: 'das Wasser', en: 'water', ipa: '[das ˈvasɐ]' },
-    { de: 'der Apfel', en: 'apple', ipa: '[deːɐ̯ ˈapfl̩]' },
-    { de: 'das Fleisch', en: 'meat', ipa: '[das flaɪ̯ʃ]' },
-    { de: 'der Kaffee', en: 'coffee', ipa: '[deːɐ̯ ˈkafe]' },
-    { de: 'die Milch', en: 'milk', ipa: '[diː mɪlç]' },
-    { de: 'das Bier', en: 'beer', ipa: '[das biːɐ̯]' },
-    { de: 'die Suppe', en: 'soup', ipa: '[diː ˈzʊpə]' },
-    { de: 'der Zucker', en: 'sugar', ipa: '[deːɐ̯ ˈtsʊkɐ]' },
-  ],
-  travel: [
-    { de: 'der Bahnhof', en: 'train station', ipa: '[deːɐ̯ ˈbaːnhoːf]' },
-    { de: 'der Flughafen', en: 'airport', ipa: '[deːɐ̯ ˈfluːkhaːfn̩]' },
-    { de: 'das Hotel', en: 'hotel', ipa: '[das hoˈtɛl]' },
-    { de: 'die Karte', en: 'map / ticket', ipa: '[diː ˈkaʁtə]' },
-    { de: 'der Koffer', en: 'suitcase', ipa: '[deːɐ̯ ˈkɔfɐ]' },
-    { de: 'der Pass', en: 'passport', ipa: '[deːɐ̯ pas]' },
-    { de: 'links', en: 'left', ipa: '[lɪŋks]' },
-    { de: 'rechts', en: 'right', ipa: '[ʁɛçts]' },
-    { de: 'geradeaus', en: 'straight ahead', ipa: '[ɡəˈʁaːdəˌʔaʊ̯s]' },
-    { de: 'Wo ist...?', en: 'Where is...?', ipa: '[voː ɪst]' },
-  ],
-  numbers: [
-    { de: 'eins', en: 'one', ipa: '[aɪ̯ns]' },
-    { de: 'zwei', en: 'two', ipa: '[t͡svaɪ̯]' },
-    { de: 'drei', en: 'three', ipa: '[dʁaɪ̯]' },
-    { de: 'vier', en: 'four', ipa: '[fiːɐ̯]' },
-    { de: 'fünf', en: 'five', ipa: '[fʏnf]' },
-    { de: 'sechs', en: 'six', ipa: '[zɛks]' },
-    { de: 'sieben', en: 'seven', ipa: '[ˈziːbn̩]' },
-    { de: 'acht', en: 'eight', ipa: '[axt]' },
-    { de: 'neun', en: 'nine', ipa: '[nɔɪ̯n]' },
-    { de: 'zehn', en: 'ten', ipa: '[t͡seːn]' },
-  ],
-};
-
 export const SCENARIOS = [
   { id: 'free', name: 'Free Chat', icon: '◆', desc: 'open conversation' },
   { id: 'coffee', name: 'Order Coffee', icon: '☕', desc: 'at a Berlin café' },

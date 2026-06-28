@@ -8,7 +8,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   ALPHABET,
-  PRESET_DECKS,
   SCENARIOS,
   CHAT_TASKS,
   TRANSLATE_SENTENCES_A1,
@@ -59,40 +58,6 @@ describe('ALPHABET', () => {
     for (const { l, w } of ALPHABET) {
       if (l === 'ß') continue; // ß never appears word-initially in German
       expect(w[0].toUpperCase()).toBe(l.toUpperCase());
-    }
-  });
-});
-
-describe('PRESET_DECKS', () => {
-  const expectedDecks = ['greetings', 'food', 'travel', 'numbers'];
-
-  it('has exactly the 4 expected deck keys', () => {
-    expect(Object.keys(PRESET_DECKS).sort()).toEqual([...expectedDecks].sort());
-  });
-
-  it.each(expectedDecks)('deck "%s" has exactly 10 cards', (deck) => {
-    expect(PRESET_DECKS[deck]).toHaveLength(10);
-  });
-
-  it('every card has { de, en, ipa } with non-empty strings', () => {
-    for (const deck of expectedDecks) {
-      for (const card of PRESET_DECKS[deck]) {
-        expect(typeof card.de).toBe('string');
-        expect(card.de.length).toBeGreaterThan(0);
-        expect(typeof card.en).toBe('string');
-        expect(card.en.length).toBeGreaterThan(0);
-        expect(typeof card.ipa).toBe('string');
-        expect(card.ipa.length).toBeGreaterThan(0);
-      }
-    }
-  });
-
-  it('every IPA string is wrapped in [ ... ] brackets', () => {
-    for (const deck of expectedDecks) {
-      for (const card of PRESET_DECKS[deck]) {
-        expect(card.ipa.startsWith('[')).toBe(true);
-        expect(card.ipa.endsWith(']')).toBe(true);
-      }
     }
   });
 });
