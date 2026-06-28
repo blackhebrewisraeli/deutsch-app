@@ -287,5 +287,39 @@ describe('VocabTab', () => {
       // food cards sorted by rank: n:wasser (rank 88) → "das Wasser"
       expect(await screen.findByText('das Wasser')).toBeInTheDocument();
     });
+
+    it('Retry button re-fetches after a failed load and shows deck cards', async () => {
+      const user = userEvent.setup();
+      const fixtures = {
+        '/lexicon/index.json': indexJson,
+        '/lexicon/chunk-00.json': chunk0,
+        '/lexicon/chunk-01.json': chunk1,
+      };
+      let callCount = 0;
+      globalThis.fetch = vi.fn((url) => {
+        callCount += 1;
+        // First call fails with a 500
+        if (callCount === 1) {
+          return Promise.resolve({ ok: false, status: 500 });
+        }
+        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
+        return key
+          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
+          : Promise.resolve({ ok: false, status: 404 });
+      });
+
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /🍞 Food/i }));
+
+      // Error UI with Retry button appears after the initial failed fetch
+      const retryBtn = await screen.findByRole('button', { name: /Retry/i });
+      expect(retryBtn).toBeInTheDocument();
+
+      // Click Retry — should trigger a new fetch that succeeds
+      await user.click(retryBtn);
+
+      // Food deck cards now render (das Wasser is the first by rank)
+      expect(await screen.findByText('das Wasser')).toBeInTheDocument();
+    });
   });
 });

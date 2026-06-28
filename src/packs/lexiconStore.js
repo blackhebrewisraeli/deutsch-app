@@ -11,10 +11,15 @@ export function __resetCache() {
 
 export function loadIndex() {
   if (!indexPromise) {
-    indexPromise = fetch(`${BASE}/index.json`).then((r) => {
-      if (!r.ok) throw new Error(`lexicon index ${r.status}`);
-      return r.json();
-    });
+    indexPromise = fetch(`${BASE}/index.json`)
+      .then((r) => {
+        if (!r.ok) throw new Error(`lexicon index ${r.status}`);
+        return r.json();
+      })
+      .catch((err) => {
+        indexPromise = null; // allow retry on next call
+        throw err;
+      });
   }
   return indexPromise;
 }
@@ -25,13 +30,16 @@ function chunkName(chunk) {
 
 function loadChunk(chunk) {
   if (!chunkPromises.has(chunk)) {
-    chunkPromises.set(
-      chunk,
-      fetch(`${BASE}/${chunkName(chunk)}`).then((r) => {
+    const p = fetch(`${BASE}/${chunkName(chunk)}`)
+      .then((r) => {
         if (!r.ok) throw new Error(`lexicon ${chunkName(chunk)} ${r.status}`);
         return r.json();
       })
-    );
+      .catch((err) => {
+        chunkPromises.delete(chunk); // allow retry on next call
+        throw err;
+      });
+    chunkPromises.set(chunk, p);
   }
   return chunkPromises.get(chunk);
 }

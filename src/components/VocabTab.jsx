@@ -40,6 +40,7 @@ export default function VocabTab({
   const [asyncDeck, setAsyncDeck] = useState(null);
   const [deckLoading, setDeckLoading] = useState(false);
   const [deckError, setDeckError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const [answered, setAnswered] = useState(false);
   const [result, setResult] = useState(null); // 'correct' | 'almost' | 'wrong'
@@ -97,7 +98,7 @@ export default function VocabTab({
     return () => {
       cancelled = true;
     };
-  }, [deckId]);
+  }, [deckId, retryCount]);
 
   // Brief lock to swallow the trailing click event that would otherwise pass
   // through to whatever button mounts at the SRS button's screen position on
@@ -414,7 +415,7 @@ export default function VocabTab({
               Could not load this deck.{' '}
               <button
                 type="button"
-                onClick={() => setDeckId(deckId)}
+                onClick={() => setRetryCount((c) => c + 1)}
                 style={{ textDecoration: 'underline' }}
               >
                 Retry
