@@ -33,3 +33,27 @@ describe('LEXICON', () => {
     }
   });
 });
+
+import { DECKS } from './decks';
+
+describe('DECKS', () => {
+  it('has the 4 legacy decks in order', () => {
+    expect(Object.keys(DECKS)).toEqual(['greetings', 'food', 'travel', 'numbers']);
+  });
+  it('each curated deck has 10 cardIds, all resolvable in LEXICON', () => {
+    for (const def of Object.values(DECKS)) {
+      expect(def.cardIds).toHaveLength(10);
+      for (const id of def.cardIds) {
+        expect(LEXICON[id]).toBeDefined();
+      }
+    }
+  });
+  it('every deck has a name and icon', () => {
+    for (const def of Object.values(DECKS)) {
+      expect(typeof def.name).toBe('string');
+      expect(def.name.length).toBeGreaterThan(0);
+      expect(typeof def.icon).toBe('string');
+      expect(def.icon.length).toBeGreaterThan(0);
+    }
+  });
+});
