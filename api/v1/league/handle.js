@@ -26,6 +26,13 @@ export default async function handler(req, res) {
     if (error.code === '23505') return sendError(res, 'bad_request', 'That handle is taken.');
     return sendError(res, 'server_error', 'Failed to update profile.');
   }
+
+  // handle is denormalized onto league_members (what the leaderboard renders), so
+  // keep it in sync — otherwise a rename never reaches the standings.
+  if (typeof patch.handle === 'string') {
+    await db.from('league_members').update({ handle: patch.handle }).eq('user_id', auth.userId);
+  }
+
   return res
     .status(200)
     .json({ handle: patch.handle ?? null, avatar_emoji: patch.avatar_emoji ?? null });
