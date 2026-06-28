@@ -81,3 +81,37 @@ describe('resolveDecks', () => {
     expect(out.a.map((c) => c.id)).toEqual(['Hallo']);
   });
 });
+
+describe('resolveDeck auto.by=tag and sort coverage', () => {
+  const e = (id, rank, cefr, tags) => ({
+    id,
+    de: id,
+    en: [id],
+    pos: 'noun',
+    article: 'das',
+    ipa: null,
+    plural: null,
+    cefr,
+    freqRank: rank,
+    tags,
+    examples: [],
+    verb: null,
+    source: { dict: 'w', license: 'l' },
+  });
+  const lex = {
+    'n:a': e('n:a', 3, 'A1', ['food']),
+    'n:b': e('n:b', 1, 'A1', ['food']),
+    'n:c': e('n:c', 2, 'A2', ['travel']),
+  };
+  it('filters by tag and sorts ascending by freqRank', () => {
+    const cards = resolveDeck({ auto: { by: 'tag', tag: 'food' } }, lex);
+    expect(cards.map((c) => c.id)).toEqual(['n:b', 'n:a']);
+  });
+  it('freq band sorts multiple entries ascending', () => {
+    const cards = resolveDeck({ auto: { by: 'freq', range: [1, 3] } }, lex);
+    expect(cards.map((c) => c.id)).toEqual(['n:b', 'n:c', 'n:a']);
+  });
+  it('throws on an unknown auto.by', () => {
+    expect(() => resolveDeck({ auto: { by: 'bogus' } }, lex)).toThrow(/bogus/);
+  });
+});

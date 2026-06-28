@@ -45,6 +45,12 @@ export function resolveDeck(deckDef, lexicon) {
     if (deckDef.auto.by === 'cefr') {
       return all.filter((e) => e.cefr === deckDef.auto.level).map(resolveCard);
     }
+    if (deckDef.auto.by === 'tag') {
+      return all
+        .filter((e) => Array.isArray(e.tags) && e.tags.includes(deckDef.auto.tag))
+        .sort((a, b) => (a.freqRank ?? Infinity) - (b.freqRank ?? Infinity))
+        .map(resolveCard);
+    }
     throw new Error(`resolveDeck: unknown auto.by "${deckDef.auto.by}"`);
   }
   throw new Error('resolveDeck: deckDef needs cardIds or auto');
