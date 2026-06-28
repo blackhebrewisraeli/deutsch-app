@@ -25,3 +25,18 @@ export const VERB_GEHEN = {
 export const NON_GERMAN = { word: 'bread', pos: 'noun', lang_code: 'en', senses: [{ glosses: ['bread'] }] };
 
 export const NO_GLOSS = { word: 'Xyz', pos: 'noun', lang_code: 'de', senses: [{ glosses: [] }] };
+
+export const NOUN_WITH_DUPLICATE_GLOSSES = {
+  word: 'Haus',
+  pos: 'noun',
+  lang_code: 'de',
+  forms: [
+    { form: 'Haus', tags: ['canonical', 'neuter'] },
+    { form: 'Häuser', tags: ['plural'] },
+  ],
+  sounds: [{ ipa: '[haʊs]' }],
+  senses: [
+    { glosses: ['house', 'home'], examples: [{ text: 'Das ist mein Haus.', english: 'This is my house.' }] },
+    { glosses: ['house', 'building', 'structure', 'dwelling'], examples: [] },
+  ],
+};

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { parseRecord } from './parseWiktextract.js';
-import { NOUN_BROT, VERB_GEHEN, NON_GERMAN, NO_GLOSS } from './__fixtures__/wiktextract-sample.js';
+import { NOUN_BROT, VERB_GEHEN, NON_GERMAN, NO_GLOSS, NOUN_WITH_DUPLICATE_GLOSSES } from './__fixtures__/wiktextract-sample.js';
 
 describe('parseRecord', () => {
   it('parses a noun with gender, plural, ipa, gloss, topic, example', () => {
@@ -27,5 +27,10 @@ describe('parseRecord', () => {
   });
   it('drops records with no usable gloss', () => {
     expect(parseRecord(NO_GLOSS)).toBe(null);
+  });
+  it('deduplicates glosses and caps at 3', () => {
+    const out = parseRecord(NOUN_WITH_DUPLICATE_GLOSSES);
+    expect(out.glosses).toHaveLength(3);
+    expect(out.glosses).toEqual(['house', 'home', 'building']);
   });
 });
