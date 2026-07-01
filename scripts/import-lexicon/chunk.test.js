@@ -26,6 +26,14 @@ describe('buildArtifacts', () => {
     expect(Object.keys(chunks[0].data)).toEqual(['n:a', 'n:b']);
     expect(chunks[1].data['n:c'].id).toBe('n:c');
   });
+
+  it('emits zero chunks for an empty entry set (manifest and chunks agree)', () => {
+    const { manifest, index, chunks } = buildArtifacts([], { chunkSize: 500 });
+    expect(manifest.total).toBe(0);
+    expect(manifest.chunkCount).toBe(0);
+    expect(index).toEqual([]);
+    expect(chunks).toEqual([]); // no ghost chunk-00.json
+  });
 });
 
 describe('writeArtifacts', () => {

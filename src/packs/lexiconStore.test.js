@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { loadIndex, resolveAutoDeck, __resetCache } from './lexiconStore';
+import { loadIndex, loadChunks, resolveAutoDeck, __resetCache } from './lexiconStore';
 import index from '../../public/lexicon/index.json';
 import chunk0 from '../../public/lexicon/chunk-00.json';
 import chunk1 from '../../public/lexicon/chunk-01.json';
@@ -48,5 +48,33 @@ describe('resolveAutoDeck', () => {
   it('resolves a tag deck', async () => {
     const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } });
     expect(cards.map((c) => c.id)).toEqual(['n:wasser', 'n:brot']); // 88 then 142
+  });
+});
+
+describe('transient failure recovery', () => {
+  it('loadIndex re-fetches after a failed attempt (rejected promise not cached)', async () => {
+    let calls = 0;
+    globalThis.fetch = vi.fn(() => {
+      calls += 1;
+      if (calls === 1) return Promise.resolve({ ok: false, status: 500 });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(index) });
+    });
+    await expect(loadIndex()).rejects.toThrow(/index 500/);
+    const rows = await loadIndex(); // retry
+    expect(rows).toBe(index);
+    expect(calls).toBe(2); // the failed promise was evicted, not memoized
+  });
+
+  it('loadChunks re-fetches a chunk after a failed attempt', async () => {
+    let calls = 0;
+    globalThis.fetch = vi.fn(() => {
+      calls += 1;
+      if (calls === 1) return Promise.resolve({ ok: false, status: 503 });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(chunk0) });
+    });
+    await expect(loadChunks([0])).rejects.toThrow(/chunk-00/);
+    const data = await loadChunks([0]); // retry
+    expect(data['n:brot'].id).toBe('n:brot');
+    expect(calls).toBe(2);
   });
 });

@@ -4,7 +4,9 @@ import { join } from 'node:path';
 const pad2 = (n) => String(n).padStart(2, '0');
 
 export function buildArtifacts(entries, { chunkSize = 500, sources = {} } = {}) {
-  const chunkCount = Math.max(1, Math.ceil(entries.length / chunkSize));
+  // No Math.max floor: an empty entry set yields zero chunks, so chunkCount and
+  // the chunks array agree (no ghost chunk-00.json written for an empty import).
+  const chunkCount = Math.ceil(entries.length / chunkSize);
   const chunks = Array.from({ length: chunkCount }, (_, i) => ({
     name: `chunk-${pad2(i)}.json`,
     data: {},
@@ -20,7 +22,7 @@ export function buildArtifacts(entries, { chunkSize = 500, sources = {} } = {}) 
     sources,
     total: entries.length,
     chunkSize,
-    chunkCount: entries.length === 0 ? 0 : chunkCount,
+    chunkCount,
   };
   return { manifest, index, chunks };
 }
