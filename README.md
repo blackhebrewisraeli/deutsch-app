@@ -567,6 +567,36 @@ npm run audit:dead   # Dev toolkit — list orphan modules (dead code)
 npm run clean        # Dev toolkit — wipe stale build/dev caches
 ```
 
+## Importing vocabulary
+
+The vocabulary lexicon (`public/lexicon/`) is built from three open datasets.
+Run the import **locally** — the output files are not checked into version control.
+
+```bash
+npm run import:lexicon
+```
+
+This downloads and processes the following pinned sources:
+
+| Dataset | URL | License |
+|---|---|---|
+| Wiktextract (German Wiktionary) | `https://kaikki.org/dictionary/German/kaikki.org-dictionary-German.jsonl` | CC BY-SA 4.0 |
+| Tatoeba sentences | `https://downloads.tatoeba.org/exports/per_language/deu/deu_sentences.tsv.bz2` | CC BY 2.0 FR |
+| Tatoeba sentence links | `https://downloads.tatoeba.org/exports/links.tar.bz2` | CC BY 2.0 FR |
+| Leipzig Corpora (deu\_news\_2023\_100K) | `https://downloads.wortschatz-leipzig.de/corpora/deu_news_2023_100K.tar.gz` | CC BY |
+
+The Tatoeba `.bz2` and the Leipzig `.tar.gz` must be decompressed before the
+pipeline can read them — the import script handles this automatically into a
+local `scripts/import-lexicon/.cache/` directory that is git-ignored.
+
+Output lands in `public/lexicon/` as a set of JSON chunk files plus an
+`index.json` manifest. The app loads these chunks on demand and caches them via
+the Workbox `CacheFirst` strategy (cache name `lexicon-json`, 30-day TTL).
+
+See [CONTENT_LICENSE.md](./CONTENT_LICENSE.md) for full licensing details.
+Content derives from Wiktionary (CC BY-SA 4.0), Tatoeba (CC BY 2.0 FR), and
+the Leipzig Corpora Collection (CC BY).
+
 > 💡 **Cost:** A 30-minute session (chat + a few translations + a generated deck) typically costs **$0.01–0.03** with Claude Haiku 4.5.
 
 ---

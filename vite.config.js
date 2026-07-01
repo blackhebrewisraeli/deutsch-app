@@ -16,6 +16,16 @@ export default defineConfig({
         // Don't cache API calls — those need to be live
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
+        runtimeCaching: [
+          {
+            urlPattern: /\/lexicon\/.*\.json$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'lexicon-json',
+              expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 30 },
+            },
+          },
+        ],
       },
       manifest: {
         name: 'Deutsch. Sprachschule',

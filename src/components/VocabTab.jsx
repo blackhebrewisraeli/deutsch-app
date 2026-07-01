@@ -387,6 +387,17 @@ export default function VocabTab({
               )}
             </button>
           </div>
+
+          <div
+            style={{
+              marginTop: 12,
+              fontFamily: FONTS.mono,
+              fontSize: FONT_SIZE.tag,
+              color: COLORS.mute,
+            }}
+          >
+            Vocabulary from Wiktionary (CC BY-SA), Tatoeba &amp; Leipzig (CC BY).
+          </div>
         </div>
 
         {/* ── Right column: active recall UI ── */}
