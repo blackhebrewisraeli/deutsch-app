@@ -99,14 +99,19 @@ export function validateLexiconEntry(entry) {
   if (entry.verb !== null) {
     const v = entry.verb;
     if (!v || typeof v !== 'object') fail('verb must be null or an object');
-    if (!['haben', 'sein'].includes(v.aux)) fail('verb.aux must be haben or sein');
-    if (!nonEmptyStr(v.partizip2)) fail('verb.partizip2 must be a non-empty string');
+    if (v.aux !== null && !['haben', 'sein'].includes(v.aux)) {
+      fail('verb.aux must be null, haben, or sein');
+    }
+    if (v.partizip2 !== null && typeof v.partizip2 !== 'string') {
+      fail('verb.partizip2 must be null or a string');
+    }
     if (!v.present || typeof v.present !== 'object') fail('verb.present must be an object');
     for (const p of ['ich', 'du', 'er', 'wir', 'ihr', 'sie']) {
-      if (!nonEmptyStr(v.present[p])) fail(`verb.present.${p} must be a non-empty string`);
+      if (v.present[p] !== null && !nonEmptyStr(v.present[p])) {
+        fail(`verb.present.${p} must be null or a non-empty string`);
+      }
     }
   }
-  if (entry.pos === 'verb' && entry.verb === null) fail('verb block is required for verbs');
 
   if (!entry.source || typeof entry.source !== 'object') fail('source must be an object');
   if (!nonEmptyStr(entry.source.dict) || !nonEmptyStr(entry.source.license)) {
