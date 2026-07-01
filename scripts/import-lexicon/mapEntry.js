@@ -11,7 +11,7 @@ export function mapEntry(word) {
     freqRank: word.freqRank ?? null,
     tags: word.topics ?? [],
     examples: word.examples ?? [],
-    verb: null,
+    verb: word.verb ?? null,
     source: { dict: 'wiktionary', license: 'CC-BY-SA-4.0', sentences: 'tatoeba' },
   };
 }

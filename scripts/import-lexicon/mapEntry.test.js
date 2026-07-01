@@ -20,4 +20,17 @@ describe('mapEntry', () => {
     });
     expect(validateLexiconEntry(entry)).toBe(true);
   });
+
+  it('passes a verb conjugation block through and stays valid', () => {
+    const verbWord = {
+      id: 'v:gehen', lemma: 'gehen', pos: 'verb', article: null, plural: null,
+      ipa: '[ˈɡeːən]', glosses: ['to go'], topics: [], freqRank: 12, cefr: 'A1',
+      examples: [{ de: 'Wir gehen.', en: 'We go.', source: 'tatoeba' }],
+      verb: { aux: 'sein', partizip2: 'gegangen', present: { ich: 'gehe', du: 'gehst', er: 'geht', wir: 'gehen', ihr: 'geht', sie: 'gehen' } },
+    };
+    const entry = mapEntry(verbWord);
+    expect(entry.verb).toEqual(verbWord.verb);
+    expect(entry.pos).toBe('verb');
+    expect(validateLexiconEntry(entry)).toBe(true);
+  });
 });
