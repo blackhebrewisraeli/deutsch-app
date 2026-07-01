@@ -10,6 +10,9 @@ describe('cleanExamples', () => {
       ex('Ich esse Brot.', 'I eat bread.'),
     ]);
   });
+  it('drops examples containing a blocklisted word', () => {
+    expect(cleanExamples([ex('Das ist scheiße gut.', 'That is shit good.')], {})).toEqual([]);
+  });
 });
 
 describe('keepEntry', () => {

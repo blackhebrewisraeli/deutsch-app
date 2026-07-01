@@ -4,7 +4,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureRaw, SOURCES } from './download.js';
 import { parseRecord } from './parseWiktextract.js';
-import { buildExampleIndex, attachExamples } from './joinTatoeba.js';
+import { buildExampleIndex, attachExamples, pickExamples } from './joinTatoeba.js';
 import { assignRanks, topByRank } from './rankLeipzig.js';
 import { disambiguateIds } from './ids.js';
 import { mapEntry } from './mapEntry.js';
@@ -57,14 +57,14 @@ export async function run({ n = 5000, cacheDir, outDir } = {}) {
   outDir = outDir || join(ROOT, 'public', 'lexicon');
 
   await ensureRaw(cacheDir);
-  const parsed = await readParsed(join(cacheDir, 'tatoeba-or-wiktextract.jsonl'));
+  const parsed = await readParsed(join(cacheDir, 'wiktextract.jsonl'));
   const pairs = await readTatoebaPairs(join(cacheDir, 'tatoeba-de-en.tsv'));
   const rankMap = await readRankMap(join(cacheDir, 'freq.tsv'));
 
   const exIndex = buildExampleIndex(pairs);
   const ranked = topByRank(assignRanks(parsed, rankMap), n);
   const withIds = disambiguateIds(ranked); // adds .id
-  const mapped = withIds.map((w) => mapEntry({ ...w, examples: attachExamples(w, exIndex, 2) }));
+  const mapped = withIds.map((w) => mapEntry({ ...w, examples: pickExamples(attachExamples(w, exIndex, 2), w.rawExamples ?? [], 2) }));
   const { kept, rejected } = applyFilter(mapped);
 
   const artifacts = buildArtifacts(kept, { chunkSize: 500, sources: SOURCES });
