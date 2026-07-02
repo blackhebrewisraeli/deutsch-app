@@ -182,6 +182,18 @@ describe('VocabTab', () => {
     });
   });
 
+  describe('plural and example rendering', () => {
+    it('shows plural and example sentence for a noun card', async () => {
+      const user = userEvent.setup();
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      // Switch to the Food & Drink deck.
+      await user.click(screen.getByRole('button', { name: /Food & Drink/i }));
+      // The card face shows the plural label and the first example sentence.
+      expect(await screen.findByText(/PL: Brote/)).toBeInTheDocument();
+      expect(screen.getByText('Ich esse Brot.')).toBeInTheDocument();
+    });
+  });
+
   describe('custom deck generation', () => {
     const generated = [
       { de: 'die Sonne', en: 'the sun', ipa: '[ˈzɔnə]' },

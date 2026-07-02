@@ -467,6 +467,32 @@ export default function VocabTab({
                     {card.ipa}
                   </div>
                 )}
+                {card.plural && (
+                  <div
+                    style={{
+                      fontFamily: FONTS.mono,
+                      fontSize: FONT_SIZE.tag,
+                      letterSpacing: LETTER_SPACING.caps,
+                      color: COLORS.mute,
+                      marginTop: SPACE[2],
+                    }}
+                  >
+                    PL: {card.plural}
+                  </div>
+                )}
+                {card.examples?.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: SPACE[3],
+                      fontFamily: FONTS.body,
+                      fontSize: FONT_SIZE.md,
+                      fontStyle: 'italic',
+                      opacity: 0.75,
+                    }}
+                  >
+                    {card.examples[0].de}
+                  </div>
+                )}
               </div>
 
               {/* A1/A2 — multiple choice */}
