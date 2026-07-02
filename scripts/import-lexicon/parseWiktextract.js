@@ -28,6 +28,48 @@ function firstIpa(sounds) {
   return s ? s.ipa : null;
 }
 
+const PERSON_SLOT = {
+  'first-person|singular': 'ich',
+  'second-person|singular': 'du',
+  'third-person|singular': 'er',
+  'first-person|plural': 'wir',
+  'second-person|plural': 'ihr',
+  'third-person|plural': 'sie',
+};
+
+function verbFromForms(forms) {
+  const present = { ich: null, du: null, er: null, wir: null, ihr: null, sie: null };
+  let partizip2 = null;
+  let aux = null;
+  let found = false;
+
+  for (const f of forms || []) {
+    if (!f.form) continue;
+    const tags = f.tags || [];
+    const has = (t) => tags.includes(t);
+
+    if (has('present') && has('indicative')) {
+      const person = ['first-person', 'second-person', 'third-person'].find((p) => has(p));
+      const number = ['singular', 'plural'].find((n) => has(n));
+      const slot = person && number ? PERSON_SLOT[`${person}|${number}`] : null;
+      if (slot && present[slot] === null) {
+        present[slot] = f.form;
+        found = true;
+      }
+    }
+    if (partizip2 === null && has('participle') && (has('past') || has('perfect'))) {
+      partizip2 = f.form;
+      found = true;
+    }
+    if (aux === null && has('auxiliary') && ['haben', 'sein'].includes(f.form)) {
+      aux = f.form;
+      found = true;
+    }
+  }
+
+  return found ? { aux, partizip2, present } : null;
+}
+
 export function parseRecord(raw) {
   if (!raw || raw.lang_code !== 'de' || !raw.word) return null;
   const pos = mapPos(raw.pos);
@@ -54,5 +96,6 @@ export function parseRecord(raw) {
     glosses,
     topics,
     rawExamples,
+    verb: pos === 'verb' ? verbFromForms(raw.forms) : null,
   };
 }

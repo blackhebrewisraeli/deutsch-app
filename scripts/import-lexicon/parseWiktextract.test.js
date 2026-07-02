@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { parseRecord } from './parseWiktextract.js';
-import { NOUN_BROT, VERB_GEHEN, NON_GERMAN, NO_GLOSS, NOUN_WITH_DUPLICATE_GLOSSES } from './__fixtures__/wiktextract-sample.js';
+import {
+  NOUN_BROT,
+  VERB_GEHEN,
+  NON_GERMAN,
+  NO_GLOSS,
+  NOUN_WITH_DUPLICATE_GLOSSES,
+  VERB_FULL,
+  VERB_PARTIAL,
+  VERB_NO_FORMS,
+} from './__fixtures__/wiktextract-sample.js';
 
 describe('parseRecord', () => {
   it('parses a noun with gender, plural, ipa, gloss, topic, example', () => {
@@ -13,6 +22,7 @@ describe('parseRecord', () => {
       glosses: ['bread'],
       topics: ['food'],
       rawExamples: [{ de: 'Ich esse Brot.', en: 'I eat bread.' }],
+      verb: null,
     });
   });
   it('parses a verb (no article/plural) and caps glosses', () => {
@@ -32,5 +42,28 @@ describe('parseRecord', () => {
     const out = parseRecord(NOUN_WITH_DUPLICATE_GLOSSES);
     expect(out.glosses).toHaveLength(3);
     expect(out.glosses).toEqual(['house', 'home', 'building']);
+  });
+});
+
+describe('parseRecord — verb conjugation', () => {
+  it('extracts a full present table, partizip2, and aux', () => {
+    expect(parseRecord(VERB_FULL).verb).toEqual({
+      aux: 'sein',
+      partizip2: 'gegangen',
+      present: { ich: 'gehe', du: 'gehst', er: 'geht', wir: 'gehen', ihr: 'geht', sie: 'gehen' },
+    });
+  });
+  it('extracts a partial block with null for missing fields', () => {
+    expect(parseRecord(VERB_PARTIAL).verb).toEqual({
+      aux: null,
+      partizip2: 'gemacht',
+      present: { ich: 'mache', du: null, er: null, wir: null, ihr: null, sie: null },
+    });
+  });
+  it('returns verb: null when there is no conjugation data', () => {
+    expect(parseRecord(VERB_NO_FORMS).verb).toBe(null);
+  });
+  it('leaves verb null for non-verbs', () => {
+    expect(parseRecord(NOUN_BROT).verb).toBe(null);
   });
 });

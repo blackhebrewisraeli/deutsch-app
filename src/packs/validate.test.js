@@ -115,10 +115,61 @@ describe('validateLexiconEntry', () => {
       validateLexiconEntry({ ...validNoun, examples: [{ de: 'x', source: 'authored' }] })
     ).toThrow(/example/);
   });
-  it('throws when a verb entry has no verb block', () => {
+  it('accepts a verb entry with a null verb block (best-effort)', () => {
+    expect(
+      validateLexiconEntry({
+        ...validNoun,
+        id: 'v:gehen',
+        de: 'gehen',
+        en: ['to go'],
+        pos: 'verb',
+        article: null,
+        plural: null,
+        verb: null,
+      })
+    ).toBe(true);
+  });
+  it('accepts a partial verb block (null aux, some present forms null)', () => {
+    expect(
+      validateLexiconEntry({
+        ...validNoun,
+        id: 'v:machen',
+        de: 'machen',
+        en: ['to make'],
+        pos: 'verb',
+        article: null,
+        plural: null,
+        verb: {
+          aux: null,
+          partizip2: 'gemacht',
+          present: { ich: 'mache', du: null, er: null, wir: null, ihr: null, sie: null },
+        },
+      })
+    ).toBe(true);
+  });
+  it('throws when verb.aux is not null/haben/sein', () => {
     expect(() =>
-      validateLexiconEntry({ ...validNoun, pos: 'verb', article: null, verb: null })
-    ).toThrow(/verb/);
+      validateLexiconEntry({
+        ...validNoun,
+        pos: 'verb',
+        article: null,
+        verb: {
+          aux: 'werden',
+          partizip2: null,
+          present: { ich: null, du: null, er: null, wir: null, ihr: null, sie: null },
+        },
+      })
+    ).toThrow(/aux/);
+  });
+  it('throws when a present key is missing from the verb block', () => {
+    expect(() =>
+      validateLexiconEntry({
+        ...validNoun,
+        pos: 'verb',
+        article: null,
+        verb: { aux: null, partizip2: null, present: { ich: 'gehe' } },
+      })
+    ).toThrow(/present/);
   });
   it('accepts a valid verb entry', () => {
     expect(

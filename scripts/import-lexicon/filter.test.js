@@ -23,8 +23,8 @@ describe('keepEntry', () => {
   it('drops a noun without an article', () => {
     expect(keepEntry({ ...base, article: null }).keep).toBe(false);
   });
-  it('drops a verb without a verb block', () => {
-    expect(keepEntry({ ...base, pos: 'verb', article: null }).reason).toMatch(/verb/);
+  it('keeps a verb even without a verb block (best-effort)', () => {
+    expect(keepEntry({ ...base, pos: 'verb', article: null, verb: null }).keep).toBe(true);
   });
   it('drops an entry with no examples', () => {
     expect(keepEntry({ ...base, examples: [] }).reason).toMatch(/example/);

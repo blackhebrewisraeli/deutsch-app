@@ -12,7 +12,6 @@ export function cleanExamples(examples, { maxLen = 120 } = {}) {
 
 export function keepEntry(entry) {
   if (entry.pos === 'noun' && !entry.article) return { keep: false, reason: 'noun missing article' };
-  if (entry.pos === 'verb' && entry.verb === null) return { keep: false, reason: 'verb missing verb block' };
   if (!entry.examples || entry.examples.length === 0) return { keep: false, reason: 'no example' };
   return { keep: true, reason: null };
 }
