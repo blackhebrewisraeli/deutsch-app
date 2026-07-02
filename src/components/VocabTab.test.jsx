@@ -6,6 +6,10 @@ import VocabTab from './VocabTab';
 import { activePack } from '../packs';
 import { callClaude } from '../lib/claude';
 import { srsKey } from '../lib/srs';
+import indexJson from '../../public/lexicon/index.json';
+import chunk0 from '../../public/lexicon/chunk-00.json';
+import chunk1 from '../../public/lexicon/chunk-01.json';
+import { __resetCache } from '../packs/lexiconStore';
 
 vi.mock('../lib/claude', () => ({
   callClaude: vi.fn(),
@@ -59,7 +63,7 @@ describe('VocabTab', () => {
   describe('deck picker', () => {
     it('renders the four preset decks and the first greetings card', () => {
       renderTab();
-      for (const name of ['Greetings', 'Food & Drink', 'Travel', 'Numbers']) {
+      for (const name of ['Greetings', 'Food & Drink', 'Travel 10', 'Numbers']) {
         expect(screen.getByRole('button', { name: new RegExp(name) })).toBeInTheDocument();
       }
       expect(screen.getByText(firstCard().de)).toBeInTheDocument();
@@ -68,7 +72,7 @@ describe('VocabTab', () => {
 
     it('switching decks resets the queue to the new deck', async () => {
       renderTab();
-      await userEvent.click(screen.getByRole('button', { name: /Travel/ }));
+      await userEvent.click(screen.getByRole('button', { name: /Travel 10/ }));
       expect(screen.getByText(firstCard('travel').de)).toBeInTheDocument();
       expect(screen.getByText(`${DECKS.travel.length} cards remaining`)).toBeInTheDocument();
     });
@@ -79,8 +83,8 @@ describe('VocabTab', () => {
         'aria-pressed',
         'true'
       );
-      await userEvent.click(screen.getByRole('button', { name: /Travel/ }));
-      expect(screen.getByRole('button', { name: /Travel/ })).toHaveAttribute(
+      await userEvent.click(screen.getByRole('button', { name: /Travel 10/ }));
+      expect(screen.getByRole('button', { name: /Travel 10/ })).toHaveAttribute(
         'aria-pressed',
         'true'
       );
@@ -257,6 +261,65 @@ describe('VocabTab', () => {
       await waitFor(() => expect(alertSpy).toHaveBeenCalled());
       expect(alertSpy.mock.calls[0][0]).toMatch(/429/);
       expect(screen.getByText(firstCard().de)).toBeInTheDocument();
+    });
+  });
+
+  describe('auto deck loading', () => {
+    beforeEach(() => {
+      __resetCache();
+      const fixtures = {
+        '/lexicon/index.json': indexJson,
+        '/lexicon/chunk-00.json': chunk0,
+        '/lexicon/chunk-01.json': chunk1,
+      };
+      globalThis.fetch = vi.fn((url) => {
+        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
+        return key
+          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
+          : Promise.resolve({ ok: false, status: 404 });
+      });
+    });
+
+    it('loads a Topics deck and shows its cards', async () => {
+      const user = userEvent.setup();
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /🍞 Food/i }));
+      // food cards sorted by rank: n:wasser (rank 88) → "das Wasser"
+      expect(await screen.findByText('das Wasser')).toBeInTheDocument();
+    });
+
+    it('Retry button re-fetches after a failed load and shows deck cards', async () => {
+      const user = userEvent.setup();
+      const fixtures = {
+        '/lexicon/index.json': indexJson,
+        '/lexicon/chunk-00.json': chunk0,
+        '/lexicon/chunk-01.json': chunk1,
+      };
+      let callCount = 0;
+      globalThis.fetch = vi.fn((url) => {
+        callCount += 1;
+        // First call fails with a 500
+        if (callCount === 1) {
+          return Promise.resolve({ ok: false, status: 500 });
+        }
+        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
+        return key
+          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
+          : Promise.resolve({ ok: false, status: 404 });
+      });
+
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /🍞 Food/i }));
+
+      // Error UI with Retry button appears after the initial failed fetch
+      const retryBtn = await screen.findByRole('button', { name: /Retry/i });
+      expect(retryBtn).toBeInTheDocument();
+
+      // Click Retry — should trigger a new fetch that succeeds
+      await user.click(retryBtn);
+
+      // Food deck cards now render (das Wasser is the first by rank)
+      expect(await screen.findByText('das Wasser')).toBeInTheDocument();
     });
   });
 });

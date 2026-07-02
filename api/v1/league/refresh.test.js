@@ -11,6 +11,10 @@ import { createRes } from '../../_lib/test-helpers.js';
 const USER = { userId: 'uid-1', email: 'a@b.com' };
 const req = (method = 'POST') => ({ method, headers: { authorization: 'Bearer t' } });
 const counters = (correct) => ({ byLevel: { a1: { correct, almost: 0, wrong: 0 } }, bonusXp: 0 });
+// Seed the stats row for "today" so it is always >= the current league period
+// (currentPeriodStart = this week's Monday). A hardcoded date silently falls out
+// of the period as the weeks roll by and makes weeklyXpFromRows sum to 0.
+const TODAY = new Date().toISOString().slice(0, 10);
 
 afterEach(() => vi.clearAllMocks());
 
@@ -27,7 +31,7 @@ it('computes weekly xp from stats and updates only the current-period league row
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     gte: vi.fn().mockResolvedValue({
-      data: [{ day: '2026-06-23', counters: counters(2) }], // 20 xp
+      data: [{ day: TODAY, counters: counters(2) }], // 20 xp
       error: null,
     }),
   };
@@ -80,7 +84,7 @@ it('returns weekly_xp without updating when user has no current-period membershi
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     gte: vi.fn().mockResolvedValue({
-      data: [{ day: '2026-06-23', counters: counters(2) }],
+      data: [{ day: TODAY, counters: counters(2) }],
       error: null,
     }),
   };

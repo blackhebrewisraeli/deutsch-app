@@ -20,7 +20,8 @@
     "where": "node scripts/where.js",
     "audit:dead": "node scripts/audit-dead.js",
     "clean": "node scripts/clean.js",
-    "prepare": "husky"
+    "prepare": "husky",
+    "import:lexicon": "node scripts/import-lexicon/index.js"
   },
   "dependencies": {
     "@sentry/react": "^10.59.0",

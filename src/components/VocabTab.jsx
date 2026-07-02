@@ -21,6 +21,8 @@ import { fuzzyMatch } from '../lib/matching';
 import { recordEvent, recordItem } from '../lib/stats';
 import { getDueCards, recordVocabAnswer } from '../lib/srs';
 import Confetti from './ui/Confetti';
+import { AUTO_DECKS, DECK_GROUPS } from '../packs/de/autoDecks';
+import { resolveAutoDeck } from '../packs/lexiconStore';
 
 export default function VocabTab({
   level,
@@ -35,6 +37,10 @@ export default function VocabTab({
   const [customTopic, setCustomTopic] = useState('');
   const [generating, setGenerating] = useState(false);
   const [deckComplete, setDeckComplete] = useState(false);
+  const [asyncDeck, setAsyncDeck] = useState(null);
+  const [deckLoading, setDeckLoading] = useState(false);
+  const [deckError, setDeckError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
 
   const [answered, setAnswered] = useState(false);
   const [result, setResult] = useState(null); // 'correct' | 'almost' | 'wrong'
@@ -44,7 +50,13 @@ export default function VocabTab({
   // card first in the queue instead of starting fresh.
   const pendingReviewRef = useRef(null);
 
-  const activeDeck = deckId === 'custom' && customCards ? customCards : PRESET_DECKS[deckId] || [];
+  const isAuto = AUTO_DECKS.some((d) => d.id === deckId);
+  const activeDeck =
+    deckId === 'custom' && customCards
+      ? customCards
+      : isAuto
+        ? asyncDeck || []
+        : PRESET_DECKS[deckId] || [];
 
   useEffect(() => {
     const target = pendingReviewRef.current;
@@ -63,8 +75,30 @@ export default function VocabTab({
     setResult(null);
     setTypedAnswer('');
     setDeckComplete(false);
-    // activeDeck is derived from deckId+customCards which are already in deps — safe to omit
-  }, [deckId, customCards, level]); // eslint-disable-line react-hooks/exhaustive-deps
+    // activeDeck is derived from deckId+customCards+asyncDeck which are in deps — safe to omit
+  }, [deckId, customCards, asyncDeck, level]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const def = AUTO_DECKS.find((d) => d.id === deckId);
+    if (!def) return;
+    let cancelled = false;
+    setDeckLoading(true);
+    setDeckError(false);
+    setAsyncDeck(null);
+    resolveAutoDeck(def)
+      .then((cards) => {
+        if (!cancelled) setAsyncDeck(cards);
+      })
+      .catch(() => {
+        if (!cancelled) setDeckError(true);
+      })
+      .finally(() => {
+        if (!cancelled) setDeckLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [deckId, retryCount]);
 
   // Brief lock to swallow the trailing click event that would otherwise pass
   // through to whatever button mounts at the SRS button's screen position on
@@ -266,6 +300,34 @@ export default function VocabTab({
             )}
           </div>
 
+          {DECK_GROUPS.filter((g) => g !== 'Curated').map((group) => (
+            <div key={group} style={{ marginBottom: 16 }}>
+              <SectionLabel num={group[0]} text={group} />
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {AUTO_DECKS.filter((d) => d.group === group).map((d) => (
+                  <button
+                    key={d.id}
+                    type="button"
+                    onClick={() => setDeckId(d.id)}
+                    aria-pressed={deckId === d.id}
+                    style={{
+                      padding: '8px 12px',
+                      background: deckId === d.id ? COLORS.ink : COLORS.card,
+                      color: deckId === d.id ? COLORS.paper : COLORS.ink,
+                      border: 'none',
+                      borderRadius: RADIUS.md,
+                      fontFamily: FONTS.display,
+                      fontSize: FONT_SIZE.base,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {d.icon} {d.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+
           <SectionLabel num="B" text="Generate Custom" />
           <div
             style={{
@@ -325,10 +387,52 @@ export default function VocabTab({
               )}
             </button>
           </div>
+
+          <div
+            style={{
+              marginTop: 12,
+              fontFamily: FONTS.mono,
+              fontSize: FONT_SIZE.tag,
+              color: COLORS.mute,
+            }}
+          >
+            Vocabulary from Wiktionary (CC BY-SA), Tatoeba &amp; Leipzig (CC BY).
+          </div>
         </div>
 
         {/* ── Right column: active recall UI ── */}
         <div>
+          {isAuto && deckLoading && (
+            <div
+              style={{
+                padding: SPACE[8],
+                textAlign: 'center',
+                fontFamily: FONTS.mono,
+                color: COLORS.mute,
+              }}
+            >
+              Loading deck…
+            </div>
+          )}
+          {isAuto && deckError && (
+            <div
+              style={{
+                padding: SPACE[8],
+                textAlign: 'center',
+                fontFamily: FONTS.mono,
+                color: COLORS.red,
+              }}
+            >
+              Could not load this deck.{' '}
+              <button
+                type="button"
+                onClick={() => setRetryCount((c) => c + 1)}
+                style={{ textDecoration: 'underline' }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
           {card && (
             <>
               {/* Progress bar */}

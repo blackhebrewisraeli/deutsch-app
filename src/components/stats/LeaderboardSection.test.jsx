@@ -24,9 +24,25 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+// This week's Monday (UTC), matching the server's currentPeriodStart. Computed
+// at run time so the countdown ("Ends in …") is always active — a hardcoded
+// period_start rolls into the past and makes weekRemaining report "ended".
+const currentMonday = () => {
+  const d = new Date();
+  const utc = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
+  const dow = utc.getUTCDay(); // 0=Sun..6=Sat
+  utc.setUTCDate(utc.getUTCDate() + (dow === 0 ? -6 : 1 - dow));
+  return utc.toISOString().slice(0, 10);
+};
+
 const signIn = (rows, tier = 0) => {
   useAuth.mockReturnValue({ user: { id: 'me' } });
-  joinLeague.mockResolvedValue({ league_id: 'L1', tier, period_start: '2026-06-22', handle: 'Me' });
+  joinLeague.mockResolvedValue({
+    league_id: 'L1',
+    tier,
+    period_start: currentMonday(),
+    handle: 'Me',
+  });
   refreshLeague.mockResolvedValue({ weekly_xp: 0 });
   fetchStandings.mockResolvedValue(rows);
 };
