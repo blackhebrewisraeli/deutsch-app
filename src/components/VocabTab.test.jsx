@@ -183,7 +183,9 @@ describe('VocabTab', () => {
       await userEvent.click(screen.getByRole('button', { name: /CHECK/ }));
       expect(screen.getByText('✗ NOT QUITE')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: /AGAIN/ })).toBeInTheDocument();
-    });
+      // Generous timeout: userEvent.type simulates 10 per-keystroke re-renders,
+      // which intermittently exceeds the 5000ms default under heavy CI/hook load.
+    }, 15000);
   });
 
   describe('plural and example rendering', () => {
