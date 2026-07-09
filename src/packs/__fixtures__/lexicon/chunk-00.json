@@ -1,0 +1,47 @@
+{
+  "n:brot": {
+    "id": "n:brot",
+    "de": "Brot",
+    "en": ["bread"],
+    "pos": "noun",
+    "article": "das",
+    "ipa": "[bʁoːt]",
+    "plural": "Brote",
+    "cefr": "A1",
+    "freqRank": 142,
+    "tags": ["food"],
+    "examples": [{ "de": "Ich esse Brot.", "en": "I eat bread.", "source": "tatoeba" }],
+    "verb": null,
+    "source": { "dict": "wiktionary", "license": "CC-BY-SA-4.0", "sentences": "tatoeba" }
+  },
+  "n:wasser": {
+    "id": "n:wasser",
+    "de": "Wasser",
+    "en": ["water"],
+    "pos": "noun",
+    "article": "das",
+    "ipa": "[ˈvasɐ]",
+    "plural": "Wässer",
+    "cefr": "A1",
+    "freqRank": 88,
+    "tags": ["food"],
+    "examples": [{ "de": "Ich trinke Wasser.", "en": "I drink water.", "source": "tatoeba" }],
+    "verb": null,
+    "source": { "dict": "wiktionary", "license": "CC-BY-SA-4.0", "sentences": "tatoeba" }
+  },
+  "n:haus": {
+    "id": "n:haus",
+    "de": "Haus",
+    "en": ["house"],
+    "pos": "noun",
+    "article": "das",
+    "ipa": "[haʊ̯s]",
+    "plural": "Häuser",
+    "cefr": "A1",
+    "freqRank": 60,
+    "tags": ["home"],
+    "examples": [{ "de": "Das Haus ist groß.", "en": "The house is big.", "source": "tatoeba" }],
+    "verb": null,
+    "source": { "dict": "wiktionary", "license": "CC-BY-SA-4.0", "sentences": "tatoeba" }
+  }
+}
