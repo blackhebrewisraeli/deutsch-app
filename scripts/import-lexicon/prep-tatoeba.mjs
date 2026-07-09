@@ -1,5 +1,5 @@
 // Join Tatoeba deu↔eng sentences via links.csv → tatoeba-de-en.tsv (de \t en).
-// Run: node --max-old-space-size=4096 join-tatoeba.mjs <cacheDir>
+// Run: node --max-old-space-size=4096 prep-tatoeba.mjs <cacheDir>
 import { createReadStream, createWriteStream } from 'node:fs';
 import { createInterface } from 'node:readline';
 import { join } from 'node:path';
@@ -33,7 +33,7 @@ console.error(`  eng=${eng.size}`);
 console.error('streaming links → pairs…');
 const out = createWriteStream(join(dir, 'tatoeba-de-en.tsv'));
 let pairs = 0;
-const seen = new Set(); // dedupe by "deId:enId" not needed; dedupe by de text to keep file lean
+const seen = new Set(); // dedupe by German text: one English pairing per de sentence keeps the file lean
 for await (const line of rl('links.csv')) {
   const t = line.indexOf('\t');
   if (t < 0) continue;
