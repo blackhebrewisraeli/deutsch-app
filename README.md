@@ -582,39 +582,18 @@ The importer downloads these pinned sources into a git-ignored
 | Dataset | URL | License |
 |---|---|---|
 | Wiktextract (German Wiktionary) | `https://kaikki.org/dictionary/German/kaikki.org-dictionary-German.jsonl` | CC BY-SA 4.0 |
-| Tatoeba sentences | `https://downloads.tatoeba.org/exports/per_language/deu/deu_sentences.tsv.bz2` | CC BY 2.0 FR |
+| Tatoeba sentences (German) | `https://downloads.tatoeba.org/exports/per_language/deu/deu_sentences.tsv.bz2` | CC BY 2.0 FR |
+| Tatoeba sentences (English) | `https://downloads.tatoeba.org/exports/per_language/eng/eng_sentences.tsv.bz2` | CC BY 2.0 FR |
 | Tatoeba sentence links | `https://downloads.tatoeba.org/exports/links.tar.bz2` | CC BY 2.0 FR |
 | Leipzig Corpora (deu\_news\_2023\_100K) | `https://downloads.wortschatz-leipzig.de/corpora/deu_news_2023_100K.tar.gz` | CC BY |
 
-**Manual prep step (required).** The downloader fetches the archives verbatim — it
-does **not** decompress or join them. The `read*` helpers in
-`scripts/import-lexicon/index.js` expect three prepared files in
-`.cache/lexicon-raw/`: `wiktextract.jsonl`, `tatoeba-de-en.tsv` (German↔English
-sentence pairs, tab-separated), and `freq.tsv` (word in column 2, most-frequent
-first). Building the Tatoeba pairs also needs the **English** sentences (not in
-`SOURCES`). The exact steps used to produce the committed lexicon:
-
-```bash
-cd .cache/lexicon-raw
-
-# Wiktextract: the download is already the .jsonl — just give it the read name
-ln -f kaikki.org-dictionary-German.jsonl wiktextract.jsonl
-
-# Tatoeba: also fetch English sentences, then join de↔en via links
-curl -sSLO https://downloads.tatoeba.org/exports/per_language/eng/eng_sentences.tsv.bz2
-bunzip2 -kf deu_sentences.tsv.bz2 eng_sentences.tsv.bz2
-tar xjf links.tar.bz2                       # → links.csv
-node --max-old-space-size=4096 ../../scripts/import-lexicon/prep-tatoeba.mjs "$PWD"
-
-# Leipzig: sort the words file by frequency (col 3) desc → line order = rank
-tar xzf deu_news_2023_100K.tar.gz
-sort -t$'\t' -k3 -rn deu_news_2023_100K/deu_news_2023_100K-words.txt > freq.tsv
-```
-
-Then run `node --max-old-space-size=4096 scripts/import-lexicon/index.js` (the
-heap bump lets the Tatoeba example index fit). It prints a JSON report (kept /
-rejected counts by reason + a random sample) — spot-check it before committing
-the artifacts.
+**One command.** `npm run import:lexicon` downloads all sources (first run:
+~1.2 GB into the git-ignored `.cache/lexicon-raw/`), decompresses them, joins
+the Tatoeba de↔en sentence pairs, frequency-sorts the Leipzig word list, and
+runs the pipeline. Requires macOS/Linux (`tar` + `bunzip2` on PATH). Prep steps
+are idempotent — outputs are reused if present; delete `.cache/lexicon-raw/` to
+rebuild from fresh dumps. The run prints a JSON report (kept/rejected counts by
+reason + a random sample) — spot-check it before committing `public/lexicon/`.
 
 Output lands in `public/lexicon/` as a set of JSON chunk files plus an
 `index.json` and a `manifest.json`. The app loads these chunks on demand and

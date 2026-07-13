@@ -6,6 +6,7 @@ import { Readable } from 'node:stream';
 export const SOURCES = {
   wiktextract: 'https://kaikki.org/dictionary/German/kaikki.org-dictionary-German.jsonl',
   tatoebaSentences: 'https://downloads.tatoeba.org/exports/per_language/deu/deu_sentences.tsv.bz2',
+  tatoebaEngSentences: 'https://downloads.tatoeba.org/exports/per_language/eng/eng_sentences.tsv.bz2',
   tatoebaLinks: 'https://downloads.tatoeba.org/exports/links.tar.bz2',
   leipzig: 'https://downloads.wortschatz-leipzig.de/corpora/deu_news_2023_100K.tar.gz',
 };

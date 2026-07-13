@@ -21,7 +21,7 @@
     "audit:dead": "node scripts/audit-dead.js",
     "clean": "node scripts/clean.js",
     "prepare": "husky",
-    "import:lexicon": "node scripts/import-lexicon/index.js"
+    "import:lexicon": "node --max-old-space-size=4096 scripts/import-lexicon/index.js"
   },
   "dependencies": {
     "@sentry/react": "^10.59.0",
