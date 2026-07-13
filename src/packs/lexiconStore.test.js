@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadIndex, loadChunks, resolveAutoDeck, __resetCache } from './lexiconStore';
-import index from '../../public/lexicon/index.json';
-import chunk0 from '../../public/lexicon/chunk-00.json';
-import chunk1 from '../../public/lexicon/chunk-01.json';
+import index from './__fixtures__/lexicon/index.json';
+import chunk0 from './__fixtures__/lexicon/chunk-00.json';
+import chunk1 from './__fixtures__/lexicon/chunk-01.json';
 
 const fixtures = {
   '/lexicon/index.json': index,

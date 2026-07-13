@@ -9,9 +9,13 @@ function mapPos(pos) {
   return KEPT_POS[pos] || null;
 }
 
-function articleFromForms(forms) {
-  for (const f of forms || []) {
-    for (const t of f.tags || []) {
+// Noun gender lives on the sense tags in the kaikki/Wiktextract German export
+// (e.g. senses[0].tags: ["neuter","strong"]) — NOT on the canonical form. Reading
+// forms[].tags mis-fires: many nouns list no gender there (→ dropped), and the
+// diminutive forms that DO carry a gender are always neuter (→ wrong article).
+function articleFromSenses(senses) {
+  for (const s of senses || []) {
+    for (const t of s.tags || []) {
       if (GENDER_ARTICLE[t]) return GENDER_ARTICLE[t];
     }
   }
@@ -75,7 +79,13 @@ export function parseRecord(raw) {
   const pos = mapPos(raw.pos);
   if (!pos) return null;
 
-  const senses = raw.senses || [];
+  // Drop non-lemma inflected-form entries: kaikki lists e.g. "sagte" / "gemacht"
+  // as their own records whose senses are ALL tagged "form-of" ("inflection of
+  // sagen: …"). A true lemma keeps at least one non-form-of definition sense.
+  // Filtering here also uses only lemma senses for glosses/gender/examples.
+  const senses = (raw.senses || []).filter((s) => !(s.tags || []).includes('form-of'));
+  if (senses.length === 0) return null;
+
   const glosses = [
     ...new Set(senses.flatMap((s) => (s.glosses || []).filter((g) => typeof g === 'string' && g.trim()))),
   ].slice(0, 3);
@@ -90,7 +100,7 @@ export function parseRecord(raw) {
   return {
     lemma: raw.word,
     pos,
-    article: pos === 'noun' ? articleFromForms(raw.forms) : null,
+    article: pos === 'noun' ? articleFromSenses(senses) : null,
     plural: pos === 'noun' ? pluralFromForms(raw.forms) : null,
     ipa: firstIpa(raw.sounds),
     glosses,

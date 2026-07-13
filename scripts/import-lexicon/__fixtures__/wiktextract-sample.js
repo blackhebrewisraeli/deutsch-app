@@ -3,13 +3,33 @@ export const NOUN_BROT = {
   word: 'Brot',
   pos: 'noun',
   lang_code: 'de',
-  forms: [
-    { form: 'Brot', tags: ['canonical', 'neuter'] },
-    { form: 'Brote', tags: ['plural'] },
-  ],
+  // Gender lives on the sense tags in the real kaikki export, not on the form.
+  forms: [{ form: 'Brote', tags: ['plural'] }],
   sounds: [{ ipa: '[bʁoːt]' }],
   senses: [
-    { glosses: ['bread'], topics: ['food'], examples: [{ text: 'Ich esse Brot.', english: 'I eat bread.' }] },
+    {
+      glosses: ['bread'],
+      tags: ['neuter', 'strong'],
+      topics: ['food'],
+      examples: [{ text: 'Ich esse Brot.', english: 'I eat bread.' }],
+    },
+  ],
+};
+
+// A non-lemma inflected form: every sense is tagged "form-of" (kaikki lists these
+// as their own records). parseRecord must drop it (returns null).
+export const FORM_OF_SAGTE = {
+  word: 'sagte',
+  pos: 'verb',
+  lang_code: 'de',
+  forms: [],
+  sounds: [],
+  senses: [
+    {
+      glosses: ['inflection of sagen:', 'first/third-person singular preterite'],
+      tags: ['first-person', 'form-of', 'preterite', 'singular', 'third-person'],
+      form_of: [{ word: 'sagen' }],
+    },
   ],
 };
 

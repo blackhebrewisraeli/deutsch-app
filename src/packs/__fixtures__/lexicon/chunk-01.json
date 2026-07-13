@@ -1,0 +1,51 @@
+{
+  "n:bahnhof": {
+    "id": "n:bahnhof",
+    "de": "Bahnhof",
+    "en": ["train station"],
+    "pos": "noun",
+    "article": "der",
+    "ipa": "[ˈbaːnhoːf]",
+    "plural": "Bahnhöfe",
+    "cefr": "A2",
+    "freqRank": 1200,
+    "tags": ["travel"],
+    "examples": [
+      { "de": "Der Bahnhof ist dort.", "en": "The station is there.", "source": "tatoeba" }
+    ],
+    "verb": null,
+    "source": { "dict": "wiktionary", "license": "CC-BY-SA-4.0", "sentences": "tatoeba" }
+  },
+  "n:freund": {
+    "id": "n:freund",
+    "de": "Freund",
+    "en": ["friend"],
+    "pos": "noun",
+    "article": "der",
+    "ipa": "[fʁɔɪ̯nt]",
+    "plural": "Freunde",
+    "cefr": "A1",
+    "freqRank": 300,
+    "tags": ["people"],
+    "examples": [{ "de": "Er ist mein Freund.", "en": "He is my friend.", "source": "tatoeba" }],
+    "verb": null,
+    "source": { "dict": "wiktionary", "license": "CC-BY-SA-4.0", "sentences": "tatoeba" }
+  },
+  "n:arbeit": {
+    "id": "n:arbeit",
+    "de": "Arbeit",
+    "en": ["work"],
+    "pos": "noun",
+    "article": "die",
+    "ipa": "[ˈaʁbaɪ̯t]",
+    "plural": "Arbeiten",
+    "cefr": "A2",
+    "freqRank": 1500,
+    "tags": ["work"],
+    "examples": [
+      { "de": "Die Arbeit ist schwer.", "en": "The work is hard.", "source": "tatoeba" }
+    ],
+    "verb": null,
+    "source": { "dict": "wiktionary", "license": "CC-BY-SA-4.0", "sentences": "tatoeba" }
+  }
+}

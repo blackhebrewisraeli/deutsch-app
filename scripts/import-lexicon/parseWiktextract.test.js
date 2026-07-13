@@ -9,6 +9,7 @@ import {
   VERB_FULL,
   VERB_PARTIAL,
   VERB_NO_FORMS,
+  FORM_OF_SAGTE,
 } from './__fixtures__/wiktextract-sample.js';
 
 describe('parseRecord', () => {
@@ -37,6 +38,9 @@ describe('parseRecord', () => {
   });
   it('drops records with no usable gloss', () => {
     expect(parseRecord(NO_GLOSS)).toBe(null);
+  });
+  it('drops non-lemma inflected-form records (all senses form-of)', () => {
+    expect(parseRecord(FORM_OF_SAGTE)).toBe(null);
   });
   it('deduplicates glosses and caps at 3', () => {
     const out = parseRecord(NOUN_WITH_DUPLICATE_GLOSSES);

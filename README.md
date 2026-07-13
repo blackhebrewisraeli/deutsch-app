@@ -587,13 +587,34 @@ The importer downloads these pinned sources into a git-ignored
 | Leipzig Corpora (deu\_news\_2023\_100K) | `https://downloads.wortschatz-leipzig.de/corpora/deu_news_2023_100K.tar.gz` | CC BY |
 
 **Manual prep step (required).** The downloader fetches the archives verbatim — it
-does **not** decompress or join them. Before the pipeline can read them, in
-`.cache/lexicon-raw/` you must decompress the Tatoeba `.bz2` and Leipzig `.tar.gz`
-and produce the pre-joined inputs the readers expect (the `read*` helpers in
-`scripts/import-lexicon/index.js` document the exact filenames): the Wiktextract
-`.jsonl`, a `tatoeba-de-en.tsv` (tab-separated German↔English pairs), and a
-`freq.tsv` (frequency-ordered word list). Adjust those helpers if your local
-filenames differ.
+does **not** decompress or join them. The `read*` helpers in
+`scripts/import-lexicon/index.js` expect three prepared files in
+`.cache/lexicon-raw/`: `wiktextract.jsonl`, `tatoeba-de-en.tsv` (German↔English
+sentence pairs, tab-separated), and `freq.tsv` (word in column 2, most-frequent
+first). Building the Tatoeba pairs also needs the **English** sentences (not in
+`SOURCES`). The exact steps used to produce the committed lexicon:
+
+```bash
+cd .cache/lexicon-raw
+
+# Wiktextract: the download is already the .jsonl — just give it the read name
+ln -f kaikki.org-dictionary-German.jsonl wiktextract.jsonl
+
+# Tatoeba: also fetch English sentences, then join de↔en via links
+curl -sSLO https://downloads.tatoeba.org/exports/per_language/eng/eng_sentences.tsv.bz2
+bunzip2 -kf deu_sentences.tsv.bz2 eng_sentences.tsv.bz2
+tar xjf links.tar.bz2                       # → links.csv
+node --max-old-space-size=4096 ../../scripts/import-lexicon/prep-tatoeba.mjs "$PWD"
+
+# Leipzig: sort the words file by frequency (col 3) desc → line order = rank
+tar xzf deu_news_2023_100K.tar.gz
+sort -t$'\t' -k3 -rn deu_news_2023_100K/deu_news_2023_100K-words.txt > freq.tsv
+```
+
+Then run `node --max-old-space-size=4096 scripts/import-lexicon/index.js` (the
+heap bump lets the Tatoeba example index fit). It prints a JSON report (kept /
+rejected counts by reason + a random sample) — spot-check it before committing
+the artifacts.
 
 Output lands in `public/lexicon/` as a set of JSON chunk files plus an
 `index.json` and a `manifest.json`. The app loads these chunks on demand and

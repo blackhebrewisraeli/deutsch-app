@@ -6,9 +6,9 @@ import VocabTab from './VocabTab';
 import { activePack } from '../packs';
 import { callClaude } from '../lib/claude';
 import { srsKey } from '../lib/srs';
-import indexJson from '../../public/lexicon/index.json';
-import chunk0 from '../../public/lexicon/chunk-00.json';
-import chunk1 from '../../public/lexicon/chunk-01.json';
+import indexJson from '../packs/__fixtures__/lexicon/index.json';
+import chunk0 from '../packs/__fixtures__/lexicon/chunk-00.json';
+import chunk1 from '../packs/__fixtures__/lexicon/chunk-01.json';
 import { __resetCache } from '../packs/lexiconStore';
 
 vi.mock('../lib/claude', () => ({
