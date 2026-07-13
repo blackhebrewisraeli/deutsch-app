@@ -3,6 +3,7 @@ import { createInterface } from 'node:readline';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ensureRaw, SOURCES } from './download.js';
+import { ensurePrepared } from './prep.js';
 import { parseRecord } from './parseWiktextract.js';
 import { buildExampleIndex, attachExamples, pickExamples } from './joinTatoeba.js';
 import { assignRanks, topByRank } from './rankLeipzig.js';
@@ -15,9 +16,9 @@ import { buildReport } from './report.js';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..', '..');
 
-// NOTE: the readers below assume decompressed inputs. Decompress the Tatoeba/
-// Leipzig archives into cacheDir first (documented in README), or extend these
-// readers. The Wiktextract .jsonl is read directly.
+// The readers below consume the prepared inputs that ensurePrepared() derives
+// from the raw downloads (decompressed sentences/links, freq.tsv, the joined
+// tatoeba-de-en.tsv). The Wiktextract .jsonl download is read directly.
 async function readParsed(jsonlPath) {
   const rl = createInterface({ input: createReadStream(jsonlPath), crlfDelay: Infinity });
   const out = [];
@@ -57,7 +58,8 @@ export async function run({ n = 5000, cacheDir, outDir } = {}) {
   outDir = outDir || join(ROOT, 'public', 'lexicon');
 
   await ensureRaw(cacheDir);
-  const parsed = await readParsed(join(cacheDir, 'wiktextract.jsonl'));
+  await ensurePrepared(cacheDir);
+  const parsed = await readParsed(join(cacheDir, 'kaikki.org-dictionary-German.jsonl'));
   const pairs = await readTatoebaPairs(join(cacheDir, 'tatoeba-de-en.tsv'));
   const rankMap = await readRankMap(join(cacheDir, 'freq.tsv'));
 
