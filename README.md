@@ -582,7 +582,8 @@ The importer downloads these pinned sources into a git-ignored
 | Dataset | URL | License |
 |---|---|---|
 | Wiktextract (German Wiktionary) | `https://kaikki.org/dictionary/German/kaikki.org-dictionary-German.jsonl` | CC BY-SA 4.0 |
-| Tatoeba sentences | `https://downloads.tatoeba.org/exports/per_language/deu/deu_sentences.tsv.bz2` | CC BY 2.0 FR |
+| Tatoeba sentences (German) | `https://downloads.tatoeba.org/exports/per_language/deu/deu_sentences.tsv.bz2` | CC BY 2.0 FR |
+| Tatoeba sentences (English) | `https://downloads.tatoeba.org/exports/per_language/eng/eng_sentences.tsv.bz2` | CC BY 2.0 FR |
 | Tatoeba sentence links | `https://downloads.tatoeba.org/exports/links.tar.bz2` | CC BY 2.0 FR |
 | Leipzig Corpora (deu\_news\_2023\_100K) | `https://downloads.wortschatz-leipzig.de/corpora/deu_news_2023_100K.tar.gz` | CC BY |
 

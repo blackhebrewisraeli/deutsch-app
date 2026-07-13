@@ -31,8 +31,8 @@ async function readParsed(jsonlPath) {
 }
 
 async function readTatoebaPairs(sentencesTsv, _linksCsv) {
-  // Minimal de+en pairing: expects a pre-joined TSV "de\ten" in cacheDir as
-  // tatoeba-de-en.tsv (produced by the documented prep step). Falls back to [].
+  // Reads the pre-joined "de\ten" TSV that ensurePrepared()'s buildTatoebaPairs
+  // step writes to cacheDir as tatoeba-de-en.tsv.
   const pairs = [];
   const rl = createInterface({ input: createReadStream(sentencesTsv), crlfDelay: Infinity });
   for await (const line of rl) {

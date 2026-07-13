@@ -12,6 +12,10 @@ const LEIPZIG_WORDS = join('deu_news_2023_100K', 'deu_news_2023_100K-words.txt')
 
 // Leipzig words lines are "id \t word \t frequency" and are NOT pre-sorted;
 // readRankMap treats line order as rank, so sort by frequency descending.
+// Array.prototype.sort is stable (ES2019+), so frequency TIES keep their file
+// order — that stability is load-bearing: it makes ranks (and therefore the
+// committed lexicon) deterministic for a pinned dump on any platform, unlike
+// system `sort -rn` whose whole-line tie-breaking is platform/locale-dependent.
 export function sortByFrequency(lines) {
   const freq = (l) => Number(l.split('\t')[2]) || 0;
   return lines.filter((l) => l.trim()).sort((a, b) => freq(b) - freq(a));
