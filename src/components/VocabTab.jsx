@@ -20,6 +20,7 @@ import { shuffle } from '../lib/utils';
 import { fuzzyMatch } from '../lib/matching';
 import { recordEvent, recordItem } from '../lib/stats';
 import { getDueCards, recordVocabAnswer } from '../lib/srs';
+import { formatVerb } from '../lib/verbDisplay';
 import Confetti from './ui/Confetti';
 import { AUTO_DECKS, DECK_GROUPS } from '../packs/de/autoDecks';
 import { resolveAutoDeck } from '../packs/lexiconStore';
@@ -584,6 +585,20 @@ export default function VocabTab({
                     PL: {card.plural}
                   </div>
                 )}
+                {formatVerb(card.verb).map((line) => (
+                  <div
+                    key={line.label}
+                    style={{
+                      fontFamily: FONTS.mono,
+                      fontSize: FONT_SIZE.tag,
+                      letterSpacing: LETTER_SPACING.caps,
+                      color: COLORS.mute,
+                      marginTop: SPACE[2],
+                    }}
+                  >
+                    {line.label}: {line.value}
+                  </div>
+                ))}
                 {card.examples?.length > 0 && (
                   <div
                     style={{
