@@ -35,6 +35,7 @@ export function resolveDeck(deckDef, lexicon) {
   }
   if (deckDef.auto) {
     const all = Object.values(lexicon);
+    const byRank = (a, b) => (a.freqRank ?? Infinity) - (b.freqRank ?? Infinity);
     if (deckDef.auto.by === 'freq') {
       const [min, max] = deckDef.auto.range;
       return all
@@ -42,13 +43,17 @@ export function resolveDeck(deckDef, lexicon) {
         .sort((a, b) => a.freqRank - b.freqRank)
         .map(resolveCard);
     }
+    if (deckDef.auto.by === 'top') {
+      return all.slice().sort(byRank).slice(0, deckDef.auto.count).map(resolveCard);
+    }
     if (deckDef.auto.by === 'cefr') {
       return all.filter((e) => e.cefr === deckDef.auto.level).map(resolveCard);
     }
     if (deckDef.auto.by === 'tag') {
+      const wanted = Array.isArray(deckDef.auto.tag) ? deckDef.auto.tag : [deckDef.auto.tag];
       return all
-        .filter((e) => Array.isArray(e.tags) && e.tags.includes(deckDef.auto.tag))
-        .sort((a, b) => (a.freqRank ?? Infinity) - (b.freqRank ?? Infinity))
+        .filter((e) => Array.isArray(e.tags) && e.tags.some((t) => wanted.includes(t)))
+        .sort(byRank)
         .map(resolveCard);
     }
     throw new Error(`resolveDeck: unknown auto.by "${deckDef.auto.by}"`);
