@@ -115,3 +115,45 @@ describe('resolveDeck auto.by=tag and sort coverage', () => {
     expect(() => resolveDeck({ auto: { by: 'bogus' } }, lex)).toThrow(/bogus/);
   });
 });
+
+describe('resolveDeck auto.by=top and array tags', () => {
+  const e = (id, rank, tags = []) => ({
+    id,
+    de: id,
+    en: [id],
+    pos: 'noun',
+    article: 'das',
+    ipa: null,
+    plural: null,
+    cefr: 'A1',
+    freqRank: rank,
+    tags,
+    examples: [],
+    verb: null,
+    source: { dict: 'w', license: 'l' },
+  });
+  const lex = {
+    'n:a': e('n:a', 30, ['sports']),
+    'n:b': e('n:b', 10, ['games']),
+    'n:c': e('n:c', 20, ['hobbies']),
+    'n:d': e('n:d', null, ['sports']),
+  };
+
+  it('top returns the N lowest-rank cards in rank order', () => {
+    const cards = resolveDeck({ auto: { by: 'top', count: 2 } }, lex);
+    expect(cards.map((c) => c.id)).toEqual(['n:b', 'n:c']);
+  });
+  it('top never exceeds count and puts null ranks last', () => {
+    const cards = resolveDeck({ auto: { by: 'top', count: 10 } }, lex);
+    expect(cards).toHaveLength(4);
+    expect(cards[3].id).toBe('n:d');
+  });
+  it('tag still accepts a single string', () => {
+    const cards = resolveDeck({ auto: { by: 'tag', tag: 'sports' } }, lex);
+    expect(cards.map((c) => c.id)).toEqual(['n:a', 'n:d']);
+  });
+  it('tag accepts an array and matches any of them', () => {
+    const cards = resolveDeck({ auto: { by: 'tag', tag: ['games', 'hobbies'] } }, lex);
+    expect(cards.map((c) => c.id)).toEqual(['n:b', 'n:c']);
+  });
+});

@@ -78,3 +78,18 @@ describe('transient failure recovery', () => {
     expect(calls).toBe(2);
   });
 });
+
+describe('resolveAutoDeck top and array tags', () => {
+  it('top returns the N lowest-rank cards and loads only needed chunks', async () => {
+    const cards = await resolveAutoDeck({ auto: { by: 'top', count: 3 } });
+    expect(cards.map((c) => c.id)).toEqual(['n:haus', 'n:wasser', 'n:brot']);
+    const chunk1Calls = globalThis.fetch.mock.calls.filter((c) =>
+      String(c[0]).endsWith('chunk-01.json')
+    );
+    expect(chunk1Calls).toHaveLength(0);
+  });
+  it('tag accepts an array and matches any of them', async () => {
+    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: ['travel', 'work'] } });
+    expect(cards.map((c) => c.id).sort()).toEqual(['n:arbeit', 'n:bahnhof']);
+  });
+});

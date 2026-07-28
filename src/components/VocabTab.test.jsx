@@ -282,12 +282,12 @@ describe('VocabTab', () => {
       });
     });
 
-    it('loads a Topics deck and shows its cards', async () => {
+    it('loads an auto deck and shows its cards', async () => {
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /🍞 Food/i }));
-      // food cards sorted by rank: n:wasser (rank 88) → "das Wasser"
-      expect(await screen.findByText('das Wasser')).toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /Core 100/i }));
+      // Core 100 uses the 'top' rule (sorted by rank ascending): n:haus (rank 60) → "das Haus"
+      expect(await screen.findByText('das Haus')).toBeInTheDocument();
     });
 
     it('Retry button re-fetches after a failed load and shows deck cards', async () => {
@@ -311,7 +311,7 @@ describe('VocabTab', () => {
       });
 
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /🍞 Food/i }));
+      await user.click(screen.getByRole('button', { name: /Core 100/i }));
 
       // Error UI with Retry button appears after the initial failed fetch
       const retryBtn = await screen.findByRole('button', { name: /Retry/i });
@@ -320,8 +320,8 @@ describe('VocabTab', () => {
       // Click Retry — should trigger a new fetch that succeeds
       await user.click(retryBtn);
 
-      // Food deck cards now render (das Wasser is the first by rank)
-      expect(await screen.findByText('das Wasser')).toBeInTheDocument();
+      // Core 100 (top rule) cards now render (das Haus is the lowest-rank fixture entry)
+      expect(await screen.findByText('das Haus')).toBeInTheDocument();
     });
   });
 });
