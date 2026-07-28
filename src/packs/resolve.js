@@ -34,6 +34,9 @@ export function resolveDeck(deckDef, lexicon) {
     });
   }
   if (deckDef.auto) {
+    // NOTE: this rule vocabulary (top/freq/cefr/tag) is duplicated in
+    // src/packs/lexiconStore.js (selectRows/matches), which resolves decks
+    // asynchronously over index rows. Keep the two in sync.
     const all = Object.values(lexicon);
     const byRank = (a, b) => (a.freqRank ?? Infinity) - (b.freqRank ?? Infinity);
     if (deckDef.auto.by === 'freq') {
