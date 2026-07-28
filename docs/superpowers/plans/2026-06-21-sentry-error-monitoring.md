@@ -37,7 +37,7 @@
 - Test: `src/lib/observability.test.js`
 - Commit also: `package.json`, `package-lock.json` (the already-installed dependency lands with its first consumer)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/lib/observability.test.js`:
 
@@ -131,12 +131,12 @@ describe('scrubEvent', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/lib/observability.test.js`
 Expected: FAIL — `Failed to load url ./observability.js` (the module does not exist yet).
 
-- [ ] **Step 3: Write the minimal implementation**
+- [x] **Step 3: Write the minimal implementation**
 
 Create `src/lib/observability.js`:
 
@@ -193,12 +193,12 @@ export function reportError(error, context) {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/lib/observability.test.js`
 Expected: PASS — 6 tests pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add package.json package-lock.json src/lib/observability.js src/lib/observability.test.js
@@ -216,7 +216,7 @@ Expected: the pre-commit hook runs `lint-staged` then the full `npm test` and al
 - Create: `src/components/ErrorBoundary.jsx`
 - Test: `src/components/ErrorBoundary.test.jsx`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/components/ErrorBoundary.test.jsx`:
 
@@ -277,12 +277,12 @@ describe('ErrorBoundary', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npx vitest run src/components/ErrorBoundary.test.jsx`
 Expected: FAIL — `Failed to load url ./ErrorBoundary.jsx` (the component does not exist yet).
 
-- [ ] **Step 3: Write the minimal implementation**
+- [x] **Step 3: Write the minimal implementation**
 
 Create `src/components/ErrorBoundary.jsx`:
 
@@ -368,12 +368,12 @@ export default class ErrorBoundary extends React.Component {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npx vitest run src/components/ErrorBoundary.test.jsx`
 Expected: PASS — 3 tests pass. (You may see no console noise; the `console.error` spy silences React's caught-error log.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/ErrorBoundary.jsx src/components/ErrorBoundary.test.jsx
@@ -393,7 +393,7 @@ No unit test: `src/main.jsx` is the composition root (there is no `main.test.jsx
 - Modify: `src/main.jsx`
 - Modify: `.env.example`
 
-- [ ] **Step 1: Update `src/main.jsx`**
+- [x] **Step 1: Update `src/main.jsx`**
 
 Replace the entire file with:
 
@@ -419,7 +419,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 );
 ```
 
-- [ ] **Step 2: Document the env var in `.env.example`**
+- [x] **Step 2: Document the env var in `.env.example`**
 
 Append to the end of `.env.example` (after the `VITE_SUPABASE_ANON_KEY` line):
 
@@ -434,7 +434,7 @@ Append to the end of `.env.example` (after the `VITE_SUPABASE_ANON_KEY` line):
 # VITE_SENTRY_ENVIRONMENT=production
 ```
 
-- [ ] **Step 3: Format, lint, test, and build to verify**
+- [x] **Step 3: Format, lint, test, and build to verify**
 
 Run each and confirm success:
 
@@ -448,7 +448,7 @@ npm run build         # vite build — production bundle compiles with @sentry/r
 
 Expected: all five succeed. `npm run build` is the integration smoke test — it confirms the new imports resolve and the bundle builds.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/main.jsx .env.example

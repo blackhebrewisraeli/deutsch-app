@@ -54,7 +54,7 @@
 **Files:**
 - Modify: `src/lib/theme.js`
 
-- [ ] **Step 1: Add new colors.** In `src/lib/theme.js`, inside the `COLORS` object, after the `gold` line, add:
+- [x] **Step 1: Add new colors.** In `src/lib/theme.js`, inside the `COLORS` object, after the `gold` line, add:
 
 ```js
   // Playful redesign additions
@@ -66,7 +66,7 @@
 
 (`rust` #a82020 already exists and is reused as the red button lip; the ink lip is `#000000`.)
 
-- [ ] **Step 2: Add the `RADIUS` scale.** After the `BORDER` export (around line 111), add:
+- [x] **Step 2: Add the `RADIUS` scale.** After the `BORDER` export (around line 111), add:
 
 ```js
 // ── Radius ───────────────────────────────────────────────────
@@ -79,7 +79,7 @@ export const RADIUS = {
 };
 ```
 
-- [ ] **Step 3: Add the `SHADOW` scale.** Immediately after `RADIUS`, add:
+- [x] **Step 3: Add the `SHADOW` scale.** Immediately after `RADIUS`, add:
 
 ```js
 // ── Elevation ────────────────────────────────────────────────
@@ -95,12 +95,12 @@ export const SHADOW = {
 };
 ```
 
-- [ ] **Step 4: Verify build + tests.**
+- [x] **Step 4: Verify build + tests.**
 
 Run: `npm run build && npm test`
 Expected: build `✓ built`, `Tests 142 passed (142)`. (No visual change yet — tokens are additive.)
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add src/lib/theme.js
@@ -114,7 +114,7 @@ git commit -m "feat(theme): add green/lip colors, RADIUS and SHADOW scales"
 **Files:**
 - Modify: `src/lib/theme.js:142-217` (the `BUTTON` block + `btnSecondary` alias) and the `CARD` block.
 
-- [ ] **Step 1: Replace the entire `BUTTON` export** (lines ~142-214) with this. It keeps existing variant names (`primary`, `danger`, `secondary`, `ghost`) so current imports keep working, and adds `go` and `tile`:
+- [x] **Step 1: Replace the entire `BUTTON` export** (lines ~142-214) with this. It keeps existing variant names (`primary`, `danger`, `secondary`, `ghost`) so current imports keep working, and adds `go` and `tile`:
 
 ```js
 // ── Buttons ──────────────────────────────────────────────────
@@ -166,7 +166,7 @@ export const BUTTON = {
 export const btnSecondary = BUTTON.secondary;
 ```
 
-- [ ] **Step 2: Replace the `CARD` export** with rounded + shadow (remove the hard borders):
+- [x] **Step 2: Replace the `CARD` export** with rounded + shadow (remove the hard borders):
 
 ```js
 // ── Cards / panels ───────────────────────────────────────────
@@ -178,14 +178,14 @@ export const CARD = {
 };
 ```
 
-- [ ] **Step 2.5: `RADIUS`/`SHADOW`/`COLORS` must be declared above `BUTTON`/`CARD`.** They are (Task 1 placed `RADIUS`/`SHADOW` right after `BORDER`, ~line 111; `BUTTON` starts ~142). Confirm ordering after editing.
+- [x] **Step 2.5: `RADIUS`/`SHADOW`/`COLORS` must be declared above `BUTTON`/`CARD`.** They are (Task 1 placed `RADIUS`/`SHADOW` right after `BORDER`, ~line 111; `BUTTON` starts ~142). Confirm ordering after editing.
 
-- [ ] **Step 3: Verify build + lint + tests.**
+- [x] **Step 3: Verify build + lint + tests.**
 
 Run: `npm run build && npm run lint && npm test`
 Expected: build `✓ built`, lint clean, `142 passed`. Existing buttons now render rounded with a lip (no press animation yet — that arrives with the primitive). This is acceptable interim state.
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
 
 ```bash
 git add src/lib/theme.js
@@ -199,7 +199,7 @@ git commit -m "feat(theme): rework BUTTON (add go/tile, 3D lip) and CARD (rounde
 **Files:**
 - Modify: `src/App.jsx` (the global `<style>` block, currently ~lines 93-108)
 
-- [ ] **Step 1: Add keyframes.** Inside the existing `<style>{`...`}</style>` block in `App.jsx`, after the existing `.slide-up` animation line, add:
+- [x] **Step 1: Add keyframes.** Inside the existing `<style>{`...`}</style>` block in `App.jsx`, after the existing `.slide-up` animation line, add:
 
 ```css
         @keyframes pop      { 0% { transform: scale(0.9); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
@@ -212,12 +212,12 @@ git commit -m "feat(theme): rework BUTTON (add go/tile, 3D lip) and CARD (rounde
         }
 ```
 
-- [ ] **Step 2: Verify build.**
+- [x] **Step 2: Verify build.**
 
 Run: `npm run build`
 Expected: `✓ built`. (Keyframes unused as yet — no visual change.)
 
-- [ ] **Step 3: Commit.**
+- [x] **Step 3: Commit.**
 
 ```bash
 git add src/App.jsx
@@ -231,7 +231,7 @@ git commit -m "feat(motion): add pop/wiggle/confetti keyframes + reduced-motion 
 **Files:**
 - Create: `src/components/ui/Button.jsx`
 
-- [ ] **Step 1: Create the component.** Full file:
+- [x] **Step 1: Create the component.** Full file:
 
 ```jsx
 import { useState } from 'react';
@@ -280,14 +280,14 @@ export default function Button({
 }
 ```
 
-- [ ] **Step 2: Smoke-test it renders.** Temporarily import and drop `<Button variant="go">CHECK →</Button>` into any tab, run the dev server, confirm it shows green and sinks on click, then remove the temporary usage. (Real wiring happens in the surface tasks.)
+- [x] **Step 2: Smoke-test it renders.** Temporarily import and drop `<Button variant="go">CHECK →</Button>` into any tab, run the dev server, confirm it shows green and sinks on click, then remove the temporary usage. (Real wiring happens in the surface tasks.)
 
-- [ ] **Step 3: Verify build + lint.**
+- [x] **Step 3: Verify build + lint.**
 
 Run: `npm run lint && npm run build`
 Expected: lint clean, `✓ built`.
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
 
 ```bash
 git add src/components/ui/Button.jsx
@@ -301,7 +301,7 @@ git commit -m "feat(ui): add Button primitive with 3D-press interaction"
 **Files:**
 - Create: `src/components/ui/Card.jsx`
 
-- [ ] **Step 1: Create the component.** Full file:
+- [x] **Step 1: Create the component.** Full file:
 
 ```jsx
 import { CARD } from '../../lib/theme';
@@ -316,12 +316,12 @@ export default function Card({ variant = 'base', style, children, ...rest }) {
 }
 ```
 
-- [ ] **Step 2: Verify build + lint.**
+- [x] **Step 2: Verify build + lint.**
 
 Run: `npm run lint && npm run build`
 Expected: lint clean, `✓ built`.
 
-- [ ] **Step 3: Commit.**
+- [x] **Step 3: Commit.**
 
 ```bash
 git add src/components/ui/Card.jsx
@@ -335,7 +335,7 @@ git commit -m "feat(ui): add Card primitive (rounded + shadow)"
 **Files:**
 - Create: `src/components/ui/Confetti.jsx`
 
-- [ ] **Step 1: Create the component.** Full file (relies on the `confetti` keyframe from Task 3):
+- [x] **Step 1: Create the component.** Full file (relies on the `confetti` keyframe from Task 3):
 
 ```jsx
 import { useMemo } from 'react';
@@ -387,18 +387,18 @@ export default function Confetti({ count = 28 }) {
 }
 ```
 
-- [ ] **Step 2: Add a reduced-motion guard for confetti.** In `App.jsx`'s `@media (prefers-reduced-motion: reduce)` block (added in Task 3), append a rule so confetti pieces don't animate. Since the pieces use an inline `animation`, the cleanest guard is to give the burst a class. Update `Confetti.jsx` wrapper `<div>` to add `className="confetti-layer"`, then in `App.jsx` reduced-motion block add:
+- [x] **Step 2: Add a reduced-motion guard for confetti.** In `App.jsx`'s `@media (prefers-reduced-motion: reduce)` block (added in Task 3), append a rule so confetti pieces don't animate. Since the pieces use an inline `animation`, the cleanest guard is to give the burst a class. Update `Confetti.jsx` wrapper `<div>` to add `className="confetti-layer"`, then in `App.jsx` reduced-motion block add:
 
 ```css
           .confetti-layer { display: none !important; }
 ```
 
-- [ ] **Step 3: Verify build + lint.**
+- [x] **Step 3: Verify build + lint.**
 
 Run: `npm run lint && npm run build`
 Expected: lint clean, `✓ built`.
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
 
 ```bash
 git add src/components/ui/Confetti.jsx src/App.jsx
@@ -417,15 +417,15 @@ git commit -m "feat(ui): add dependency-free Confetti burst + reduced-motion gua
 - Any `border: 2px solid ${COLORS.ink}` on a container → remove border, add `borderRadius: RADIUS.lg`, `boxShadow: SHADOW.card` (or `SHADOW.bar` for sticky bars).
 - Keep all mono fonts/labels.
 
-- [ ] **Step 1: Nav pills.** In `App.jsx` nav, wrap the tab row so the `<nav>` becomes a rounded bar: set the `<nav>` style to `borderBottom: 'none'`, add `margin: '0 16px'` (desktop), `borderRadius: RADIUS.lg`, `boxShadow: SHADOW.bar`, `padding: 8`, `gap: 8`, `background: COLORS.paper`. Each tab `<button>`: remove `borderRight`, add `borderRadius: RADIUS.md`; active tab `background: COLORS.ink` + `boxShadow: SHADOW.press('#000000')`; keep the `num` + `label` mono text and the emoji-free icon. Keep the existing red active-dot OR replace with the existing Stats badge logic (unchanged). Keep mobile icon-only behavior; just add `borderRadius`.
+- [x] **Step 1: Nav pills.** In `App.jsx` nav, wrap the tab row so the `<nav>` becomes a rounded bar: set the `<nav>` style to `borderBottom: 'none'`, add `margin: '0 16px'` (desktop), `borderRadius: RADIUS.lg`, `boxShadow: SHADOW.bar`, `padding: 8`, `gap: 8`, `background: COLORS.paper`. Each tab `<button>`: remove `borderRight`, add `borderRadius: RADIUS.md`; active tab `background: COLORS.ink` + `boxShadow: SHADOW.press('#000000')`; keep the `num` + `label` mono text and the emoji-free icon. Keep the existing red active-dot OR replace with the existing Stats badge logic (unchanged). Keep mobile icon-only behavior; just add `borderRadius`.
 
-- [ ] **Step 2: Header stat chips.** In `UI.jsx` `StatBlock`, change the icon container to `borderRadius: RADIUS.pill` (circle) and wrap the label+value in a chip: add `borderRadius: RADIUS.lg`, `boxShadow: SHADOW.card`, `background: COLORS.card`, `padding: '6px 12px'`. Keep `pulsing` animation prop behavior.
+- [x] **Step 2: Header stat chips.** In `UI.jsx` `StatBlock`, change the icon container to `borderRadius: RADIUS.pill` (circle) and wrap the label+value in a chip: add `borderRadius: RADIUS.lg`, `boxShadow: SHADOW.card`, `background: COLORS.card`, `padding: '6px 12px'`. Keep `pulsing` animation prop behavior.
 
-- [ ] **Step 3: SectionLabel + Hero.** `SectionLabel` — no structural change needed (it's text); leave as-is. `Hero` — leave type as-is (Fraunces title stays); optionally soften the `borderBottom` divider to `1px solid ${COLORS.ink}20`. (Keep minimal.)
+- [x] **Step 3: SectionLabel + Hero.** `SectionLabel` — no structural change needed (it's text); leave as-is. `Hero` — leave type as-is (Fraunces title stays); optionally soften the `borderBottom` divider to `1px solid ${COLORS.ink}20`. (Keep minimal.)
 
-- [ ] **Step 4: Verify.** Run the 4-step verification (test/lint/build/screenshot). Screenshot the app header+nav on any tab; confirm rounded pills + chips, active tab sunk, Stats badge intact.
+- [x] **Step 4: Verify.** Run the 4-step verification (test/lint/build/screenshot). Screenshot the app header+nav on any tab; confirm rounded pills + chips, active tab sunk, Stats badge intact.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add src/App.jsx src/components/UI.jsx
@@ -439,13 +439,13 @@ git commit -m "style(chrome): rounded nav pills + header stat chips"
 **Files:**
 - Modify: `src/components/SplashScreen.jsx`
 
-- [ ] **Step 1: Chunky level cards.** Replace each level `<button>`'s flat border style with `BUTTON.tile` shape: `borderRadius: RADIUS.lg`, `boxShadow: SHADOW.press(COLORS.lip)`, no hard border. Keep the 3-band German-flag layout and the existing `onComplete(level)` handler. Optionally wrap each with the `Button` primitive (`variant="tile"`) for the press effect — but keep the existing `onClick`/level logic.
+- [x] **Step 1: Chunky level cards.** Replace each level `<button>`'s flat border style with `BUTTON.tile` shape: `borderRadius: RADIUS.lg`, `boxShadow: SHADOW.press(COLORS.lip)`, no hard border. Keep the 3-band German-flag layout and the existing `onComplete(level)` handler. Optionally wrap each with the `Button` primitive (`variant="tile"`) for the press effect — but keep the existing `onClick`/level logic.
 
-- [ ] **Step 2: Entrance bounce.** Add `className="pop"` to the level-button container so they pop in on mount.
+- [x] **Step 2: Entrance bounce.** Add `className="pop"` to the level-button container so they pop in on mount.
 
-- [ ] **Step 3: Verify.** 4-step verification; screenshot the splash (clear `deutsch-onboarded` in localStorage to see it).
+- [x] **Step 3: Verify.** 4-step verification; screenshot the splash (clear `deutsch-onboarded` in localStorage to see it).
 
-- [ ] **Step 4: Commit.**
+- [x] **Step 4: Commit.**
 
 ```bash
 git add src/components/SplashScreen.jsx
@@ -459,12 +459,12 @@ git commit -m "style(splash): chunky rounded level cards + entrance pop"
 **Files:**
 - Modify: `src/components/VocabTab.jsx`
 
-- [ ] **Step 1: Flashcard.** The white card showing the German word: replace `border: BORDER.standard` with `borderRadius: RADIUS.xl` + `boxShadow: SHADOW.cardChunk`. Keep the Fraunces word + mono IPA.
-- [ ] **Step 2: Progress pills.** The deck progress dots: `borderRadius: RADIUS.pill`, learned = `COLORS.green`, unlearned = `#e7dcae`.
-- [ ] **Step 3: Multiple-choice + Hard/Good/Easy buttons.** Replace the inline `<button>`s with the `Button` primitive: MC options use `variant="tile"`; the correct-answer highlight on answer uses `variant="go"`; the typed-answer CHECK uses `variant="go"`; Hard = `variant="tile"`, Good = `variant="primary"`, Easy = `variant="go"`. Keep every existing `onClick` handler (`recordVocabAnswer`, `markLearned`, `advanceQueue`, the `clickLockRef` guard) exactly.
-- [ ] **Step 4: Deck-complete banner → celebration.** Keep the existing shimmer banner but add `<Confetti />` inside a `position: relative` wrapper when `deckComplete` is true. Add `className="pop"` to the banner.
-- [ ] **Step 5: Verify.** 4-step verification; screenshot Vocab (seed an SRS state if helpful). Click an answer → confirm pop + green correct + 3D press. Confirm `LEARNED` still increments correctly (logic unchanged).
-- [ ] **Step 6: Commit.**
+- [x] **Step 1: Flashcard.** The white card showing the German word: replace `border: BORDER.standard` with `borderRadius: RADIUS.xl` + `boxShadow: SHADOW.cardChunk`. Keep the Fraunces word + mono IPA.
+- [x] **Step 2: Progress pills.** The deck progress dots: `borderRadius: RADIUS.pill`, learned = `COLORS.green`, unlearned = `#e7dcae`.
+- [x] **Step 3: Multiple-choice + Hard/Good/Easy buttons.** Replace the inline `<button>`s with the `Button` primitive: MC options use `variant="tile"`; the correct-answer highlight on answer uses `variant="go"`; the typed-answer CHECK uses `variant="go"`; Hard = `variant="tile"`, Good = `variant="primary"`, Easy = `variant="go"`. Keep every existing `onClick` handler (`recordVocabAnswer`, `markLearned`, `advanceQueue`, the `clickLockRef` guard) exactly.
+- [x] **Step 4: Deck-complete banner → celebration.** Keep the existing shimmer banner but add `<Confetti />` inside a `position: relative` wrapper when `deckComplete` is true. Add `className="pop"` to the banner.
+- [x] **Step 5: Verify.** 4-step verification; screenshot Vocab (seed an SRS state if helpful). Click an answer → confirm pop + green correct + 3D press. Confirm `LEARNED` still increments correctly (logic unchanged).
+- [x] **Step 6: Commit.**
 
 ```bash
 git add src/components/VocabTab.jsx
@@ -478,12 +478,12 @@ git commit -m "style(vocab): rounded flashcard, 3D answer buttons, confetti on d
 **Files:**
 - Modify: `src/components/translate/FeedbackPanel.jsx`, `TileExercise.jsx`, `BlankExercise.jsx`, `TypingExercise.jsx`, `PromptCard.jsx`
 
-- [ ] **Step 1: PromptCard.** Replace `BORDER.standard` with `borderRadius: RADIUS.lg` + `boxShadow: SHADOW.card`.
-- [ ] **Step 2: Word/blank tiles.** In `TileExercise` and `BlankExercise`, swap the inline tile `<button>`s for `Button variant="tile"`; the CHECK button → `Button variant="go"`; the skip button → `Button variant="secondary"`. Keep `check`, `addTile`, `removeTile`, `fillNext`, `clearBlank`, `onSkip` handlers exactly.
-- [ ] **Step 3: TypingExercise.** Textarea → `borderRadius: RADIUS.md`, inset shadow, no hard border. CHECK → `Button variant="go"`; skip → `Button variant="secondary"`.
-- [ ] **Step 4: FeedbackPanel.** Container → `borderRadius: RADIUS.lg` + `SHADOW.card`; keep the three-way `verdict` colors (correct=gold, almost=paperDeep, wrong=red). NEXT → `Button variant="primary"` for correct / `Button variant="go"` otherwise (keep current color logic). Add `className="pop"` to the panel so results pop in.
-- [ ] **Step 5: Verify.** 4-step verification; screenshot Translate at A1 (assemble tiles → CHECK → pop feedback) and A2 (blanks render).
-- [ ] **Step 6: Commit.**
+- [x] **Step 1: PromptCard.** Replace `BORDER.standard` with `borderRadius: RADIUS.lg` + `boxShadow: SHADOW.card`.
+- [x] **Step 2: Word/blank tiles.** In `TileExercise` and `BlankExercise`, swap the inline tile `<button>`s for `Button variant="tile"`; the CHECK button → `Button variant="go"`; the skip button → `Button variant="secondary"`. Keep `check`, `addTile`, `removeTile`, `fillNext`, `clearBlank`, `onSkip` handlers exactly.
+- [x] **Step 3: TypingExercise.** Textarea → `borderRadius: RADIUS.md`, inset shadow, no hard border. CHECK → `Button variant="go"`; skip → `Button variant="secondary"`.
+- [x] **Step 4: FeedbackPanel.** Container → `borderRadius: RADIUS.lg` + `SHADOW.card`; keep the three-way `verdict` colors (correct=gold, almost=paperDeep, wrong=red). NEXT → `Button variant="primary"` for correct / `Button variant="go"` otherwise (keep current color logic). Add `className="pop"` to the panel so results pop in.
+- [x] **Step 5: Verify.** 4-step verification; screenshot Translate at A1 (assemble tiles → CHECK → pop feedback) and A2 (blanks render).
+- [x] **Step 6: Commit.**
 
 ```bash
 git add src/components/translate/
@@ -497,11 +497,11 @@ git commit -m "style(translate): rounded tiles/cards, 3D buttons, pop feedback"
 **Files:**
 - Modify: `src/components/AlphabetTab.jsx`
 
-- [ ] **Step 1: Quiz letter tiles.** The four letter-choice `<button>`s → `Button variant="tile"` (keep `handleLetterGuess`). On answer, the chosen tile shows green (`variant="go"`) if correct / red (`variant="danger"`) if wrong; add `className="pop"` to the result.
-- [ ] **Step 2: Audio play button.** The big "play" button → circle: `borderRadius: RADIUS.pill`, `boxShadow: SHADOW.press(COLORS.greenDeep)` (or keep gold with `SHADOW.press` using a gold-deep `#caa10f`). Keep `speak()` handler.
-- [ ] **Step 3: Browse-mode letter grid.** Soften the grid cells: `borderRadius: RADIUS.sm`; keep the existing letter+word layout.
-- [ ] **Step 4: Verify.** 4-step verification; screenshot Alphabet quiz + browse.
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Quiz letter tiles.** The four letter-choice `<button>`s → `Button variant="tile"` (keep `handleLetterGuess`). On answer, the chosen tile shows green (`variant="go"`) if correct / red (`variant="danger"`) if wrong; add `className="pop"` to the result.
+- [x] **Step 2: Audio play button.** The big "play" button → circle: `borderRadius: RADIUS.pill`, `boxShadow: SHADOW.press(COLORS.greenDeep)` (or keep gold with `SHADOW.press` using a gold-deep `#caa10f`). Keep `speak()` handler.
+- [x] **Step 3: Browse-mode letter grid.** Soften the grid cells: `borderRadius: RADIUS.sm`; keep the existing letter+word layout.
+- [x] **Step 4: Verify.** 4-step verification; screenshot Alphabet quiz + browse.
+- [x] **Step 5: Commit.**
 
 ```bash
 git add src/components/AlphabetTab.jsx
@@ -515,12 +515,12 @@ git commit -m "style(alphabet): rounded quiz tiles, round play button, pop feedb
 **Files:**
 - Modify: `src/components/chat/MessageBubble.jsx`, `TaskPanel.jsx`, `ChatInput.jsx`, `CorrectionPanel.jsx`, `WelcomeBanner.jsx`, `ScenarioPicker.jsx`
 
-- [ ] **Step 1: Anna avatar + bubbles.** In `MessageBubble`, add a circular avatar (`borderRadius: RADIUS.pill`, gold bg, emoji `🧑‍🏫`) beside Anna's messages. Bubble: gold for Anna with `borderRadius: '20px 20px 20px 6px'` (tail) + `SHADOW.press('rgba(22,17,11,.10)')`; user bubble ink with `borderRadius: '20px 20px 6px 20px'`. Keep the `speak()` button + IPA (mono) + English (kept; mono or body as today).
-- [ ] **Step 2: TaskPanel.** Red card → `borderRadius: RADIUS.lg` + `SHADOW.press(COLORS.rust)`; "all done" gold card → `borderRadius: RADIUS.lg`. Keep `SHOW HINT`/reset handlers.
-- [ ] **Step 3: ChatInput.** Mic button → `borderRadius: RADIUS.md` chunky (`SHADOW.press('#000000')`); text input → `borderRadius: RADIUS.md`, inset shadow, no hard border; Send → `Button variant="go"`. Keep `onSend`/`onStartListening`/`onStopListening`.
-- [ ] **Step 4: CorrectionPanel + WelcomeBanner + ScenarioPicker.** Correction `<aside>` panel → `borderRadius: RADIUS.lg`; keep red/parchment states. WelcomeBanner → `borderRadius: RADIUS.lg`. ScenarioPicker buttons → `borderRadius` on the container + active state; keep `setScenario`.
-- [ ] **Step 5: Verify.** 4-step verification; screenshot Chat (welcome banner, Anna bubble + avatar, task card, input row, correction panel).
-- [ ] **Step 6: Commit.**
+- [x] **Step 1: Anna avatar + bubbles.** In `MessageBubble`, add a circular avatar (`borderRadius: RADIUS.pill`, gold bg, emoji `🧑‍🏫`) beside Anna's messages. Bubble: gold for Anna with `borderRadius: '20px 20px 20px 6px'` (tail) + `SHADOW.press('rgba(22,17,11,.10)')`; user bubble ink with `borderRadius: '20px 20px 6px 20px'`. Keep the `speak()` button + IPA (mono) + English (kept; mono or body as today).
+- [x] **Step 2: TaskPanel.** Red card → `borderRadius: RADIUS.lg` + `SHADOW.press(COLORS.rust)`; "all done" gold card → `borderRadius: RADIUS.lg`. Keep `SHOW HINT`/reset handlers.
+- [x] **Step 3: ChatInput.** Mic button → `borderRadius: RADIUS.md` chunky (`SHADOW.press('#000000')`); text input → `borderRadius: RADIUS.md`, inset shadow, no hard border; Send → `Button variant="go"`. Keep `onSend`/`onStartListening`/`onStopListening`.
+- [x] **Step 4: CorrectionPanel + WelcomeBanner + ScenarioPicker.** Correction `<aside>` panel → `borderRadius: RADIUS.lg`; keep red/parchment states. WelcomeBanner → `borderRadius: RADIUS.lg`. ScenarioPicker buttons → `borderRadius` on the container + active state; keep `setScenario`.
+- [x] **Step 5: Verify.** 4-step verification; screenshot Chat (welcome banner, Anna bubble + avatar, task card, input row, correction panel).
+- [x] **Step 6: Commit.**
 
 ```bash
 git add src/components/chat/
@@ -534,11 +534,11 @@ git commit -m "style(chat): avatar + rounded bubbles, chunky input, rounded pane
 **Files:**
 - Modify: `src/components/StatsTab.jsx`
 
-- [ ] **Step 1: Widget cards.** Each section container (Today, By section, Accuracy, Vocab queue) → `borderRadius: RADIUS.lg` + `SHADOW.card`, remove hard borders.
-- [ ] **Step 2: Bars + heatmap.** Bar fills (`PerTabBars`, `AccuracyByLevel`, SRS progress) → rounded ends (`borderRadius: RADIUS.pill` on the fill). Heatmap cells → `borderRadius: 3`.
-- [ ] **Step 3: Review-feed rows.** Each tappable review row → `borderRadius: RADIUS.md` + hover `SHADOW.card`; keep the `onReview` click handler and badges.
-- [ ] **Step 4: Verify.** 4-step verification; screenshot Stats with seeded data (daily + items + srs).
-- [ ] **Step 5: Commit.**
+- [x] **Step 1: Widget cards.** Each section container (Today, By section, Accuracy, Vocab queue) → `borderRadius: RADIUS.lg` + `SHADOW.card`, remove hard borders.
+- [x] **Step 2: Bars + heatmap.** Bar fills (`PerTabBars`, `AccuracyByLevel`, SRS progress) → rounded ends (`borderRadius: RADIUS.pill` on the fill). Heatmap cells → `borderRadius: 3`.
+- [x] **Step 3: Review-feed rows.** Each tappable review row → `borderRadius: RADIUS.md` + hover `SHADOW.card`; keep the `onReview` click handler and badges.
+- [x] **Step 4: Verify.** 4-step verification; screenshot Stats with seeded data (daily + items + srs).
+- [x] **Step 5: Commit.**
 
 ```bash
 git add src/components/StatsTab.jsx
@@ -552,10 +552,10 @@ git commit -m "style(stats): rounded widget cards, pill bars, tappable review ro
 **Files:**
 - Modify: `src/components/VocabTab.jsx`, `src/components/AlphabetTab.jsx`, `src/components/translate/FeedbackPanel.jsx` (most `pop` hooks added in earlier tasks — this task fills gaps + adds `wiggle` + streak confetti)
 
-- [ ] **Step 1: Wrong-answer wiggle.** In Vocab MC/typed-wrong, Alphabet wrong, and Translate wrong feedback, add `className="wiggle"` to the result/feedback element when the verdict is `wrong`.
-- [ ] **Step 2: Streak-milestone confetti.** In `App.jsx`, when `stats.streak` crosses a milestone (every 7) on load, render `<Confetti />` once over the header for ~1.2s (a `useState` flag cleared by `setTimeout`). Keep it lightweight; guard with the reduced-motion class already in place.
-- [ ] **Step 3: Verify.** 4-step verification; screenshot a wrong answer (wiggle) and confirm confetti fires on a seeded 7-streak.
-- [ ] **Step 4: Commit.**
+- [x] **Step 1: Wrong-answer wiggle.** In Vocab MC/typed-wrong, Alphabet wrong, and Translate wrong feedback, add `className="wiggle"` to the result/feedback element when the verdict is `wrong`.
+- [x] **Step 2: Streak-milestone confetti.** In `App.jsx`, when `stats.streak` crosses a milestone (every 7) on load, render `<Confetti />` once over the header for ~1.2s (a `useState` flag cleared by `setTimeout`). Keep it lightweight; guard with the reduced-motion class already in place.
+- [x] **Step 3: Verify.** 4-step verification; screenshot a wrong answer (wiggle) and confirm confetti fires on a seeded 7-streak.
+- [x] **Step 4: Commit.**
 
 ```bash
 git add src/components/VocabTab.jsx src/components/AlphabetTab.jsx src/components/translate/FeedbackPanel.jsx src/App.jsx
@@ -566,9 +566,9 @@ git commit -m "feat(motion): wiggle on wrong, confetti on streak milestones"
 
 ## Final: full regression pass + finish the branch
 
-- [ ] **Step 1: Full verification.** `npm test` (142 pass) + `npm run lint` (clean) + `npm run build` (`✓ built`).
-- [ ] **Step 2: Whole-app screenshot tour.** Dev server; screenshot all 5 tabs + splash to confirm the cohesive playful-editorial look.
-- [ ] **Step 3:** Use the `superpowers:finishing-a-development-branch` skill to decide merge/PR for `playful-redesign`.
+- [x] **Step 1: Full verification.** `npm test` (142 pass) + `npm run lint` (clean) + `npm run build` (`✓ built`).
+- [x] **Step 2: Whole-app screenshot tour.** Dev server; screenshot all 5 tabs + splash to confirm the cohesive playful-editorial look.
+- [x] **Step 3:** Use the `superpowers:finishing-a-development-branch` skill to decide merge/PR for `playful-redesign`.
 
 ---
 

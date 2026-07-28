@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: tables `public.leagues(id uuid, tier smallint, period_start date, pack_id text, created_at timestamptz)` and `public.league_members(league_id uuid, user_id uuid, handle text, weekly_xp int, rank smallint, result text, updated_at timestamptz)`; columns `profiles.handle text unique`, `profiles.avatar_emoji text`; function `public.is_league_member(uuid, uuid) returns boolean`.
 
-- [ ] **Step 1: Write the migration**
+- [x] **Step 1: Write the migration**
 
 Create `supabase/migrations/20260627000000_leagues.sql`:
 
@@ -90,13 +90,13 @@ create policy "read my leagues" on public.leagues
   for select using (public.is_league_member(id, auth.uid()));
 ```
 
-- [ ] **Step 2: Apply to a Supabase preview branch and verify**
+- [x] **Step 2: Apply to a Supabase preview branch and verify**
 
 Apply via the Supabase MCP `apply_migration` against a dev/preview branch (NOT production). Then verify with `list_tables` that `leagues` and `league_members` exist with RLS enabled, and `list_migrations` shows the new migration. Confirm `profiles` now has `handle` + `avatar_emoji`.
 
 Expected: both tables present, `rowsecurity = true`, no advisor errors from `get_advisors` (security).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add supabase/migrations/20260627000000_leagues.sql
@@ -118,7 +118,7 @@ git commit -m "feat(leagues): migration — leagues/league_members tables, profi
 - Produces: `xpForDay(day) -> number` exported from `src/lib/xpCore.js`, depending only on `XP_PER_VERDICT` from `./gameConfig`.
 - Consumes: `XP_PER_VERDICT` from `src/lib/gameConfig.js`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/lib/xpCore.test.js`:
 
@@ -156,12 +156,12 @@ describe('xpForDay', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/lib/xpCore.test.js`
 Expected: FAIL — cannot resolve `./xpCore.js`.
 
-- [ ] **Step 3: Create the module**
+- [x] **Step 3: Create the module**
 
 Create `src/lib/xpCore.js`:
 
@@ -183,7 +183,7 @@ export function xpForDay(day) {
 }
 ```
 
-- [ ] **Step 4: Re-export from gamification.js**
+- [x] **Step 4: Re-export from gamification.js**
 
 In `src/lib/gamification.js`, remove the `export function xpForDay(day) { ... }` block (lines ~14-25) and add near the other imports:
 
@@ -194,12 +194,12 @@ export { xpForDay };
 
 Leave `totalXp` / `todayXp` as-is — they call `xpForDay` and now get it from the import.
 
-- [ ] **Step 5: Run tests to verify pass (no regressions)**
+- [x] **Step 5: Run tests to verify pass (no regressions)**
 
 Run: `npx vitest run src/lib/xpCore.test.js src/lib/gamification.test.js`
 Expected: PASS — both files green.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/lib/xpCore.js src/lib/xpCore.test.js src/lib/gamification.js
@@ -217,7 +217,7 @@ git commit -m "refactor(xp): extract xpForDay into dependency-free xpCore module
 **Interfaces:**
 - Produces: `generateHandle(rng = Math.random) -> string` returning `AdjectiveNounNN` (NN = two digits). Deterministic when given a seeded rng.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `api/_lib/handle.test.js`:
 
@@ -251,12 +251,12 @@ describe('generateHandle', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/_lib/handle.test.js`
 Expected: FAIL — cannot resolve `./handle.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `api/_lib/handle.js`:
 
@@ -273,12 +273,12 @@ export function generateHandle(rng = Math.random) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/_lib/handle.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/_lib/handle.js api/_lib/handle.test.js
@@ -297,7 +297,7 @@ git commit -m "feat(leagues): handle generator"
 - Consumes: `xpForDay` from `../../src/lib/xpCore.js`.
 - Produces: `weeklyXpFromRows(rows, periodStart) -> number`, where `rows` are `stats_daily` rows `{ day: 'YYYY-MM-DD', counters: <day aggregate> }` and `periodStart` is a `'YYYY-MM-DD'` string. Sums `xpForDay(row.counters)` over rows with `day >= periodStart`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `api/_lib/weeklyXp.test.js`:
 
@@ -335,12 +335,12 @@ describe('weeklyXpFromRows', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/_lib/weeklyXp.test.js`
 Expected: FAIL — cannot resolve `./weeklyXp.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `api/_lib/weeklyXp.js`:
 
@@ -357,12 +357,12 @@ export function weeklyXpFromRows(rows, periodStart) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/_lib/weeklyXp.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/_lib/weeklyXp.js api/_lib/weeklyXp.test.js
@@ -384,7 +384,7 @@ git commit -m "feat(leagues): weekly-XP aggregation helper reusing xpForDay"
   - `nextTier(tier, result) -> number` — applies `'promoted'|'demoted'|'held'`, clamped to `[MIN, MAX]`.
   - `settleLeague(members) -> Array<{ user_id, rank, result }>` — sorts by `weekly_xp` desc, tie-break `updated_at` asc; top 7 `promoted`, bottom 5 `demoted`, rest `held`. Pure; does not mutate input.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `api/_lib/leagueLogic.test.js`:
 
@@ -446,12 +446,12 @@ describe('settleLeague', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/_lib/leagueLogic.test.js`
 Expected: FAIL — cannot resolve `./leagueLogic.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `api/_lib/leagueLogic.js`:
 
@@ -489,12 +489,12 @@ export function settleLeague(members) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/_lib/leagueLogic.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/_lib/leagueLogic.js api/_lib/leagueLogic.test.js
@@ -513,7 +513,7 @@ git commit -m "feat(leagues): period/tier/settlement domain logic"
 - Consumes: `requireAuth`, `serviceClient`, `sendError`; `currentPeriodStart` from `api/_lib/leagueLogic.js`; `generateHandle` from `api/_lib/handle.js`.
 - Produces: default export `handler(req, res)`. On success returns `200 { league_id, tier, period_start, handle }`. Idempotent: returns the existing membership if one exists for the current period.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `api/v1/league/join.test.js`:
 
@@ -574,12 +574,12 @@ it('returns existing membership without creating a new one (idempotent)', async 
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/v1/league/join.test.js`
 Expected: FAIL — cannot resolve `./join.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `api/v1/league/join.js`:
 
@@ -676,12 +676,12 @@ export default async function handler(req, res) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/v1/league/join.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/v1/league/join.js api/v1/league/join.test.js
@@ -700,7 +700,7 @@ git commit -m "feat(leagues): POST join endpoint (idempotent, tier placement)"
 - Consumes: `requireAuth`, `serviceClient`, `sendError`; `currentPeriodStart`; `weeklyXpFromRows` from `api/_lib/weeklyXp.js`.
 - Produces: default export `handler(req, res)`. Recomputes the caller's own `weekly_xp` from their `stats_daily` for the current period and upserts it. Returns `200 { weekly_xp }`. Only ever writes the caller's row.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `api/v1/league/refresh.test.js`:
 
@@ -753,12 +753,12 @@ it('computes weekly xp from stats and updates only the caller row', async () => 
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/v1/league/refresh.test.js`
 Expected: FAIL — cannot resolve `./refresh.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `api/v1/league/refresh.js`:
 
@@ -809,12 +809,12 @@ export default async function handler(req, res) {
 
 Note: the `update().eq('user_id', ...)` scopes to the caller's membership rows; only the current-period row exists as un-settled, so a tighter `period` filter is unnecessary, but if a stale prior row exists the settled `rank` is left untouched (we only set `weekly_xp`/`updated_at`). This is acceptable — settled rows are read by period.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/v1/league/refresh.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/v1/league/refresh.js api/v1/league/refresh.test.js
@@ -834,7 +834,7 @@ git commit -m "feat(leagues): POST refresh endpoint (server-computed weekly XP)"
 - Produces: default export `handler(req, res)`. Reads `?userId=` from `req.query`. Returns `200 { handle, avatar_emoji, tier, total_xp, longest_streak, achievements }` only if the requester shares a current-period league with the target; else `403`.
 - Note: `longest_streak` is computed from a helper `longestStreak(dayKeys)` defined in this task (pure, local), to avoid pulling the browser streak module server-side.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `api/v1/league/profile.test.js`:
 
@@ -879,12 +879,12 @@ it('returns 400 when userId missing', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/v1/league/profile.test.js`
 Expected: FAIL — cannot resolve `./profile.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 First add a SQL helper for the shared-league check. Append to a NEW migration `supabase/migrations/20260627000100_shared_league.sql`:
 
@@ -980,12 +980,12 @@ export default async function handler(req, res) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/v1/league/profile.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/v1/league/profile.js api/v1/league/profile.test.js supabase/migrations/20260627000100_shared_league.sql
@@ -1005,7 +1005,7 @@ git commit -m "feat(leagues): GET profile endpoint with shared-league gate"
 - Consumes: `serviceClient`, `sendError`; `settleLeague`, `currentPeriodStart` from `api/_lib/leagueLogic.js`.
 - Produces: default export `handler(req, res)`. Protected by a `CRON_SECRET` bearer check (Vercel cron sets `authorization: Bearer <CRON_SECRET>`). Settles every league whose `period_start` is before the current period and whose members are not yet ranked. Returns `200 { settled: <count> }`. Idempotent.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `api/v1/league/settle.test.js`:
 
@@ -1067,12 +1067,12 @@ it('settles past leagues and writes ranks/results', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/v1/league/settle.test.js`
 Expected: FAIL — cannot resolve `./settle.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `api/v1/league/settle.js`:
 
@@ -1128,12 +1128,12 @@ export default async function handler(req, res) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run api/v1/league/settle.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Add the cron to `vercel.json`**
+- [x] **Step 5: Add the cron to `vercel.json`**
 
 Add (or merge) a `crons` array in `vercel.json`:
 
@@ -1147,7 +1147,7 @@ Add (or merge) a `crons` array in `vercel.json`:
 
 If `vercel.json` already has other top-level keys, add `crons` alongside them without removing anything. Set `CRON_SECRET` in Vercel project env (Preview + Production) via `vercel env add CRON_SECRET`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add api/v1/league/settle.js api/v1/league/settle.test.js vercel.json
@@ -1172,7 +1172,7 @@ git commit -m "feat(leagues): weekly settle endpoint + Vercel cron"
   - `fetchProfile(userId) -> Promise<profile>`
   - `fetchStandings(supabase, leagueId) -> Promise<rows[]>` (uses the RLS-scoped client `select`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/lib/leagues.test.js`:
 
@@ -1212,12 +1212,12 @@ describe('joinLeague', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/lib/leagues.test.js`
 Expected: FAIL — cannot resolve `./leagues.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `src/lib/leagues.js`:
 
@@ -1266,12 +1266,12 @@ export async function fetchStandings(supabase, leagueId) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/lib/leagues.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/leagues.js src/lib/leagues.test.js
@@ -1290,7 +1290,7 @@ git commit -m "feat(leagues): client API module"
 - Consumes: `useAuth`, `getSupabase` from `src/lib/auth.js`; `joinLeague`, `refreshLeague`, `fetchStandings`, `TIER_NAMES`, `LEAGUES_ENABLED` from `src/lib/leagues.js`; theme tokens from `src/lib/theme.js`.
 - Produces: default export `LeaderboardSection({ onSelectUser })`. Renders the signed-out teaser, or the league standings list. Calls `onSelectUser(userId)` when a row is tapped.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/components/stats/LeaderboardSection.test.jsx`:
 
@@ -1336,12 +1336,12 @@ it('renders standings when signed in', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/components/stats/LeaderboardSection.test.jsx`
 Expected: FAIL — cannot resolve `./LeaderboardSection.jsx`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Open `src/components/stats/AccountSection.jsx` first to copy its exact theme-token import path and inline-style idiom, then create `src/components/stats/LeaderboardSection.jsx`:
 
@@ -1429,12 +1429,12 @@ export default function LeaderboardSection({ onSelectUser }) {
 
 If any referenced token (`theme.color.surfaceAlt`, `theme.color.success`, `theme.color.danger`, `theme.space.*`) does not exist, open `src/lib/theme.js` and substitute the nearest existing token — do not invent new tokens or hardcode colors.
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/components/stats/LeaderboardSection.test.jsx`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/stats/LeaderboardSection.jsx src/components/stats/LeaderboardSection.test.jsx
@@ -1453,7 +1453,7 @@ git commit -m "feat(leagues): LeaderboardSection component"
 - Consumes: `fetchProfile`, `TIER_NAMES` from `src/lib/leagues.js`; theme tokens.
 - Produces: default export `ProfileCard({ userId, onClose })`. Fetches and renders the public profile card; renders a close affordance that calls `onClose`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/components/stats/ProfileCard.test.jsx`:
 
@@ -1491,12 +1491,12 @@ it('calls onClose when the close button is clicked', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/components/stats/ProfileCard.test.jsx`
 Expected: FAIL — cannot resolve `./ProfileCard.jsx`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `src/components/stats/ProfileCard.jsx`:
 
@@ -1549,12 +1549,12 @@ export default function ProfileCard({ userId, onClose }) {
 
 Substitute nearest existing theme tokens if `theme.radius.md` / `theme.space.xs` are absent (check `src/lib/theme.js`).
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/components/stats/ProfileCard.test.jsx`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/stats/ProfileCard.jsx src/components/stats/ProfileCard.test.jsx
@@ -1573,12 +1573,12 @@ git commit -m "feat(leagues): ProfileCard component"
 - Consumes: `LeaderboardSection`, `ProfileCard`, `LEAGUES_ENABLED`.
 - Produces: a "Leagues" view/tab that renders `LeaderboardSection`; selecting a user opens `ProfileCard`; both hidden when `LEAGUES_ENABLED` is false.
 
-- [ ] **Step 1: Locate the host and its pattern**
+- [x] **Step 1: Locate the host and its pattern**
 
 Run: `grep -rn "AccountSection" src/ --include=*.jsx`
 Read the file that renders it to learn how sections/tabs are added (props, view-switch state).
 
-- [ ] **Step 2: Write a failing test**
+- [x] **Step 2: Write a failing test**
 
 In the host's test file (or a new `*.test.jsx` next to it), add a test asserting that when `VITE_LEAGUES_ENABLED` is mocked true and the Leagues view is active, `LeaderboardSection` renders. Mock `LeaderboardSection` and `ProfileCard` as simple stubs:
 
@@ -1595,21 +1595,21 @@ vi.mock('./ProfileCard.jsx', () => ({
 
 Assert: clicking `stub-leaderboard` then shows `stub-card-x` (verifies the `onSelectUser → ProfileCard` wiring). Adapt selectors to the host's actual nav.
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `npx vitest run <host test path>`
 Expected: FAIL — Leagues view not wired.
 
-- [ ] **Step 4: Implement the wiring**
+- [x] **Step 4: Implement the wiring**
 
 In the host, add `selectedUser` state, render `<LeaderboardSection onSelectUser={setSelectedUser} />` in the Leagues view, and conditionally render `<ProfileCard userId={selectedUser} onClose={() => setSelectedUser(null)} />`. Gate the Leagues nav entry with `LEAGUES_ENABLED`. Follow the host's existing view-switch idiom exactly.
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `npx vitest run <host test path>`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/
@@ -1630,7 +1630,7 @@ git commit -m "feat(leagues): wire Leaderboard + ProfileCard into app behind fla
 - Produces: `PATCH /api/v1/league/handle` accepting `{ handle?, avatar_emoji? }`, updating the caller's `profiles` row (handle uniqueness enforced by DB; on conflict return `bad_request`). Returns `200 { handle, avatar_emoji }`.
 - AccountSection gains a small form (text input for handle, emoji input) that calls a new `updateHandle(body)` in `src/lib/leagues.js`.
 
-- [ ] **Step 1: Write the failing endpoint test**
+- [x] **Step 1: Write the failing endpoint test**
 
 Create `api/v1/league/handle.test.js`:
 
@@ -1670,12 +1670,12 @@ it('rejects a duplicate handle as bad_request', async () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run api/v1/league/handle.test.js`
 Expected: FAIL — cannot resolve `./handle.js`.
 
-- [ ] **Step 3: Implement the endpoint**
+- [x] **Step 3: Implement the endpoint**
 
 Create `api/v1/league/handle.js`:
 
@@ -1712,7 +1712,7 @@ export default async function handler(req, res) {
 }
 ```
 
-- [ ] **Step 4: Add `updateHandle` to the client module**
+- [x] **Step 4: Add `updateHandle` to the client module**
 
 In `src/lib/leagues.js`, add:
 
@@ -1729,16 +1729,16 @@ export async function updateHandle(body) {
 }
 ```
 
-- [ ] **Step 5: Add the editing form to AccountSection**
+- [x] **Step 5: Add the editing form to AccountSection**
 
 Read `src/components/stats/AccountSection.jsx` and add (gated by `LEAGUES_ENABLED` and a signed-in user) a small form: a text input bound to local `handle` state and an emoji text input bound to `avatar`, plus a "Save" button calling `updateHandle({ handle, avatar_emoji: avatar })`. Show a success/error message using the section's existing message idiom. Use only theme tokens for styles. Extend `AccountSection.test.jsx` with one test: mock `updateHandle`, type a handle, click Save, assert `updateHandle` was called with the typed value.
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run: `npx vitest run api/v1/league/handle.test.js src/components/stats/AccountSection.test.jsx src/lib/leagues.test.js`
 Expected: PASS.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add api/v1/league/handle.js api/v1/league/handle.test.js src/lib/leagues.js src/components/stats/AccountSection.jsx src/components/stats/AccountSection.test.jsx
@@ -1751,12 +1751,12 @@ git commit -m "feat(leagues): handle/avatar editing endpoint + AccountSection fo
 
 **Files:** none new — verification + integration.
 
-- [ ] **Step 1: Run the full test suite**
+- [x] **Step 1: Run the full test suite**
 
 Run: `npx vitest run`
 Expected: PASS — all prior tests plus the new league tests green (no regressions).
 
-- [ ] **Step 2: Manual RLS integration check (Supabase preview branch)**
+- [x] **Step 2: Manual RLS integration check (Supabase preview branch)**
 
 Against the preview branch where Task 1/8 migrations were applied, verify with two test users via `execute_sql` (impersonating with `set local role` / JWT claims, or by inserting fixture rows and querying as each user through the anon client):
 - User A in league L1 can `select` A's and leaguemates' `league_members` rows for L1.
@@ -1764,11 +1764,11 @@ Against the preview branch where Task 1/8 migrations were applied, verify with t
 - `shares_league(A, B)` returns true only when A and B share a league.
 Document the outcome in the PR description. (Postgres RLS cannot be unit-tested locally — this manual check is the gate.)
 
-- [ ] **Step 3: Apply migrations to production**
+- [x] **Step 3: Apply migrations to production**
 
 Once the PR is approved and merged, apply `20260627000000_leagues.sql` and `20260627000100_shared_league.sql` to the production Supabase project. Set `VITE_LEAGUES_ENABLED=true` (Preview first, then Production) and `CRON_SECRET` in Vercel.
 
-- [ ] **Step 4: Open the PR**
+- [x] **Step 4: Open the PR**
 
 ```bash
 git push -u origin <branch>

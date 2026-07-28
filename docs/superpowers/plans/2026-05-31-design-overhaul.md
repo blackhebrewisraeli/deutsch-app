@@ -28,7 +28,7 @@
 **Files:**
 - Modify: `src/lib/theme.js`
 
-- [ ] **Step 1: Replace the file content**
+- [x] **Step 1: Replace the file content**
 
 ```js
 // src/lib/theme.js
@@ -50,7 +50,7 @@ export const FONT_MONO    = "'JetBrains Mono', 'Courier New', monospace";
 export const FONT_BODY    = "'Fraunces', Georgia, serif";
 ```
 
-- [ ] **Step 2: Verify visually**
+- [x] **Step 2: Verify visually**
 
 ```bash
 cd /Users/shimonesterkin/Downloads/deutsch-app && npm run dev
@@ -58,7 +58,7 @@ cd /Users/shimonesterkin/Downloads/deutsch-app && npm run dev
 
 Open http://localhost:5173 — the page background should look **warm gold** (not parchment). Active nav tab should show gold text on black. If it still looks cream/parchment, hard-refresh with Cmd+Shift+R.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git -C /Users/shimonesterkin/Downloads/deutsch-app add src/lib/theme.js
@@ -72,7 +72,7 @@ git -C /Users/shimonesterkin/Downloads/deutsch-app commit -m "feat: update color
 **Files:**
 - Modify: `src/components/UI.jsx`
 
-- [ ] **Step 1: Update StatBlock to accept `pulsing` prop and use gold for `accent`**
+- [x] **Step 1: Update StatBlock to accept `pulsing` prop and use gold for `accent`**
 
 Replace the `StatBlock` function (lines 1–18 of `src/components/UI.jsx`):
 
@@ -97,11 +97,11 @@ export function StatBlock({ label, value, icon, accent, pulsing }) {
 }
 ```
 
-- [ ] **Step 2: Verify visually**
+- [x] **Step 2: Verify visually**
 
 The 🔥 Streak block in the header should now have a **gold square** (not red). LEARNED block stays dark.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git -C /Users/shimonesterkin/Downloads/deutsch-app add src/components/UI.jsx
@@ -115,7 +115,7 @@ git -C /Users/shimonesterkin/Downloads/deutsch-app commit -m "feat: streak icon 
 **Files:**
 - Create: `src/components/SplashScreen.jsx`
 
-- [ ] **Step 1: Create the file**
+- [x] **Step 1: Create the file**
 
 ```jsx
 // src/components/SplashScreen.jsx
@@ -267,7 +267,7 @@ export default function SplashScreen({ onComplete }) {
 }
 ```
 
-- [ ] **Step 2: Verify the component exists**
+- [x] **Step 2: Verify the component exists**
 
 ```bash
 ls /Users/shimonesterkin/Downloads/deutsch-app/src/components/SplashScreen.jsx
@@ -275,7 +275,7 @@ ls /Users/shimonesterkin/Downloads/deutsch-app/src/components/SplashScreen.jsx
 
 Expected: file listed with no error.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git -C /Users/shimonesterkin/Downloads/deutsch-app add src/components/SplashScreen.jsx
@@ -289,7 +289,7 @@ git -C /Users/shimonesterkin/Downloads/deutsch-app commit -m "feat: add SplashSc
 **Files:**
 - Modify: `src/App.jsx`
 
-- [ ] **Step 1: Add imports and new state at the top of App.jsx**
+- [x] **Step 1: Add imports and new state at the top of App.jsx**
 
 Replace the existing imports block and the `export default function App()` opening with:
 
@@ -324,7 +324,7 @@ export default function App() {
   };
 ```
 
-- [ ] **Step 2: Add new CSS keyframes to the `<style>` block in the JSX**
+- [x] **Step 2: Add new CSS keyframes to the `<style>` block in the JSX**
 
 Find the existing `<style>` tag inside the `return (` block. It currently contains keyframes for `blink`, `pulse-red`, and `slide-up`. Add three new keyframes at the end:
 
@@ -343,7 +343,7 @@ Find the existing `<style>` tag inside the `return (` block. It currently contai
 }
 ```
 
-- [ ] **Step 3: Add `streakPulsing` computation and update StatBlock + render SplashScreen**
+- [x] **Step 3: Add `streakPulsing` computation and update StatBlock + render SplashScreen**
 
 Find the `<header>` JSX block. Replace the two `<StatBlock>` calls so that the Streak one receives `pulsing`:
 
@@ -365,7 +365,7 @@ Then, at the very top of the `return (` block (before the outer `<div>`), add:
 if (showSplash) return <SplashScreen onComplete={handleSplashComplete} />;
 ```
 
-- [ ] **Step 4: Verify splash appears on first load**
+- [x] **Step 4: Verify splash appears on first load**
 
 ```bash
 # In a new terminal tab, open browser storage and clear the key:
@@ -375,7 +375,7 @@ if (showSplash) return <SplashScreen onComplete={handleSplashComplete} />;
 
 You should see the three-stripe splash screen. Clicking Beginner or Intermediate should fade into the main app.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git -C /Users/shimonesterkin/Downloads/deutsch-app add src/App.jsx
@@ -389,7 +389,7 @@ git -C /Users/shimonesterkin/Downloads/deutsch-app commit -m "feat: wire SplashS
 **Files:**
 - Modify: `src/components/ChatTab.jsx`
 
-- [ ] **Step 1: Accept `level` prop and use it in the system prompt**
+- [x] **Step 1: Accept `level` prop and use it in the system prompt**
 
 Find the `export default function ChatTab()` line and change it to:
 
@@ -419,7 +419,7 @@ You MUST always respond with strict JSON only (no markdown, no extra text):
 Stay in the scenario. Only provide 'correction' if the user made a real grammar/vocabulary mistake. If they spoke perfectly or just sent a greeting, set correction to null.`;
 ```
 
-- [ ] **Step 2: Pass `level` from App.jsx to ChatTab**
+- [x] **Step 2: Pass `level` from App.jsx to ChatTab**
 
 In `src/App.jsx`, find the line:
 
@@ -433,11 +433,11 @@ Replace with:
 {tab === 'chat' && <ChatTab level={level} />}
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 In DevTools → Local Storage, set `deutsch-level` to `beginner`. Reload. Open Chat. Type "Hallo" and send. Anna's reply should be shorter and simpler, with more English context. Then change level to `intermediate` — replies should be longer.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git -C /Users/shimonesterkin/Downloads/deutsch-app add src/components/ChatTab.jsx src/App.jsx
@@ -451,7 +451,7 @@ git -C /Users/shimonesterkin/Downloads/deutsch-app commit -m "feat: ChatTab adap
 **Files:**
 - Modify: `src/components/VocabTab.jsx`
 
-- [ ] **Step 1: Add `deckComplete` state and white card background**
+- [x] **Step 1: Add `deckComplete` state and white card background**
 
 Add `deckComplete` to the state declarations at the top of the component:
 
@@ -469,7 +469,7 @@ useEffect(() => {
 }, [deckId, customCards]);
 ```
 
-- [ ] **Step 2: Update `markLearned` call to detect completion**
+- [x] **Step 2: Update `markLearned` call to detect completion**
 
 Find the `<button` that calls `markLearned(card.de)`. Add an `onClick` wrapper that also checks for deck completion **after** marking:
 
@@ -484,7 +484,7 @@ onClick={(e) => {
 }}
 ```
 
-- [ ] **Step 3: Add the celebration banner and update the flashcard background**
+- [x] **Step 3: Add the celebration banner and update the flashcard background**
 
 Find the flashcard `<div onClick={() => setFlipped...}` block. Replace its `background` style:
 
@@ -528,7 +528,7 @@ Then, directly **above** the flashcard div, add the celebration banner condition
 )}
 ```
 
-- [ ] **Step 4: Fix progress bar — always show at least 1 filled segment**
+- [x] **Step 4: Fix progress bar — always show at least 1 filled segment**
 
 Find the progress bar `<div>` that renders `activeDeck.map(...)`. The inner div currently uses:
 
@@ -548,11 +548,11 @@ background: i === cardIdx
       : COLORS.paperDeep,
 ```
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Open the Vocab tab. The flashcard front should now be **white** (not gold). Work through a deck, marking all cards learned — the gold shimmer banner should appear. Dismiss it, switch decks — banner should be gone.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git -C /Users/shimonesterkin/Downloads/deutsch-app add src/components/VocabTab.jsx
@@ -563,17 +563,17 @@ git -C /Users/shimonesterkin/Downloads/deutsch-app commit -m "feat: white flashc
 
 ## Task 7: Push and Deploy
 
-- [ ] **Step 1: Push all commits to GitHub**
+- [x] **Step 1: Push all commits to GitHub**
 
 ```bash
 git -C /Users/shimonesterkin/Downloads/deutsch-app push origin main
 ```
 
-- [ ] **Step 2: Verify Vercel auto-deploys**
+- [x] **Step 2: Verify Vercel auto-deploys**
 
 Open https://vercel.com/blackhebrewisraelis-projects/deutsch-app — a new deployment should start automatically within 30 seconds of the push. Wait for it to reach "Ready".
 
-- [ ] **Step 3: Smoke-test on production URL**
+- [x] **Step 3: Smoke-test on production URL**
 
 Open https://deutsch-app-dusky.vercel.app in a fresh incognito window (so localStorage is empty).
 
@@ -586,7 +586,7 @@ Verify:
 6. ✓ Mark all cards in Greetings deck → shimmer celebration banner appears
 7. ✓ Revisiting the URL skips the splash (localStorage key is set)
 
-- [ ] **Step 4: Final commit if any fixes were needed**
+- [x] **Step 4: Final commit if any fixes were needed**
 
 ```bash
 git -C /Users/shimonesterkin/Downloads/deutsch-app add -A

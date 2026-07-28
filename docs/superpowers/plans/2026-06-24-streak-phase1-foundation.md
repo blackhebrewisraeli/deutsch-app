@@ -30,7 +30,7 @@
 **Interfaces:**
 - Produces: `XP_PER_VERDICT`, `GOAL_PRESETS`, `DEFAULT_GOAL`, `QUALIFYING_DAY` from `gameConfig`.
 
-- [ ] **Step 1: Write the failing test** — `src/lib/gameConfig.test.js`
+- [x] **Step 1: Write the failing test** — `src/lib/gameConfig.test.js`
 
 ```js
 import { describe, it, expect } from 'vitest';
@@ -50,9 +50,9 @@ describe('gameConfig', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails** — `npx vitest run src/lib/gameConfig.test.js` → FAIL (`Failed to resolve import "./gameConfig"`).
+- [x] **Step 2: Run to verify it fails** — `npx vitest run src/lib/gameConfig.test.js` → FAIL (`Failed to resolve import "./gameConfig"`).
 
-- [ ] **Step 3: Create `src/lib/gameConfig.js`**
+- [x] **Step 3: Create `src/lib/gameConfig.js`**
 
 ```js
 // gameConfig — central game-balance tunables. Change a knob here and it
@@ -66,7 +66,7 @@ export const DEFAULT_GOAL = 50;
 export const QUALIFYING_DAY = 'goal';
 ```
 
-- [ ] **Step 4: Move the constants in `gamification.js`.** Replace lines 9-11 (the three `export const` declarations) with a re-export, and import `XP_PER_VERDICT` for `xpForDay`:
+- [x] **Step 4: Move the constants in `gamification.js`.** Replace lines 9-11 (the three `export const` declarations) with a re-export, and import `XP_PER_VERDICT` for `xpForDay`:
 
 ```js
 // near the top, after the existing imports:
@@ -76,9 +76,9 @@ export { XP_PER_VERDICT, GOAL_PRESETS, DEFAULT_GOAL };
 
 (Leave `xpForDay`, `totalXp`, `todayXp`, `levelFromXp`, achievements, and `gamificationContext` unchanged — they keep using `XP_PER_VERDICT`, now imported.)
 
-- [ ] **Step 5: Run to verify** — `npx vitest run src/lib/gameConfig.test.js src/lib/gamification.test.js` → PASS (re-export keeps existing gamification tests green).
+- [x] **Step 5: Run to verify** — `npx vitest run src/lib/gameConfig.test.js src/lib/gamification.test.js` → PASS (re-export keeps existing gamification tests green).
 
-- [ ] **Step 6: Commit** — `git add src/lib/gameConfig.js src/lib/gameConfig.test.js src/lib/gamification.js && git commit -m "feat(streak): add gameConfig tunables; move XP/goal constants"`
+- [x] **Step 6: Commit** — `git add src/lib/gameConfig.js src/lib/gameConfig.test.js src/lib/gamification.js && git commit -m "feat(streak): add gameConfig tunables; move XP/goal constants"`
 
 ---
 
@@ -92,7 +92,7 @@ export { XP_PER_VERDICT, GOAL_PRESETS, DEFAULT_GOAL };
 - Consumes: `xpForDay` from `gamification.js` (no cycle — gamification does not import streak).
 - Produces: `qualifies(day, goal): boolean`.
 
-- [ ] **Step 1: Write the failing test** — `src/lib/streak.test.js`
+- [x] **Step 1: Write the failing test** — `src/lib/streak.test.js`
 
 ```js
 import { describe, it, expect } from 'vitest';
@@ -114,9 +114,9 @@ describe('qualifies', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails** — `npx vitest run src/lib/streak.test.js` → FAIL.
+- [x] **Step 2: Run to verify it fails** — `npx vitest run src/lib/streak.test.js` → FAIL.
 
-- [ ] **Step 3: Create `src/lib/streak.js`**
+- [x] **Step 3: Create `src/lib/streak.js`**
 
 ```js
 // Streak derivation — pure, I/O-free. The streak is DERIVED from the daily log
@@ -129,9 +129,9 @@ export function qualifies(day, goal) {
 }
 ```
 
-- [ ] **Step 4: Run to verify** — `npx vitest run src/lib/streak.test.js` → PASS.
+- [x] **Step 4: Run to verify** — `npx vitest run src/lib/streak.test.js` → PASS.
 
-- [ ] **Step 5: Commit** — `git add src/lib/streak.js src/lib/streak.test.js && git commit -m "feat(streak): qualifies(day, goal)"`
+- [x] **Step 5: Commit** — `git add src/lib/streak.js src/lib/streak.test.js && git commit -m "feat(streak): qualifies(day, goal)"`
 
 ---
 
@@ -143,7 +143,7 @@ export function qualifies(day, goal) {
 **Interfaces:**
 - Produces: `currentStreak(daily, goal, today): number`.
 
-- [ ] **Step 1: Add failing tests** to `streak.test.js`
+- [x] **Step 1: Add failing tests** to `streak.test.js`
 
 ```js
 import { currentStreak } from './streak';
@@ -170,9 +170,9 @@ describe('currentStreak', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails** — `npx vitest run src/lib/streak.test.js` → FAIL (`currentStreak is not a function`).
+- [x] **Step 2: Run to verify it fails** — `npx vitest run src/lib/streak.test.js` → FAIL (`currentStreak is not a function`).
 
-- [ ] **Step 3: Implement** — add to `streak.js`:
+- [x] **Step 3: Implement** — add to `streak.js`:
 
 ```js
 // Previous local-date key ('YYYY-MM-DD' → the day before). UTC math avoids DST drift.
@@ -198,9 +198,9 @@ export function currentStreak(daily, goal, today) {
 }
 ```
 
-- [ ] **Step 4: Run to verify** — `npx vitest run src/lib/streak.test.js` → PASS (all 7).
+- [x] **Step 4: Run to verify** — `npx vitest run src/lib/streak.test.js` → PASS (all 7).
 
-- [ ] **Step 5: Commit** — `git add src/lib/streak.js src/lib/streak.test.js && git commit -m "feat(streak): currentStreak(daily, goal, today)"`
+- [x] **Step 5: Commit** — `git add src/lib/streak.js src/lib/streak.test.js && git commit -m "feat(streak): currentStreak(daily, goal, today)"`
 
 ---
 
@@ -212,7 +212,7 @@ export function currentStreak(daily, goal, today) {
 **Interfaces:**
 - Produces: `bestStreakFromHistory(daily, goal): number` — longest consecutive qualifying run ever.
 
-- [ ] **Step 1: Add failing tests** to `streak.test.js`
+- [x] **Step 1: Add failing tests** to `streak.test.js`
 
 ```js
 import { bestStreakFromHistory } from './streak';
@@ -231,9 +231,9 @@ describe('bestStreakFromHistory', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails** — `npx vitest run src/lib/streak.test.js` → FAIL.
+- [x] **Step 2: Run to verify it fails** — `npx vitest run src/lib/streak.test.js` → FAIL.
 
-- [ ] **Step 3: Implement** — add to `streak.js`:
+- [x] **Step 3: Implement** — add to `streak.js`:
 
 ```js
 export function bestStreakFromHistory(daily, goal) {
@@ -252,9 +252,9 @@ export function bestStreakFromHistory(daily, goal) {
 }
 ```
 
-- [ ] **Step 4: Run to verify** — `npx vitest run src/lib/streak.test.js` → PASS.
+- [x] **Step 4: Run to verify** — `npx vitest run src/lib/streak.test.js` → PASS.
 
-- [ ] **Step 5: Commit** — `git add src/lib/streak.js src/lib/streak.test.js && git commit -m "feat(streak): bestStreakFromHistory(daily, goal)"`
+- [x] **Step 5: Commit** — `git add src/lib/streak.js src/lib/streak.test.js && git commit -m "feat(streak): bestStreakFromHistory(daily, goal)"`
 
 ---
 
@@ -268,7 +268,7 @@ Replaces the buggy login-streak counter with derivation; `stats.streak` becomes 
 **Interfaces:**
 - Consumes: `currentStreak`, `bestStreakFromHistory`, `qualifies` from `streak.js`; `DEFAULT_GOAL` from `gamification` (already importable); `todayKey` from `stats` (already imported).
 
-- [ ] **Step 1: Add imports** near the other `lib` imports:
+- [x] **Step 1: Add imports** near the other `lib` imports:
 
 ```js
 import { currentStreak, bestStreakFromHistory, qualifies } from './lib/streak';
@@ -276,7 +276,7 @@ import { currentStreak, bestStreakFromHistory, qualifies } from './lib/streak';
 
 (`DEFAULT_GOAL` and `todayKey` are already imported.)
 
-- [ ] **Step 2: Replace the load effect's streak block** (`src/App.jsx:226-245`) so the streak is derived, not incremented:
+- [x] **Step 2: Replace the load effect's streak block** (`src/App.jsx:226-245`) so the streak is derived, not incremented:
 
 ```js
 useEffect(() => {
@@ -294,7 +294,7 @@ useEffect(() => {
 }, []);
 ```
 
-- [ ] **Step 3: Add `bestStreak: 0` to the `g` default** in `applyProgress` (`src/App.jsx:98-103`):
+- [x] **Step 3: Add `bestStreak: 0` to the `g` default** in `applyProgress` (`src/App.jsx:98-103`):
 
 ```js
 const g = s.gamification ?? {
@@ -306,7 +306,7 @@ const g = s.gamification ?? {
 };
 ```
 
-- [ ] **Step 4: Recompute streak + bestStreak inside `applyProgress`.** After `const goal = goalProgress(...)` and before `saveState(...)`, add:
+- [x] **Step 4: Recompute streak + bestStreak inside `applyProgress`.** After `const goal = goalProgress(...)` and before `saveState(...)`, add:
 
 ```js
 const tStreak = currentStreak(s.daily ?? {}, g.goal, tKey);
@@ -321,7 +321,7 @@ setStats((prev) => ({ ...prev, streak: tStreak }));
 
 (`nextG` already exists; `saveState({ ...s, gamification: nextG })` then persists `bestStreak`. The `setStats` update flows to the existing save effect, refreshing the `stats.streak` cache.)
 
-- [ ] **Step 5: Fix `streakPulsing`** (`src/App.jsx:294-295`). Move the existing `const liveState = loadState() ?? {};` (currently line 300) above this line, then:
+- [x] **Step 5: Fix `streakPulsing`** (`src/App.jsx:294-295`). Move the existing `const liveState = loadState() ?? {};` (currently line 300) above this line, then:
 
 ```js
 // Streak at risk: user has a run going but today hasn't qualified yet.
@@ -329,12 +329,12 @@ const goalNow = liveState.gamification?.goal ?? DEFAULT_GOAL;
 const streakPulsing = stats.streak > 0 && !qualifies((liveState.daily ?? {})[todayKey()], goalNow);
 ```
 
-- [ ] **Step 6: Run the full suite** — `npm test`
+- [x] **Step 6: Run the full suite** — `npm test`
   Expected: PASS. No reader changed signature, so `gamification.test.js` and `stats.test.js` stay green; `App.test.jsx` (a11y) is unaffected.
 
-- [ ] **Step 7: Manual smoke** — `npm run dev`, open the app: the header 🔥 reflects practice (do exercises to hit the goal → it ticks up), not mere visits; the flame pulses when today's goal isn't met yet.
+- [x] **Step 7: Manual smoke** — `npm run dev`, open the app: the header 🔥 reflects practice (do exercises to hit the goal → it ticks up), not mere visits; the flame pulses when today's goal isn't met yet.
 
-- [ ] **Step 8: Commit** — `git add src/App.jsx && git commit -m "feat(streak): derive the streak from practice history; track bestStreak"`
+- [x] **Step 8: Commit** — `git add src/App.jsx && git commit -m "feat(streak): derive the streak from practice history; track bestStreak"`
 
 ---
 

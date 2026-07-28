@@ -41,7 +41,7 @@
 - Consumes: nothing from other tasks.
 - Produces: `buildTatoebaPairs(cacheDir) => Promise<string /* outPath */>`. Reads `deu_sentences.tsv` / `eng_sentences.tsv` (`id \t lang \t text`) and `links.csv` (`id \t id`) from `cacheDir`; writes `tatoeba-de-en.tsv` (`de \t en`, one English pairing per German sentence, bidirectional link matching). **Skips (returns path) when the output already exists.** Awaits stream end before resolving.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `scripts/import-lexicon/prepTatoeba.test.js`:
 
@@ -95,12 +95,12 @@ describe('buildTatoebaPairs', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/prepTatoeba.test.js`
 Expected: FAIL — cannot resolve `./prepTatoeba.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `scripts/import-lexicon/prepTatoeba.js` (absorbs `prep-tatoeba.mjs`; adds the exists-skip and awaits stream end):
 
@@ -169,12 +169,12 @@ Then delete the superseded script:
 git rm scripts/import-lexicon/prep-tatoeba.mjs
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/prepTatoeba.test.js`
 Expected: PASS (3 cases).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/import-lexicon/prepTatoeba.js scripts/import-lexicon/prepTatoeba.test.js
@@ -197,7 +197,7 @@ git commit -m "feat(import): Tatoeba de↔en join as a tested, idempotent module
   - `decompress(cacheDir)` — shell-outs, each skipped when its output exists: `bunzip2 -kf` for the two `.bz2` sentence files; `tar xjf links.tar.bz2 -C cacheDir`; `tar xzf deu_news_2023_100K.tar.gz -C cacheDir`. Not unit-tested (shell glue).
   - `ensurePrepared(cacheDir) => Promise<void>` — `decompress` → `buildFreqTsv` → `await buildTatoebaPairs`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `scripts/import-lexicon/prep.test.js`:
 
@@ -252,12 +252,12 @@ describe('buildFreqTsv', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/prep.test.js`
 Expected: FAIL — cannot resolve `./prep.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `scripts/import-lexicon/prep.js`:
 
@@ -309,12 +309,12 @@ export async function ensurePrepared(cacheDir) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/prep.test.js`
 Expected: PASS (5 cases).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/import-lexicon/prep.js scripts/import-lexicon/prep.test.js
@@ -335,7 +335,7 @@ git commit -m "feat(import): idempotent prep — decompress, freq sort, pair joi
 - Consumes: `ensurePrepared` from `./prep.js` (Task 2).
 - Produces: `npm run import:lexicon` performs download → prep → pipeline in one command.
 
-- [ ] **Step 1: Add the eng_sentences source**
+- [x] **Step 1: Add the eng_sentences source**
 
 In `scripts/import-lexicon/download.js`, add to `SOURCES` (after `tatoebaSentences`):
 
@@ -343,7 +343,7 @@ In `scripts/import-lexicon/download.js`, add to `SOURCES` (after `tatoebaSentenc
   tatoebaEngSentences: 'https://downloads.tatoeba.org/exports/per_language/eng/eng_sentences.tsv.bz2',
 ```
 
-- [ ] **Step 2: Wire prep into `index.js` and drop the rename**
+- [x] **Step 2: Wire prep into `index.js` and drop the rename**
 
 In `scripts/import-lexicon/index.js`:
 
@@ -365,7 +365,7 @@ import { ensurePrepared } from './prep.js';
 ```
 (The `wiktextract.jsonl` name is gone — no hardlink/rename step exists anymore.)
 
-- [ ] **Step 3: Bake the heap flag into the npm script**
+- [x] **Step 3: Bake the heap flag into the npm script**
 
 In `package.json`:
 
@@ -373,7 +373,7 @@ In `package.json`:
     "import:lexicon": "node --max-old-space-size=4096 scripts/import-lexicon/index.js",
 ```
 
-- [ ] **Step 4: Collapse the README runbook**
+- [x] **Step 4: Collapse the README runbook**
 
 In `README.md`, replace the whole block from `**Manual prep step (required).**` through the closing triple-backtick of its bash block AND the following "Then run …" paragraph with:
 
@@ -387,7 +387,7 @@ rebuild from fresh dumps. The run prints a JSON report (kept/rejected counts by
 reason + a random sample) — spot-check it before committing `public/lexicon/`.
 ```
 
-- [ ] **Step 5: E2E proof against the cached real data**
+- [x] **Step 5: E2E proof against the cached real data**
 
 The raw downloads are already in `.cache/lexicon-raw/`. Delete only the *prepared* files, then prove the one-command flow regenerates everything and reproduces the shipped artifacts:
 
@@ -409,12 +409,12 @@ git checkout -- public/lexicon
 git status --short public/lexicon   # expect: clean
 ```
 
-- [ ] **Step 6: Run the full suite**
+- [x] **Step 6: Run the full suite**
 
 Run: `npm test`
 Expected: PASS (all files — the real-artifact guard `lexiconSample.test.js` still passes because artifacts were restored).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add scripts/import-lexicon/download.js scripts/import-lexicon/index.js package.json README.md
