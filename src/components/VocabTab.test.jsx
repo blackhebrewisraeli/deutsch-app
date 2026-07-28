@@ -282,7 +282,7 @@ describe('VocabTab', () => {
       });
     });
 
-    it('loads a Topics deck and shows its cards', async () => {
+    it('loads an auto deck and shows its cards', async () => {
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
       await user.click(screen.getByRole('button', { name: /Core 100/i }));
