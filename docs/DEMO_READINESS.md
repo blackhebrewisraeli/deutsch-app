@@ -9,7 +9,7 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
 
 ## P0 — Demo blockers (visible breakage today)
 
-- [ ] **1. Seven of eight Topic decks are empty.** `src/packs/de/autoDecks.js` filters on
+- [x] **1. Seven of eight Topic decks are empty.** — FIXED in #62 (rebuilt from real tags; all 8 decks now 46-291 cards, guarded by autoDecks.population.test.js) `src/packs/de/autoDecks.js` filters on
   guessed tags (`travel`, `home`, `people`, `work`, `body`, `nature`, `time`) that do not
   exist in the imported data. Only `food` matches (16 entries). A visitor clicking six of
   the eight Topic chips gets an empty deck.
@@ -20,7 +20,7 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
   data-driven test asserting every shipped auto-deck resolves to ≥N cards so this cannot
   regress silently.
 
-- [ ] **2. Frequency decks under-deliver on their names.** "Core 100" resolves to **8 cards**,
+- [x] **2. Frequency decks under-deliver on their names.** — FIXED in #62 (new `top` rule; Core 100 now yields exactly 100) "Core 100" resolves to **8 cards**,
   "Top 500" to **114**. The top frequency ranks are function words (articles, pronouns,
   conjunctions) that the import filters drop (no article / form-of / no example), so few
   survive in the low-rank band.
