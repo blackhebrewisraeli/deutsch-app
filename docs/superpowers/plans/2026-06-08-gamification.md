@@ -50,7 +50,7 @@
 **Files:**
 - Create: `src/lib/gamification.js`, `src/lib/gamification.test.js`
 
-- [ ] **Step 1: Write the failing test.** Create `src/lib/gamification.test.js`:
+- [x] **Step 1: Write the failing test.** Create `src/lib/gamification.test.js`:
 
 ```js
 import { describe, it, expect } from 'vitest';
@@ -161,9 +161,9 @@ describe('context derivation', () => {
 });
 ```
 
-- [ ] **Step 2: Run it — expect failure.** Run: `npx vitest run src/lib/gamification.test.js` → FAIL (module not found).
+- [x] **Step 2: Run it — expect failure.** Run: `npx vitest run src/lib/gamification.test.js` → FAIL (module not found).
 
-- [ ] **Step 3: Implement `src/lib/gamification.js`:**
+- [x] **Step 3: Implement `src/lib/gamification.js`:**
 
 ```js
 // Gamification — XP, levels, daily goal, achievements. PURE (no storage/DOM).
@@ -291,9 +291,9 @@ export function gamificationContext(state) {
 }
 ```
 
-- [ ] **Step 4: Run tests — expect pass.** Run: `npx vitest run src/lib/gamification.test.js` → PASS.
+- [x] **Step 4: Run tests — expect pass.** Run: `npx vitest run src/lib/gamification.test.js` → PASS.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add src/lib/gamification.js src/lib/gamification.test.js
@@ -308,7 +308,7 @@ git commit -m "feat(gamification): pure XP/level/goal/achievement engine + tests
 - Create: `src/lib/sound.js`
 - Modify: `src/lib/stats.js` (the `recordEvent` function)
 
-- [ ] **Step 1: Create `src/lib/sound.js`** (no test — Web Audio is unavailable in jsdom; functions no-op safely there):
+- [x] **Step 1: Create `src/lib/sound.js`** (no test — Web Audio is unavailable in jsdom; functions no-op safely there):
 
 ```js
 // Synthesized sound effects via Web Audio — no asset files. No-op unless enabled
@@ -370,7 +370,7 @@ export const playGoalMet = () =>
   playNotes([{ freq: 587, start: 0, dur: 0.16 }, { freq: 880, start: 0.12, dur: 0.26 }]);
 ```
 
-- [ ] **Step 2: Add the progress event to `recordEvent`.** In `src/lib/stats.js`, the current function is:
+- [x] **Step 2: Add the progress event to `recordEvent`.** In `src/lib/stats.js`, the current function is:
 
 ```js
 export function recordEvent(tab, level, verdict) {
@@ -401,11 +401,11 @@ export function recordEvent(tab, level, verdict) {
 }
 ```
 
-- [ ] **Step 3: Verify the existing stats tests still pass.** Run: `npx vitest run src/lib/stats.test.js` → PASS (the `recordEvent` tests run in jsdom where `window` exists; dispatch is harmless and uncaught by those tests).
+- [x] **Step 3: Verify the existing stats tests still pass.** Run: `npx vitest run src/lib/stats.test.js` → PASS (the `recordEvent` tests run in jsdom where `window` exists; dispatch is harmless and uncaught by those tests).
 
-- [ ] **Step 4: Full verify.** `npm run lint && npm run build && npm test` → clean / `✓ built` / all pass.
+- [x] **Step 4: Full verify.** `npm run lint && npm run build && npm test` → clean / `✓ built` / all pass.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add src/lib/sound.js src/lib/stats.js
@@ -419,7 +419,7 @@ git commit -m "feat(gamification): synth sound module + recordEvent fires deutsc
 **Files:**
 - Create: `src/components/gamification/LevelBadge.jsx`, `LevelBadge.test.jsx`, `GoalRing.jsx`, `GoalRing.test.jsx`
 
-- [ ] **Step 1: Create `src/components/gamification/LevelBadge.jsx`:**
+- [x] **Step 1: Create `src/components/gamification/LevelBadge.jsx`:**
 
 ```jsx
 import { COLORS, FONTS, FONT_WEIGHT } from '../../lib/theme';
@@ -469,7 +469,7 @@ export default function LevelBadge({ level, progress, rank, size = 52 }) {
 }
 ```
 
-- [ ] **Step 2: Create `src/components/gamification/LevelBadge.test.jsx`:**
+- [x] **Step 2: Create `src/components/gamification/LevelBadge.test.jsx`:**
 
 ```jsx
 import { describe, it, expect } from 'vitest';
@@ -488,7 +488,7 @@ describe('LevelBadge', () => {
 });
 ```
 
-- [ ] **Step 3: Create `src/components/gamification/GoalRing.jsx`:**
+- [x] **Step 3: Create `src/components/gamification/GoalRing.jsx`:**
 
 ```jsx
 import { COLORS } from '../../lib/theme';
@@ -535,7 +535,7 @@ export default function GoalRing({ pct, met, size = 48 }) {
 }
 ```
 
-- [ ] **Step 4: Create `src/components/gamification/GoalRing.test.jsx`:**
+- [x] **Step 4: Create `src/components/gamification/GoalRing.test.jsx`:**
 
 ```jsx
 import { describe, it, expect } from 'vitest';
@@ -556,7 +556,7 @@ describe('GoalRing', () => {
 });
 ```
 
-- [ ] **Step 5: Verify + commit.** `npm test` (4 new pass) + `npm run lint` + `npm run build`.
+- [x] **Step 5: Verify + commit.** `npm test` (4 new pass) + `npm run lint` + `npm run build`.
 
 ```bash
 git add src/components/gamification/LevelBadge.jsx src/components/gamification/LevelBadge.test.jsx src/components/gamification/GoalRing.jsx src/components/gamification/GoalRing.test.jsx
@@ -572,7 +572,7 @@ git commit -m "feat(gamification): LevelBadge + GoalRing header primitives + tes
 
 This is the wiring task. No new tests (covered by lib + primitive tests + manual screenshot); existing 167 stay green.
 
-- [ ] **Step 1: Imports.** Add to `src/App.jsx` imports (near the other `./lib` + `./components` imports):
+- [x] **Step 1: Imports.** Add to `src/App.jsx` imports (near the other `./lib` + `./components` imports):
 
 ```jsx
 import { loadState, saveState } from './lib/storage';
@@ -593,7 +593,7 @@ import GoalRing from './components/gamification/GoalRing';
 
 (`loadState` is already imported — don't duplicate; ensure `saveState` is included.)
 
-- [ ] **Step 2: Gamification state + a derive helper.** Inside `App()`, after the existing `const [streakBurst, setStreakBurst] = useState(false);` line, add:
+- [x] **Step 2: Gamification state + a derive helper.** Inside `App()`, after the existing `const [streakBurst, setStreakBurst] = useState(false);` line, add:
 
 ```jsx
   // Gamification — derived from storage, refreshed on every `deutsch:progress`.
@@ -611,7 +611,7 @@ import GoalRing from './components/gamification/GoalRing';
 
 (`game.lvl` is the `levelFromXp` result `{ level, rankName, progress, ... }`; `game.goal` is the `goalProgress` result `{ pct, met, ... }`. The effect in Step 3 calls `setGame(deriveGame())` to refresh after each progress event.)
 
-- [ ] **Step 3: First-run backfill + progress reactions.** Add this effect after the existing streak-milestone effect:
+- [x] **Step 3: First-run backfill + progress reactions.** Add this effect after the existing streak-milestone effect:
 
 ```jsx
   useEffect(() => {
@@ -682,9 +682,9 @@ import GoalRing from './components/gamification/GoalRing';
 
 NOTE: `pushToasts` comes from Task 5 (the toast stack). Until Task 5 lands, temporarily define `const pushToasts = () => {};` near the top of `App()` so this compiles; Task 5 replaces it with the real toast state. (Flagged again in Task 5.)
 
-- [ ] **Step 4: `useRef` import.** Ensure `useRef` is imported from React at the top: `import { useState, useEffect, useRef } from 'react';`
+- [x] **Step 4: `useRef` import.** Ensure `useRef` is imported from React at the top: `import { useState, useEffect, useRef } from 'react';`
 
-- [ ] **Step 5: Header — add LevelBadge + GoalRing, remove LEARNED.** Replace the header right-side block (currently the two `StatBlock`s for STREAK + LEARNED) with:
+- [x] **Step 5: Header — add LevelBadge + GoalRing, remove LEARNED.** Replace the header right-side block (currently the two `StatBlock`s for STREAK + LEARNED) with:
 
 ```jsx
         <div style={{ display: 'flex', gap: mobile ? 10 : 16, alignItems: 'center' }}>
@@ -707,9 +707,9 @@ NOTE: `pushToasts` comes from Task 5 (the toast stack). Until Task 5 lands, temp
 
 (Removes the LEARNED `StatBlock` — it reappears in Stats in Task 6. Leave the `Check` icon import; it's reused in Stats. If lint flags `Check` as unused after this task, leave it — Task 6 uses it. If you prefer zero interim warnings, this task and Task 6 can be committed together.)
 
-- [ ] **Step 6: Verify.** `npm test` (all pass) + `npm run lint` + `npm run build`. Dev server → seed some `daily` data (or just practice) → header shows the level badge with XP ring + goal ring; no error in console.
+- [x] **Step 6: Verify.** `npm test` (all pass) + `npm run lint` + `npm run build`. Dev server → seed some `daily` data (or just practice) → header shows the level badge with XP ring + goal ring; no error in console.
 
-- [ ] **Step 7: Commit.**
+- [x] **Step 7: Commit.**
 
 ```bash
 git add src/App.jsx
@@ -724,7 +724,7 @@ git commit -m "feat(gamification): header layout A + derive state + progress sub
 - Create: `src/components/ui/Toast.jsx`, `src/components/ui/Toast.test.jsx`
 - Modify: `src/App.jsx` (replace the temporary `pushToasts` stub with real toast state + render `<ToastStack/>`)
 
-- [ ] **Step 1: Create `src/components/ui/Toast.jsx`:**
+- [x] **Step 1: Create `src/components/ui/Toast.jsx`:**
 
 ```jsx
 import { useEffect } from 'react';
@@ -790,7 +790,7 @@ export default function ToastStack({ toasts, onDismiss }) {
 }
 ```
 
-- [ ] **Step 2: Create `src/components/ui/Toast.test.jsx`:**
+- [x] **Step 2: Create `src/components/ui/Toast.test.jsx`:**
 
 ```jsx
 import { describe, it, expect, vi, afterEach } from 'vitest';
@@ -828,7 +828,7 @@ describe('ToastStack', () => {
 });
 ```
 
-- [ ] **Step 3: Wire real toast state in `App.jsx`.** Remove the temporary `const pushToasts = () => {};` stub. Add near the top of `App()`:
+- [x] **Step 3: Wire real toast state in `App.jsx`.** Remove the temporary `const pushToasts = () => {};` stub. Add near the top of `App()`:
 
 ```jsx
   const [toasts, setToasts] = useState([]);
@@ -851,9 +851,9 @@ describe('ToastStack', () => {
 
 Add `ACHIEVEMENTS` to the gamification import in App.jsx. Render `<ToastStack toasts={toasts} onDismiss={dismissToast} />` just inside the root `<div>` (next to the existing streak `<Confetti/>` block). Import: `import ToastStack from './components/ui/Toast';`
 
-- [ ] **Step 4: Verify.** `npm test` (Toast tests pass) + lint + build. Dev server: trigger a level-up by seeding XP just below a threshold and answering once → toast slides in, confetti fires, auto-dismisses.
+- [x] **Step 4: Verify.** `npm test` (Toast tests pass) + lint + build. Dev server: trigger a level-up by seeding XP just below a threshold and answering once → toast slides in, confetti fires, auto-dismisses.
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add src/components/ui/Toast.jsx src/components/ui/Toast.test.jsx src/App.jsx
@@ -868,7 +868,7 @@ git commit -m "feat(gamification): toast stack + wire level-up/achievement/goal 
 - Create: `src/components/gamification/LevelCard.jsx`, `GoalPicker.jsx`, `GoalPicker.test.jsx`, `BadgeGrid.jsx`, `BadgeGrid.test.jsx`
 - Modify: `src/components/StatsTab.jsx`
 
-- [ ] **Step 1: `LevelCard.jsx`** — rank + level + XP-to-next bar + total XP + LEARNED figure. Props: `{ lvl, totalXp, learnedCount }` where `lvl` is the `levelFromXp` result.
+- [x] **Step 1: `LevelCard.jsx`** — rank + level + XP-to-next bar + total XP + LEARNED figure. Props: `{ lvl, totalXp, learnedCount }` where `lvl` is the `levelFromXp` result.
 
 ```jsx
 import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE, RADIUS, SHADOW } from '../../lib/theme';
@@ -927,7 +927,7 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
 }
 ```
 
-- [ ] **Step 2: `GoalPicker.jsx` + test.** Three 3D-press buttons; selecting calls `onPick(xpValue)`. Props: `{ goal, onPick }`.
+- [x] **Step 2: `GoalPicker.jsx` + test.** Three 3D-press buttons; selecting calls `onPick(xpValue)`. Props: `{ goal, onPick }`.
 
 ```jsx
 import { GOAL_PRESETS } from '../../lib/gamification';
@@ -996,7 +996,7 @@ describe('GoalPicker', () => {
 });
 ```
 
-- [ ] **Step 3: `BadgeGrid.jsx` + test.** All `ACHIEVEMENTS` as tiles; earned = color, locked = greyed. Props: `{ achievements }` (the persisted `{id: ts}` map).
+- [x] **Step 3: `BadgeGrid.jsx` + test.** All `ACHIEVEMENTS` as tiles; earned = color, locked = greyed. Props: `{ achievements }` (the persisted `{id: ts}` map).
 
 ```jsx
 import { ACHIEVEMENTS } from '../../lib/gamification';
@@ -1053,7 +1053,7 @@ describe('BadgeGrid', () => {
 });
 ```
 
-- [ ] **Step 4: Add the Fortschritt section to `StatsTab.jsx`.** Import the three components + `levelFromXp`, `totalXp` from gamification. The component already reads `state` via `loadState()` and derives `daily`, `srs`, `stats`. Add at the top of the rendered sections (before "A · Today"):
+- [x] **Step 4: Add the Fortschritt section to `StatsTab.jsx`.** Import the three components + `levelFromXp`, `totalXp` from gamification. The component already reads `state` via `loadState()` and derives `daily`, `srs`, `stats`. Add at the top of the rendered sections (before "A · Today"):
 
 ```jsx
         <section>
@@ -1081,9 +1081,9 @@ describe('BadgeGrid', () => {
 
 Add imports to `StatsTab.jsx`: `saveState` from `../lib/storage`; `levelFromXp, totalXp, DEFAULT_GOAL` from `../lib/gamification`; the three components from `./gamification/...`. (`SPACE` is already imported.)
 
-- [ ] **Step 5: Verify.** `npm test` (GoalPicker + BadgeGrid pass) + lint + build. Dev server → Stats tab shows the Fortschritt card, goal picker (selecting changes the active button + header ring target), and the badge grid (earned vs locked).
+- [x] **Step 5: Verify.** `npm test` (GoalPicker + BadgeGrid pass) + lint + build. Dev server → Stats tab shows the Fortschritt card, goal picker (selecting changes the active button + header ring target), and the badge grid (earned vs locked).
 
-- [ ] **Step 6: Commit.**
+- [x] **Step 6: Commit.**
 
 ```bash
 git add src/components/gamification/LevelCard.jsx src/components/gamification/GoalPicker.jsx src/components/gamification/GoalPicker.test.jsx src/components/gamification/BadgeGrid.jsx src/components/gamification/BadgeGrid.test.jsx src/components/StatsTab.jsx
@@ -1097,7 +1097,7 @@ git commit -m "feat(gamification): Stats Fortschritt section — level card, goa
 **Files:**
 - Modify: `src/components/StatsTab.jsx` (sound toggle), `src/App.jsx` (ensure `setSoundEnabled` reflects state on load)
 
-- [ ] **Step 1: Sound toggle.** In the Fortschritt section (StatsTab), under the goal picker, add a mute toggle:
+- [x] **Step 1: Sound toggle.** In the Fortschritt section (StatsTab), under the goal picker, add a mute toggle:
 
 ```jsx
           <button
@@ -1130,13 +1130,13 @@ git commit -m "feat(gamification): Stats Fortschritt section — level card, goa
 
 (Requires `RADIUS`, `COLORS`, `FONTS`, `FONT_SIZE`, `LETTER_SPACING` in StatsTab imports — add any missing.)
 
-- [ ] **Step 2: Sound reflects persisted state on load.** Confirm Task 4's `applyProgress` calls `setSoundEnabled(!!nextG.soundOn)` (it does) so the flag is correct on first mount and after every toggle.
+- [x] **Step 2: Sound reflects persisted state on load.** Confirm Task 4's `applyProgress` calls `setSoundEnabled(!!nextG.soundOn)` (it does) so the flag is correct on first mount and after every toggle.
 
-- [ ] **Step 3: Full regression.** `npm test` (all pass — expect ~180) + `npm run lint` (clean) + `npm run build` (`✓ built`).
+- [x] **Step 3: Full regression.** `npm test` (all pass — expect ~180) + `npm run lint` (clean) + `npm run build` (`✓ built`).
 
-- [ ] **Step 4: Whole-app screenshot tour.** Dev server; seed rich state; screenshot the header (badge + streak + goal ring), a level-up toast, and the Stats Fortschritt section. Confirm reduced-motion still disables confetti (the `Confetti` `.confetti-layer` guard already handles this).
+- [x] **Step 4: Whole-app screenshot tour.** Dev server; seed rich state; screenshot the header (badge + streak + goal ring), a level-up toast, and the Stats Fortschritt section. Confirm reduced-motion still disables confetti (the `Confetti` `.confetti-layer` guard already handles this).
 
-- [ ] **Step 5: Commit.**
+- [x] **Step 5: Commit.**
 
 ```bash
 git add src/components/StatsTab.jsx src/App.jsx
@@ -1147,8 +1147,8 @@ git commit -m "feat(gamification): sound toggle in Stats + final polish"
 
 ## Final: finish the branch
 
-- [ ] `npm test` + `npm run lint` + `npm run build` all green.
-- [ ] Use the `superpowers:finishing-a-development-branch` skill to merge/PR `gamification`.
+- [x] `npm test` + `npm run lint` + `npm run build` all green.
+- [x] Use the `superpowers:finishing-a-development-branch` skill to merge/PR `gamification`.
 
 ---
 

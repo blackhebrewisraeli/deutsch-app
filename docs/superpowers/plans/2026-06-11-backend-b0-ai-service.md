@@ -1340,9 +1340,9 @@ gh pr create --title "feat: B0 — versioned AI service lane (/api/v1/ai/*)" --b
 
 ### Task 12: Deploy verification runbook — OWNER ONLY (humans, not Cursor)
 
-- [ ] **Step 1 (pre-merge, owner):** confirm `vercel env ls` shows `ANTHROPIC_API_KEY` in Development+Preview+Production and `ALLOWED_ORIGINS` in Production (precondition 2 — re-check it survived).
-- [ ] **Step 2 (owner):** merge the reviewed PR; wait for the Vercel production deploy.
-- [ ] **Step 3 (owner or Claude Code):** verify production:
+- [x] **Step 1 (pre-merge, owner):** confirm `vercel env ls` shows `ANTHROPIC_API_KEY` in Development+Preview+Production and `ALLOWED_ORIGINS` in Production (precondition 2 — re-check it survived).
+- [x] **Step 2 (owner):** merge the reviewed PR; wait for the Vercel production deploy.
+- [x] **Step 3 (owner or Claude Code):** verify production:
 
 ```bash
 # happy path through the new route (expect HTTP 200 + JSON content)
@@ -1365,11 +1365,11 @@ curl -sS -X POST https://deutsch-app-dusky.vercel.app/api/v1/ai/chat \
   -H 'Content-Type: application/json' -d '{"model":"gpt-4"}'
 ```
 
-- [ ] **Step 4 (owner, only after Step 3 passes):** remove the old secret:
+- [x] **Step 4 (owner, only after Step 3 passes):** remove the old secret:
 
 ```bash
 vercel env rm VITE_ANTHROPIC_API_KEY preview
 vercel env rm VITE_ANTHROPIC_API_KEY production
 ```
 
-- [ ] **Step 5 (owner):** open the production PWA, run one chat turn, one translate grading, one deck generation. Rename the key in your local `.env` to `ANTHROPIC_API_KEY` (it is only a fallback — `vercel dev` injects the cloud Development value). Schedule the legacy-shim removal for the next release cycle (tracked in CURSOR_TASKS.md backlog).
+- [x] **Step 5 (owner):** open the production PWA, run one chat turn, one translate grading, one deck generation. Rename the key in your local `.env` to `ANTHROPIC_API_KEY` (it is only a fallback — `vercel dev` injects the cloud Development value). Schedule the legacy-shim removal for the next release cycle (tracked in CURSOR_TASKS.md backlog).

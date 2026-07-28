@@ -68,7 +68,7 @@ A-ii (`src/`):
   - `disambiguateIds(entries)` → given `[{ pos, lemma, glosses, ... }]`, returns the same array with an added `id`; when ≥2 share a base id, every colliding member's id becomes `` `${base}:${slug(glosses[0])}` ``; if still colliding, append `-2`, `-3`… by stable input order.
   - `cefrForRank(rank)` → `'A1'|'A2'|'B1'` per the band rule; `null` if `rank == null`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `scripts/import-lexicon/ids.test.js`:
 
@@ -142,12 +142,12 @@ describe('cefrForRank', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/ids.test.js`
 Expected: FAIL — cannot resolve `./ids.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `scripts/import-lexicon/ids.js`:
 
@@ -201,12 +201,12 @@ export function cefrForRank(rank) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/ids.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/import-lexicon/ids.js scripts/import-lexicon/ids.test.js
@@ -238,7 +238,7 @@ git commit -m "feat(import): id + cefr helpers for lexicon pipeline"
   - `topics`: union of `senses[].topics` (strings), deduped.
   - `rawExamples`: `senses[].examples` mapped to `{ de: text, en: english||null }`, only where `text` is non-empty.
 
-- [ ] **Step 1: Write the fixture**
+- [x] **Step 1: Write the fixture**
 
 Create `scripts/import-lexicon/__fixtures__/wiktextract-sample.js`:
 
@@ -272,7 +272,7 @@ export const NON_GERMAN = { word: 'bread', pos: 'noun', lang_code: 'en', senses:
 export const NO_GLOSS = { word: 'Xyz', pos: 'noun', lang_code: 'de', senses: [{ glosses: [] }] };
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `scripts/import-lexicon/parseWiktextract.test.js`:
 
@@ -310,12 +310,12 @@ describe('parseRecord', () => {
 });
 ```
 
-- [ ] **Step 3: Run to verify it fails**
+- [x] **Step 3: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/parseWiktextract.test.js`
 Expected: FAIL — cannot resolve `./parseWiktextract.js`.
 
-- [ ] **Step 4: Implement**
+- [x] **Step 4: Implement**
 
 Create `scripts/import-lexicon/parseWiktextract.js`:
 
@@ -380,12 +380,12 @@ export function parseRecord(raw) {
 }
 ```
 
-- [ ] **Step 5: Run to verify it passes**
+- [x] **Step 5: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/parseWiktextract.test.js`
 Expected: PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/import-lexicon/parseWiktextract.js scripts/import-lexicon/parseWiktextract.test.js scripts/import-lexicon/__fixtures__/wiktextract-sample.js
@@ -408,7 +408,7 @@ git commit -m "feat(import): parse Wiktextract German records"
   - `buildExampleIndex(pairs)` → `Map<string, Array<{de,en}>>` keyed by every lowercased word token in the German sentence (so a lemma lookup can find sentences containing it). Caps each bucket at 20 to bound memory.
   - `attachExamples(parsed, index, max=2)` → returns up to `max` `{ de, en, source:'tatoeba' }` examples whose German sentence contains the lemma (case-insensitive whole-word match), preferring shorter sentences; `[]` if none.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `scripts/import-lexicon/joinTatoeba.test.js`:
 
@@ -442,12 +442,12 @@ describe('buildExampleIndex + attachExamples', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/joinTatoeba.test.js`
 Expected: FAIL — cannot resolve `./joinTatoeba.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `scripts/import-lexicon/joinTatoeba.js`:
 
@@ -485,12 +485,12 @@ export function attachExamples(parsed, index, max = 2) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/joinTatoeba.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/import-lexicon/joinTatoeba.js scripts/import-lexicon/joinTatoeba.test.js
@@ -513,7 +513,7 @@ git commit -m "feat(import): join Tatoeba example sentences by lemma"
   - `assignRanks(parsedList, rankMap)` → for each parsed word, look up `rankMap.get(lemma.toLowerCase())`; set `freqRank` (number|null) and `cefr` (`cefrForRank(freqRank)`). Returns a NEW array, unsorted.
   - `topByRank(list, n)` → entries with a non-null `freqRank`, sorted ascending by rank, sliced to `n`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `scripts/import-lexicon/rankLeipzig.test.js`:
 
@@ -548,12 +548,12 @@ describe('topByRank', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/rankLeipzig.test.js`
 Expected: FAIL — cannot resolve `./rankLeipzig.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `scripts/import-lexicon/rankLeipzig.js`:
 
@@ -575,12 +575,12 @@ export function topByRank(list, n) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/rankLeipzig.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/import-lexicon/rankLeipzig.js scripts/import-lexicon/rankLeipzig.test.js
@@ -608,7 +608,7 @@ git commit -m "feat(import): Leipzig frequency ranking + cefr banding"
   ```
   Note: `verb` stays `null` even for verbs in Phase A — the parser does not extract conjugation tables, and `validateLexiconEntry` only requires the verb block when `pos==='verb'`. **Therefore `mapEntry` sets `pos` to `'verb'` only would fail validation; to stay valid, verbs are mapped with `pos` unchanged but a minimal `verb` block is NOT available.** To avoid shipping invalid entries, `mapEntry` returns `pos: word.pos` and, for verbs, sets `verb` to `null` AND the filter (Task 6) drops `pos==='verb'` entries that lack a verb block. (Verb conjugation import is a follow-up.)
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `scripts/import-lexicon/mapEntry.test.js`:
 
@@ -638,12 +638,12 @@ describe('mapEntry', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/mapEntry.test.js`
 Expected: FAIL — cannot resolve `./mapEntry.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `scripts/import-lexicon/mapEntry.js`:
 
@@ -667,12 +667,12 @@ export function mapEntry(word) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/mapEntry.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/import-lexicon/mapEntry.js scripts/import-lexicon/mapEntry.test.js
@@ -694,7 +694,7 @@ git commit -m "feat(import): map parsed words to LexiconEntry"
   - `keepEntry(entry)` → `{ keep: boolean, reason: string|null }`. Drops: noun without `article`; `pos==='verb'` with `verb===null` (conjugation not imported in Phase A); entry with zero examples after cleaning. Returns the FIRST failing reason or `{keep:true,reason:null}`.
   - `applyFilter(entries)` → `{ kept: entry[], rejected: [{id, reason}] }`; runs `cleanExamples` on each entry first (mutating its `examples`), then `keepEntry`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `scripts/import-lexicon/filter.test.js`:
 
@@ -744,12 +744,12 @@ describe('applyFilter', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/filter.test.js`
 Expected: FAIL — cannot resolve `./filter.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `scripts/import-lexicon/filter.js`:
 
@@ -786,12 +786,12 @@ export function applyFilter(entries) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/filter.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/import-lexicon/filter.js scripts/import-lexicon/filter.test.js
@@ -816,7 +816,7 @@ git commit -m "feat(import): required-field + example cleanliness filter"
     - `manifest`: `{ version:1, generatedAt: <ISO from new Date().toISOString()>, sources, total: entries.length, chunkSize, chunkCount: chunks.length }`.
   - `writeArtifacts(outDir, { manifest, index, chunks })` → writes the files with `node:fs` (mkdir -p, pretty JSON). Tested via a tmp dir.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `scripts/import-lexicon/chunk.test.js`:
 
@@ -863,12 +863,12 @@ describe('writeArtifacts', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/chunk.test.js`
 Expected: FAIL — cannot resolve `./chunk.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `scripts/import-lexicon/chunk.js`:
 
@@ -908,12 +908,12 @@ export function writeArtifacts(outDir, { manifest, index, chunks }) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/chunk.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/import-lexicon/chunk.js scripts/import-lexicon/chunk.test.js
@@ -939,7 +939,7 @@ git commit -m "feat(import): chunk/index/manifest artifact builder"
   - `download.js`: `ensureRaw(cacheDir)` → downloads the three dumps if missing (network; not unit-tested). Exposes the dump URLs as constants the README documents.
   - `index.js`: the orchestrator (default export `run({ n=5000, cacheDir, outDir })`) wiring parse→join→rank→map→id→filter→chunk→write→report. Network-dependent; invoked by the npm script, not unit-tested.
 
-- [ ] **Step 1: Write the failing test (report only — the orchestrator/download are network glue)**
+- [x] **Step 1: Write the failing test (report only — the orchestrator/download are network glue)**
 
 Create `scripts/import-lexicon/report.test.js`:
 
@@ -965,12 +965,12 @@ describe('buildReport', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/report.test.js`
 Expected: FAIL — cannot resolve `./report.js`.
 
-- [ ] **Step 3: Implement `report.js`**
+- [x] **Step 3: Implement `report.js`**
 
 Create `scripts/import-lexicon/report.js`:
 
@@ -989,7 +989,7 @@ export function buildReport({ parsedCount, rankedCount, kept, rejected }) {
 }
 ```
 
-- [ ] **Step 4: Implement `download.js`**
+- [x] **Step 4: Implement `download.js`**
 
 Create `scripts/import-lexicon/download.js`:
 
@@ -1027,7 +1027,7 @@ export async function ensureRaw(cacheDir) {
 }
 ```
 
-- [ ] **Step 5: Implement the orchestrator `index.js`**
+- [x] **Step 5: Implement the orchestrator `index.js`**
 
 Create `scripts/import-lexicon/index.js`:
 
@@ -1119,7 +1119,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
 
 > **Implementer note:** the three `read*` helpers depend on the exact decompressed file shapes, which the user confirms locally (README documents the decompress/prep step). They are deliberately thin and may need small adjustments against the real files on first run — this is the expected "develop against real data" seam. The pure modules (Tasks 1–7) are fully tested; the orchestrator only wires them.
 
-- [ ] **Step 6: Add the npm script and gitignore the cache**
+- [x] **Step 6: Add the npm script and gitignore the cache**
 
 In `package.json` `scripts`, add:
 
@@ -1133,14 +1133,14 @@ In `.gitignore`, add:
 .cache/
 ```
 
-- [ ] **Step 7: Run report test + full suite**
+- [x] **Step 7: Run report test + full suite**
 
 Run: `npx vitest run scripts/import-lexicon/report.test.js`
 Expected: PASS.
 Run: `npm test`
 Expected: PASS (all files).
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add scripts/import-lexicon/download.js scripts/import-lexicon/report.js scripts/import-lexicon/index.js scripts/import-lexicon/report.test.js package.json .gitignore
@@ -1163,7 +1163,7 @@ git commit -m "feat(import): orchestrator, downloader, report + import:lexicon s
 **Interfaces:**
 - Produces: a tiny, valid artifact set (6 entries across 2 chunks of size 3) that the runtime tests and local dev use until the user runs the full import. Each entry passes `validateLexiconEntry`. Covers ≥1 entry per shipped deck type (freq, cefr A1/A2, a `food` tag).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/packs/lexiconSample.test.js`:
 
@@ -1191,12 +1191,12 @@ describe('sample lexicon artifacts', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run src/packs/lexiconSample.test.js`
 Expected: FAIL — cannot find `../../public/lexicon/manifest.json`.
 
-- [ ] **Step 3: Create the sample artifacts**
+- [x] **Step 3: Create the sample artifacts**
 
 `public/lexicon/manifest.json`:
 
@@ -1244,12 +1244,12 @@ Expected: FAIL — cannot find `../../public/lexicon/manifest.json`.
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run src/packs/lexiconSample.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add public/lexicon/ src/packs/lexiconSample.test.js
@@ -1268,7 +1268,7 @@ git commit -m "feat(lexicon): committed sample artifacts for dev + tests"
 - Consumes: existing `resolveDeck`.
 - Produces: `resolveDeck` additionally handles `auto.by === 'tag'` → keep entries whose `tags` include `auto.tag`, sorted ascending by `freqRank` (nulls last). Existing `freq`/`cefr` behavior unchanged.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `src/packs/resolve.test.js` (inside the existing `describe('resolveDeck', …)` block or as a new one):
 
@@ -1297,12 +1297,12 @@ describe('resolveDeck auto.by=tag and sort coverage', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify the tag/throw tests fail**
+- [x] **Step 2: Run to verify the tag/throw tests fail**
 
 Run: `npx vitest run src/packs/resolve.test.js`
 Expected: FAIL — `auto.by='tag'` currently hits the `unknown auto.by "tag"` throw.
 
-- [ ] **Step 3: Implement the tag branch**
+- [x] **Step 3: Implement the tag branch**
 
 In `src/packs/resolve.js`, inside the `if (deckDef.auto) {` block, AFTER the `cefr` branch and BEFORE the `throw new Error(\`resolveDeck: unknown auto.by …\`)`, add:
 
@@ -1315,12 +1315,12 @@ In `src/packs/resolve.js`, inside the `if (deckDef.auto) {` block, AFTER the `ce
     }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run src/packs/resolve.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/resolve.js src/packs/resolve.test.js
@@ -1344,7 +1344,7 @@ git commit -m "feat(packs): resolveDeck tag decks + multi-entry sort coverage"
   - `__resetCache()` → clears memo (tests only).
   - Uses global `fetch`; chunk filename = `chunk-${String(chunk).padStart(2,'0')}.json`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/packs/lexiconStore.test.js`:
 
@@ -1399,12 +1399,12 @@ describe('resolveAutoDeck', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run src/packs/lexiconStore.test.js`
 Expected: FAIL — cannot resolve `./lexiconStore`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `src/packs/lexiconStore.js`:
 
@@ -1469,12 +1469,12 @@ export async function resolveAutoDeck(deckDef) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run src/packs/lexiconStore.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/lexiconStore.js src/packs/lexiconStore.test.js
@@ -1497,7 +1497,7 @@ git commit -m "feat(packs): async lexicon store (index + chunk lazy loading)"
   - group `'Topics'`: a curated allow-list of `{by:'tag',tag}` — `food, travel, home, people, work, body, nature, time` (icons chosen per topic).
   - Also `export const DECK_GROUPS = ['Curated','Frequency','CEFR','Topics']` (display order; Curated covers the Phase B `DECKS`).
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/packs/de/autoDecks.test.js`:
 
@@ -1524,12 +1524,12 @@ describe('AUTO_DECKS', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run src/packs/de/autoDecks.test.js`
 Expected: FAIL — cannot resolve `./autoDecks`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `src/packs/de/autoDecks.js`:
 
@@ -1554,12 +1554,12 @@ export const AUTO_DECKS = [
 ];
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run src/packs/de/autoDecks.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/de/autoDecks.js src/packs/de/autoDecks.test.js
@@ -1578,7 +1578,7 @@ git commit -m "feat(packs): frequency/cefr/topical auto-deck definitions"
 - Consumes: `AUTO_DECKS`, `DECK_GROUPS` from `../packs/de/autoDecks`; `resolveAutoDeck` from `../packs/lexiconStore`; existing curated `PRESET_DECKS` alias.
 - Produces: the deck selector lists curated decks (group "Curated") plus the auto decks grouped by `DECK_GROUPS`. Selecting an auto deck sets `activeDeck` from an async fetch with a **loading** state and an **error** state (retry). Curated decks remain synchronous. SRS/queue logic unchanged (operates on whatever `activeDeck` array is current).
 
-- [ ] **Step 1: Add async deck state + loader (implementation)**
+- [x] **Step 1: Add async deck state + loader (implementation)**
 
 In `src/components/VocabTab.jsx`:
 
@@ -1676,7 +1676,7 @@ import { resolveAutoDeck } from '../packs/lexiconStore';
 
 > Note: `SectionLabel` is already imported in this file. If it requires a non-empty `num`, pass `num={group[0]}` instead of `num=""` — match its actual prop contract (check `./UI`).
 
-- [ ] **Step 2: Write the test**
+- [x] **Step 2: Write the test**
 
 Add to `src/components/VocabTab.test.jsx` (mirror the file's existing harness; mock `fetch` like `lexiconStore.test.js` does, importing the sample JSON):
 
@@ -1714,17 +1714,17 @@ describe('auto deck loading', () => {
 
 > Ensure `vi`, `userEvent`, `screen`, `render`, `beforeEach`, `describe`, `it`, `expect` are imported as the existing tests in this file do.
 
-- [ ] **Step 3: Run the focused test**
+- [x] **Step 3: Run the focused test**
 
 Run: `npx vitest run src/components/VocabTab.test.jsx`
 Expected: PASS (loading resolves to the card). If queue ordering hides the first card, assert on any card known to be in the deck.
 
-- [ ] **Step 4: Run the full suite**
+- [x] **Step 4: Run the full suite**
 
 Run: `npm test`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/VocabTab.jsx src/components/VocabTab.test.jsx
@@ -1745,7 +1745,7 @@ git commit -m "feat(vocab): grouped deck list + async auto-deck loading"
 **Interfaces:**
 - Produces: Workbox runtime-caching for `/lexicon/*.json`; a `CONTENT_LICENSE.md` documenting CC BY-SA (Wiktionary) + CC BY (Tatoeba/Leipzig) with attribution; a README "Importing vocabulary" section; an in-app attribution line.
 
-- [ ] **Step 1: Write the failing test (docs presence guard)**
+- [x] **Step 1: Write the failing test (docs presence guard)**
 
 Create `src/packs/contentLicense.test.js`:
 
@@ -1764,12 +1764,12 @@ describe('CONTENT_LICENSE.md', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run src/packs/contentLicense.test.js`
 Expected: FAIL — file not found.
 
-- [ ] **Step 3: Create `CONTENT_LICENSE.md`**
+- [x] **Step 3: Create `CONTENT_LICENSE.md`**
 
 ```markdown
 # Content licensing
@@ -1794,12 +1794,12 @@ Word-frequency ordering is derived from the Leipzig Corpora Collection
 Attribution is also surfaced in-app in the vocabulary section.
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run src/packs/contentLicense.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Add Workbox runtime caching**
+- [x] **Step 5: Add Workbox runtime caching**
 
 In `vite.config.js`, change the `workbox` block to add `runtimeCaching` (keep `globPatterns`, `navigateFallback`, `navigateFallbackDenylist`):
 
@@ -1821,7 +1821,7 @@ In `vite.config.js`, change the `workbox` block to add `runtimeCaching` (keep `g
       },
 ```
 
-- [ ] **Step 6: Add the README section + in-app attribution**
+- [x] **Step 6: Add the README section + in-app attribution**
 
 In `README.md`, add a section "## Importing vocabulary" describing: `npm run import:lexicon`, the pinned source URLs (from `scripts/import-lexicon/download.js`'s `SOURCES`), the decompress/prep step for Tatoeba/Leipzig, that output lands in `public/lexicon/`, and the CC BY-SA note (link `CONTENT_LICENSE.md`).
 
@@ -1833,12 +1833,12 @@ In `src/components/VocabTab.jsx`, add a small attribution line at the bottom of 
           </div>
 ```
 
-- [ ] **Step 7: Run the full suite**
+- [x] **Step 7: Run the full suite**
 
 Run: `npm test`
 Expected: PASS.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add vite.config.js CONTENT_LICENSE.md README.md src/components/VocabTab.jsx src/packs/contentLicense.test.js

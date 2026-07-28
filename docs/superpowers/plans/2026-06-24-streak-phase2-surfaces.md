@@ -21,7 +21,7 @@
 
 **Files:** Modify `src/lib/gameConfig.js`; Modify `src/lib/gameConfig.test.js`
 
-- [ ] **Step 1: Add the failing test** to `gameConfig.test.js`:
+- [x] **Step 1: Add the failing test** to `gameConfig.test.js`:
 
 ```js
 import { STREAK_MILESTONES } from './gameConfig';
@@ -31,16 +31,16 @@ it('defines streak milestones', () => {
 });
 ```
 
-- [ ] **Step 2: Run** `npx vitest run src/lib/gameConfig.test.js` → FAIL.
-- [ ] **Step 3: Add to `gameConfig.js`:**
+- [x] **Step 2: Run** `npx vitest run src/lib/gameConfig.test.js` → FAIL.
+- [x] **Step 3: Add to `gameConfig.js`:**
 
 ```js
 // Streak lengths that earn a celebration (replaces the old every-7-days burst).
 export const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100];
 ```
 
-- [ ] **Step 4: Run** → PASS.
-- [ ] **Step 5: Commit** `git add src/lib/gameConfig.js src/lib/gameConfig.test.js && git commit -m "feat(streak): STREAK_MILESTONES config"`
+- [x] **Step 4: Run** → PASS.
+- [x] **Step 5: Commit** `git add src/lib/gameConfig.js src/lib/gameConfig.test.js && git commit -m "feat(streak): STREAK_MILESTONES config"`
 
 ---
 
@@ -50,7 +50,7 @@ Returns the highest milestone in `(prev, next]` — i.e. one the streak just rea
 
 **Files:** Modify `src/lib/streak.js`, `src/lib/streak.test.js`
 
-- [ ] **Step 1: Add failing tests:**
+- [x] **Step 1: Add failing tests:**
 
 ```js
 import { crossedMilestone } from './streak';
@@ -70,8 +70,8 @@ describe('crossedMilestone', () => {
 });
 ```
 
-- [ ] **Step 2: Run** `npx vitest run src/lib/streak.test.js` → FAIL.
-- [ ] **Step 3: Implement** (add to `streak.js`, importing the config):
+- [x] **Step 2: Run** `npx vitest run src/lib/streak.test.js` → FAIL.
+- [x] **Step 3: Implement** (add to `streak.js`, importing the config):
 
 ```js
 import { STREAK_MILESTONES } from './gameConfig';
@@ -84,8 +84,8 @@ export function crossedMilestone(prev, next) {
 }
 ```
 
-- [ ] **Step 4: Run** → PASS.
-- [ ] **Step 5: Commit** `git add src/lib/streak.js src/lib/streak.test.js && git commit -m "feat(streak): crossedMilestone(prev, next)"`
+- [x] **Step 4: Run** → PASS.
+- [x] **Step 5: Commit** `git add src/lib/streak.js src/lib/streak.test.js && git commit -m "feat(streak): crossedMilestone(prev, next)"`
 
 ---
 
@@ -97,19 +97,19 @@ Fire toasts when the streak is **secured/extended**, hits a **new record**, or c
 
 **Interfaces:** Consumes `crossedMilestone` from `streak.js`; reuses `pushToasts`, `setStreakBurst`, `playGoalMet`.
 
-- [ ] **Step 1: Import** `crossedMilestone` (extend the existing streak import):
+- [x] **Step 1: Import** `crossedMilestone` (extend the existing streak import):
 
 ```js
 import { currentStreak, bestStreakFromHistory, qualifies, crossedMilestone } from './lib/streak';
 ```
 
-- [ ] **Step 2: Add a `prevStreakRef`** next to `prevLevelRef` (~line 51):
+- [x] **Step 2: Add a `prevStreakRef`** next to `prevLevelRef` (~line 51):
 
 ```js
 const prevStreakRef = useRef(null);
 ```
 
-- [ ] **Step 3: Extend `deriveGame`** (~line 52-59) to expose the streak:
+- [x] **Step 3: Extend `deriveGame`** (~line 52-59) to expose the streak:
 
 ```js
 const deriveGame = () => {
@@ -124,9 +124,9 @@ const deriveGame = () => {
 };
 ```
 
-- [ ] **Step 4: Remove the old `%7` milestone effect** (the `useEffect` at ~lines 85-92, the one commented "Celebrate streak milestones (every 7 days)"). Delete the whole effect.
+- [x] **Step 4: Remove the old `%7` milestone effect** (the `useEffect` at ~lines 85-92, the one commented "Celebrate streak milestones (every 7 days)"). Delete the whole effect.
 
-- [ ] **Step 5: Add streak toasts in `applyProgress`.** Replace the streak/bestStreak block (the lines from `const tStreak = ...` through `setStats((prev) => ({ ...prev, streak: tStreak }));`) with:
+- [x] **Step 5: Add streak toasts in `applyProgress`.** Replace the streak/bestStreak block (the lines from `const tStreak = ...` through `setStats((prev) => ({ ...prev, streak: tStreak }));`) with:
 
 ```js
       const tStreak = currentStreak(s.daily ?? {}, g.goal, tKey);
@@ -155,11 +155,11 @@ const deriveGame = () => {
       setStats((prev) => ({ ...prev, streak: tStreak }));
 ```
 
-- [ ] **Step 6: Add a sound for the new kinds** in the `if (nextG.soundOn)` loop (~line 165): add `else if (t.kind === 'streak' || t.kind === 'record' || t.kind === 'milestone') playGoalMet();`
+- [x] **Step 6: Add a sound for the new kinds** in the `if (nextG.soundOn)` loop (~line 165): add `else if (t.kind === 'streak' || t.kind === 'record' || t.kind === 'milestone') playGoalMet();`
 
-- [ ] **Step 7: Run** `npm test` → PASS (App a11y tests unaffected; no reader changed). Targeted: also `npx vitest run src/lib/streak.test.js`.
+- [x] **Step 7: Run** `npm test` → PASS (App a11y tests unaffected; no reader changed). Targeted: also `npx vitest run src/lib/streak.test.js`.
 
-- [ ] **Step 8: Commit** `git add src/App.jsx && git commit -m "feat(streak): secured/record/milestone celebrations; retire %7 burst"`
+- [x] **Step 8: Commit** `git add src/App.jsx && git commit -m "feat(streak): secured/record/milestone celebrations; retire %7 burst"`
 
 ---
 
@@ -167,7 +167,7 @@ const deriveGame = () => {
 
 **Files:** Modify `src/components/gamification/GoalRing.jsx`
 
-- [ ] **Step 1:** Add a CSS transition to the progress circle so the fill animates, and scale the ✓ in on `met`. In `GoalRing.jsx`, on the second (colored) `<circle>`, add:
+- [x] **Step 1:** Add a CSS transition to the progress circle so the fill animates, and scale the ✓ in on `met`. In `GoalRing.jsx`, on the second (colored) `<circle>`, add:
 
 ```jsx
         style={{ transition: 'stroke-dashoffset 0.5s ease, stroke 0.3s ease' }}
@@ -179,8 +179,8 @@ and on the center glyph `<div>`, when `met`, add `animation: 'pop 0.3s ease-out'
           ...(met ? { animation: 'pop 0.4s ease-out' } : {}),
 ```
 
-- [ ] **Step 2:** Existing `GoalRing.test.jsx` still passes (renders both states). Run `npx vitest run src/components/gamification/GoalRing.test.jsx` → PASS.
-- [ ] **Step 3: Commit** `git add src/components/gamification/GoalRing.jsx && git commit -m "feat(streak): animate the goal ring fill + met pop"`
+- [x] **Step 2:** Existing `GoalRing.test.jsx` still passes (renders both states). Run `npx vitest run src/components/gamification/GoalRing.test.jsx` → PASS.
+- [x] **Step 3: Commit** `git add src/components/gamification/GoalRing.jsx && git commit -m "feat(streak): animate the goal ring fill + met pop"`
 
 ---
 
@@ -190,7 +190,7 @@ A slim strip — `🔥{streak} · {todayXp}/{goal} XP` — shown above exercise 
 
 **Files:** Create `src/components/gamification/GoalStrip.jsx`, `src/components/gamification/GoalStrip.test.jsx`; Modify `src/App.jsx` (render it)
 
-- [ ] **Step 1: Failing test** `GoalStrip.test.jsx`:
+- [x] **Step 1: Failing test** `GoalStrip.test.jsx`:
 
 ```jsx
 import { describe, it, expect } from 'vitest';
@@ -206,8 +206,8 @@ describe('GoalStrip', () => {
 });
 ```
 
-- [ ] **Step 2: Run** `npx vitest run src/components/gamification/GoalStrip.test.jsx` → FAIL.
-- [ ] **Step 3: Implement `GoalStrip.jsx`:**
+- [x] **Step 2: Run** `npx vitest run src/components/gamification/GoalStrip.test.jsx` → FAIL.
+- [x] **Step 3: Implement `GoalStrip.jsx`:**
 
 ```jsx
 import { Flame } from 'lucide-react';
@@ -251,8 +251,8 @@ export default function GoalStrip({ streak, current, target }) {
 }
 ```
 
-- [ ] **Step 4: Run** → PASS.
-- [ ] **Step 5: Wire into App.** Import `GoalStrip`; in `<main>`, render it above the active exercise tab (translate/vocab) using `game`:
+- [x] **Step 4: Run** → PASS.
+- [x] **Step 5: Wire into App.** Import `GoalStrip`; in `<main>`, render it above the active exercise tab (translate/vocab) using `game`:
 
 ```jsx
 {(tab === 'translate' || tab === 'vocab') && (
@@ -260,8 +260,8 @@ export default function GoalStrip({ streak, current, target }) {
 )}
 ```
 
-- [ ] **Step 6: Run** `npm test` → PASS.
-- [ ] **Step 7: Commit** `git add src/components/gamification/GoalStrip.jsx src/components/gamification/GoalStrip.test.jsx src/App.jsx && git commit -m "feat(streak): in-play goal strip on exercise tabs"`
+- [x] **Step 6: Run** `npm test` → PASS.
+- [x] **Step 7: Commit** `git add src/components/gamification/GoalStrip.jsx src/components/gamification/GoalStrip.test.jsx src/App.jsx && git commit -m "feat(streak): in-play goal strip on exercise tabs"`
 
 ---
 

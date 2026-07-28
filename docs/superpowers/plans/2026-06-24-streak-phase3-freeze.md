@@ -18,9 +18,9 @@
 
 **Files:** `src/lib/gameConfig.js` (+ test)
 
-- [ ] Test: `expect(FREEZE).toEqual({ earnEveryDays: 7, maxHeld: 2 })`.
-- [ ] Implement: `export const FREEZE = { earnEveryDays: 7, maxHeld: 2 };`
-- [ ] Run → PASS. Commit `feat(streak): FREEZE config`.
+- [x] Test: `expect(FREEZE).toEqual({ earnEveryDays: 7, maxHeld: 2 })`.
+- [x] Implement: `export const FREEZE = { earnEveryDays: 7, maxHeld: 2 };`
+- [x] Run → PASS. Commit `feat(streak): FREEZE config`.
 
 ---
 
@@ -30,7 +30,7 @@ A rescued day counts like a qualifying day. Add an optional `frozenDays` arg (de
 
 **Files:** `src/lib/streak.js` (+ test)
 
-- [ ] **Tests** (add to `streak.test.js`):
+- [x] **Tests** (add to `streak.test.js`):
 
 ```js
 it('currentStreak bridges a missed day that was frozen', () => {
@@ -44,8 +44,8 @@ it('bestStreakFromHistory bridges frozen days', () => {
 });
 ```
 
-- [ ] **Implement:** add a `counts(daily, frozenDays, goal, key)` helper = `qualifies(daily[key], goal) || !!frozenDays[key]`. Thread `frozenDays = {}` through both functions, replacing the `qualifies(...)` checks with `counts(...)`. (For `bestStreakFromHistory`, the candidate days become `Object.keys({ ...daily, ...frozenDays })` filtered by `counts`.)
-- [ ] Run → PASS. Commit `feat(streak): frozenDays bridging in currentStreak/bestStreak`.
+- [x] **Implement:** add a `counts(daily, frozenDays, goal, key)` helper = `qualifies(daily[key], goal) || !!frozenDays[key]`. Thread `frozenDays = {}` through both functions, replacing the `qualifies(...)` checks with `counts(...)`. (For `bestStreakFromHistory`, the candidate days become `Object.keys({ ...daily, ...frozenDays })` filtered by `counts`.)
+- [x] Run → PASS. Commit `feat(streak): frozenDays bridging in currentStreak/bestStreak`.
 
 ---
 
@@ -55,7 +55,7 @@ Forward-walk the calendar from the first activity day up to (excluding) `upTo`, 
 
 **Files:** `src/lib/streak.js` (+ test)
 
-- [ ] **Tests:**
+- [x] **Tests:**
 
 ```js
 import { simulateFreezes } from './streak';
@@ -85,7 +85,7 @@ describe('simulateFreezes', () => {
 });
 ```
 
-- [ ] **Implement:**
+- [x] **Implement:**
 
 ```js
 import { FREEZE } from './gameConfig';
@@ -116,7 +116,7 @@ export function simulateFreezes(daily, goal, upTo) {
 
 (Add a `nextKey(key)` helper — the inverse of `prevKey`.)
 
-- [ ] Run → PASS. Commit `feat(streak): simulateFreezes engine`.
+- [x] Run → PASS. Commit `feat(streak): simulateFreezes engine`.
 
 ---
 
@@ -124,7 +124,7 @@ export function simulateFreezes(daily, goal, upTo) {
 
 **Files:** `src/lib/streak.js` (+ test)
 
-- [ ] **Tests:**
+- [x] **Tests:**
 
 ```js
 import { reconcile, freezesAvailable } from './streak';
@@ -144,7 +144,7 @@ it('freezesAvailable reflects the earned balance', () => {
 });
 ```
 
-- [ ] **Implement:**
+- [x] **Implement:**
 
 ```js
 export function reconcile(state, today) {
@@ -164,7 +164,7 @@ export function freezesAvailable(state, today) {
 }
 ```
 
-- [ ] Run → PASS. Commit `feat(streak): reconcile + freezesAvailable`.
+- [x] Run → PASS. Commit `feat(streak): reconcile + freezesAvailable`.
 
 ---
 
@@ -172,8 +172,8 @@ export function freezesAvailable(state, today) {
 
 **Files:** `src/App.jsx`, `src/components/UI.jsx` (StatBlock freeze indicator — optional minimal)
 
-- [ ] Import `reconcile`, `freezesAvailable` (extend streak import).
-- [ ] In `applyProgress`, after computing `g`, run reconcile once per new day:
+- [x] Import `reconcile`, `freezesAvailable` (extend streak import).
+- [x] In `applyProgress`, after computing `g`, run reconcile once per new day:
 
 ```js
 if (g.lastReconcileDay !== tKey) {
@@ -185,13 +185,13 @@ if (g.lastReconcileDay !== tKey) {
 const frozenDays = nextG.frozenDays ?? g.frozenDays ?? {};
 ```
 
-- [ ] Update the `tStreak`/`histBest` lines to pass `frozenDays`:
+- [x] Update the `tStreak`/`histBest` lines to pass `frozenDays`:
   `currentStreak(s.daily ?? {}, g.goal, tKey, frozenDays)` and `bestStreakFromHistory(s.daily ?? {}, g.goal, frozenDays)`.
-- [ ] Update `deriveGame` to pass frozenDays + expose `freezes`:
+- [x] Update `deriveGame` to pass frozenDays + expose `freezes`:
   `streak: currentStreak(daily, goalXp, todayKey(), s.gamification?.frozenDays ?? {})`, `freezes: freezesAvailable(s, todayKey())`.
-- [ ] Freeze toast: when `Object.keys(rec.frozenDays).length > Object.keys(g.frozenDays ?? {}).length` (a freeze was just spent) → push `{ kind: 'freeze', title: 'Freeze genutzt', sub: 'Streak gerettet', icon: '❄️' }` (non-firstRun only).
-- [ ] Header: show `❄️ {game.freezes}` next to the streak when `game.freezes > 0` (small span in the header, near `StatBlock STREAK`).
-- [ ] Run `npm test` → PASS. Commit `feat(streak): reconcile on rollover; frozen-day bridging; freeze UI`.
+- [x] Freeze toast: when `Object.keys(rec.frozenDays).length > Object.keys(g.frozenDays ?? {}).length` (a freeze was just spent) → push `{ kind: 'freeze', title: 'Freeze genutzt', sub: 'Streak gerettet', icon: '❄️' }` (non-firstRun only).
+- [x] Header: show `❄️ {game.freezes}` next to the streak when `game.freezes > 0` (small span in the header, near `StatBlock STREAK`).
+- [x] Run `npm test` → PASS. Commit `feat(streak): reconcile on rollover; frozen-day bridging; freeze UI`.
 
 ---
 
@@ -199,9 +199,9 @@ const frozenDays = nextG.frozenDays ?? g.frozenDays ?? {};
 
 **Files:** `src/lib/sync/merge.js` (+ test)
 
-- [ ] **Test** (extend `merge.test.js`): two settings blobs with different `frozenDays`/`bestStreak` → merged `frozenDays` is the union, `bestStreak` is the max.
-- [ ] **Implement:** in `mergeSettings`, after the `learnedWords` union, also union `frozenDays` and take `Math.max` of `bestStreak`, attaching both to the returned object (mirror the learnedWords pattern; skip when neither side has them).
-- [ ] Run → PASS. Commit `feat(streak): sync-merge frozenDays (union) + bestStreak (max)`.
+- [x] **Test** (extend `merge.test.js`): two settings blobs with different `frozenDays`/`bestStreak` → merged `frozenDays` is the union, `bestStreak` is the max.
+- [x] **Implement:** in `mergeSettings`, after the `learnedWords` union, also union `frozenDays` and take `Math.max` of `bestStreak`, attaching both to the returned object (mirror the learnedWords pattern; skip when neither side has them).
+- [x] Run → PASS. Commit `feat(streak): sync-merge frozenDays (union) + bestStreak (max)`.
 
 ---
 
@@ -209,9 +209,9 @@ const frozenDays = nextG.frozenDays ?? g.frozenDays ?? {};
 
 **Files:** `src/lib/sync/adapters.js` (+ test)
 
-- [ ] **Test** (extend `adapters.test.js`): `settingsToRow` includes `frozenDays`/`bestStreak`/`lastReconcileDay`; `settingsFromRow` reads them back into `gamification`.
-- [ ] **Implement:** add `frozenDays`, `bestStreak`, `lastReconcileDay` to the `data` object in `settingsToRow` (from `local.gamification`) and into `gamification` in `settingsFromRow`.
-- [ ] Run `npm test` → PASS. Commit `feat(streak): sync adapters carry frozenDays/bestStreak/lastReconcileDay`.
+- [x] **Test** (extend `adapters.test.js`): `settingsToRow` includes `frozenDays`/`bestStreak`/`lastReconcileDay`; `settingsFromRow` reads them back into `gamification`.
+- [x] **Implement:** add `frozenDays`, `bestStreak`, `lastReconcileDay` to the `data` object in `settingsToRow` (from `local.gamification`) and into `gamification` in `settingsFromRow`.
+- [x] Run `npm test` → PASS. Commit `feat(streak): sync adapters carry frozenDays/bestStreak/lastReconcileDay`.
 
 ---
 

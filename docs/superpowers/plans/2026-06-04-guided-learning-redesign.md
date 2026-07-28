@@ -32,7 +32,7 @@
 - Modify: `src/components/SplashScreen.jsx`
 - Modify: `src/App.jsx`
 
-- [ ] **Step 1: Create `src/lib/utils.js`**
+- [x] **Step 1: Create `src/lib/utils.js`**
 
 ```js
 // Pure utility functions shared across exercise components.
@@ -74,7 +74,7 @@ export function levenshtein(a, b) {
 }
 ```
 
-- [ ] **Step 2: Update `SplashScreen.jsx` — add A2 level button**
+- [x] **Step 2: Update `SplashScreen.jsx` — add A2 level button**
 
 Read the current file, then replace the two-button row with three buttons. The current buttons render inside the red stripe section. Replace the button block:
 
@@ -165,7 +165,7 @@ export default function SplashScreen({ onComplete }) {
 }
 ```
 
-- [ ] **Step 3: Update `App.jsx` — pass `level` to all tabs**
+- [x] **Step 3: Update `App.jsx` — pass `level` to all tabs**
 
 Find the tab rendering block and add `level={level}` to the three tabs that don't yet receive it:
 
@@ -188,7 +188,7 @@ const [level, setLevel] = useState(() => {
 });
 ```
 
-- [ ] **Step 4: Build and verify**
+- [x] **Step 4: Build and verify**
 
 ```bash
 npm run build
@@ -196,7 +196,7 @@ npm run build
 
 Expected: `✓ built in` — zero errors. The app should still render; SplashScreen now shows three buttons.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/utils.js src/components/SplashScreen.jsx src/App.jsx
@@ -210,7 +210,7 @@ git commit -m "feat: add A2 level, utils module, pass level prop to all tabs"
 **Files:**
 - Modify: `src/data/content.js`
 
-- [ ] **Step 1: Append exercise data to `src/data/content.js`**
+- [x] **Step 1: Append exercise data to `src/data/content.js`**
 
 Add the following exports at the bottom of the file (after the existing `SCENARIOS` export):
 
@@ -417,7 +417,7 @@ export const ALPHABET_QUIZ_GROUPS = [
 ];
 ```
 
-- [ ] **Step 2: Build to verify no syntax errors**
+- [x] **Step 2: Build to verify no syntax errors**
 
 ```bash
 npm run build
@@ -425,7 +425,7 @@ npm run build
 
 Expected: `✓ built in` with no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add src/data/content.js
@@ -441,7 +441,7 @@ git commit -m "feat: add exercise sentence banks and task/quiz data to content.j
 
 This component renders three distinct exercise modes based on `level`. The shared wrapper manages: current exercise index, exercise counter (N/10), shuffle-on-mount, feedback state, and AI generation fallback.
 
-- [ ] **Step 1: Rewrite `src/components/TranslateTab.jsx`**
+- [x] **Step 1: Rewrite `src/components/TranslateTab.jsx`**
 
 ```jsx
 import { useState, useEffect, useCallback } from 'react';
@@ -877,7 +877,7 @@ export default function TranslateTab({ level = 'a1' }) {
 }
 ```
 
-- [ ] **Step 2: Build to verify**
+- [x] **Step 2: Build to verify**
 
 ```bash
 npm run build
@@ -885,7 +885,7 @@ npm run build
 
 Expected: `✓ built in` with no errors.
 
-- [ ] **Step 3: Run dev server and manually test all three modes**
+- [x] **Step 3: Run dev server and manually test all three modes**
 
 ```bash
 npm run dev
@@ -896,7 +896,7 @@ Open `http://localhost:5173`. Clear localStorage in DevTools > Application > Loc
 - Go back to splash (clear localStorage), select **Elementary (A2)** → fill-the-blanks sentence shown, clicking a tile fills next blank
 - Go back to splash, select **Intermediate (B1)** → textarea, type a translation, CHECK calls AI and shows feedback
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/TranslateTab.jsx
@@ -912,7 +912,7 @@ git commit -m "feat: rewrite TranslateTab as exercise mode (tiles/blanks/typing 
 
 Add a `YOUR TASK` box below the scenario selector. Anna's system prompt is updated to be task-aware. A collapsible hint shows the model answer.
 
-- [ ] **Step 1: Modify `src/components/ChatTab.jsx`**
+- [x] **Step 1: Modify `src/components/ChatTab.jsx`**
 
 Add these imports at the top:
 
@@ -1010,7 +1010,7 @@ import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE, BORDER } 
 
 (Replace the existing destructured import from `'../lib/theme'` which uses the old FONT_DISPLAY/FONT_MONO/FONT_BODY names — keep backward compat by also keeping those or switching fully to FONTS.display etc. Easiest: add the new names alongside the old ones in the import.)
 
-- [ ] **Step 2: Build and verify**
+- [x] **Step 2: Build and verify**
 
 ```bash
 npm run build
@@ -1018,7 +1018,7 @@ npm run build
 
 Expected: zero errors.
 
-- [ ] **Step 3: Manual test**
+- [x] **Step 3: Manual test**
 
 ```bash
 npm run dev
@@ -1029,7 +1029,7 @@ npm run dev
 - Click "SHOW HINT" → hint text appears
 - Switch scenario → task resets to task 0 for that scenario
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/ChatTab.jsx
@@ -1045,7 +1045,7 @@ git commit -m "feat: add task panel and guided conversation mode to ChatTab"
 
 Replace the passive flip mechanic. A1/A2 get four-option multiple choice; B1 gets a type-the-meaning input. Cards answered incorrectly return to the end of the deck.
 
-- [ ] **Step 1: Rewrite the card interaction section of `VocabTab.jsx`**
+- [x] **Step 1: Rewrite the card interaction section of `VocabTab.jsx`**
 
 Add import:
 ```jsx
@@ -1205,7 +1205,7 @@ const advanceQueue = (wasCorrect) => {
 };
 ```
 
-- [ ] **Step 2: Build and verify**
+- [x] **Step 2: Build and verify**
 
 ```bash
 npm run build
@@ -1213,7 +1213,7 @@ npm run build
 
 Expected: zero errors.
 
-- [ ] **Step 3: Manual test**
+- [x] **Step 3: Manual test**
 
 ```bash
 npm run dev
@@ -1223,7 +1223,7 @@ npm run dev
 - B1 level → text input appears instead of choices, type answer, Enter submits
 - Deck complete banner shows when all cards answered correctly at least once
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/VocabTab.jsx
@@ -1239,7 +1239,7 @@ git commit -m "feat: replace passive vocab flip with active recall (multiple cho
 
 Add a quiz mode. A toggle at the top switches between Browse (existing grid) and Quiz (listen & identify). The quiz plays a letter via Web Speech and shows four confusable options.
 
-- [ ] **Step 1: Modify `src/components/AlphabetTab.jsx`**
+- [x] **Step 1: Modify `src/components/AlphabetTab.jsx`**
 
 Add imports:
 ```jsx
@@ -1405,7 +1405,7 @@ return (
 );
 ```
 
-- [ ] **Step 2: Build and verify**
+- [x] **Step 2: Build and verify**
 
 ```bash
 npm run build
@@ -1413,7 +1413,7 @@ npm run build
 
 Expected: zero errors.
 
-- [ ] **Step 3: Manual test**
+- [x] **Step 3: Manual test**
 
 ```bash
 npm run dev
@@ -1425,7 +1425,7 @@ npm run dev
 - Score counter updates each round
 - Switch to Browse → existing letter grid shown as before, clicking a letter plays audio and shows detail panel
 
-- [ ] **Step 4: Final build + commit all**
+- [x] **Step 4: Final build + commit all**
 
 ```bash
 npm run build

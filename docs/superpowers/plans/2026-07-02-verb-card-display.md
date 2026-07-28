@@ -33,7 +33,7 @@
 - Consumes: nothing.
 - Produces: `formatVerb(verb) => Array<{ label: string, value: string }>`. Input is a resolved card's `verb` field: `null` or `{ aux: null|'haben'|'sein', partizip2: null|string, present: { ich, du, er, wir, ihr, sie } }` (each present value string|null). Returns `[]` for `null`/non-object/empty blocks.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/lib/verbDisplay.test.js`:
 
@@ -89,12 +89,12 @@ describe('formatVerb', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run src/lib/verbDisplay.test.js`
 Expected: FAIL — cannot resolve `./verbDisplay`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 Create `src/lib/verbDisplay.js`:
 
@@ -121,12 +121,12 @@ export function formatVerb(verb) {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run src/lib/verbDisplay.test.js`
 Expected: PASS (7 cases).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/verbDisplay.js src/lib/verbDisplay.test.js
@@ -144,7 +144,7 @@ git commit -m "feat(vocab): formatVerb helper for card conjugation lines"
 - Consumes: `formatVerb` from `../lib/verbDisplay` (Task 1); `card.verb` (already on resolved cards).
 - Produces: the card face shows the verb lines; nouns/phrases (`verb: null`) render nothing new.
 
-- [ ] **Step 1: Add the import**
+- [x] **Step 1: Add the import**
 
 In `src/components/VocabTab.jsx`, add near the other `../lib/...` imports (e.g. after the `getDueCards`/`recordVocabAnswer` import from `../lib/srs`):
 
@@ -152,7 +152,7 @@ In `src/components/VocabTab.jsx`, add near the other `../lib/...` imports (e.g. 
 import { formatVerb } from '../lib/verbDisplay';
 ```
 
-- [ ] **Step 2: Render the lines after the plural block**
+- [x] **Step 2: Render the lines after the plural block**
 
 In the card-face block, immediately AFTER the plural block (the `{card.plural && ( … )}` that ends around line 586) and BEFORE the example block (`{card.examples?.length > 0 && (`), insert:
 
@@ -175,14 +175,14 @@ In the card-face block, immediately AFTER the plural block (the `{card.plural &&
 
 (These theme tokens — `FONTS.mono`, `FONT_SIZE.tag`, `LETTER_SPACING.caps`, `COLORS.mute`, `SPACE` — are already imported and in use by the adjacent plural block.)
 
-- [ ] **Step 3: Run the VocabTab suite + full suite**
+- [x] **Step 3: Run the VocabTab suite + full suite**
 
 Run: `npx vitest run src/components/VocabTab.test.jsx`
 Expected: PASS (existing tests unaffected — the new render is additive and gated on `card.verb`, which is `null` for every card in the test decks).
 Run: `npm test`
 Expected: PASS (all files).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add src/components/VocabTab.jsx

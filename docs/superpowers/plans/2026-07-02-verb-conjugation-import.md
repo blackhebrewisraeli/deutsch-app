@@ -40,7 +40,7 @@
 - Consumes: existing `validateLexiconEntry`, `nonEmptyStr` helper (in-file).
 - Produces: `validateLexiconEntry` now accepts `verb: null` for any pos (including verbs), and validates a present verb block against the relaxed shape.
 
-- [ ] **Step 1: Update the failing tests**
+- [x] **Step 1: Update the failing tests**
 
 In `src/packs/validate.test.js`, REPLACE the test at lines ~118-122 (`it('throws when a verb entry has no verb block', …)`) with the following, and add the sibling cases. (Keep the existing `it('accepts a valid verb entry', …)` full-block test.)
 
@@ -80,12 +80,12 @@ In `src/packs/validate.test.js`, REPLACE the test at lines ~118-122 (`it('throws
   });
 ```
 
-- [ ] **Step 2: Run to verify the new tests fail**
+- [x] **Step 2: Run to verify the new tests fail**
 
 Run: `npx vitest run src/packs/validate.test.js`
 Expected: FAIL — the null-block and partial-block cases throw under the current strict rules; the "missing present key" message differs.
 
-- [ ] **Step 3: Relax the validator**
+- [x] **Step 3: Relax the validator**
 
 In `src/packs/validate.js`, replace the block at lines 99-109 with:
 
@@ -110,12 +110,12 @@ In `src/packs/validate.js`, replace the block at lines 99-109 with:
 
 (Note: the old line `if (entry.pos === 'verb' && entry.verb === null) fail('verb block is required for verbs');` is DELETED — do not keep it. A missing `present` key still fails because `v.present[p]` is `undefined`, which is `!== null` and not a non-empty string.)
 
-- [ ] **Step 4: Run to verify all pass**
+- [x] **Step 4: Run to verify all pass**
 
 Run: `npx vitest run src/packs/validate.test.js`
 Expected: PASS (including the retained full-block test).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/validate.js src/packs/validate.test.js
@@ -135,7 +135,7 @@ git commit -m "feat(packs): relax verb block validation (best-effort, nullable f
 - Consumes: nothing new.
 - Produces: `parseRecord(raw)` now returns an extra field `verb` — the relaxed block (all six `present` keys, `null` for gaps) or `null` when no conjugation data is found. Only populated for `pos === 'verb'`.
 
-- [ ] **Step 1: Add verb fixtures**
+- [x] **Step 1: Add verb fixtures**
 
 Append to `scripts/import-lexicon/__fixtures__/wiktextract-sample.js`:
 
@@ -180,7 +180,7 @@ export const VERB_NO_FORMS = {
 };
 ```
 
-- [ ] **Step 2: Write the failing tests + fix the noun assertion**
+- [x] **Step 2: Write the failing tests + fix the noun assertion**
 
 In `scripts/import-lexicon/parseWiktextract.test.js`:
 
@@ -243,12 +243,12 @@ describe('parseRecord — verb conjugation', () => {
 });
 ```
 
-- [ ] **Step 3: Run to verify it fails**
+- [x] **Step 3: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/parseWiktextract.test.js`
 Expected: FAIL — `parseRecord(...).verb` is `undefined` (field doesn't exist yet); NOUN_BROT `toEqual` now expects `verb: null`.
 
-- [ ] **Step 4: Implement `verbFromForms` + return `verb`**
+- [x] **Step 4: Implement `verbFromForms` + return `verb`**
 
 In `scripts/import-lexicon/parseWiktextract.js`, add near the other helpers (after `firstIpa`):
 
@@ -302,12 +302,12 @@ Then, in the `return { … }` of `parseRecord`, add the `verb` field (after `raw
     verb: pos === 'verb' ? verbFromForms(raw.forms) : null,
 ```
 
-- [ ] **Step 5: Run to verify it passes**
+- [x] **Step 5: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/parseWiktextract.test.js`
 Expected: PASS (verb cases + updated NOUN_BROT).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add scripts/import-lexicon/parseWiktextract.js scripts/import-lexicon/parseWiktextract.test.js scripts/import-lexicon/__fixtures__/wiktextract-sample.js
@@ -328,7 +328,7 @@ git commit -m "feat(import): extract best-effort verb conjugation from Wiktextra
 - Consumes: the parser's `verb` block (Task 2); the relaxed validator (Task 1).
 - Produces: `mapEntry(word)` sets `verb: word.verb ?? null`; `keepEntry` no longer drops verbs.
 
-- [ ] **Step 1: Write the failing mapEntry test**
+- [x] **Step 1: Write the failing mapEntry test**
 
 In `scripts/import-lexicon/mapEntry.test.js`, add a verb case (the existing noun test stays). `validateLexiconEntry` is already imported there.
 
@@ -347,12 +347,12 @@ it('passes a verb conjugation block through and stays valid', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/mapEntry.test.js`
 Expected: FAIL — `entry.verb` is `null` (mapEntry hardcodes it).
 
-- [ ] **Step 3: Pass verb through in mapEntry**
+- [x] **Step 3: Pass verb through in mapEntry**
 
 In `scripts/import-lexicon/mapEntry.js`, change the `verb` line from `verb: null,` to:
 
@@ -360,12 +360,12 @@ In `scripts/import-lexicon/mapEntry.js`, change the `verb` line from `verb: null
     verb: word.verb ?? null,
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run scripts/import-lexicon/mapEntry.test.js`
 Expected: PASS (noun test still passes — a noun word has no `verb`, so `?? null` yields `null`).
 
-- [ ] **Step 5: Write the failing filter test**
+- [x] **Step 5: Write the failing filter test**
 
 In `scripts/import-lexicon/filter.test.js`, REPLACE the test `it('drops a verb without a verb block', …)` (around line 26) with:
 
@@ -375,12 +375,12 @@ In `scripts/import-lexicon/filter.test.js`, REPLACE the test `it('drops a verb w
   });
 ```
 
-- [ ] **Step 6: Run to verify it fails**
+- [x] **Step 6: Run to verify it fails**
 
 Run: `npx vitest run scripts/import-lexicon/filter.test.js`
 Expected: FAIL — `keepEntry` currently returns `{ keep: false, reason: 'verb missing verb block' }`.
 
-- [ ] **Step 7: Remove the verb drop in filter**
+- [x] **Step 7: Remove the verb drop in filter**
 
 In `scripts/import-lexicon/filter.js`, delete this line from `keepEntry` (line ~15):
 
@@ -398,14 +398,14 @@ export function keepEntry(entry) {
 }
 ```
 
-- [ ] **Step 8: Run the focused tests + full suite**
+- [x] **Step 8: Run the focused tests + full suite**
 
 Run: `npx vitest run scripts/import-lexicon/mapEntry.test.js scripts/import-lexicon/filter.test.js`
 Expected: PASS.
 Run: `npm test`
 Expected: PASS (all files).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add scripts/import-lexicon/mapEntry.js scripts/import-lexicon/mapEntry.test.js scripts/import-lexicon/filter.js scripts/import-lexicon/filter.test.js

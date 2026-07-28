@@ -55,13 +55,13 @@
 - Modify: `eslint.config.js`
 - Create: `vitest.rls.config.js`
 
-- [ ] **Step 1: Install the dependency**
+- [x] **Step 1: Install the dependency**
 
 Run: `npm install @supabase/supabase-js`
 (`.npmrc` already sets `legacy-peer-deps=true`.)
 Expected: `@supabase/supabase-js` appears under `"dependencies"` in `package.json`.
 
-- [ ] **Step 2: Add the script and widen lint**
+- [x] **Step 2: Add the script and widen lint**
 
 In `package.json` scripts, change/add these lines (leave the rest untouched):
 
@@ -80,7 +80,7 @@ In the `lint-staged` block, add (keep existing entries):
     ],
 ```
 
-- [ ] **Step 3: Give supabase test files Node globals in ESLint**
+- [x] **Step 3: Give supabase test files Node globals in ESLint**
 
 In `eslint.config.js`, find the server-side block and add the new glob:
 
@@ -91,7 +91,7 @@ In `eslint.config.js`, find the server-side block and add the new glob:
     files: ['api/**/*.js', '*.config.js', 'scripts/**/*.js', 'supabase/tests/**/*.js'],
 ```
 
-- [ ] **Step 4: Create `vitest.rls.config.js`**
+- [x] **Step 4: Create `vitest.rls.config.js`**
 
 ```js
 import { defineConfig } from 'vitest/config';
@@ -110,13 +110,13 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 5: Verify nothing broke**
+- [x] **Step 5: Verify nothing broke**
 
 Run: `npm test` → 41 files / 327 tests, green (the rls config is separate; no new tests yet).
 Run: `npm run lint` → exit 0.
 Run: `npm run test:rls` → "No test files found" (expected — suite arrives in Task 7).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add package.json package-lock.json eslint.config.js vitest.rls.config.js
@@ -131,12 +131,12 @@ git commit -m "chore(b1): supabase-js dep, test:rls script, lint reach"
 - Create: `supabase/config.toml` (generated)
 - Modify: `.gitignore` (only if needed)
 
-- [ ] **Step 1: Init**
+- [x] **Step 1: Init**
 
 Run: `supabase init`
 Expected: `supabase/config.toml` created. If the CLI offers to generate VS Code/Deno settings, answer **no**.
 
-- [ ] **Step 2: Keep the repo clean**
+- [x] **Step 2: Keep the repo clean**
 
 Check `.gitignore`: if `supabase init` did not already create ignore rules for the CLI's scratch dirs, append this block to the repo `.gitignore`:
 
@@ -146,12 +146,12 @@ supabase/.temp/
 supabase/.branches/
 ```
 
-- [ ] **Step 3: First boot of the local stack**
+- [x] **Step 3: First boot of the local stack**
 
 Run: `supabase start`
 Expected: first run pulls Docker images (several minutes), then prints a block with `API URL: http://127.0.0.1:54321`, anon key, and service_role key. Run `supabase status` afterwards — same values, stack healthy.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add supabase/config.toml .gitignore
@@ -165,12 +165,12 @@ git commit -m "chore(b1): supabase init — local stack config"
 **Files:**
 - Create: `supabase/migrations/<ts>_rate_limits.sql` (timestamp via CLI)
 
-- [ ] **Step 1: Create the migration file**
+- [x] **Step 1: Create the migration file**
 
 Run: `supabase migration new rate_limits`
 Expected: empty file `supabase/migrations/<timestamp>_rate_limits.sql` created.
 
-- [ ] **Step 2: Fill it with exactly this SQL**
+- [x] **Step 2: Fill it with exactly this SQL**
 
 ```sql
 create table public.rate_limits (
@@ -208,12 +208,12 @@ revoke execute on function public.increment_rate_limit(text, bigint) from anon, 
 grant  execute on function public.increment_rate_limit(text, bigint) to service_role;
 ```
 
-- [ ] **Step 3: Apply**
+- [x] **Step 3: Apply**
 
 Run: `supabase db reset`
 Expected: ends with `Finished supabase db reset` and lists the migration as applied. Any SQL error = fix the file, reset again.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add supabase/migrations/
@@ -227,11 +227,11 @@ git commit -m "feat(b1): rate_limits table + atomic increment_rate_limit RPC"
 **Files:**
 - Create: `supabase/migrations/<ts>_user_tables.sql`
 
-- [ ] **Step 1: Create the migration file**
+- [x] **Step 1: Create the migration file**
 
 Run: `supabase migration new user_tables`
 
-- [ ] **Step 2: Fill it with exactly this SQL**
+- [x] **Step 2: Fill it with exactly this SQL**
 
 ```sql
 -- Five user-owned tables. RLS is enabled in the same migration as each
@@ -350,12 +350,12 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 ```
 
-- [ ] **Step 3: Apply**
+- [x] **Step 3: Apply**
 
 Run: `supabase db reset`
 Expected: both migrations applied, no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add supabase/migrations/
@@ -370,7 +370,7 @@ git commit -m "feat(b1): user tables with RLS-in-migration + profiles trigger"
 - Test: `api/_lib/supabase.test.js`
 - Create: `api/_lib/supabase.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 The factory caches at module scope, so each test reloads the module (`vi.resetModules` + dynamic import):
 
@@ -413,12 +413,12 @@ describe('serviceClient', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify it fails**
+- [x] **Step 2: Run to verify it fails**
 
 Run: `npx vitest run api/_lib/supabase.test.js`
 Expected: FAIL — cannot find module `./supabase.js`.
 
-- [ ] **Step 3: Implement**
+- [x] **Step 3: Implement**
 
 ```js
 import { createClient } from '@supabase/supabase-js';
@@ -439,12 +439,12 @@ export function serviceClient() {
 }
 ```
 
-- [ ] **Step 4: Run to verify it passes**
+- [x] **Step 4: Run to verify it passes**
 
 Run: `npx vitest run api/_lib/supabase.test.js`
 Expected: PASS (3 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add api/_lib/supabase.js api/_lib/supabase.test.js
@@ -460,7 +460,7 @@ git commit -m "feat(b1): service-role client factory (null when unconfigured)"
 - Modify: `api/_lib/ratelimit.js`
 - Modify: `api/_lib/handler.js`
 
-- [ ] **Step 1: Append the failing tests to `api/_lib/ratelimit.test.js`**
+- [x] **Step 1: Append the failing tests to `api/_lib/ratelimit.test.js`**
 
 Add these imports to the existing import line: `SupabaseStore`, `defaultStore` (final line reads:)
 
@@ -535,12 +535,12 @@ describe('defaultStore', () => {
 });
 ```
 
-- [ ] **Step 2: Run to verify the new tests fail**
+- [x] **Step 2: Run to verify the new tests fail**
 
 Run: `npx vitest run api/_lib/ratelimit.test.js`
 Expected: FAIL — `SupabaseStore` / `defaultStore` are not exported.
 
-- [ ] **Step 3: Implement in `api/_lib/ratelimit.js`**
+- [x] **Step 3: Implement in `api/_lib/ratelimit.js`**
 
 Add at the top of the file:
 
@@ -601,7 +601,7 @@ export function createRateLimiter({ windowMs, max, store = new MemoryStore(), no
 }
 ```
 
-- [ ] **Step 4: Wire the handler**
+- [x] **Step 4: Wire the handler**
 
 In `api/_lib/handler.js`, add `defaultStore` to the ratelimit import and pass it:
 
@@ -615,12 +615,12 @@ import { createRateLimiter, defaultStore } from './ratelimit.js';
 
 (One changed line each. Everything else in the handler stays as-is.)
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: 43 files / 336 tests, all green (327 baseline + 3 from Task 5 + 6 here). A few `console.warn` lines about MemoryStore in stderr are expected — vitest isolates test files, so the warn-once fires once per file that loads the limiter without `SUPABASE_*` env (handler, endpoints, ratelimit tests).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add api/_lib/ratelimit.js api/_lib/ratelimit.test.js api/_lib/handler.js
@@ -637,7 +637,7 @@ git commit -m "feat(b1): durable SupabaseStore with fail-open limiter"
 
 Requires the local stack from Task 2 (`supabase status` → healthy; if not, `supabase start`).
 
-- [ ] **Step 1: Create `supabase/tests/rls/helpers.js`**
+- [x] **Step 1: Create `supabase/tests/rls/helpers.js`**
 
 ```js
 import { createClient } from '@supabase/supabase-js';
@@ -682,7 +682,7 @@ export async function createSignedInUser(label) {
 }
 ```
 
-- [ ] **Step 2: Create `supabase/tests/rls/policies.test.js`**
+- [x] **Step 2: Create `supabase/tests/rls/policies.test.js`**
 
 ```js
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -795,12 +795,12 @@ describe('RLS: rate_limits', () => {
 });
 ```
 
-- [ ] **Step 3: Run the suite**
+- [x] **Step 3: Run the suite**
 
 Run: `npm run test:rls`
 Expected: PASS — `policies.test.js` 25 tests (4 tables × 5 + profiles 3 + anon 1 + rate_limits 1), green against the local stack.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add supabase/tests/
@@ -814,7 +814,7 @@ git commit -m "test(b1): adversarial RLS suite — cross-user access denied ever
 **Files:**
 - Create: `supabase/tests/rls/ratelimit.test.js`
 
-- [ ] **Step 1: Write the tests**
+- [x] **Step 1: Write the tests**
 
 ```js
 import { describe, it, expect, beforeAll } from 'vitest';
@@ -877,12 +877,12 @@ describe('increment_rate_limit', () => {
 });
 ```
 
-- [ ] **Step 2: Run the full RLS suite**
+- [x] **Step 2: Run the full RLS suite**
 
 Run: `npm run test:rls`
 Expected: PASS — 2 files / 30 tests (25 + 5).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add supabase/tests/rls/ratelimit.test.js
@@ -898,7 +898,7 @@ git commit -m "test(b1): RPC privilege + atomic counting tests"
 - Modify: `.env.example`
 - Create: `docs/api/data.md`
 
-- [ ] **Step 1: Append the CI job**
+- [x] **Step 1: Append the CI job**
 
 At the end of `.github/workflows/ci.yml` (same indentation as the `verify:` job, i.e. nested under `jobs:`):
 
@@ -938,7 +938,7 @@ At the end of `.github/workflows/ci.yml` (same indentation as the `verify:` job,
           npm run test:rls
 ```
 
-- [ ] **Step 2: Document the env vars in `.env.example`**
+- [x] **Step 2: Document the env vars in `.env.example`**
 
 Append:
 
@@ -950,7 +950,7 @@ SUPABASE_URL=https://your-project-ref.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
 ```
 
-- [ ] **Step 3: Create `docs/api/data.md`**
+- [x] **Step 3: Create `docs/api/data.md`**
 
 ```markdown
 # Data contract — Supabase (phase B1)
@@ -995,11 +995,11 @@ npm run test:rls    # 30 adversarial tests
 ```
 ```
 
-- [ ] **Step 4: Verify everything still green**
+- [x] **Step 4: Verify everything still green**
 
 Run: `npm test` → 336. Run: `npm run lint` → exit 0. Run: `npm run format:check` → exit 0.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add .github/workflows/ci.yml .env.example docs/api/data.md
@@ -1010,14 +1010,14 @@ git commit -m "ci(b1): RLS policy-test job + env docs + data contract page"
 
 ### Task 10: Final gate, PR, report-back
 
-- [ ] **Step 1: Full local gate**
+- [x] **Step 1: Full local gate**
 
 ```bash
 npm test && npm run lint && npm run format:check && npm run test:rls
 ```
 All four green (the last needs the local stack running).
 
-- [ ] **Step 2: Push and open the PR**
+- [x] **Step 2: Push and open the PR**
 
 ```bash
 git push -u origin feature/backend-b1-data-lane
@@ -1026,15 +1026,15 @@ gh pr create --title "feat: B1 — Supabase data lane (schema, RLS, durable rate
 
 Note: this PR's CI run is the **first real execution** of the `rls-policy-tests` job — watch that it passes.
 
-- [ ] **Step 3: Report back** to Claude Code with the `CURSOR_TASKS.md` template. Do **not** merge. Task 11 is owner-only.
+- [x] **Step 3: Report back** to Claude Code with the `CURSOR_TASKS.md` template. Do **not** merge. Task 11 is owner-only.
 
 ---
 
 ### Task 11: Cloud rollout runbook — OWNER ONLY (after Claude Code merges the PR)
 
-- [ ] **Step 1 (owner):** supabase.com → New project (free tier), region **EU (Frankfurt)**. While in the dashboard: Authentication → Sign In / Up → enable **anonymous sign-ins** (needed at B2, free now).
-- [ ] **Step 2 (owner, in the repo):** `supabase link --project-ref <ref-from-dashboard-url>` then `supabase db push` (applies both migrations to the cloud — verify it lists them).
-- [ ] **Step 3 (owner):** add the env vars:
+- [x] **Step 1 (owner):** supabase.com → New project (free tier), region **EU (Frankfurt)**. While in the dashboard: Authentication → Sign In / Up → enable **anonymous sign-ins** (needed at B2, free now).
+- [x] **Step 2 (owner, in the repo):** `supabase link --project-ref <ref-from-dashboard-url>` then `supabase db push` (applies both migrations to the cloud — verify it lists them).
+- [x] **Step 3 (owner):** add the env vars:
 
 ```bash
 vercel env add SUPABASE_URL              # value: https://<ref>.supabase.co — NOT sensitive; all three environments
@@ -1043,8 +1043,8 @@ vercel env add SUPABASE_SERVICE_ROLE_KEY # dashboard → Settings → API; SENSI
 
 Append both (real values) to the local `.env` as well — `vercel dev` can't pull sensitive values.
 
-- [ ] **Step 4 (owner or Claude Code):** redeploy (merge to main already did; otherwise `vercel redeploy`), then verify:
+- [x] **Step 4 (owner or Claude Code):** redeploy (merge to main already did; otherwise `vercel redeploy`), then verify:
   - The B0 production battery still passes (chat 200, legacy 200, foreign origin 403, garbage 400).
   - Vercel function logs show **no** "using per-instance MemoryStore" warning.
   - After 2–3 prod AI calls: dashboard → Table Editor → `rate_limits` shows rows accruing.
-- [ ] **Step 5 (owner):** report completion to Claude Code so the arc memory and CURSOR_TASKS.md get updated and B2 design can start.
+- [x] **Step 5 (owner):** report completion to Claude Code so the arc memory and CURSOR_TASKS.md get updated and B2 design can start.

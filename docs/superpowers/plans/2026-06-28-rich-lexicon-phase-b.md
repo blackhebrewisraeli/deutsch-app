@@ -64,7 +64,7 @@
   ```
   `POS = ['noun','verb','adj','adv','prep','num','phrase','pron','conj']`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `src/packs/validate.test.js`:
 
@@ -169,12 +169,12 @@ describe('validateLexiconEntry', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `npx vitest run src/packs/validate.test.js`
 Expected: FAIL — `validateLexiconEntry is not a function` / `POS` undefined.
 
-- [ ] **Step 3: Implement the validator**
+- [x] **Step 3: Implement the validator**
 
 Append to `src/packs/validate.js`:
 
@@ -255,12 +255,12 @@ export function validateLexiconEntry(entry) {
 }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `npx vitest run src/packs/validate.test.js`
 Expected: PASS (all cases).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/validate.js src/packs/validate.test.js
@@ -279,7 +279,7 @@ git commit -m "feat(packs): add validateLexiconEntry schema validator"
 - Consumes: `validateLexiconEntry`, `POS` (Task 1).
 - Produces: `export const LEXICON` — a plain object keyed by entry `id` → `LexiconEntry`. Ids are the legacy surface forms (`"das Brot"`, `"Hallo"`, `"eins"`). `en` is an array (first element = the legacy `en` string). `ipa` is kept identical to today's values (article included for nouns). Nouns split the article into `article` and store the bare lemma in `de`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/packs/de/lexicon.test.js`:
 
@@ -321,12 +321,12 @@ describe('LEXICON', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/packs/de/lexicon.test.js`
 Expected: FAIL — cannot resolve `./lexicon`.
 
-- [ ] **Step 3: Implement the lexicon**
+- [x] **Step 3: Implement the lexicon**
 
 Create `src/packs/de/lexicon.js`. Author all 40 entries. (`source` is `{ dict: 'authored', license: 'MIT' }` for every migrated entry; these are the app's own hand-written cards, not imported.)
 
@@ -389,12 +389,12 @@ export const LEXICON = {
 };
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/packs/de/lexicon.test.js`
 Expected: PASS (40 entries, all valid, display/id invariants hold).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/de/lexicon.js src/packs/de/lexicon.test.js
@@ -413,7 +413,7 @@ git commit -m "feat(packs): migrate 40 curated cards into rich German lexicon"
 - Consumes: `LEXICON` ids (Task 2).
 - Produces: `export const DECKS` — object keyed by deckId. Curated decks: `{ name, icon, cardIds: string[] }`. (Auto decks like `{ name, icon, auto: { by, range } }` are SUPPORTED by the resolver in Task 4 but none are shipped in Phase B — there is no frequency data yet.) Deck order and ids reproduce today's 4 decks exactly.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Append to `src/packs/de/lexicon.test.js`:
 
@@ -443,12 +443,12 @@ describe('DECKS', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/packs/de/lexicon.test.js`
 Expected: FAIL — cannot resolve `./decks`.
 
-- [ ] **Step 3: Implement the deck definitions**
+- [x] **Step 3: Implement the deck definitions**
 
 Create `src/packs/de/decks.js`:
 
@@ -488,12 +488,12 @@ export const DECKS = {
 };
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/packs/de/lexicon.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/de/decks.js src/packs/de/lexicon.test.js
@@ -524,7 +524,7 @@ git commit -m "feat(packs): add German deck definitions as lexicon views"
     - throw if `deckDef` has neither `cardIds` nor a recognized `auto.by`
   - `resolveDecks(deckDefs, lexicon) => Record<deckId, resolvedCard[]>`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/packs/resolve.test.js`:
 
@@ -595,12 +595,12 @@ describe('resolveDecks', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/packs/resolve.test.js`
 Expected: FAIL — cannot resolve `./resolve`.
 
-- [ ] **Step 3: Implement the resolver**
+- [x] **Step 3: Implement the resolver**
 
 Create `src/packs/resolve.js`:
 
@@ -669,12 +669,12 @@ export function resolveDecks(deckDefs, lexicon) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/packs/resolve.test.js`
 Expected: PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/resolve.js src/packs/resolve.test.js
@@ -695,7 +695,7 @@ git commit -m "feat(packs): add lexicon/deck resolver"
 - Consumes: `LEXICON` (Task 2), `DECKS` (Task 3), `resolveDecks` (Task 4).
 - Produces: `activePack.content.decks` is now `resolveDecks(DECKS, LEXICON)` (object keyed by deckId → resolved card arrays). Also exposes `activePack.content.lexicon = LEXICON` and `activePack.content.deckDefs = DECKS`. `cardId` unchanged (`(card) => card.de`, used for custom AI decks).
 
-- [ ] **Step 1: Update the pack wiring**
+- [x] **Step 1: Update the pack wiring**
 
 In `src/packs/de/index.js`, remove the `PRESET_DECKS` import and the `tagDeck`/`tagDecks`/`tagDecks(PRESET_DECKS)` machinery, and wire the resolver. The file becomes:
 
@@ -753,7 +753,7 @@ export const dePack = {
 };
 ```
 
-- [ ] **Step 2: Update `packs.test.js`**
+- [x] **Step 2: Update `packs.test.js`**
 
 In `src/packs/packs.test.js`, replace the `PRESET_DECKS` import and the wiring test that referenced it. Change the import block at the top to drop `PRESET_DECKS`:
 
@@ -803,15 +803,15 @@ In the `cardId + tagged decks` describe block, update the second test (the deck 
 
 (For greetings the lemma has no article so `id === de` trivially; this still holds for every legacy card because each id equals its display form.)
 
-- [ ] **Step 3: Remove `PRESET_DECKS` from `content.js`**
+- [x] **Step 3: Remove `PRESET_DECKS` from `content.js`**
 
 In `src/data/content.js`, delete the entire `export const PRESET_DECKS = { … };` block (lines ~34–83). Leave `ALPHABET`, `SCENARIOS`, `CHAT_TASKS`, the `TRANSLATE_SENTENCES_*`, and `ALPHABET_QUIZ_GROUPS` untouched.
 
-- [ ] **Step 4: Remove the `PRESET_DECKS` tests from `content.test.js`**
+- [x] **Step 4: Remove the `PRESET_DECKS` tests from `content.test.js`**
 
 In `src/data/content.test.js`, delete `PRESET_DECKS` from the import list and delete the entire `describe('PRESET_DECKS', …)` block. (Deck/card shape is now covered by `lexicon.test.js` + `resolve.test.js`.)
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: PASS — all files green (no remaining references to `PRESET_DECKS`).
@@ -819,7 +819,7 @@ Expected: PASS — all files green (no remaining references to `PRESET_DECKS`).
 If anything still imports `PRESET_DECKS`, grep and fix:
 Run: `grep -rn "PRESET_DECKS" src` — expected: only local aliases inside components (e.g. `const { decks: PRESET_DECKS } = activePack.content;`), never an import from `../data/content`.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add src/packs/de/index.js src/packs/packs.test.js src/data/content.js src/data/content.test.js
@@ -838,7 +838,7 @@ git commit -m "refactor(packs): resolve decks from lexicon; retire PRESET_DECKS"
 - Consumes: resolved cards now carry `plural` (string|null) and `examples` (array). `card.de` is the display form (gender already visible via the article, e.g. `"das Brot"`).
 - Produces: when present, the card face shows the plural and the first example sentence.
 
-- [ ] **Step 1: Add the rendering to the card face**
+- [x] **Step 1: Add the rendering to the card face**
 
 In `src/components/VocabTab.jsx`, inside the card-face `<div>`, immediately AFTER the IPA block (the `{card.ipa && ( … )}` ending at line ~469), add:
 
@@ -871,7 +871,7 @@ In `src/components/VocabTab.jsx`, inside the card-face `<div>`, immediately AFTE
                 )}
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Add to `src/components/VocabTab.test.jsx` (follow the existing render/setup pattern already in that file — same imports and `render(<VocabTab … />)` harness). Add a test that selects the Food deck and asserts the plural + example render for "das Brot":
 
@@ -891,17 +891,17 @@ it('shows plural and example sentence for a noun card', async () => {
 
 > Note: the SRS queue orders cards; "das Brot" is the first Food card and has no prior SRS state in the test (fresh `loadState`), so it appears in the initial queue. If queue ordering makes it non-first, advance with the on-screen answer flow until the Brot card shows, or assert against whichever Food card carries a plural+example — but "das Brot" is authored with both specifically to anchor this test.
 
-- [ ] **Step 3: Run the test to verify it fails (before Step 1 is applied) / passes (after)**
+- [x] **Step 3: Run the test to verify it fails (before Step 1 is applied) / passes (after)**
 
 Run: `npx vitest run src/components/VocabTab.test.jsx`
 Expected: PASS once Step 1 rendering is in place. If it fails on queue ordering, adjust the test to click through to the Brot card per the note.
 
-- [ ] **Step 4: Run the full suite + lint**
+- [x] **Step 4: Run the full suite + lint**
 
 Run: `npm test`
 Expected: PASS (all files).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/components/VocabTab.jsx src/components/VocabTab.test.jsx

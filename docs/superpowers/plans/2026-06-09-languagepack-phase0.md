@@ -43,7 +43,7 @@
 - Create: `src/lib/matching.js`
 - Test: `src/lib/matching.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/lib/matching.test.js`:
 
@@ -77,12 +77,12 @@ describe('fuzzyMatch', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/lib/matching.test.js`
 Expected: FAIL — `Failed to resolve import "./matching"`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `src/lib/matching.js`:
 
@@ -116,12 +116,12 @@ export function fuzzyMatch(expected, given, normalize, maxDistance = 2) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/lib/matching.test.js`
 Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/lib/matching.js src/lib/matching.test.js
@@ -136,7 +136,7 @@ git commit -m "feat(engine): add language-agnostic matching module"
 - Create: `src/packs/validate.js`
 - Test: `src/packs/validate.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/packs/validate.test.js`:
 
@@ -172,12 +172,12 @@ describe('validateLanguagePack', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/packs/validate.test.js`
 Expected: FAIL — `Failed to resolve import "./validate"`.
 
-- [ ] **Step 3: Write minimal implementation**
+- [x] **Step 3: Write minimal implementation**
 
 Create `src/packs/validate.js`:
 
@@ -222,12 +222,12 @@ export function validateLanguagePack(pack) {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/packs/validate.test.js`
 Expected: PASS (3 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/validate.js src/packs/validate.test.js
@@ -242,7 +242,7 @@ git commit -m "feat(packs): add validateLanguagePack shape checker"
 - Create: `src/packs/de/index.js`, `src/packs/index.js`
 - Test: `src/packs/packs.test.js`
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `src/packs/packs.test.js`:
 
@@ -285,12 +285,12 @@ describe('activePack', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `npx vitest run src/packs/packs.test.js`
 Expected: FAIL — `Failed to resolve import "./index"`.
 
-- [ ] **Step 3a: Write the German pack**
+- [x] **Step 3a: Write the German pack**
 
 Create `src/packs/de/index.js`:
 
@@ -343,7 +343,7 @@ export const dePack = {
 };
 ```
 
-- [ ] **Step 3b: Write the registry**
+- [x] **Step 3b: Write the registry**
 
 Create `src/packs/index.js`:
 
@@ -363,12 +363,12 @@ export function getPack(id) {
 export const activePack = dePack;
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `npx vitest run src/packs/packs.test.js`
 Expected: PASS (5 tests).
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add src/packs/de/index.js src/packs/index.js src/packs/packs.test.js
@@ -381,7 +381,7 @@ git commit -m "feat(packs): add German LanguagePack + registry (activePack)"
 
 Each site swaps `import … from '…/data/content'` for a destructure off `activePack.content`, preserving the existing local names so the rest of each file is untouched. After all 8, the full suite must stay green.
 
-- [ ] **Step 1: `src/lib/gamification.js`**
+- [x] **Step 1: `src/lib/gamification.js`**
 
 Replace line 6:
 ```js
@@ -393,7 +393,7 @@ import { activePack } from '../packs';
 const { decks: PRESET_DECKS } = activePack.content;
 ```
 
-- [ ] **Step 2: `src/App.jsx`**
+- [x] **Step 2: `src/App.jsx`**
 
 Replace line 18:
 ```js
@@ -405,7 +405,7 @@ import { activePack } from './packs';
 const { decks: PRESET_DECKS } = activePack.content;
 ```
 
-- [ ] **Step 3: `src/components/ChatTab.jsx`**
+- [x] **Step 3: `src/components/ChatTab.jsx`**
 
 Replace line 5:
 ```js
@@ -417,7 +417,7 @@ import { activePack } from '../packs';
 const { scenarios: SCENARIOS, chatTasks: CHAT_TASKS } = activePack.content;
 ```
 
-- [ ] **Step 4: `src/components/AlphabetTab.jsx`**
+- [x] **Step 4: `src/components/AlphabetTab.jsx`**
 
 Replace line 15:
 ```js
@@ -429,7 +429,7 @@ import { activePack } from '../packs';
 const { alphabet: ALPHABET, alphabetQuiz: ALPHABET_QUIZ_GROUPS } = activePack.content;
 ```
 
-- [ ] **Step 5: `src/components/VocabTab.jsx`**
+- [x] **Step 5: `src/components/VocabTab.jsx`**
 
 Replace line 16:
 ```js
@@ -442,7 +442,7 @@ const { decks: PRESET_DECKS } = activePack.content;
 ```
 (Keep this `activePack` import — Task 5 reuses it for matching.)
 
-- [ ] **Step 6: `src/components/TranslateTab.jsx`**
+- [x] **Step 6: `src/components/TranslateTab.jsx`**
 
 Replace lines 4–8:
 ```js
@@ -462,7 +462,7 @@ const {
 } = activePack.content.translateSentences;
 ```
 
-- [ ] **Step 7: `src/components/chat/ScenarioPicker.jsx`**
+- [x] **Step 7: `src/components/chat/ScenarioPicker.jsx`**
 
 Replace line 2:
 ```js
@@ -474,7 +474,7 @@ import { activePack } from '../../packs';
 const { scenarios: SCENARIOS } = activePack.content;
 ```
 
-- [ ] **Step 8: `src/components/stats/VocabSrsWidget.jsx`**
+- [x] **Step 8: `src/components/stats/VocabSrsWidget.jsx`**
 
 Replace line 12:
 ```js
@@ -486,12 +486,12 @@ import { activePack } from '../../packs';
 const { decks: PRESET_DECKS } = activePack.content;
 ```
 
-- [ ] **Step 9: Run the full suite**
+- [x] **Step 9: Run the full suite**
 
 Run: `npm test`
 Expected: PASS — `Test Files 25 passed (25)`, `Tests 225 passed (225)` (212 prior + 13 new from Tasks 1–3). No regressions: the data behind every name is identical (same references).
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add src/App.jsx src/lib/gamification.js src/components/ChatTab.jsx src/components/AlphabetTab.jsx src/components/VocabTab.jsx src/components/TranslateTab.jsx src/components/chat/ScenarioPicker.jsx src/components/stats/VocabSrsWidget.jsx
@@ -507,7 +507,7 @@ Behavior-preserving: `normalize` (trim+lowercase) reproduces current outcomes fo
 **Files:**
 - Modify: `src/components/VocabTab.jsx`, `src/components/translate/TileExercise.jsx`
 
-- [ ] **Step 1: `VocabTab.jsx` — swap the import**
+- [x] **Step 1: `VocabTab.jsx` — swap the import**
 
 VocabTab line 18 currently:
 ```js
@@ -520,7 +520,7 @@ import { fuzzyMatch } from '../lib/matching';
 ```
 (`activePack` is already imported from Task 4 Step 5.)
 
-- [ ] **Step 2: `VocabTab.jsx` — route the typed answer (line 132)**
+- [x] **Step 2: `VocabTab.jsx` — route the typed answer (line 132)**
 
 Replace:
 ```js
@@ -532,7 +532,7 @@ with:
 ```
 The next line (`const res = dist === 0 ? 'correct' : dist <= 2 ? 'almost' : 'wrong';`) is unchanged.
 
-- [ ] **Step 3: `TileExercise.jsx` — add imports**
+- [x] **Step 3: `TileExercise.jsx` — add imports**
 
 At the top of `src/components/translate/TileExercise.jsx`, add:
 ```js
@@ -540,7 +540,7 @@ import { activePack } from '../../packs';
 import { exactMatch } from '../../lib/matching';
 ```
 
-- [ ] **Step 4: `TileExercise.jsx` — route the check (line 44)**
+- [x] **Step 4: `TileExercise.jsx` — route the check (line 44)**
 
 Replace:
 ```js
@@ -551,12 +551,12 @@ with:
     const isCorrect = exactMatch(correct, answer, activePack.validation.normalize);
 ```
 
-- [ ] **Step 5: Run the full suite**
+- [x] **Step 5: Run the full suite**
 
 Run: `npm test`
 Expected: PASS — `Tests 225 passed (225)`. Answer-checking outcomes unchanged.
 
-- [ ] **Step 6: Manual smoke test**
+- [x] **Step 6: Manual smoke test**
 
 Run: `npm run dev`, then in the browser:
 1. **Vocab** → type a correct English answer for a card → still graded `correct`; a 1–2 char typo → `almost`; nonsense → `wrong`.
@@ -565,7 +565,7 @@ Run: `npm run dev`, then in the browser:
 
 Expected: behaves exactly as before.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add src/components/VocabTab.jsx src/components/translate/TileExercise.jsx
@@ -576,10 +576,10 @@ git commit -m "refactor: route answer-checking through matching.js + pack.normal
 
 ## Final verification
 
-- [ ] Run `npm test` → `Tests 225 passed (225)`.
-- [ ] Run `npm run lint` → clean.
-- [ ] Confirm `src/data/content.js` is unchanged (`git diff main -- src/data/content.js` is empty).
-- [ ] Confirm no remaining direct imports: `grep -rn "data/content" src --include=*.jsx --include=*.js | grep -v packs/de | grep -v "\.test\."` returns only `src/packs/de/index.js`.
+- [x] Run `npm test` → `Tests 225 passed (225)`.
+- [x] Run `npm run lint` → clean.
+- [x] Confirm `src/data/content.js` is unchanged (`git diff main -- src/data/content.js` is empty).
+- [x] Confirm no remaining direct imports: `grep -rn "data/content" src --include=*.jsx --include=*.js | grep -v packs/de | grep -v "\.test\."` returns only `src/packs/de/index.js`.
 
 ---
 

@@ -48,7 +48,7 @@
 - Produces: `requireAuth(req) → Promise<{ userId: string, email: string }>` — throws `{ code: 'unauthorized', message: string }` on failure
 - Produces: `getReq(ip, token, overrides)` test fixture in `test-helpers.js`
 
-- [ ] **Step 1.1: Create the test file with failing tests**
+- [x] **Step 1.1: Create the test file with failing tests**
 
 ```js
 // api/_lib/auth-middleware.test.js
@@ -108,14 +108,14 @@ describe('requireAuth', () => {
 });
 ```
 
-- [ ] **Step 1.2: Run to confirm failure**
+- [x] **Step 1.2: Run to confirm failure**
 
 ```bash
 npx vitest run api/_lib/auth-middleware.test.js
 ```
 Expected: FAIL — `auth-middleware.js` not found.
 
-- [ ] **Step 1.3: Create `api/_lib/auth-middleware.js`**
+- [x] **Step 1.3: Create `api/_lib/auth-middleware.js`**
 
 ```js
 import { serviceClient } from './supabase.js';
@@ -140,14 +140,14 @@ export async function requireAuth(req) {
 }
 ```
 
-- [ ] **Step 1.4: Run tests — expect pass**
+- [x] **Step 1.4: Run tests — expect pass**
 
 ```bash
 npx vitest run api/_lib/auth-middleware.test.js
 ```
 Expected: 4 tests pass.
 
-- [ ] **Step 1.5: Add `getReq` fixture to `api/_lib/test-helpers.js`**
+- [x] **Step 1.5: Add `getReq` fixture to `api/_lib/test-helpers.js`**
 
 Open `api/_lib/test-helpers.js` and add at the bottom:
 
@@ -162,14 +162,14 @@ export const getReq = (ip, token = 'test-token', overrides = {}) => ({
 });
 ```
 
-- [ ] **Step 1.6: Run full suite to confirm nothing broke**
+- [x] **Step 1.6: Run full suite to confirm nothing broke**
 
 ```bash
 npx vitest run
 ```
 Expected: all existing tests pass.
 
-- [ ] **Step 1.7: Commit**
+- [x] **Step 1.7: Commit**
 
 ```bash
 git add api/_lib/auth-middleware.js api/_lib/auth-middleware.test.js api/_lib/test-helpers.js
@@ -193,7 +193,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - Consumes: `getReq(ip, token)` from `api/_lib/test-helpers.js`
 - Produces: `GET /api/v1/account/export` → `200 { email, exportedAt, data: { srs, daily, settings } }` or error envelope
 
-- [ ] **Step 2.1: Create the test file**
+- [x] **Step 2.1: Create the test file**
 
 ```js
 // api/v1/account/export.test.js
@@ -267,14 +267,14 @@ describe('GET /api/v1/account/export', () => {
 });
 ```
 
-- [ ] **Step 2.2: Run to confirm failure**
+- [x] **Step 2.2: Run to confirm failure**
 
 ```bash
 npx vitest run api/v1/account/export.test.js
 ```
 Expected: FAIL — `export.js` not found.
 
-- [ ] **Step 2.3: Create `api/v1/account/export.js`**
+- [x] **Step 2.3: Create `api/v1/account/export.js`**
 
 ```js
 import { sendError } from '../../_lib/respond.js';
@@ -322,21 +322,21 @@ export default async function handler(req, res) {
 }
 ```
 
-- [ ] **Step 2.4: Run tests — expect pass**
+- [x] **Step 2.4: Run tests — expect pass**
 
 ```bash
 npx vitest run api/v1/account/export.test.js
 ```
 Expected: 4 tests pass.
 
-- [ ] **Step 2.5: Run full suite**
+- [x] **Step 2.5: Run full suite**
 
 ```bash
 npx vitest run
 ```
 Expected: all tests pass.
 
-- [ ] **Step 2.6: Commit**
+- [x] **Step 2.6: Commit**
 
 ```bash
 git add api/v1/account/export.js api/v1/account/export.test.js
@@ -359,7 +359,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - Consumes: `sendError(res, code, message)` from `api/_lib/respond.js`
 - Produces: `DELETE /api/v1/account` → `204 No Content` or error envelope
 
-- [ ] **Step 3.1: Create the test file**
+- [x] **Step 3.1: Create the test file**
 
 ```js
 // api/v1/account/delete.test.js
@@ -433,14 +433,14 @@ describe('DELETE /api/v1/account', () => {
 });
 ```
 
-- [ ] **Step 3.2: Run to confirm failure**
+- [x] **Step 3.2: Run to confirm failure**
 
 ```bash
 npx vitest run api/v1/account/delete.test.js
 ```
 Expected: FAIL — `delete.js` not found.
 
-- [ ] **Step 3.3: Create `api/v1/account/delete.js`**
+- [x] **Step 3.3: Create `api/v1/account/delete.js`**
 
 ```js
 import { sendError } from '../../_lib/respond.js';
@@ -479,21 +479,21 @@ export default async function handler(req, res) {
 }
 ```
 
-- [ ] **Step 3.4: Run tests — expect pass**
+- [x] **Step 3.4: Run tests — expect pass**
 
 ```bash
 npx vitest run api/v1/account/delete.test.js
 ```
 Expected: 4 tests pass.
 
-- [ ] **Step 3.5: Run full suite**
+- [x] **Step 3.5: Run full suite**
 
 ```bash
 npx vitest run
 ```
 Expected: all tests pass.
 
-- [ ] **Step 3.6: Commit**
+- [x] **Step 3.6: Commit**
 
 ```bash
 git add api/v1/account/delete.js api/v1/account/delete.test.js
@@ -512,7 +512,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 **Interfaces:**
 - Produces: `getAccessToken() → Promise<string | null>` — returns the current session's JWT or null if not signed in
 
-- [ ] **Step 4.1: Add failing test to `src/lib/auth.test.js`**
+- [x] **Step 4.1: Add failing test to `src/lib/auth.test.js`**
 
 Open `src/lib/auth.test.js`. Add this test inside (or at the end of) the existing `describe` block:
 
@@ -549,14 +549,14 @@ it('getAccessToken returns null when no session exists', async () => {
 });
 ```
 
-- [ ] **Step 4.2: Run to confirm failure**
+- [x] **Step 4.2: Run to confirm failure**
 
 ```bash
 npx vitest run src/lib/auth.test.js
 ```
 Expected: FAIL — `getAccessToken` not exported.
 
-- [ ] **Step 4.3: Add `getAccessToken` to `src/lib/auth.js`**
+- [x] **Step 4.3: Add `getAccessToken` to `src/lib/auth.js`**
 
 At the bottom of `src/lib/auth.js`, add:
 
@@ -570,14 +570,14 @@ export async function getAccessToken() {
 }
 ```
 
-- [ ] **Step 4.4: Run tests — expect pass**
+- [x] **Step 4.4: Run tests — expect pass**
 
 ```bash
 npx vitest run src/lib/auth.test.js
 ```
 Expected: all auth tests pass.
 
-- [ ] **Step 4.5: Commit**
+- [x] **Step 4.5: Commit**
 
 ```bash
 git add src/lib/auth.js src/lib/auth.test.js
@@ -599,7 +599,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - Consumes: `COLORS`, `FONTS`, `FONT_SIZE`, `FONT_WEIGHT`, `LETTER_SPACING`, `SPACE`, `RADIUS`, `BUTTON` from `src/lib/theme.js`
 - New prop: `onDelete` — `() => Promise<void>` — called by the component after the user confirms; the parent (App.jsx) will handle the actual API call + localStorage clear + signOut
 
-- [ ] **Step 5.1: Add failing tests to `AccountSection.test.jsx`**
+- [x] **Step 5.1: Add failing tests to `AccountSection.test.jsx`**
 
 Replace the entire contents of `src/components/stats/AccountSection.test.jsx` with:
 
@@ -688,14 +688,14 @@ describe('AccountSection', () => {
 });
 ```
 
-- [ ] **Step 5.2: Run to confirm failures**
+- [x] **Step 5.2: Run to confirm failures**
 
 ```bash
 npx vitest run src/components/stats/AccountSection.test.jsx
 ```
 Expected: 4 new tests fail, 3 existing pass.
 
-- [ ] **Step 5.3: Rewrite `src/components/stats/AccountSection.jsx`**
+- [x] **Step 5.3: Rewrite `src/components/stats/AccountSection.jsx`**
 
 ```jsx
 import { useState } from 'react';
@@ -820,7 +820,7 @@ export default function AccountSection({ user, onSignIn, onSignOut, onDelete, la
 
 > **Note:** The export button's click handler currently uses a pattern-matching workaround (`onDelete.__exportData`). In Step 5.5 we clean this up by splitting the props properly.
 
-- [ ] **Step 5.4: Fix the export prop — split `onExport` out properly**
+- [x] **Step 5.4: Fix the export prop — split `onExport` out properly**
 
 The component needs a clean `onExport` prop, not the workaround above. Replace the component with the final version:
 
@@ -972,21 +972,21 @@ export default function AccountSection({
 }
 ```
 
-- [ ] **Step 5.5: Run tests — expect pass**
+- [x] **Step 5.5: Run tests — expect pass**
 
 ```bash
 npx vitest run src/components/stats/AccountSection.test.jsx
 ```
 Expected: all 8 tests pass.
 
-- [ ] **Step 5.6: Run full suite**
+- [x] **Step 5.6: Run full suite**
 
 ```bash
 npx vitest run
 ```
 Expected: all tests pass.
 
-- [ ] **Step 5.7: Commit**
+- [x] **Step 5.7: Commit**
 
 ```bash
 git add src/components/stats/AccountSection.jsx src/components/stats/AccountSection.test.jsx
@@ -1008,7 +1008,7 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 - The export handler fetches `/api/v1/account/export`, triggers a browser download
 - The delete handler fetches `DELETE /api/v1/account`, clears localStorage, calls `signOut()`
 
-- [ ] **Step 6.1: Find where `AccountSection` is rendered in `App.jsx`**
+- [x] **Step 6.1: Find where `AccountSection` is rendered in `App.jsx`**
 
 ```bash
 grep -n "AccountSection" src/App.jsx
@@ -1016,7 +1016,7 @@ grep -n "AccountSection" src/App.jsx
 
 Note the line number — you will add `onExport` and `onDelete` props there.
 
-- [ ] **Step 6.2: Add `handleExport` and `handleDelete` functions to `App.jsx`**
+- [x] **Step 6.2: Add `handleExport` and `handleDelete` functions to `App.jsx`**
 
 Find the block where `signOut` and other auth handlers are defined and add after them:
 
@@ -1057,7 +1057,7 @@ const handleDelete = async () => {
 };
 ```
 
-- [ ] **Step 6.3: Add the import for `getAccessToken` at the top of `App.jsx`**
+- [x] **Step 6.3: Add the import for `getAccessToken` at the top of `App.jsx`**
 
 Find the existing auth import line:
 ```js
@@ -1068,7 +1068,7 @@ Add `getAccessToken` to it:
 import { ..., signOut, useAuth, getAccessToken } from './lib/auth';
 ```
 
-- [ ] **Step 6.4: Pass props to `<AccountSection>`**
+- [x] **Step 6.4: Pass props to `<AccountSection>`**
 
 Find the `<AccountSection>` JSX and add the two new props:
 ```jsx
@@ -1082,14 +1082,14 @@ Find the `<AccountSection>` JSX and add the two new props:
 />
 ```
 
-- [ ] **Step 6.5: Run full suite**
+- [x] **Step 6.5: Run full suite**
 
 ```bash
 npx vitest run
 ```
 Expected: all tests pass.
 
-- [ ] **Step 6.6: Commit**
+- [x] **Step 6.6: Commit**
 
 ```bash
 git add src/App.jsx src/lib/auth.js
@@ -1102,13 +1102,13 @@ Co-Authored-By: Claude Opus 4.8 <noreply@anthropic.com>"
 
 ## Task 7: Push + PR
 
-- [ ] **Step 7.1: Push branch**
+- [x] **Step 7.1: Push branch**
 
 ```bash
 git push -u origin feat/b3-export-delete
 ```
 
-- [ ] **Step 7.2: Open PR**
+- [x] **Step 7.2: Open PR**
 
 ```bash
 gh pr create \
@@ -1120,13 +1120,13 @@ gh pr create \
 - \`requireAuth\` middleware shared by both endpoints
 
 ## Test plan
-- [ ] Sign in on prod → Stats tab → Export my data → JSON file downloads
-- [ ] Sign in → Delete account → confirm → signed out + fresh guest state
-- [ ] Cancel on confirm → returns to Delete account button
-- [ ] \`npm test\` passes"
+- [x] Sign in on prod → Stats tab → Export my data → JSON file downloads
+- [x] Sign in → Delete account → confirm → signed out + fresh guest state
+- [x] Cancel on confirm → returns to Delete account button
+- [x] \`npm test\` passes"
 ```
 
-- [ ] **Step 7.3: Wait for CI green, then merge**
+- [x] **Step 7.3: Wait for CI green, then merge**
 
 ```bash
 gh pr checks <PR_NUMBER> --watch
