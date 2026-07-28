@@ -9,11 +9,11 @@ describe('AUTO_DECKS', () => {
       expect(typeof d.name).toBe('string');
       expect(typeof d.icon).toBe('string');
       expect(DECK_GROUPS).toContain(d.group);
-      expect(['freq', 'cefr', 'tag']).toContain(d.auto.by);
+      expect(['top', 'freq', 'cefr', 'tag']).toContain(d.auto.by);
     }
   });
   it('covers all three deck types', () => {
-    expect(AUTO_DECKS.some((d) => d.auto.by === 'freq')).toBe(true);
+    expect(AUTO_DECKS.some((d) => d.auto.by === 'top')).toBe(true);
     expect(AUTO_DECKS.some((d) => d.auto.by === 'cefr')).toBe(true);
     expect(AUTO_DECKS.some((d) => d.auto.by === 'tag')).toBe(true);
   });
