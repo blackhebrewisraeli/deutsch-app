@@ -6,7 +6,7 @@ import { ensureRaw, SOURCES } from './download.js';
 import { ensurePrepared } from './prep.js';
 import { parseRecord } from './parseWiktextract.js';
 import { buildExampleIndex, attachExamples, pickExamples } from './joinTatoeba.js';
-import { assignRanks, topByRank } from './rankLeipzig.js';
+import { assignRanks, topByRank, assignCefrBands } from './rankLeipzig.js';
 import { disambiguateIds } from './ids.js';
 import { mapEntry } from './mapEntry.js';
 import { applyFilter } from './filter.js';
@@ -68,8 +68,11 @@ export async function run({ n = 5000, cacheDir, outDir } = {}) {
   const withIds = disambiguateIds(ranked); // adds .id
   const mapped = withIds.map((w) => mapEntry({ ...w, examples: pickExamples(attachExamples(w, exIndex, 2), w.rawExamples ?? [], 2) }));
   const { kept, rejected } = applyFilter(mapped);
+  // CEFR is banded by position within the KEPT set, so it must run here — after
+  // filtering, when the final lexicon is known (see assignCefrBands).
+  const banded = assignCefrBands(kept);
 
-  const artifacts = buildArtifacts(kept, { chunkSize: 500, sources: SOURCES });
+  const artifacts = buildArtifacts(banded, { chunkSize: 500, sources: SOURCES });
   writeArtifacts(outDir, artifacts);
 
   const report = buildReport({ parsedCount: parsed.length, rankedCount: ranked.length, kept, rejected });
