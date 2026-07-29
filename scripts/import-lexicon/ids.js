@@ -38,10 +38,3 @@ export function disambiguateIds(entries) {
     return n === 1 ? e : { ...e, id: `${e.id}-${n}` };
   });
 }
-
-export function cefrForRank(rank) {
-  if (rank == null) return null;
-  if (rank <= 1000) return 'A1';
-  if (rank <= 2500) return 'A2';
-  return 'B1';
-}

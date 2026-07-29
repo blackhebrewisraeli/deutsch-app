@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { posPrefix, slug, entryId, disambiguateIds, cefrForRank } from './ids.js';
+import { posPrefix, slug, entryId, disambiguateIds } from './ids.js';
 
 describe('posPrefix', () => {
   it('maps known pos and falls back to x', () => {
@@ -51,17 +51,5 @@ describe('disambiguateIds', () => {
       { pos: 'noun', lemma: 'Bank', glosses: ['bench'] },
     ]).map((e) => e.id).sort();
     expect(a).toEqual(b);
-  });
-});
-
-describe('cefrForRank', () => {
-  it('maps rank to band', () => {
-    expect(cefrForRank(1)).toBe('A1');
-    expect(cefrForRank(1000)).toBe('A1');
-    expect(cefrForRank(1001)).toBe('A2');
-    expect(cefrForRank(2500)).toBe('A2');
-    expect(cefrForRank(2501)).toBe('B1');
-    expect(cefrForRank(5000)).toBe('B1');
-    expect(cefrForRank(null)).toBe(null);
   });
 });
