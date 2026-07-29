@@ -22,6 +22,7 @@ import { recordEvent, recordItem } from '../lib/stats';
 import { getDueCards, recordVocabAnswer } from '../lib/srs';
 import { formatVerb } from '../lib/verbDisplay';
 import Confetti from './ui/Confetti';
+import DeckProgress from './ui/DeckProgress';
 import { AUTO_DECKS, DECK_GROUPS } from '../packs/de/autoDecks';
 import { resolveAutoDeck } from '../packs/lexiconStore';
 
@@ -455,19 +456,7 @@ export default function VocabTab({
                 >
                   {queue.length} card{queue.length !== 1 ? 's' : ''} remaining
                 </div>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  {activeDeck.map((_, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: 26,
-                        height: 8,
-                        borderRadius: RADIUS.pill,
-                        background: learnedWords[activeDeck[i].id] ? COLORS.green : '#e7dcae',
-                      }}
-                    />
-                  ))}
-                </div>
+                <DeckProgress cards={activeDeck} learnedWords={learnedWords} />
               </div>
 
               {/* Deck complete banner */}

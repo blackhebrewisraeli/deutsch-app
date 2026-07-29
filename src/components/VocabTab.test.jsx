@@ -324,4 +324,37 @@ describe('VocabTab', () => {
       expect(await screen.findByText('das Haus')).toBeInTheDocument();
     });
   });
+
+  // The per-card dot strip was the only unbounded child of the progress row, so
+  // a lexicon-sized deck dragged the page far wider than the viewport. Large
+  // decks now get a bounded bar instead. The large-deck case is driven through
+  // the custom-deck path because the committed lexicon fixture only holds 6
+  // entries — every auto deck resolved from it stays under the dot threshold.
+  describe('deck progress', () => {
+    it('shows one dot per card on a 10-card curated deck', () => {
+      renderTab();
+      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
+      expect(screen.getAllByTestId('deck-progress-dot')).toHaveLength(10);
+      expect(screen.queryByRole('progressbar')).not.toBeInTheDocument();
+    });
+
+    it('shows a bounded progress bar instead of dots above the threshold', async () => {
+      const big = Array.from({ length: 13 }, (_, i) => ({
+        de: `Wort ${i}`,
+        en: `word ${i}`,
+        ipa: '[vɔʁt]',
+      }));
+      callClaude.mockResolvedValue(JSON.stringify(big));
+      renderTab();
+
+      await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
+      await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+
+      expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
+      const bar = screen.getByRole('progressbar');
+      expect(bar).toHaveAttribute('aria-valuenow', '0');
+      expect(bar).toHaveAttribute('aria-valuemax', '13');
+      expect(screen.queryAllByTestId('deck-progress-dot')).toHaveLength(0);
+    });
+  });
 });
