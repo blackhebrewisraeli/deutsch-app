@@ -389,7 +389,9 @@ export default function AlphabetTab({
                 borderRadius: RADIUS.lg,
                 boxShadow: SHADOW.card,
                 display: 'grid',
-                gridTemplateColumns: mobile ? '1fr' : '200px 1fr auto',
+                // minmax(0, …) so the track can shrink below its content's
+                // min-content width instead of widening the page (see ChatTab).
+                gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : '200px minmax(0, 1fr) auto',
                 gap: SPACE[8],
                 alignItems: 'center',
               }}

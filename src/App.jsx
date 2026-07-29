@@ -596,7 +596,9 @@ export default function App() {
               ❄️{game.freezes}
             </span>
           )}
-          <GoalRing pct={game.goal.pct} met={game.goal.met} size={mobile ? 40 : 48} />
+          {/* Dropped on mobile: the header cluster measured 389px on a 375px
+              screen, and the ring duplicates the goal strip under the nav. */}
+          {!mobile && <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />}
           <AccountChip
             user={user}
             onSignIn={requestSignIn}
