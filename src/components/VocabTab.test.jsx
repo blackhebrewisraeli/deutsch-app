@@ -357,4 +357,40 @@ describe('VocabTab', () => {
       expect(screen.queryAllByTestId('deck-progress-dot')).toHaveLength(0);
     });
   });
+
+  // German compounds are long and the display word is the widest thing on the
+  // card. At 64px inside 48px padding, "bestimmen" alone measured 408px on a
+  // 375px viewport — wider than the screen, and a compound is far worse. The
+  // word must be able to break, and the card must not spend 96px of a phone
+  // screen on padding.
+  describe('card face at mobile width', () => {
+    const wordStyle = (mobile) => {
+      const { unmount } = render(
+        <VocabTab level="a1" learnedWords={{}} markLearned={() => {}} mobile={mobile} />
+      );
+      const word = screen.getByText(firstCard().de);
+      const style = {
+        overflowWrap: word.style.overflowWrap,
+        fontSize: word.style.fontSize,
+        maxWidth: word.style.maxWidth,
+        cardPadding: word.parentElement.style.padding,
+      };
+      unmount();
+      return style;
+    };
+
+    it('lets a long word break instead of forcing the page wider', () => {
+      expect(wordStyle(true).overflowWrap).toBe('anywhere');
+      expect(wordStyle(false).overflowWrap).toBe('anywhere');
+    });
+
+    it('steps the display word and card padding down on mobile', () => {
+      const mobile = wordStyle(true);
+      const desktop = wordStyle(false);
+      expect(mobile.fontSize).toBe('48px');
+      expect(desktop.fontSize).toBe('64px');
+      expect(mobile.cardPadding).toBe('20px');
+      expect(desktop.cardPadding).toBe('48px');
+    });
+  });
 });

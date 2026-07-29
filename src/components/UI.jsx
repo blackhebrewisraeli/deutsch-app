@@ -89,7 +89,11 @@ export function Hero({ kicker, title, sub }) {
       <h1
         style={{
           ...TEXT.display,
-          fontSize: 72,
+          // A flat 72px overflowed narrow screens: "Wortschatz" is 370px wide
+          // at that size, wider than a 375px phone can show. 13vw reaches 72px
+          // at ~554px and above, so desktop is unchanged and only small
+          // viewports scale down.
+          fontSize: 'min(72px, 13vw)',
           margin: 0,
           lineHeight: 0.95,
         }}
