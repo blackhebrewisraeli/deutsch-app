@@ -13,9 +13,9 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-455_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-717_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
-  <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-30_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
+  <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-38_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
   &nbsp;
   <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
 </p>
@@ -52,7 +52,7 @@
 
 **Deutsch · Sprachschule** is an exercise-driven German learning app that runs in the browser and installs as a PWA. It does not wait for you to know what to do — it gives you a task, you respond, and it tells you whether you got it right.
 
-The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four exercise modules — guided conversation, alphabet recognition, vocabulary active recall, and translation — plus a **Stats tab** that records every interaction and resurfaces what you got wrong. Vocab is backed by a **Leitner spaced-repetition scheduler**, so cards return at the right time, not on every visit.
+The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four exercise modules — guided conversation, alphabet recognition, vocabulary active recall, and translation — plus a **Stats tab** that records every interaction and resurfaces what you got wrong. Vocab draws on a **4,424-word German lexicon** — each entry with gender, plural, IPA, example sentences, and verb conjugation — scheduled by a **Leitner spaced-repetition** algorithm, so cards return at the right time, not on every visit.
 
 All AI features call **Claude Haiku 4.5** through a versioned server-side API (`/api/v1/ai/*` — validated, rate-limited, [contract-documented](./docs/api/ai.md)) — your API key never touches the browser.
 
@@ -207,14 +207,40 @@ CARD 4 / 10 · TRANSLATE THIS WORD
 
 Answers within **Levenshtein distance ≤ 2** (one or two typos) are marked **ALMOST** and advance the card. Wrong answers return to the back of the queue — the deck never completes until every card is answered correctly at least once.
 
-**Preset decks** (same for all levels):
+**Starter decks** — four hand-written decks of 10 cards, always available offline:
 
-| Deck | Cards | Sample words |
-|---|:---:|---|
-| Greetings | 10 | Hallo, Guten Morgen, Tschüss, Wie geht es dir? |
-| Food & Drink | 10 | das Brot, der Kaffee, die Milch, der Apfel |
-| Travel | 10 | der Bahnhof, der Pass, links, geradeaus |
-| Numbers | 10 | eins through zehn |
+| Deck | Sample words |
+|---|---|
+| Greetings | Hallo, Guten Morgen, Tschüss, Wie geht es dir? |
+| Food & Drink | das Brot, der Kaffee, die Milch, der Apfel |
+| Travel | der Bahnhof, der Pass, links, geradeaus |
+| Numbers | eins through zehn |
+
+**The lexicon — 4,424 words.** Beyond the starter decks the app ships a full German
+lexicon, imported from open datasets and lazy-loaded in chunks (cached for offline
+use after first visit). Every entry carries far more than a translation:
+
+| Field | Example (`das Haus`) |
+|---|---|
+| Article / gender | `das` |
+| Plural | `Häuser` |
+| IPA | `[haʊ̯s]` |
+| Example sentence | *Auf dem Hügel steht ein Haus.* |
+| Verb conjugation | present tense, Partizip II, `haben`/`sein` (verbs only) |
+| Frequency rank + CEFR | rank 456 · A1 |
+
+Those entries are sliced into **13 decks** you can jump between:
+
+| Group | Decks |
+|---|---|
+| **Frequency** | Core 100, Top 500 — the most common words first |
+| **CEFR** | A1 (885) · A2 (1,327) · B1 (2,212) — banded by position in the lexicon |
+| **Topics** | Lifestyle, Science, Hobbies & Games, Sports, Politics, Business & Law, Tech, Medicine |
+
+Word data comes from Wiktionary (via Wiktextract), example sentences from Tatoeba,
+and frequency ranking from the Leipzig Corpora Collection — see
+[Importing vocabulary](#importing-vocabulary) for the one-command import and
+[CONTENT_LICENSE.md](./CONTENT_LICENSE.md) for attribution.
 
 **AI-generated decks:** Type any topic — *colours, animals, at the doctor's, football* — and Claude generates a 10-card deck with German articles for nouns, IPA, and English meanings.
 
@@ -409,7 +435,7 @@ AI-generated decks expand to any domain on demand.
 | Error monitoring | **Sentry** (errors-only) | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay |
 | Linting | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars |
 | Formatting | **Prettier 3** | Consistent code style, enforced on every commit |
-| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **455 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **30-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
+| Testing | **Vitest 2** + **jsdom** + **React Testing Library** | **717 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **38-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
 | CI | **GitHub Actions** | Runs lint + test + build on every push to `main` and every PR |
 | Pre-commit | **Husky + lint-staged** | Runs ESLint + Prettier + the full test suite before every `git commit` |
 | PWA | **vite-plugin-pwa** + Workbox | Installable on iOS/Android, offline-capable static assets |
