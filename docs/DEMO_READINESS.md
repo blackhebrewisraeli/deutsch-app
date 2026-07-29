@@ -1,6 +1,7 @@
 # Demo Readiness — TODO
 
 Assessment date: 2026-07-13 · against `main` @ `ca95851` · live: https://deutsch-app-dusky.vercel.app
+Revised 2026-07-29: #3, #4, #6 closed (PRs #64, #65); #13 and #14 added from a live pass.
 
 **Verified healthy:** build passes (1.8s), 686/686 tests green, lint 0 errors, live demo
 returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 591 KiB.
@@ -27,11 +28,23 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
   **Fix:** band by percentile over *kept* entries rather than raw Leipzig rank, or rename
   the decks to describe what they actually contain.
 
+- [x] **13. Vocab progress dots blew out page width on lexicon decks.** — FIXED in this branch
+  (`src/components/ui/DeckProgress.jsx`) `VocabTab` rendered one 26px dot per card
+  unconditionally, inside a `justify-content: space-between` row where it was the only
+  unbounded child. It was sized for 10-card decks; with the 4,424-word lexicon, Core 100 pushed
+  page `scrollWidth` to 3,551px (2.8x the 1,274px viewport) and B1 to 69,023px (54x) while
+  mounting 2,212 needless DOM nodes.
+  **Fix:** extract `DeckProgress` — keep the dot strip at ≤12 cards, switch above that to a
+  fixed-width bar plus an `N / M LEARNED` count. Bounded DOM (5 nodes) and bounded width at any
+  deck size; verified `scrollWidth === clientWidth` on B1 at 1274px, and at mobile width the
+  progress row's `scrollWidth === clientWidth` with the dot strip shrinking to fit.
+
 ---
 
 ## P1 — Content quality
 
-- [ ] **3. German-only examples are discarded.** `validate.js` + `cleanExamples` +
+- [x] **3. German-only examples are discarded.** — FIXED in #64 (`examples[].en` nullable across
+  all three gates; import re-run) `validate.js` + `cleanExamples` +
   `pickExamples` require every example to have both `de` and `en`, but **4,545** German lemma
   entries in Wiktextract carry examples with no English translation, so they are thrown away —
   a likely large share of the **537** words dropped for "no example" in the last import.
@@ -39,7 +52,8 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
   **Fix:** make `examples[].en` nullable across the three gates; re-run the import.
   *(Designed and measured; ready to implement.)*
 
-- [ ] **4. CEFR bands are lopsided.** A1 284 · A2 567 · **B1 3,567** (81% of the lexicon).
+- [x] **4. CEFR bands are lopsided.** — FIXED in #64 (position-based bands over kept entries;
+  now A1 885 · A2 1,327 · B1 2,212) A1 284 · A2 567 · **B1 3,567** (81% of the lexicon).
   CEFR is derived from raw frequency rank, but kept entries skew to higher ranks, so the B1
   deck is enormous and A1 is thin.
   **Fix:** derive bands from percentiles over kept entries.
@@ -48,11 +62,23 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
   already covers 4,770/5,000 lemmas (95.4%); light stemming rescues only **47** (0.9%) while
   adding a stemmer and false-match risk. Documented here so it stops resurfacing as an idea.
 
+- [ ] **14. Flashcard answers are raw Wiktionary glosses.** Some are long or meta-linguistic, and
+  `VocabTab` renders them verbatim — as multiple-choice options and as the revealed answer.
+  Seen on the live demo: an option reading "ARCHAIC FORM OF STANDEN, FIRST/THIRD-PERSON PLURAL
+  PRETERITE OF STEHEN", and the correct answer for *in* being "[WITH DATIVE] IN, INSIDE, WITHIN,
+  AT (INSIDE A BUILDING)". A learner cannot meaningfully choose between options like these, and
+  they make the demo look unfinished.
+  **Fix:** needs its own design pass. Gloss cleanup belongs in the import pipeline
+  (`scripts/import-lexicon/parseWiktextract.js` — strip bracketed grammar labels, drop
+  `form of` glosses, truncate to the first sense) and requires an import re-run. Deliberately
+  not attempted as part of #13.
+
 ---
 
 ## P2 — Credibility polish
 
-- [ ] **6. README is stale.** Badge claims `Vitest 455 passing`; actual is **686**. The
+- [x] **6. README is stale.** — FIXED in #65 (counts refreshed; lexicon surfaced in the feature
+  list) Badge claims `Vitest 455 passing`; actual is **686**. The
   rich-lexicon feature set (4.4k words, conjugations, frequency/CEFR/topic decks, one-command
   reproducible import) is not represented in the feature list — for a demo, the README is the
   front door.
@@ -86,9 +112,13 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
 
 ## Suggested order
 
-1. **P0 #1 and #2** — these are visibly broken to anyone clicking around; fix before any demo.
-2. **P1 #3 and #4** — one import re-run can land both (bands + examples together).
-3. **P2 #6** — README, since it is the first thing a visitor reads.
-4. **P3 #9–#12** — verification pass immediately before announcing.
+Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13 (this branch).
+#5 is closed as won't-fix.
 
-#7, #8 are nice-to-have. #5 is closed as won't-fix.
+Remaining, in order:
+
+1. **P1 #14** — raw glosses are the most visible content problem left; needs a design pass and
+   an import re-run.
+2. **P3 #9–#12** — verification pass immediately before announcing.
+
+#7, #8 are nice-to-have.
