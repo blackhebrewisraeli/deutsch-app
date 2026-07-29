@@ -3,7 +3,7 @@ const BLOCKLIST = ['ficken', 'scheiße', 'arsch', 'fotze', 'wichser'];
 
 export function cleanExamples(examples, { maxLen = 120 } = {}) {
   return (examples || []).filter((e) => {
-    if (!e || !e.de || !e.en) return false;
+    if (!e || !e.de) return false;
     if (e.de.length > maxLen) return false;
     const lower = e.de.toLowerCase();
     return !BLOCKLIST.some((w) => lower.includes(w));

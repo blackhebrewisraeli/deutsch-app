@@ -91,8 +91,13 @@ export function validateLexiconEntry(entry) {
   if (!Array.isArray(entry.examples)) fail('examples must be an array');
   for (const ex of entry.examples) {
     if (!ex || typeof ex !== 'object') fail('each example must be an object');
-    if (!nonEmptyStr(ex.de) || !nonEmptyStr(ex.en) || !nonEmptyStr(ex.source)) {
-      fail('each example must have non-empty de, en, source');
+    if (!nonEmptyStr(ex.de) || !nonEmptyStr(ex.source)) {
+      fail('each example must have non-empty de and source');
+    }
+    // en is optional: Wiktionary examples often carry no translation, and the
+    // card renders only the German sentence.
+    if (ex.en !== null && !nonEmptyStr(ex.en)) {
+      fail('each example must have en null or a non-empty string');
     }
   }
 

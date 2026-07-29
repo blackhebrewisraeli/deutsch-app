@@ -41,11 +41,18 @@ export function attachExamples(parsed, index, max = 2) {
 }
 
 // Merges Tatoeba examples with Wiktextract rawExamples as a fallback.
-// Tatoeba examples come first; rawExamples with a missing/empty `en` are
-// skipped. The combined list is sliced to `max`.
+// Tatoeba examples come first; rawExamples with de are accepted whether or not
+// they have en. Within the Wiktextract fallback, entries with a non-empty `en`
+// are ordered before German-only ones — better data wins the slot when both are
+// available. The combined list is sliced to `max`.
 export function pickExamples(tatoebaExamples, rawExamples, max = 2) {
-  const wiktionary = (rawExamples || [])
-    .filter((e) => e && e.de && e.en)
-    .map((e) => ({ de: e.de, en: e.en, source: 'wiktionary' }));
+  const usable = (rawExamples || []).filter((e) => e && e.de && e.en !== '');
+  // Translated Wiktextract examples first, then German-only ones — better data
+  // wins the slot when both are available. (Tatoeba pairs always have both, so
+  // they stay ahead of everything.)
+  const wiktionary = [
+    ...usable.filter((e) => e.en),
+    ...usable.filter((e) => !e.en),
+  ].map((e) => ({ de: e.de, en: e.en ?? null, source: 'wiktionary' }));
   return [...tatoebaExamples, ...wiktionary].slice(0, max);
 }
