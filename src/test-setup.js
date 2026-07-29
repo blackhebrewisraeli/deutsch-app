@@ -11,7 +11,14 @@
 
 import '@testing-library/jest-dom/vitest';
 import { afterEach } from 'vitest';
-import { cleanup } from '@testing-library/react';
+import { cleanup, configure } from '@testing-library/react';
+
+// findBy*/waitFor give up after 1s by default, which is a coin flip on a loaded
+// machine — a render that normally settles in 20ms can take seconds when the
+// CPU is oversubscribed. This only extends how long we wait for something that
+// is going to happen; assertions that never come true still fail, and the
+// vitest testTimeout in vitest.config.js remains the outer bound.
+configure({ asyncUtilTimeout: 5000 });
 
 afterEach(() => {
   cleanup();
