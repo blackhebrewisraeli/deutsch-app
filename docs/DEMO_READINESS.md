@@ -39,6 +39,25 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
   deck size; verified `scrollWidth === clientWidth` on B1 at 1274px, and at mobile width the
   progress row's `scrollWidth === clientWidth` with the dot strip shrinking to fit.
 
+- [x] **15. The app scrolled sideways on a phone.** — FIXED in this branch (`VocabTab`,
+  `ChatTab`, `AlphabetTab`, `UI.Hero`, `App` header) Measured at a real 375px viewport, four
+  separate causes, all pre-existing and independent of #13:
+  - Chat's deck/panel grid used a bare `1fr` track, which keeps `min-width: auto` and so
+    refuses to shrink below its content — **190px** past the viewport. Same pattern in
+    `VocabTab` (40px) and latent in `AlphabetTab`. All now `minmax(0, 1fr)`.
+  - The flashcard face paired 48px padding with a 64px display word, giving it a 408px
+    min-content ("bestimmen" alone is 312px). Padding and font step down on mobile and the
+    word may now break.
+  - `Hero`'s title was a flat 72px; "Wortschatz" renders 370px wide. Now `min(72px, 13vw)` —
+    identical on desktop, scales only when narrow.
+  - The header cluster measured 389px. The goal ring is dropped below 640px; it duplicates
+    the goal strip under the nav.
+
+  All five tabs now measure `scrollWidth === clientWidth` at 375px and the page cannot scroll
+  horizontally. **Still open:** at 320px (original iPhone SE) the header is 25px over, and on
+  the Chat/Alphabet/Stats tabs mobile users no longer see any daily-goal indicator, since
+  `GoalStrip` only renders on Vocab and Translate.
+
 ---
 
 ## P1 — Content quality
@@ -112,7 +131,7 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
 
 ## Suggested order
 
-Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13 (this branch).
+Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (this branch).
 #5 is closed as won't-fix.
 
 Remaining, in order:
