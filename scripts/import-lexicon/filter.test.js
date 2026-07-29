@@ -13,6 +13,14 @@ describe('cleanExamples', () => {
   it('drops examples containing a blocklisted word', () => {
     expect(cleanExamples([ex('Das ist scheiße gut.', 'That is shit good.')], {})).toEqual([]);
   });
+  it('keeps a German-only example (no translation)', () => {
+    expect(cleanExamples([{ de: 'Ich esse Brot.', en: null, source: 'wiktionary' }], {})).toEqual([
+      { de: 'Ich esse Brot.', en: null, source: 'wiktionary' },
+    ]);
+  });
+  it('still drops an example with no German text', () => {
+    expect(cleanExamples([{ de: '', en: 'I eat bread.', source: 'wiktionary' }], {})).toEqual([]);
+  });
 });
 
 describe('keepEntry', () => {

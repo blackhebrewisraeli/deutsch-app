@@ -196,4 +196,28 @@ describe('validateLexiconEntry', () => {
       })
     ).toBe(true);
   });
+  it('accepts an example with a null English translation', () => {
+    expect(
+      validateLexiconEntry({
+        ...validNoun,
+        examples: [{ de: 'Ich esse Brot.', en: null, source: 'wiktionary' }],
+      })
+    ).toBe(true);
+  });
+  it('throws when an example has an empty-string en', () => {
+    expect(() =>
+      validateLexiconEntry({
+        ...validNoun,
+        examples: [{ de: 'Ich esse Brot.', en: '', source: 'wiktionary' }],
+      })
+    ).toThrow(/example/);
+  });
+  it('throws when an example has no de', () => {
+    expect(() =>
+      validateLexiconEntry({
+        ...validNoun,
+        examples: [{ de: '', en: 'I eat bread.', source: 'wiktionary' }],
+      })
+    ).toThrow(/example/);
+  });
 });

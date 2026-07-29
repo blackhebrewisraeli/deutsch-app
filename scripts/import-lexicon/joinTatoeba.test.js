@@ -22,8 +22,12 @@ describe('pickExamples', () => {
     expect(result).toEqual([{ de: 'Das Haus ist groß.', en: 'The house is big.', source: 'wiktionary' }]);
   });
 
-  it('(c) rawExample with null/empty en is skipped', () => {
-    expect(pickExamples([], [raw('Nur Deutsch.', null)], 2)).toEqual([]);
+  it('(c) null en is accepted as German-only; empty-string en is skipped', () => {
+    // null en is now accepted (German-only examples)
+    expect(pickExamples([], [raw('Nur Deutsch.', null)], 2)).toEqual([
+      { de: 'Nur Deutsch.', en: null, source: 'wiktionary' },
+    ]);
+    // empty-string en is still skipped (only null or non-empty strings are valid)
     expect(pickExamples([], [raw('Nur Deutsch.', '')], 2)).toEqual([]);
   });
 
@@ -34,6 +38,15 @@ describe('pickExamples', () => {
     expect(result).toHaveLength(2);
     expect(result[0].source).toBe('tatoeba');
     expect(result[1].source).toBe('wiktionary');
+  });
+  it('accepts a German-only rawExample when there is no Tatoeba match', () => {
+    expect(pickExamples([], [{ de: 'Ich esse Brot.', en: null }], 2)).toEqual([
+      { de: 'Ich esse Brot.', en: null, source: 'wiktionary' },
+    ]);
+  });
+  it('prefers a translated Wiktextract example over a German-only one', () => {
+    const out = pickExamples([], [{ de: 'Nur Deutsch.', en: null }, { de: 'Mit Englisch.', en: 'With English.' }], 2);
+    expect(out.map((e) => e.de)).toEqual(['Mit Englisch.', 'Nur Deutsch.']);
   });
 });
 
