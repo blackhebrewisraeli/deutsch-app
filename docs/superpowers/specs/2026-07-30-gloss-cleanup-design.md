@@ -109,7 +109,7 @@ Worked examples:
 "source material, original, inspiration (the material that is…)"
   → "source material, original, inspiration"
 "[with dative] in, inside, within, at (inside a building)"
-  → "in, inside, within, at"
+  → "in, inside, within"
 "support, assistance, backing, also endorsement"
   → "support, assistance, backing"
 ```

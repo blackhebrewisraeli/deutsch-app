@@ -3,8 +3,9 @@
 Assessment date: 2026-07-13 · against `main` @ `ca95851` · live: https://deutsch-app-dusky.vercel.app
 Revised 2026-07-29: #3, #4, #6 closed (PRs #64, #65); #13 and #14 added from a live pass.
 
-**Verified healthy:** build passes (1.8s), 686/686 tests green, lint 0 errors, live demo
-returns 200 and already serves the regenerated 4,480-word lexicon, PWA precache 591 KiB.
+**Verified healthy:** build passes (1.8s), 768/768 tests green, lint 0 errors, live demo
+returns 200 and currently serves the 4,424-word lexicon (production, pre-`feat/gloss-cleanup`),
+PWA precache 591 KiB.
 
 ---
 
@@ -123,7 +124,7 @@ returns 200 and already serves the regenerated 4,480-word lexicon, PWA precache 
   "alternative form of Rahm"; and the pipeline filtered `form-of` senses but not `alt-of`.
   **Fix:** a pure `cleanGloss()` applied at import (strip leading `[label]`, cut at the first
   parenthetical, cap to 3 synonyms, fall back to raw when that empties), plus rejecting
-  `alt-of` senses alongside `form-of`. Entry ids are derived from the raw gloss, so cleaning the display text does not rewrite ids — ids key saved learner progress (learnedWords, and srsKey in src/lib/srs.js), and an earlier run rewrote 187 of them before this was caught. First-gloss p90 length 61 → 30; glosses over 40 chars 929 → 177. Two meta-linguistic first glosses survive (adv:nach, n:gattin); recorded rather than patched, because matching English text would also delete common words whose good record exists alongside the junk one. Rejected during design: preferring a shorter later gloss, which *degrades* quality
+  `alt-of` senses alongside `form-of`. Entry ids are derived from the raw gloss, so cleaning the display text does not rewrite ids — ids key saved learner progress (learnedWords, and srsKey in src/lib/srs.js), and an earlier run rewrote 187 of them before this was caught. First-gloss p90 length 61 → 30; glosses over 40 chars 929 → 177. Under the narrow `form of|inflection of|preterite` pattern, two meta-linguistic first glosses survive (adv:nach, n:gattin); recorded rather than patched, because matching English text would also delete common words whose good record exists alongside the junk one. Other meta-linguistic phrasings the pattern doesn't catch (e.g. "abbreviation of", "clipping of" — n:juli, n:wiener) also occur and pre-date this branch. Rejected during design: preferring a shorter later gloss, which *degrades* quality
   because Wiktionary orders senses by primacy (*Ergebnis* would go from "result, outcome,
   conclusion" to "earnings, profit").
 
@@ -146,7 +147,7 @@ returns 200 and already serves the regenerated 4,480-word lexicon, PWA precache 
 - [ ] **18. The same German word can appear on several cards.** 333 surface forms resolve to
   more than one entry, adding 370 extra cards. Some are junk and were removed with the `alt-of`
   fix (#14), but the rest are legitimate homographs across parts of speech — `in` as preposition
-  ("in, inside, within, at") and as adjective ("in, popular"), `Tag` as "day" and as "tag
+  ("in, inside, within") and as adjective ("in, popular"), `Tag` as "day" and as "tag
   (label)", `aber` as conjunction and adverb. A deck can therefore show the same German word
   twice with different correct answers, and in multiple choice two options can both be
   defensible. **Fix:** needs a product decision — merge homographs into one card with combined

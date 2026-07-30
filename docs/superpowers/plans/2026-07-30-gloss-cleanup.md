@@ -592,7 +592,7 @@ fetch('/lexicon/index.json').then(r => r.json()).then(async (idx) => {
 });
 ```
 
-Then load the chunk holding those ids and print their `en[0]`. Expected: `in` reads `in, inside, within, at`; only one `Raum` id exists and it reads `space`.
+Then load the chunk holding those ids and print their `en[0]`. Expected: `in` reads `in, inside, within`; only one `Raum` id exists and it reads `space`.
 
 - [ ] **Step 4: Confirm no console errors**
 
