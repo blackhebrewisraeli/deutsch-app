@@ -619,7 +619,13 @@ export default function VocabTab({
                 !answered &&
                 currentIdx !== null &&
                 activeDeck.length >= 4 && (
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE[3] }}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                      gap: SPACE[3],
+                    }}
+                  >
                     {choices.map((choice) => (
                       <button
                         key={choice}
@@ -746,7 +752,7 @@ export default function VocabTab({
                     <div
                       style={{
                         display: 'grid',
-                        gridTemplateColumns: '1fr 1fr 1fr',
+                        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
                         gap: SPACE[2],
                       }}
                     >

@@ -22,7 +22,7 @@ export default function WelcomeBanner({ mobile, onDismiss }) {
         padding: mobile ? SPACE[4] : SPACE[5],
         marginBottom: mobile ? SPACE[4] : SPACE[6],
         display: 'grid',
-        gridTemplateColumns: '1fr auto',
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
         gap: SPACE[4],
         alignItems: 'center',
       }}

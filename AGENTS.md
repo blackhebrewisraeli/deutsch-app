@@ -52,6 +52,13 @@ styles only, Vitest + RTL, ESLint 10 flat config + Prettier.
   shadows. UI primitives live in `src/components/ui/`.
 - **Typography:** Fraunces serif for display words, JetBrains Mono for UI
   labels (uppercase). Don't change fonts.
+- **Grid tracks:** always `minmax(0, 1fr)`, never a bare `1fr`. A `1fr` track
+  keeps `min-width: auto`, so it refuses to shrink below its content and pushes
+  the page wider than the viewport instead. This caused mobile overflow in four
+  separate places (see `docs/DEMO_READINESS.md` #15–#17).
+- **Narrow viewports:** verify at 375px *and* 320px (`bp.tiny`), and with a
+  populated account — a fresh one hides elements that only exist with real
+  progress (freeze chip, high level, long rank names).
 - **Language-blind engine rule:** code in `src/lib/*` and `src/components/*`
   must not hardcode German specifics — no `card.de` keys in engine logic, no
   `if (language === 'de')`. German-specific behavior belongs in the pack

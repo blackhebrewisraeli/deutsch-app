@@ -56,7 +56,7 @@ export default function ReviewFeed({ items, onReview }) {
             onClick={() => onReview(item)}
             style={{
               display: 'grid',
-              gridTemplateColumns: 'auto 1fr auto',
+              gridTemplateColumns: 'auto minmax(0, 1fr) auto',
               gap: SPACE[4],
               alignItems: 'center',
               textAlign: 'left',

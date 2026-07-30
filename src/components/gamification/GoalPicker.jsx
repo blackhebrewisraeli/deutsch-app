@@ -18,7 +18,9 @@ const OPTIONS = [
 // Daily-goal preset picker. Selecting calls onPick(xpValue).
 export default function GoalPicker({ goal, onPick }) {
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: SPACE[3] }}>
+    <div
+      style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: SPACE[3] }}
+    >
       {OPTIONS.map((o) => {
         const active = goal === o.xp;
         return (

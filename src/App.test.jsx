@@ -128,6 +128,23 @@ describe('header at mobile width', () => {
     expect(within(screen.getByRole('banner')).getByText('STREAK')).toBeInTheDocument();
   });
 
+  // Below 360px even the scaled wordmark cannot coexist with the widgets: a
+  // real year-long streak renders level 30 + "365" + a freeze chip + SIGN IN,
+  // which measured 34px past a 320px viewport. Every one of those is the only
+  // surface for its signal — the freeze count appears nowhere else in the app —
+  // so the wordmark, the one decorative item, is dropped instead.
+  it('drops the wordmark below 360px', () => {
+    setViewportWidth(320);
+    render(<App />);
+    expect(within(screen.getByRole('banner')).queryByText(/Deutsch/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the wordmark at 360px and above', () => {
+    setViewportWidth(375);
+    render(<App />);
+    expect(within(screen.getByRole('banner')).getByText(/Deutsch/)).toBeInTheDocument();
+  });
+
   it('keeps the full-size wordmark and chrome on desktop', () => {
     setViewportWidth(1280);
     render(<App />);

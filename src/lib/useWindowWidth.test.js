@@ -1,6 +1,6 @@
 import { describe, it, expect, afterEach, vi } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
-import { useWindowWidth, bp, isMobile, isTablet } from './useWindowWidth';
+import { useWindowWidth, bp, isTiny, isMobile, isTablet } from './useWindowWidth';
 
 describe('useWindowWidth', () => {
   const originalInnerWidth = window.innerWidth;
@@ -54,6 +54,14 @@ describe('useWindowWidth', () => {
 });
 
 describe('breakpoint helpers', () => {
+  it('isTiny treats widths under bp.tiny as tiny', () => {
+    expect(isTiny(bp.tiny - 1)).toBe(true);
+    expect(isTiny(bp.tiny)).toBe(false);
+    // the two devices that motivated the breakpoint
+    expect(isTiny(320)).toBe(true);
+    expect(isTiny(375)).toBe(false);
+  });
+
   it('isMobile treats widths under bp.mobile as mobile', () => {
     expect(isMobile(bp.mobile - 1)).toBe(true);
     expect(isMobile(bp.mobile)).toBe(false);
