@@ -99,6 +99,12 @@ export function getHeatmapData(daily, endDate, days) {
 }
 
 // ─── Range queries ────────────────────────────────────────────
+//
+// Readers below optional-chain the `byTab`/`byLevel` containers, not just their
+// keys: a day entry can legitimately arrive without them (older schema, or a
+// partial write merged in from remote state by sync/merge.js), and a missing
+// bucket must degrade to zero rather than take down the whole Stats tab.
+// `xpForDay` in xpCore.js guards the same shape.
 
 function inRange(key, fromKey, toKey) {
   if (fromKey && key < fromKey) return false;
@@ -112,7 +118,7 @@ export function getPerTabBreakdown(daily, fromKey, toKey) {
 
   for (const [key, day] of Object.entries(daily)) {
     if (!inRange(key, fromKey, toKey)) continue;
-    for (const tab of TABS) out[tab] += day.byTab[tab] ?? 0;
+    for (const tab of TABS) out[tab] += day.byTab?.[tab] ?? 0;
   }
   return out;
 }
@@ -128,7 +134,7 @@ export function getAccuracyByLevel(daily, fromKey, toKey) {
     if (!inRange(key, fromKey, toKey)) continue;
     for (const level of LEVELS) {
       for (const verdict of VERDICTS) {
-        out[level][verdict] += day.byLevel[level]?.[verdict] ?? 0;
+        out[level][verdict] += day.byLevel?.[level]?.[verdict] ?? 0;
       }
     }
   }
@@ -144,7 +150,7 @@ export function getTodaySnapshot(daily, stats, dateKey) {
   if (today) {
     for (const level of LEVELS) {
       for (const v of VERDICTS) {
-        accuracy[v] += today.byLevel[level]?.[v] ?? 0;
+        accuracy[v] += today.byLevel?.[level]?.[v] ?? 0;
       }
     }
   }

@@ -221,6 +221,16 @@ describe('getPerTabBreakdown', () => {
       translate: 0,
     });
   });
+
+  it('treats a day entry without byTab as zero instead of throwing', () => {
+    const daily = { '2026-06-06': { bonusXp: 120 } };
+    expect(getPerTabBreakdown(daily)).toEqual({
+      chat: 0,
+      alphabet: 0,
+      vocab: 0,
+      translate: 0,
+    });
+  });
 });
 
 // ─── getAccuracyByLevel ───────────────────────────────────────
@@ -254,6 +264,15 @@ describe('getAccuracyByLevel', () => {
     const result = getAccuracyByLevel(daily, '2026-06-05', '2026-06-06');
     expect(result.a1.correct).toBe(1);
   });
+
+  it('treats a day entry without byLevel as zero instead of throwing', () => {
+    const daily = { '2026-06-06': { bonusXp: 120 } };
+    expect(getAccuracyByLevel(daily)).toEqual({
+      a1: { correct: 0, almost: 0, wrong: 0 },
+      a2: { correct: 0, almost: 0, wrong: 0 },
+      b1: { correct: 0, almost: 0, wrong: 0 },
+    });
+  });
 });
 
 // ─── getTodaySnapshot ─────────────────────────────────────────
@@ -274,6 +293,14 @@ describe('getTodaySnapshot', () => {
     const snap = getTodaySnapshot({}, { streak: 0 }, '2026-06-06');
     expect(snap.exercises).toBe(0);
     expect(snap.accuracy).toEqual({ correct: 0, almost: 0, wrong: 0 });
+  });
+
+  it('returns zeroed counts when today lacks byLevel instead of throwing', () => {
+    const daily = { '2026-06-06': { bonusXp: 120 } };
+    const snap = getTodaySnapshot(daily, { streak: 3 }, '2026-06-06');
+    expect(snap.exercises).toBe(0);
+    expect(snap.accuracy).toEqual({ correct: 0, almost: 0, wrong: 0 });
+    expect(snap.streak).toBe(3);
   });
 });
 
