@@ -382,6 +382,136 @@ git commit -m "chore(lexicon): regenerate with cleaned glosses and no alt-of rec
 
 ---
 
+### Task 3B: Keep entry ids stable across the gloss change
+
+Added mid-execution. The first regeneration (commit `8c8712d`) revealed that
+`disambiguateIds` builds its collision suffix from `slug(glosses[0])`, so cleaning
+the glosses rewrote **187 entry ids** for words that had not otherwise changed —
+`n:tag:day-a-24-hour-period` became `n:tag:day`. Ids are the progress key
+(`learnedWords[card.id]`, and `srsKey(deckId, id)` in `src/lib/srs.js`), so that
+silently clears learned flags and SRS scheduling for those words.
+
+Fix: derive the suffix from the **raw** gloss, so ids stay as they are today while
+the displayed answer is cleaned. Residual churn where the `alt-of` removal itself
+changed a collision set (`n:raum:space` → `n:raum`, once its twin is gone) is
+unavoidable and accepted.
+
+**Files:**
+
+- Modify: `scripts/import-lexicon/parseWiktextract.js` (return `rawGlosses`)
+- Modify: `scripts/import-lexicon/ids.js` (`disambiguateIds` slugs the raw gloss)
+- Test: `scripts/import-lexicon/parseWiktextract.test.js`, `scripts/import-lexicon/ids.test.js`
+
+**Interfaces:**
+
+- Consumes: `cleanGloss` (Task 1), the `alt-of` filter (Task 2).
+- Produces: `parseRecord` returns an additional `rawGlosses` array — the same
+  glosses as `glosses`, in the same order, before `cleanGloss` was applied.
+  `disambiguateIds` prefers `e.rawGlosses[0]` and falls back to `e.glosses[0]`.
+  `rawGlosses` must NOT reach the shipped artifacts: `mapEntry` lists its output
+  fields explicitly, so confirm it is absent from the built entry.
+
+- [ ] **Step 1: Write the failing tests**
+
+In `scripts/import-lexicon/ids.test.js`, add to the `disambiguateIds` describe block:
+
+```js
+  it('builds the collision suffix from the raw gloss, not the cleaned one', () => {
+    const out = disambiguateIds([
+      { pos: 'noun', lemma: 'Tag', glosses: ['day'], rawGlosses: ['day (a 24-hour period)'] },
+      { pos: 'noun', lemma: 'Tag', glosses: ['tag'], rawGlosses: ['tag (label)'] },
+    ]);
+    expect(out.map((e) => e.id)).toEqual(['n:tag:day-a-24-hour-period', 'n:tag:tag-label']);
+  });
+
+  it('falls back to the cleaned gloss when rawGlosses is absent', () => {
+    const out = disambiguateIds([
+      { pos: 'noun', lemma: 'Tag', glosses: ['day'] },
+      { pos: 'noun', lemma: 'Tag', glosses: ['tag'] },
+    ]);
+    expect(out.map((e) => e.id)).toEqual(['n:tag:day', 'n:tag:tag']);
+  });
+```
+
+In `scripts/import-lexicon/parseWiktextract.test.js`, add to the `parseRecord` describe block:
+
+```js
+  it('keeps the raw glosses alongside the cleaned ones for stable ids', () => {
+    const record = {
+      word: 'in',
+      pos: 'prep',
+      lang_code: 'de',
+      forms: [],
+      sounds: [],
+      senses: [{ glosses: ['[with dative] in, inside, within, at (inside a building)'], tags: [] }],
+    };
+    const out = parseRecord(record);
+    expect(out.glosses).toEqual(['in, inside, within']);
+    expect(out.rawGlosses).toEqual(['[with dative] in, inside, within, at (inside a building)']);
+  });
+```
+
+- [ ] **Step 2: Run the tests to verify they fail**
+
+Run: `npx vitest run scripts/import-lexicon/ids.test.js scripts/import-lexicon/parseWiktextract.test.js`
+Expected: FAIL — ids come back as `n:tag:day` / `n:tag:tag`, and `rawGlosses` is `undefined`.
+
+- [ ] **Step 3: Implement**
+
+In `scripts/import-lexicon/parseWiktextract.js`, build both lists from the same
+selection so they stay index-aligned, and return the raw one too:
+
+```js
+  const rawGlosses = [
+    ...new Set(
+      senses.flatMap((s) => (s.glosses || []).filter((g) => typeof g === 'string' && g.trim()))
+    ),
+  ];
+  const glosses = [...new Set(rawGlosses.map(cleanGloss).filter(Boolean))].slice(0, 3);
+  if (glosses.length === 0) return null;
+```
+
+and add `rawGlosses: rawGlosses.slice(0, 3),` to the returned object.
+
+In `scripts/import-lexicon/ids.js`, change the gloss-slug line of `disambiguateIds`:
+
+```js
+  // Slug the RAW gloss: the cleaned gloss is display text and changes when the
+  // cleaning rules change, which would rewrite ids — and ids key a learner's
+  // saved progress (learnedWords, and srsKey in src/lib/srs.js).
+  const withGloss = base.map((e) =>
+    counts.get(e.id) > 1
+      ? { ...e, id: `${e.id}:${slug((e.rawGlosses && e.rawGlosses[0]) || (e.glosses && e.glosses[0]) || 'x')}` }
+      : e
+  );
+```
+
+- [ ] **Step 4: Run the tests to verify they pass**
+
+Run: `npx vitest run scripts/import-lexicon/`
+Expected: PASS — the whole import-pipeline suite.
+
+- [ ] **Step 5: Confirm `rawGlosses` does not ship**
+
+Run: `node -e "import('./scripts/import-lexicon/mapEntry.js').then(m => console.log(Object.keys(m.mapEntry({ id: 'x', lemma: 'y', glosses: ['a'], rawGlosses: ['a (b)'], pos: 'noun' }))))"`
+Expected: the printed key list does NOT include `rawGlosses`.
+
+- [ ] **Step 6: Commit**
+
+```bash
+git add scripts/import-lexicon/parseWiktextract.js scripts/import-lexicon/ids.js scripts/import-lexicon/parseWiktextract.test.js scripts/import-lexicon/ids.test.js
+git commit -m "fix(import): keep entry ids stable when gloss text changes"
+```
+
+- [ ] **Step 7: Re-run Task 3**
+
+Task 3's regeneration ran against the pre-fix code, so its artifacts carry the
+churned ids. Re-run Task 3 in full, and add one check to its Step 4: compare the
+id sets before and after, and confirm that ids changing for an unchanged word are
+now a few dozen at most rather than 187.
+
+---
+
 ### Task 4: Update the docs
 
 **Files:**
