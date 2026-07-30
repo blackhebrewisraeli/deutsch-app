@@ -12,7 +12,7 @@ describe('cleanGloss', () => {
 
   it('strips a leading bracketed grammar label', () => {
     expect(cleanGloss('[with dative] in, inside, within, at (inside a building)')).toBe(
-      'in, inside, within, at'
+      'in, inside, within' // cap drops "at"
     );
   });
 
