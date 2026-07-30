@@ -24,9 +24,12 @@ export function disambiguateIds(entries) {
   for (const e of base) counts.set(e.id, (counts.get(e.id) || 0) + 1);
 
   // First pass: gloss-slug suffix for every member of a collision set.
+  // Slug the RAW gloss: the cleaned gloss is display text and changes when the
+  // cleaning rules change, which would rewrite ids — and ids key a learner's
+  // saved progress (learnedWords, and srsKey in src/lib/srs.js).
   const withGloss = base.map((e) =>
     counts.get(e.id) > 1
-      ? { ...e, id: `${e.id}:${slug((e.glosses && e.glosses[0]) || 'x')}` }
+      ? { ...e, id: `${e.id}:${slug((e.rawGlosses && e.rawGlosses[0]) || (e.glosses && e.glosses[0]) || 'x')}` }
       : e
   );
 

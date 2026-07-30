@@ -52,7 +52,7 @@
 
 **Deutsch · Sprachschule** is an exercise-driven German learning app that runs in the browser and installs as a PWA. It does not wait for you to know what to do — it gives you a task, you respond, and it tells you whether you got it right.
 
-The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four exercise modules — guided conversation, alphabet recognition, vocabulary active recall, and translation — plus a **Stats tab** that records every interaction and resurfaces what you got wrong. Vocab draws on a **4,424-word German lexicon** — each entry with gender, plural, IPA, example sentences, and verb conjugation — scheduled by a **Leitner spaced-repetition** algorithm, so cards return at the right time, not on every visit.
+The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four exercise modules — guided conversation, alphabet recognition, vocabulary active recall, and translation — plus a **Stats tab** that records every interaction and resurfaces what you got wrong. Vocab draws on a **4,480-word German lexicon** — each entry with gender, plural, IPA, example sentences, and verb conjugation — scheduled by a **Leitner spaced-repetition** algorithm, so cards return at the right time, not on every visit.
 
 All AI features call **Claude Haiku 4.5** through a versioned server-side API (`/api/v1/ai/*` — validated, rate-limited, [contract-documented](./docs/api/ai.md)) — your API key never touches the browser.
 
@@ -216,7 +216,7 @@ Answers within **Levenshtein distance ≤ 2** (one or two typos) are marked **AL
 | Travel | der Bahnhof, der Pass, links, geradeaus |
 | Numbers | eins through zehn |
 
-**The lexicon — 4,424 words.** Beyond the starter decks the app ships a full German
+**The lexicon — 4,480 words.** Beyond the starter decks the app ships a full German
 lexicon, imported from open datasets and lazy-loaded in chunks (cached for offline
 use after first visit). Every entry carries far more than a translation:
 

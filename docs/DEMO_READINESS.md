@@ -3,8 +3,9 @@
 Assessment date: 2026-07-13 · against `main` @ `ca95851` · live: https://deutsch-app-dusky.vercel.app
 Revised 2026-07-29: #3, #4, #6 closed (PRs #64, #65); #13 and #14 added from a live pass.
 
-**Verified healthy:** build passes (1.8s), 686/686 tests green, lint 0 errors, live demo
-returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 591 KiB.
+**Verified healthy:** build passes (1.8s), 768/768 tests green, lint 0 errors, live demo
+returns 200 and currently serves the 4,424-word lexicon (production, pre-`feat/gloss-cleanup`),
+PWA precache 591 KiB.
 
 ---
 
@@ -116,16 +117,16 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
   already covers 4,770/5,000 lemmas (95.4%); light stemming rescues only **47** (0.9%) while
   adding a stemmer and false-match risk. Documented here so it stops resurfacing as an idea.
 
-- [ ] **14. Flashcard answers are raw Wiktionary glosses.** Some are long or meta-linguistic, and
-  `VocabTab` renders them verbatim — as multiple-choice options and as the revealed answer.
-  Seen on the live demo: an option reading "ARCHAIC FORM OF STANDEN, FIRST/THIRD-PERSON PLURAL
-  PRETERITE OF STEHEN", and the correct answer for *in* being "[WITH DATIVE] IN, INSIDE, WITHIN,
-  AT (INSIDE A BUILDING)". A learner cannot meaningfully choose between options like these, and
-  they make the demo look unfinished.
-  **Fix:** needs its own design pass. Gloss cleanup belongs in the import pipeline
-  (`scripts/import-lexicon/parseWiktextract.js` — strip bracketed grammar labels, drop
-  `form of` glosses, truncate to the first sense) and requires an import re-run. Deliberately
-  not attempted as part of #13.
+- [x] **14. Flashcard answers are raw Wiktionary glosses.** — FIXED in this branch
+  (`scripts/import-lexicon/cleanGloss.js`) Three causes, not one: glosses carried grammar
+  labels and a trailing parenthetical (21% of first glosses ran over 40 chars); records tagged
+  `alt-of` shipped as their own flashcards, so *Raum* appeared twice — once as "space", once as
+  "alternative form of Rahm"; and the pipeline filtered `form-of` senses but not `alt-of`.
+  **Fix:** a pure `cleanGloss()` applied at import (strip leading `[label]`, cut at the first
+  parenthetical, cap to 3 synonyms, fall back to raw when that empties), plus rejecting
+  `alt-of` senses alongside `form-of`. Entry ids are derived from the raw gloss, so cleaning the display text does not rewrite ids — ids key saved learner progress (learnedWords, and srsKey in src/lib/srs.js), and an earlier run rewrote 187 of them before this was caught. First-gloss p90 length 61 → 32; glosses over 40 chars 929 → 230 (21.0% → 5.1%). The cut applies only to a TRAILING parenthetical: an embedded one is unwrapped, because cutting there left answers like "to" for holen and "indicating" for ein. Under the narrow `form of|inflection of|preterite` pattern, two meta-linguistic first glosses survive (adv:nach, n:gattin); recorded rather than patched, because matching English text would also delete common words whose good record exists alongside the junk one. Other meta-linguistic phrasings the pattern doesn't catch (e.g. "abbreviation of", "clipping of" — n:juli, n:wiener) also occur and pre-date this branch. Rejected during design: preferring a shorter later gloss, which *degrades* quality
+  because Wiktionary orders senses by primacy (*Ergebnis* would go from "result, outcome,
+  conclusion" to "earnings, profit").
 
 ---
 
@@ -142,6 +143,15 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
   `manualChunks`.
 
 - [ ] **8. Nine lint warnings** (unused `describe` imports in test files). Zero errors.
+
+- [ ] **18. The same German word can appear on several cards.** 333 surface forms resolve to
+  more than one entry, adding 370 extra cards. Some are junk and were removed with the `alt-of`
+  fix (#14), but the rest are legitimate homographs across parts of speech — `in` as preposition
+  ("in, inside, within") and as adjective ("in, popular"), `Tag` as "day" and as "tag
+  (label)", `aber` as conjunction and adverb. A deck can therefore show the same German word
+  twice with different correct answers, and in multiple choice two options can both be
+  defensible. **Fix:** needs a product decision — merge homographs into one card with combined
+  glosses, prefer the highest-frequency part of speech, or leave as-is and accept it.
 
 ---
 
