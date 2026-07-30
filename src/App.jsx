@@ -537,7 +537,7 @@ export default function App() {
         style={{
           borderBottom: 'none',
           boxShadow: SHADOW.bar,
-          padding: mobile ? '12px 16px' : '20px 32px',
+          padding: mobile ? '12px 10px' : '20px 32px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -547,11 +547,19 @@ export default function App() {
           zIndex: 50,
         }}
       >
+        {/* No minWidth: 0 here. Letting this block shrink below its content made
+            the nowrap wordmark spill over the level badge instead of pushing
+            width — "over: 0" by overlap, which reads as a rendering bug. It
+            scales via font-size below instead. */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
           <div
             style={{
               fontFamily: FONT_DISPLAY,
-              fontSize: mobile ? 26 : 36,
+              // Scales with the viewport: ~24px at 375px, ~21px at 320px. The
+              // widest realistic cluster (3-digit streak + 2-digit level +
+              // "SIGN IN") needs that room on a 320px screen.
+              fontSize: mobile ? 'min(26px, 6.5vw)' : 36,
+              whiteSpace: 'nowrap',
               fontWeight: 900,
               letterSpacing: '-0.04em',
               lineHeight: 1,
@@ -574,7 +582,7 @@ export default function App() {
           )}
         </div>
 
-        <div style={{ display: 'flex', gap: mobile ? 10 : 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: mobile ? 6 : 16, alignItems: 'center', flexShrink: 0 }}>
           <LevelBadge
             level={game.lvl.level}
             progress={game.lvl.progress}
@@ -582,7 +590,7 @@ export default function App() {
             size={mobile ? 42 : 52}
           />
           <StatBlock
-            label="STREAK"
+            label={mobile ? '' : 'STREAK'}
             value={stats.streak}
             icon={<Flame size={mobile ? 12 : 14} />}
             accent
