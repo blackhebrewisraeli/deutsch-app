@@ -8,6 +8,23 @@
 
 const MAX_SYNONYMS = 3;
 
+// Index of the bracket closing the one at `open`, or -1. Depth-tracked on
+// purpose: glosses nest, and taking the FIRST closing bracket instead cut
+// "school (an institution … (especially before university); …)" at the inner
+// ")", leaving the outer detail spliced back into the answer.
+function matchingClose(s, open) {
+  const closer = s[open] === '(' ? ')' : ']';
+  let depth = 0;
+  for (let i = open; i < s.length; i += 1) {
+    if (s[i] === s[open]) depth += 1;
+    else if (s[i] === closer) {
+      depth -= 1;
+      if (depth === 0) return i;
+    }
+  }
+  return -1;
+}
+
 export function cleanGloss(raw) {
   if (typeof raw !== 'string') return '';
 
@@ -28,7 +45,7 @@ export function cleanGloss(raw) {
       break;
     }
     const open = i + rel;
-    const close = s.indexOf(s[open] === '(' ? ')' : ']', open);
+    const close = matchingClose(s, open);
     if (close < 0) {
       out += s.slice(i, open);
       break;

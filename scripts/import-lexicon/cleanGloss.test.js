@@ -49,6 +49,16 @@ describe('cleanGloss', () => {
     expect(cleanGloss('(obsolete)')).toBe('(obsolete)');
   });
 
+  it('matches nested brackets by depth, not by the first closing one', () => {
+    // Taking the first ")" ended the group early, so the rest of the trailing
+    // detail was spliced back into the answer instead of being cut.
+    expect(
+      cleanGloss(
+        'school (an institution dedicated to teaching (especially before university); a department)'
+      )
+    ).toBe('school');
+  });
+
   it('unwraps a mid-phrase parenthetical and keeps scanning', () => {
     expect(cleanGloss('to (go) get, to fetch (to bring something)')).toBe(
       'to go get, to fetch'
