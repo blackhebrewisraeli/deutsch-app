@@ -90,6 +90,29 @@ describe('parseRecord', () => {
     expect(out.glosses).toEqual(['in, inside, within']);
     expect(out.rawGlosses).toEqual(['[with dative] in, inside, within, at (inside a building)']);
   });
+
+  it('keeps glosses and rawGlosses index-aligned when two senses clean to the same text', () => {
+    // Two senses differing only in their parenthetical both clean to 'year'.
+    // If rawGlosses deduped independently of glosses, rawGlosses would have two
+    // entries ('year (solar year)', 'year (a period of 365 days)') while glosses
+    // collapses to one — the two lists would drift out of index alignment from
+    // here on. Deduping both from the same cleaned-value pass prevents that.
+    const record = {
+      word: 'Jahr',
+      pos: 'noun',
+      lang_code: 'de',
+      forms: [],
+      sounds: [],
+      senses: [
+        { glosses: ['year (solar year)'], tags: ['neuter'] },
+        { glosses: ['year (a period of 365 days)'], tags: [] },
+      ],
+    };
+    const out = parseRecord(record);
+    expect(out.glosses).toEqual(['year']);
+    expect(out.rawGlosses).toHaveLength(1);
+    expect(out.rawGlosses[0]).toBe('year (solar year)');
+  });
 });
 
 describe('parseRecord — verb conjugation', () => {

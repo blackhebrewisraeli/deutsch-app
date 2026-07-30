@@ -92,13 +92,18 @@ export function parseRecord(raw) {
   );
   if (senses.length === 0) return null;
 
-  const rawGlosses = [
-    ...new Set(
-      senses.flatMap((s) => (s.glosses || []).filter((g) => typeof g === 'string' && g.trim()))
-    ),
-  ];
-  const glosses = [...new Set(rawGlosses.map(cleanGloss).filter(Boolean))].slice(0, 3);
+  // Keep raw and cleaned glosses index-aligned: dedupe on the cleaned value and
+  // remember the raw string that produced it. Two senses differing only in their
+  // parenthetical clean to the same text, so deduping the raw list separately
+  // would let the two lists drift out of step.
+  const byCleaned = new Map();
+  for (const g of senses.flatMap((s) => (s.glosses || []).filter((x) => typeof x === 'string' && x.trim()))) {
+    const cleaned = cleanGloss(g);
+    if (cleaned && !byCleaned.has(cleaned)) byCleaned.set(cleaned, g);
+  }
+  const glosses = [...byCleaned.keys()].slice(0, 3);
   if (glosses.length === 0) return null;
+  const rawGlosses = [...byCleaned.values()].slice(0, 3);
 
   const topics = [...new Set(senses.flatMap((s) => s.topics || []).filter(Boolean))];
   const rawExamples = senses
@@ -113,7 +118,7 @@ export function parseRecord(raw) {
     plural: pos === 'noun' ? pluralFromForms(raw.forms) : null,
     ipa: firstIpa(raw.sounds),
     glosses,
-    rawGlosses: rawGlosses.slice(0, 3),
+    rawGlosses,
     topics,
     rawExamples,
     verb: pos === 'verb' ? verbFromForms(raw.forms) : null,
