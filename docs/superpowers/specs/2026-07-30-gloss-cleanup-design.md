@@ -86,7 +86,7 @@ cleanGloss(raw) → string
 ```
 
 1. Strip a leading bracketed label: `/^\s*\[[^\]]*\]\s*/`
-2. Cut at the first `(` or `[`
+2. Cut at a TRAILING `(` or `[` — a bracket group with substantive text after it is unwrapped instead, and nested groups are matched by depth
 3. Cap to the first 3 comma/semicolon-separated synonyms
 4. Trim trailing separators and whitespace
 5. If the result is empty, fall back to the trimmed raw gloss
@@ -99,9 +99,9 @@ Measured effect over the shipped lexicon:
 
 | | before | after |
 | --- | ---: | ---: |
-| p90 length | 61 | 30 |
-| > 40 chars | 929 (21.0%) | 177 (4.0%) |
-| > 60 chars | 446 | 66 |
+| p90 length | 61 | 32 |
+| > 40 chars | 929 (21.0%) | 230 (5.1%) |
+| > 60 chars | 446 | 97 |
 
 Worked examples:
 
