@@ -22,6 +22,7 @@ import { recordEvent, recordItem } from '../lib/stats';
 import { getDueCards, recordVocabAnswer } from '../lib/srs';
 import { formatVerb } from '../lib/verbDisplay';
 import Confetti from './ui/Confetti';
+import DeckProgress from './ui/DeckProgress';
 import { AUTO_DECKS, DECK_GROUPS } from '../packs/de/autoDecks';
 import { resolveAutoDeck } from '../packs/lexiconStore';
 
@@ -223,7 +224,11 @@ export default function VocabTab({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: mobile ? '1fr' : '320px 1fr',
+          // minmax(0, 1fr) rather than 1fr: a bare 1fr track keeps min-width
+          // auto, so it refuses to shrink below its content's min-content width
+          // and pushes past the viewport instead (377px inside 337px at 375px
+          // wide). minmax(0, …) lets the track shrink and the content reflow.
+          gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : '320px minmax(0, 1fr)',
           gap: mobile ? 16 : 32,
           marginTop: 32,
         }}
@@ -455,19 +460,7 @@ export default function VocabTab({
                 >
                   {queue.length} card{queue.length !== 1 ? 's' : ''} remaining
                 </div>
-                <div style={{ display: 'flex', gap: 5 }}>
-                  {activeDeck.map((_, i) => (
-                    <div
-                      key={i}
-                      style={{
-                        width: 26,
-                        height: 8,
-                        borderRadius: RADIUS.pill,
-                        background: learnedWords[activeDeck[i].id] ? COLORS.green : '#e7dcae',
-                      }}
-                    />
-                  ))}
-                </div>
+                <DeckProgress cards={activeDeck} learnedWords={learnedWords} />
               </div>
 
               {/* Deck complete banner */}
@@ -528,7 +521,9 @@ export default function VocabTab({
                   boxShadow: SHADOW.cardChunk,
                   background: COLORS.card,
                   minHeight: 200,
-                  padding: SPACE[12],
+                  // 48px of padding on each side costs a quarter of a 375px
+                  // phone screen — step it down so the word gets the room.
+                  padding: mobile ? SPACE[5] : SPACE[12],
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -559,10 +554,15 @@ export default function VocabTab({
                 <div
                   style={{
                     fontFamily: FONTS.display,
-                    fontSize: FONT_SIZE['6xl'],
+                    fontSize: mobile ? FONT_SIZE['5xl'] : FONT_SIZE['6xl'],
                     fontWeight: FONT_WEIGHT.bold,
                     letterSpacing: LETTER_SPACING.tight,
                     marginBottom: SPACE[4],
+                    // German compounds are long and unbreakable by default, so
+                    // the word sets the card's min-content width and drags the
+                    // whole page wider than the viewport. Let it break instead.
+                    overflowWrap: 'anywhere',
+                    maxWidth: '100%',
                   }}
                 >
                   {card.de}

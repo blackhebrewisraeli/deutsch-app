@@ -11,6 +11,13 @@ export default defineConfig({
     environment: 'jsdom',
     globals: false,
     setupFiles: ['./src/test-setup.js'],
+    // Generous timeouts on purpose. These budgets bound how long we wait for
+    // something that is going to happen anyway, so on a loaded machine the
+    // default 5s turns passing tests red: with the box at load 16, component
+    // tests here took 7.4s, 10.0s and 12.6s and failed, in files the change
+    // under test had never touched. A real hang still fails, just later.
+    testTimeout: 30000,
+    hookTimeout: 30000,
     include: ['src/**/*.test.{js,jsx}', 'api/**/*.test.js', 'scripts/**/*.test.js'],
     coverage: {
       provider: 'v8',

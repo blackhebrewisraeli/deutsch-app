@@ -596,7 +596,9 @@ export default function App() {
               ❄️{game.freezes}
             </span>
           )}
-          <GoalRing pct={game.goal.pct} met={game.goal.met} size={mobile ? 40 : 48} />
+          {/* Dropped on mobile: the header cluster measured 389px on a 375px
+              screen, and the ring duplicates the goal strip under the nav. */}
+          {!mobile && <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />}
           <AccountChip
             user={user}
             onSignIn={requestSignIn}
@@ -714,7 +716,11 @@ export default function App() {
           margin: '0 auto',
         }}
       >
-        {(tab === 'translate' || tab === 'vocab') && (
+        {/* On mobile this is the only daily-goal indicator — the header ring is
+            dropped there for width — so it has to appear on every tab. On
+            desktop the ring covers it, and the strip stays scoped to the two
+            practice tabs it was built for. */}
+        {(mobile || tab === 'translate' || tab === 'vocab') && (
           <GoalStrip
             streak={game.streak}
             current={game.goal.current}

@@ -188,7 +188,10 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: mobile ? '1fr' : '280px 1fr 320px',
+          // minmax(0, …) rather than a bare 1fr: 1fr keeps min-width auto, so
+          // the track refused to shrink below its content and pushed the page
+          // 190px past a 375px viewport.
+          gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : '280px minmax(0, 1fr) 320px',
           gap: mobile ? 16 : 24,
           minHeight: mobile ? 'auto' : 'calc(100vh - 280px)',
         }}
