@@ -63,8 +63,9 @@ describe('cleanGloss', () => {
   });
 
   it('strips a leading bracketed grammar label', () => {
+    // note: the 3-synonym cap applies here too — "at" is dropped
     expect(cleanGloss('[with dative] in, inside, within, at (inside a building)')).toBe(
-      'in, inside, within, at'
+      'in, inside, within'
     );
   });
 
@@ -251,7 +252,7 @@ Append inside the existing `describe('parseRecord', …)` block in `scripts/impo
         },
       ],
     };
-    expect(parseRecord(record).glosses).toEqual(['in, inside, within, at']);
+    expect(parseRecord(record).glosses).toEqual(['in, inside, within']);
   });
 ```
 
