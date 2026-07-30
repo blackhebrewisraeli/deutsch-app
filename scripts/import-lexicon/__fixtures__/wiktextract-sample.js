@@ -99,3 +99,34 @@ export const VERB_NO_FORMS = {
   sounds: [],
   senses: [{ glosses: ['to test'] }],
 };
+
+// The junk twin of a real word: kaikki ships "Raum" twice, and this record —
+// tagged alt-of — is the one that became a flashcard reading "alternative form
+// of Rahm". The good record (space, capacity, room) is a separate entry.
+export const ALT_OF_RAUM = {
+  word: 'Raum',
+  pos: 'noun',
+  lang_code: 'de',
+  forms: [],
+  sounds: [],
+  senses: [
+    {
+      glosses: ['alternative form of Rahm (“cream”)'],
+      tags: ['alt-of', 'alternative', 'archaic', 'dialectal', 'masculine'],
+      alt_of: [{ word: 'Rahm' }],
+    },
+  ],
+};
+
+// A record carrying both a real sense and an alt-of sense: keep the real one.
+export const MIXED_ALT_OF = {
+  word: 'Trotz',
+  pos: 'noun',
+  lang_code: 'de',
+  forms: [],
+  sounds: [],
+  senses: [
+    { glosses: ['defiance, spite (stubborn resistance)'], tags: ['masculine', 'strong'] },
+    { glosses: ['alternative form of trotz'], tags: ['alt-of', 'alternative'] },
+  ],
+};

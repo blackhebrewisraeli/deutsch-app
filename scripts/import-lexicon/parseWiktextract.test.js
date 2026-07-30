@@ -10,6 +10,8 @@ import {
   VERB_PARTIAL,
   VERB_NO_FORMS,
   FORM_OF_SAGTE,
+  ALT_OF_RAUM,
+  MIXED_ALT_OF,
 } from './__fixtures__/wiktextract-sample.js';
 
 describe('parseRecord', () => {
@@ -46,6 +48,32 @@ describe('parseRecord', () => {
     const out = parseRecord(NOUN_WITH_DUPLICATE_GLOSSES);
     expect(out.glosses).toHaveLength(3);
     expect(out.glosses).toEqual(['house', 'home', 'building']);
+  });
+
+  it('drops alternative-form records (all senses alt-of)', () => {
+    expect(parseRecord(ALT_OF_RAUM)).toBe(null);
+  });
+
+  it('keeps the real senses of a record that also has an alt-of sense', () => {
+    const out = parseRecord(MIXED_ALT_OF);
+    expect(out.glosses).toEqual(['defiance, spite']);
+  });
+
+  it('cleans glosses: label stripped, parenthetical cut, synonyms capped', () => {
+    const record = {
+      word: 'in',
+      pos: 'prep',
+      lang_code: 'de',
+      forms: [],
+      sounds: [],
+      senses: [
+        {
+          glosses: ['[with dative] in, inside, within, at (inside a building)'],
+          tags: [],
+        },
+      ],
+    };
+    expect(parseRecord(record).glosses).toEqual(['in, inside, within']);
   });
 });
 

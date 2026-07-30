@@ -1,3 +1,5 @@
+import { cleanGloss } from './cleanGloss.js';
+
 const KEPT_POS = {
   noun: 'noun', verb: 'verb', adj: 'adj', adjective: 'adj', adv: 'adv', adverb: 'adv',
   prep: 'prep', preposition: 'prep', num: 'num', numeral: 'num',
@@ -79,15 +81,24 @@ export function parseRecord(raw) {
   const pos = mapPos(raw.pos);
   if (!pos) return null;
 
-  // Drop non-lemma inflected-form entries: kaikki lists e.g. "sagte" / "gemacht"
-  // as their own records whose senses are ALL tagged "form-of" ("inflection of
-  // sagen: …"). A true lemma keeps at least one non-form-of definition sense.
-  // Filtering here also uses only lemma senses for glosses/gender/examples.
-  const senses = (raw.senses || []).filter((s) => !(s.tags || []).includes('form-of'));
+  // Drop non-lemma records: kaikki lists e.g. "sagte" / "gemacht" as their own
+  // records whose senses are ALL tagged "form-of" ("inflection of sagen: …"),
+  // and lists alternative spellings ("Raum" → "alternative form of Rahm") whose
+  // senses are tagged "alt-of". Both surface as flashcards for a word that
+  // already has a real entry, answered with a grammar note. A true lemma keeps
+  // at least one sense that is neither.
+  const senses = (raw.senses || []).filter(
+    (s) => !(s.tags || []).includes('form-of') && !(s.tags || []).includes('alt-of')
+  );
   if (senses.length === 0) return null;
 
   const glosses = [
-    ...new Set(senses.flatMap((s) => (s.glosses || []).filter((g) => typeof g === 'string' && g.trim()))),
+    ...new Set(
+      senses
+        .flatMap((s) => (s.glosses || []).filter((g) => typeof g === 'string' && g.trim()))
+        .map(cleanGloss)
+        .filter(Boolean)
+    ),
   ].slice(0, 3);
   if (glosses.length === 0) return null;
 
