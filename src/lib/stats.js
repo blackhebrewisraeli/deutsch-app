@@ -55,15 +55,37 @@ export function emptyDayAggregate() {
 
 // ─── Event application ───────────────────────────────────────
 
+// Rebuild a day entry on the empty skeleton, keeping whatever counts it already
+// has. A partially-written entry (older schema, or a `daily` map merged in from
+// remote state by sync/merge.js) would otherwise poison the increments below:
+// a missing bucket threw, and a bucket missing just one verdict key produced
+// NaN. Both are invisible, because `recordEvent` swallows the throw and NaN
+// spreads silently through the XP arithmetic — so every later exercise that day
+// is lost. Normalising heals the entry on the next write.
+function normalizeDayAggregate(day) {
+  const next = emptyDayAggregate();
+  if (!day) return next;
+
+  next.total = day.total ?? 0;
+  next.bonusXp = day.bonusXp ?? 0;
+  for (const tab of TABS) next.byTab[tab] = day.byTab?.[tab] ?? 0;
+  for (const level of LEVELS) {
+    for (const verdict of VERDICTS) {
+      next.byLevel[level][verdict] = day.byLevel?.[level]?.[verdict] ?? 0;
+    }
+  }
+  return next;
+}
+
 export function applyEvent(daily, dateKey, tab, level, verdict, bonus = 0) {
   if (!TABS.includes(tab)) throw new Error(`Invalid tab: ${tab}`);
   if (!LEVELS.includes(level)) throw new Error(`Invalid level: ${level}`);
   if (!VERDICTS.includes(verdict)) throw new Error(`Invalid verdict: ${verdict}`);
 
-  const prev = daily[dateKey] ?? emptyDayAggregate();
+  const prev = normalizeDayAggregate(daily[dateKey]);
   const next = {
     total: prev.total + 1,
-    bonusXp: (prev.bonusXp ?? 0) + bonus,
+    bonusXp: prev.bonusXp + bonus,
     byTab: { ...prev.byTab, [tab]: prev.byTab[tab] + 1 },
     byLevel: {
       ...prev.byLevel,
