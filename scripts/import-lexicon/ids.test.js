@@ -52,4 +52,20 @@ describe('disambiguateIds', () => {
     ]).map((e) => e.id).sort();
     expect(a).toEqual(b);
   });
+
+  it('builds the collision suffix from the raw gloss, not the cleaned one', () => {
+    const out = disambiguateIds([
+      { pos: 'noun', lemma: 'Tag', glosses: ['day'], rawGlosses: ['day (a 24-hour period)'] },
+      { pos: 'noun', lemma: 'Tag', glosses: ['tag'], rawGlosses: ['tag (label)'] },
+    ]);
+    expect(out.map((e) => e.id)).toEqual(['n:tag:day-a-24-hour-period', 'n:tag:tag-label']);
+  });
+
+  it('falls back to the cleaned gloss when rawGlosses is absent', () => {
+    const out = disambiguateIds([
+      { pos: 'noun', lemma: 'Tag', glosses: ['day'] },
+      { pos: 'noun', lemma: 'Tag', glosses: ['tag'] },
+    ]);
+    expect(out.map((e) => e.id)).toEqual(['n:tag:day', 'n:tag:tag']);
+  });
 });

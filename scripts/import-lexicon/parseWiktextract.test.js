@@ -23,6 +23,7 @@ describe('parseRecord', () => {
       plural: 'Brote',
       ipa: '[bʁoːt]',
       glosses: ['bread'],
+      rawGlosses: ['bread'],
       topics: ['food'],
       rawExamples: [{ de: 'Ich esse Brot.', en: 'I eat bread.' }],
       verb: null,
@@ -74,6 +75,20 @@ describe('parseRecord', () => {
       ],
     };
     expect(parseRecord(record).glosses).toEqual(['in, inside, within']);
+  });
+
+  it('keeps the raw glosses alongside the cleaned ones for stable ids', () => {
+    const record = {
+      word: 'in',
+      pos: 'prep',
+      lang_code: 'de',
+      forms: [],
+      sounds: [],
+      senses: [{ glosses: ['[with dative] in, inside, within, at (inside a building)'], tags: [] }],
+    };
+    const out = parseRecord(record);
+    expect(out.glosses).toEqual(['in, inside, within']);
+    expect(out.rawGlosses).toEqual(['[with dative] in, inside, within, at (inside a building)']);
   });
 });
 

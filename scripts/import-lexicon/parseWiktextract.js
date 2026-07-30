@@ -92,14 +92,12 @@ export function parseRecord(raw) {
   );
   if (senses.length === 0) return null;
 
-  const glosses = [
+  const rawGlosses = [
     ...new Set(
-      senses
-        .flatMap((s) => (s.glosses || []).filter((g) => typeof g === 'string' && g.trim()))
-        .map(cleanGloss)
-        .filter(Boolean)
+      senses.flatMap((s) => (s.glosses || []).filter((g) => typeof g === 'string' && g.trim()))
     ),
-  ].slice(0, 3);
+  ];
+  const glosses = [...new Set(rawGlosses.map(cleanGloss).filter(Boolean))].slice(0, 3);
   if (glosses.length === 0) return null;
 
   const topics = [...new Set(senses.flatMap((s) => s.topics || []).filter(Boolean))];
@@ -115,6 +113,7 @@ export function parseRecord(raw) {
     plural: pos === 'noun' ? pluralFromForms(raw.forms) : null,
     ipa: firstIpa(raw.sounds),
     glosses,
+    rawGlosses: rawGlosses.slice(0, 3),
     topics,
     rawExamples,
     verb: pos === 'verb' ? verbFromForms(raw.forms) : null,
