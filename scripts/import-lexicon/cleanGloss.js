@@ -14,9 +14,34 @@ export function cleanGloss(raw) {
   let s = raw
     // leading grammar label: "[with dative] in, inside" → "in, inside"
     .replace(/^\s*\[[^\]]*\]\s*/, '')
-    // everything from the first bracket on is explanatory detail
-    .split(/\s*[([]/)[0]
     .trim();
+
+  // Cut only at a TRAILING parenthetical — that is explanatory detail. One that
+  // sits mid-phrase is part of the sense ("to (go) get, to fetch"), so unwrap it
+  // and keep scanning; cutting there left answers like "to" and "indicating".
+  let out = '';
+  let i = 0;
+  while (i < s.length) {
+    const rel = s.slice(i).search(/[([]/);
+    if (rel < 0) {
+      out += s.slice(i);
+      break;
+    }
+    const open = i + rel;
+    const close = s.indexOf(s[open] === '(' ? ')' : ']', open);
+    if (close < 0) {
+      out += s.slice(i, open);
+      break;
+    }
+    const after = s.slice(close + 1).trim();
+    if (!after || /^[,;.]*$/.test(after)) {
+      out += s.slice(i, open);
+      break;
+    }
+    out += s.slice(i, open) + s.slice(open + 1, close);
+    i = close + 1;
+  }
+  s = out.replace(/\s+/g, ' ').trim();
 
   // Cap the synonym run, keeping the separator that introduced each item.
   const parts = s.split(/\s*([,;])\s*/);

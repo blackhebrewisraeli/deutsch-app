@@ -36,11 +36,31 @@ describe('cleanGloss', () => {
     ).toBe('final exams taken by pupils at the end of their secondary education in Germany');
   });
 
-  it('falls back to the raw gloss when cleaning would empty it', () => {
-    // "ihn" — the one shipped entry whose gloss opens with a parenthetical
+  it('unwraps an embedded parenthetical instead of cutting there', () => {
+    // A leading parenthetical with substantive text after it is not trailing
+    // detail — it gets unwrapped (brackets removed) and scanning continues.
     expect(cleanGloss('(obsolete) dative of sie; them (indirect object).')).toBe(
-      '(obsolete) dative of sie; them (indirect object).'
+      'obsolete dative of sie; them'
     );
+  });
+
+  it('falls back to the raw gloss when cleaning would empty it', () => {
+    // a gloss that is nothing but a parenthetical still has nowhere to land
+    expect(cleanGloss('(obsolete)')).toBe('(obsolete)');
+  });
+
+  it('unwraps a mid-phrase parenthetical and keeps scanning', () => {
+    expect(cleanGloss('to (go) get, to fetch (to bring something)')).toBe(
+      'to go get, to fetch'
+    );
+  });
+
+  it('unwraps a mid-phrase parenthetical even when nothing follows but more prose', () => {
+    expect(
+      cleanGloss(
+        'indicating (concrete or abstract/metaphorical) motion into something'
+      )
+    ).toBe('indicating concrete or abstract/metaphorical motion into something');
   });
 
   it('returns an empty string for nullish or non-string input', () => {
