@@ -50,13 +50,14 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
     word may now break.
   - `Hero`'s title was a flat 72px; "Wortschatz" renders 370px wide. Now `min(72px, 13vw)` —
     identical on desktop, scales only when narrow.
-  - The header cluster measured 389px. The goal ring is dropped below 640px; it duplicates
-    the goal strip under the nav.
+  - The header cluster measured 389px. The goal ring is dropped below 640px, and `GoalStrip`
+    now renders on every tab at mobile so the daily-goal signal moves rather than disappears
+    (it was previously scoped to Vocab and Translate, which would have left Chat, Alphabet and
+    Stats with no indicator at all). Desktop is untouched: ring in the header everywhere,
+    strip on the two practice tabs.
 
   All five tabs now measure `scrollWidth === clientWidth` at 375px and the page cannot scroll
-  horizontally. **Still open:** at 320px (original iPhone SE) the header is 25px over, and on
-  the Chat/Alphabet/Stats tabs mobile users no longer see any daily-goal indicator, since
-  `GoalStrip` only renders on Vocab and Translate.
+  horizontally. **Still open:** at 320px (original iPhone SE) the header is 25px over.
 
 ---
 

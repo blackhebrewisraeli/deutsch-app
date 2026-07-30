@@ -55,9 +55,16 @@ describe('App navigation a11y', () => {
 
 // The header held logo + level badge + streak + goal ring + account chip,
 // which measured 389px on a 375px phone — a horizontal scroll on every tab.
-// The ring duplicates the goal strip rendered under the nav, so it is the one
-// element that can go without losing information.
+// The ring is dropped on mobile, so the goal strip has to cover every tab
+// there: otherwise Chat, Alphabet and Stats lose the daily-goal signal
+// entirely rather than merely relocating it.
 describe('header at mobile width', () => {
+  const goalStrip = () =>
+    // GoalStrip renders "{current} / {target} XP" across several text nodes
+    screen.queryByText((_, el) => /^\d+ \/ \d+ XP$/.test((el?.textContent ?? '').trim()), {
+      selector: 'div',
+    });
+
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
     localStorage.setItem('deutsch-onboarded', '1');
@@ -77,18 +84,25 @@ describe('header at mobile width', () => {
     expect(header.getByTitle(/Daily goal/)).toBeInTheDocument();
   });
 
-  // GoalStrip only renders on the vocab and translate tabs, so this is where
-  // the dropped ring is genuinely redundant rather than merely absent.
-  it('still shows daily-goal progress outside the header on the vocab tab', async () => {
-    setViewportWidth(375);
-    const user = userEvent.setup();
+  it.each(['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'])(
+    'shows daily-goal progress on the %s tab on mobile',
+    async (tabName) => {
+      setViewportWidth(375);
+      const user = userEvent.setup();
+      render(<App />);
+      await user.click(
+        within(screen.getByRole('navigation')).getByRole('button', { name: tabName })
+      );
+      expect(goalStrip()).toBeInTheDocument();
+    }
+  );
+
+  // On desktop the header ring carries the signal, so the strip stays scoped to
+  // the two practice tabs it was built for.
+  it('leaves the strip off the chat tab on desktop, where the ring covers it', () => {
+    setViewportWidth(1280);
     render(<App />);
-    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Vocab' }));
-    // GoalStrip renders "{current} / {target} XP" across several text nodes
-    expect(
-      screen.getByText((_, el) => /^\d+ \/ \d+ XP$/.test((el?.textContent ?? '').trim()), {
-        selector: 'div',
-      })
-    ).toBeInTheDocument();
+    expect(goalStrip()).not.toBeInTheDocument();
+    expect(within(screen.getByRole('banner')).getByTitle(/Daily goal/)).toBeInTheDocument();
   });
 });

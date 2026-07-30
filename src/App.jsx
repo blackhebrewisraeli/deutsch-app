@@ -716,7 +716,11 @@ export default function App() {
           margin: '0 auto',
         }}
       >
-        {(tab === 'translate' || tab === 'vocab') && (
+        {/* On mobile this is the only daily-goal indicator — the header ring is
+            dropped there for width — so it has to appear on every tab. On
+            desktop the ring covers it, and the strip stays scoped to the two
+            practice tabs it was built for. */}
+        {(mobile || tab === 'translate' || tab === 'vocab') && (
           <GoalStrip
             streak={game.streak}
             current={game.goal.current}
