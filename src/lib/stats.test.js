@@ -147,6 +147,43 @@ describe('applyEvent', () => {
   it('throws on an invalid verdict', () => {
     expect(() => applyEvent({}, '2026-06-06', 'chat', 'a1', 'okay')).toThrow(/verdict/);
   });
+
+  it('heals a day entry missing byTab/byLevel instead of throwing', () => {
+    const daily = { '2026-06-06': { bonusXp: 120 } };
+    const next = applyEvent(daily, '2026-06-06', 'chat', 'a1', 'correct');
+    expect(next['2026-06-06']).toEqual({
+      total: 1,
+      bonusXp: 120,
+      byTab: { chat: 1, alphabet: 0, vocab: 0, translate: 0 },
+      byLevel: {
+        a1: { correct: 1, almost: 0, wrong: 0 },
+        a2: { correct: 0, almost: 0, wrong: 0 },
+        b1: { correct: 0, almost: 0, wrong: 0 },
+      },
+    });
+  });
+
+  it('keeps the well-formed counts of a partially-written day entry', () => {
+    const daily = { '2026-06-06': { total: 4, byTab: { chat: 4 } } };
+    const next = applyEvent(daily, '2026-06-06', 'vocab', 'b1', 'wrong');
+    expect(next['2026-06-06'].total).toBe(5);
+    expect(next['2026-06-06'].byTab).toEqual({
+      chat: 4,
+      alphabet: 0,
+      vocab: 1,
+      translate: 0,
+    });
+    expect(next['2026-06-06'].byLevel.b1).toEqual({ correct: 0, almost: 0, wrong: 1 });
+    expect(next['2026-06-06'].byLevel.a1).toEqual({ correct: 0, almost: 0, wrong: 0 });
+  });
+
+  it('fills in verdict keys missing from an existing level', () => {
+    const daily = {
+      '2026-06-06': { total: 2, byTab: { chat: 2 }, byLevel: { a1: { correct: 2 } } },
+    };
+    const next = applyEvent(daily, '2026-06-06', 'chat', 'a1', 'wrong');
+    expect(next['2026-06-06'].byLevel.a1).toEqual({ correct: 2, almost: 0, wrong: 1 });
+  });
 });
 
 // ─── getHeatmapData ───────────────────────────────────────────
@@ -221,6 +258,16 @@ describe('getPerTabBreakdown', () => {
       translate: 0,
     });
   });
+
+  it('treats a day entry without byTab as zero instead of throwing', () => {
+    const daily = { '2026-06-06': { bonusXp: 120 } };
+    expect(getPerTabBreakdown(daily)).toEqual({
+      chat: 0,
+      alphabet: 0,
+      vocab: 0,
+      translate: 0,
+    });
+  });
 });
 
 // ─── getAccuracyByLevel ───────────────────────────────────────
@@ -254,6 +301,15 @@ describe('getAccuracyByLevel', () => {
     const result = getAccuracyByLevel(daily, '2026-06-05', '2026-06-06');
     expect(result.a1.correct).toBe(1);
   });
+
+  it('treats a day entry without byLevel as zero instead of throwing', () => {
+    const daily = { '2026-06-06': { bonusXp: 120 } };
+    expect(getAccuracyByLevel(daily)).toEqual({
+      a1: { correct: 0, almost: 0, wrong: 0 },
+      a2: { correct: 0, almost: 0, wrong: 0 },
+      b1: { correct: 0, almost: 0, wrong: 0 },
+    });
+  });
 });
 
 // ─── getTodaySnapshot ─────────────────────────────────────────
@@ -274,6 +330,14 @@ describe('getTodaySnapshot', () => {
     const snap = getTodaySnapshot({}, { streak: 0 }, '2026-06-06');
     expect(snap.exercises).toBe(0);
     expect(snap.accuracy).toEqual({ correct: 0, almost: 0, wrong: 0 });
+  });
+
+  it('returns zeroed counts when today lacks byLevel instead of throwing', () => {
+    const daily = { '2026-06-06': { bonusXp: 120 } };
+    const snap = getTodaySnapshot(daily, { streak: 3 }, '2026-06-06');
+    expect(snap.exercises).toBe(0);
+    expect(snap.accuracy).toEqual({ correct: 0, almost: 0, wrong: 0 });
+    expect(snap.streak).toBe(3);
   });
 });
 
