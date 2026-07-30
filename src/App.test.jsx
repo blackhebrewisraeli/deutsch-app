@@ -97,6 +97,65 @@ describe('header at mobile width', () => {
     }
   );
 
+  // At 320px (original iPhone SE) the cluster still overflowed by 25px after the
+  // ring came out. Nothing else in the header is expendable — the streak block
+  // carries the "streak at risk" pulse, which GoalStrip has no equivalent for —
+  // so the decorative wordmark scales with the viewport and the chrome tightens,
+  // leaving every functional widget in place.
+  it('scales the wordmark with the viewport on mobile and tightens the chrome', () => {
+    setViewportWidth(375);
+    render(<App />);
+    const header = screen.getByRole('banner');
+    expect(header.style.padding).toBe('12px 10px');
+    const wordmark = within(header)
+      .getByText(/Deutsch/)
+      .closest('div');
+    expect(wordmark.style.fontSize).toBe('min(26px, 6.5vw)');
+  });
+
+  // The streak block was 111px of the 230px cluster, most of it the caption.
+  // Dropping just the caption keeps the flame, the count and the at-risk pulse
+  // — the signal GoalStrip does not replicate — while freeing ~70px.
+  it('omits the STREAK caption on mobile', () => {
+    setViewportWidth(375);
+    render(<App />);
+    expect(within(screen.getByRole('banner')).queryByText('STREAK')).not.toBeInTheDocument();
+  });
+
+  it('keeps the STREAK caption on desktop', () => {
+    setViewportWidth(1280);
+    render(<App />);
+    expect(within(screen.getByRole('banner')).getByText('STREAK')).toBeInTheDocument();
+  });
+
+  // Below 360px even the scaled wordmark cannot coexist with the widgets: a
+  // real year-long streak renders level 30 + "365" + a freeze chip + SIGN IN,
+  // which measured 34px past a 320px viewport. Every one of those is the only
+  // surface for its signal — the freeze count appears nowhere else in the app —
+  // so the wordmark, the one decorative item, is dropped instead.
+  it('drops the wordmark below 360px', () => {
+    setViewportWidth(320);
+    render(<App />);
+    expect(within(screen.getByRole('banner')).queryByText(/Deutsch/)).not.toBeInTheDocument();
+  });
+
+  it('keeps the wordmark at 360px and above', () => {
+    setViewportWidth(375);
+    render(<App />);
+    expect(within(screen.getByRole('banner')).getByText(/Deutsch/)).toBeInTheDocument();
+  });
+
+  it('keeps the full-size wordmark and chrome on desktop', () => {
+    setViewportWidth(1280);
+    render(<App />);
+    const header = screen.getByRole('banner');
+    expect(header.style.padding).toBe('20px 32px');
+    const wordmark = within(header)
+      .getByText(/Deutsch/)
+      .closest('div');
+    expect(wordmark.style.fontSize).toBe('36px');
+  });
+
   // On desktop the header ring carries the signal, so the strip stays scoped to
   // the two practice tabs it was built for.
   it('leaves the strip off the chat tab on desktop, where the ring covers it', () => {

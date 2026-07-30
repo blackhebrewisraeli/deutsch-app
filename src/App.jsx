@@ -47,7 +47,7 @@ import LevelBadge from './components/gamification/LevelBadge';
 import GoalRing from './components/gamification/GoalRing';
 import GoalStrip from './components/gamification/GoalStrip';
 import { Analytics } from '@vercel/analytics/react';
-import { useWindowWidth, isMobile } from './lib/useWindowWidth';
+import { useWindowWidth, isMobile, isTiny } from './lib/useWindowWidth';
 
 export default function App() {
   const [tab, setTab] = useState('chat');
@@ -262,6 +262,7 @@ export default function App() {
   }, []);
   const width = useWindowWidth();
   const mobile = isMobile(width);
+  const tiny = isTiny(width);
 
   // Auth
   const { user } = useAuth();
@@ -537,7 +538,7 @@ export default function App() {
         style={{
           borderBottom: 'none',
           boxShadow: SHADOW.bar,
-          padding: mobile ? '12px 16px' : '20px 32px',
+          padding: mobile ? '12px 10px' : '20px 32px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
@@ -547,34 +548,48 @@ export default function App() {
           zIndex: 50,
         }}
       >
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-          <div
-            style={{
-              fontFamily: FONT_DISPLAY,
-              fontSize: mobile ? 26 : 36,
-              fontWeight: 900,
-              letterSpacing: '-0.04em',
-              lineHeight: 1,
-            }}
-          >
-            Deutsch<span style={{ color: COLORS.red }}>.</span>
-          </div>
-          {!mobile && (
+        {/* Dropped below 360px: a real year-long streak renders level 30 + "365"
+            + a freeze chip + SIGN IN, which ran 34px past a 320px viewport, and
+            each of those is the only surface for its signal (the freeze count
+            appears nowhere else in the app). The wordmark is the one decorative
+            item here, so it gives way instead.
+
+            No minWidth: 0 on this block either — letting it shrink below its
+            content made the nowrap wordmark spill over the level badge instead
+            of pushing width: "over: 0" by overlap, which reads as a rendering
+            bug. It scales via font-size instead. */}
+        {!tiny && (
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
             <div
               style={{
-                fontFamily: FONT_MONO,
-                fontSize: 10,
-                letterSpacing: '0.2em',
-                color: COLORS.mute,
-                textTransform: 'uppercase',
+                fontFamily: FONT_DISPLAY,
+                // Scales with the viewport between 360px and 640px.
+                fontSize: mobile ? 'min(26px, 6.5vw)' : 36,
+                whiteSpace: 'nowrap',
+                fontWeight: 900,
+                letterSpacing: '-0.04em',
+                lineHeight: 1,
               }}
             >
-              Sprachschule × Est. {new Date().getFullYear()}
+              Deutsch<span style={{ color: COLORS.red }}>.</span>
             </div>
-          )}
-        </div>
+            {!mobile && (
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: 10,
+                  letterSpacing: '0.2em',
+                  color: COLORS.mute,
+                  textTransform: 'uppercase',
+                }}
+              >
+                Sprachschule × Est. {new Date().getFullYear()}
+              </div>
+            )}
+          </div>
+        )}
 
-        <div style={{ display: 'flex', gap: mobile ? 10 : 16, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: mobile ? 6 : 16, alignItems: 'center', flexShrink: 0 }}>
           <LevelBadge
             level={game.lvl.level}
             progress={game.lvl.progress}
@@ -582,7 +597,7 @@ export default function App() {
             size={mobile ? 42 : 52}
           />
           <StatBlock
-            label="STREAK"
+            label={mobile ? '' : 'STREAK'}
             value={stats.streak}
             icon={<Flame size={mobile ? 12 : 14} />}
             accent

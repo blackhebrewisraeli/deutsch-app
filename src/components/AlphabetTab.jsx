@@ -216,7 +216,13 @@ export default function AlphabetTab({
 
           {/* Four letter options */}
           {!quizResult && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: SPACE[3] }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                gap: SPACE[3],
+              }}
+            >
               {shuffledLetters.map((letter) => (
                 <button
                   key={letter}
@@ -305,7 +311,9 @@ export default function AlphabetTab({
           <div
             style={{
               display: 'grid',
-              gridTemplateColumns: mobile ? 'repeat(4, 1fr)' : 'repeat(6, 1fr)',
+              gridTemplateColumns: mobile
+                ? 'repeat(4, minmax(0, 1fr))'
+                : 'repeat(6, minmax(0, 1fr))',
               gap: 0,
               borderRadius: RADIUS.lg,
               boxShadow: SHADOW.card,

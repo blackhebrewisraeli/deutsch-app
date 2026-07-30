@@ -57,7 +57,41 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
     strip on the two practice tabs.
 
   All five tabs now measure `scrollWidth === clientWidth` at 375px and the page cannot scroll
-  horizontally. **Still open:** at 320px (original iPhone SE) the header is 25px over.
+  horizontally.
+
+- [x] **16. The header still overflowed a 320px screen.** — FIXED (`App`, `UI.StatBlock`) After
+  #15 the cluster was 25px over at 320px (original iPhone SE). Nothing there was expendable —
+  the streak block carries the "streak at risk" pulse that `GoalStrip` has no equivalent for —
+  so instead: the `STREAK` caption is dropped at mobile (the block goes 111px → 81px, keeping
+  flame, count and pulse), the wordmark scales with the viewport (`min(26px, 6.5vw)`: 36px
+  desktop, 24.4px at 375, 20.8px at 320), and the header chrome tightens (padding 16px → 10px,
+  cluster gap 10px → 6px). Verified at 320px: 0 overflow with 9px slack, and still 0 with a
+  probed worst case of a 3-digit streak plus a 2-digit level. Desktop is untouched — 36px
+  wordmark, `20px 32px` padding, caption and ring both present.
+
+  One dead end worth recording: `minWidth: 0` on the wordmark block also reported 0 overflow,
+  but only because the `nowrap` text then spilled *over* the level badge. The metric said
+  fixed while the screenshot showed a rendering bug — measure the pixels, not just the numbers.
+
+- [x] **17. Everything above was verified on an empty account.** — FIXED (`App`, `useWindowWidth`,
+  `LevelCard`, `GoalPicker`, `StatsTab`, `VocabTab`, `AlphabetTab`, `ReviewFeed`,
+  `TodaySnapshot`, `VocabSrsWidget`, `WelcomeBanner`) #16 was checked by overwriting rendered
+  values in the DOM, which missed elements that only exist for a real user. Seeding 365
+  qualifying days (`daily[date] = { byLevel: { a1: { correct: 6 } } }` — note `xpForDay`
+  returns 0 without `byLevel`) produced level 30, streak 365 **and a freeze chip that a fresh
+  account never renders**, and with it:
+  - the header ran **34px** past 320px, not 0. Fixed by dropping the wordmark below a new
+    `bp.tiny` (360px): every remaining widget is the only surface for its signal — the freeze
+    count appears nowhere else in the app — so decoration gives way. 64px slack now, enough for
+    a 4-digit streak.
+  - the **Stats tab overflowed at 375px too** (23px) and at 320px (78px), from `LevelCard`'s
+    `auto 1fr auto` refusing to shrink below a level-30 rank name, then the goal picker's
+    `1fr 1fr 1fr`.
+
+  Every `gridTemplateColumns` in the codebase now uses `minmax(0, …)`; a bare `1fr` had caused
+  this in four separate places (vocab grid, chat grid, `LevelCard`, `GoalPicker`). Verified
+  with the seeded year-long account: all five tabs `scrollWidth === clientWidth` at 320px and
+  375px, page cannot scroll horizontally, desktop unchanged.
 
 ---
 
@@ -132,7 +166,7 @@ returns 200 and already serves the regenerated 4,418-word lexicon, PWA precache 
 
 ## Suggested order
 
-Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (this branch).
+Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (PR #66) · #16, #17.
 #5 is closed as won't-fix.
 
 Remaining, in order:

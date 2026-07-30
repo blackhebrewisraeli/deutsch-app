@@ -43,7 +43,11 @@ export function StatBlock({ label, value, icon, accent, pulsing }) {
         {icon}
       </div>
       <div>
-        <div style={{ ...TEXT.label, letterSpacing: LETTER_SPACING.widest }}>{label}</div>
+        {/* Callers pass an empty label to drop the caption where width is tight
+            (the mobile header): the icon and value still carry the signal. */}
+        {label && (
+          <div style={{ ...TEXT.label, letterSpacing: LETTER_SPACING.widest }}>{label}</div>
+        )}
         <div
           style={{
             fontFamily: FONTS.display,

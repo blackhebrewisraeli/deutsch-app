@@ -20,7 +20,7 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
         background: COLORS.card,
         padding: SPACE[6],
         display: 'grid',
-        gridTemplateColumns: 'auto 1fr auto',
+        gridTemplateColumns: 'auto minmax(0, 1fr) auto',
         gap: SPACE[6],
         alignItems: 'center',
       }}

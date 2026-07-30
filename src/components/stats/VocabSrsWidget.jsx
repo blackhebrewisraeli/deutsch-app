@@ -34,7 +34,7 @@ export default function VocabSrsWidget({ srs, now }) {
           background: COLORS.card,
           padding: SPACE[6],
           display: 'grid',
-          gridTemplateColumns: 'auto 1fr',
+          gridTemplateColumns: 'auto minmax(0, 1fr)',
           gap: SPACE[8],
           alignItems: 'center',
           marginBottom: SPACE[4],

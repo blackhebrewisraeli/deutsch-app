@@ -223,7 +223,7 @@ export default function StatsTab({
             <div
               style={{
                 display: 'grid',
-                gridTemplateColumns: mobile ? '1fr' : '1fr 1fr',
+                gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
                 gap: SPACE[8],
               }}
             >
