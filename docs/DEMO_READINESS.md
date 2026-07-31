@@ -194,10 +194,10 @@ PWA precache 591 KiB.
   - PWA: service worker active at root scope; precache holds the shell (`index.html` 731 B,
     bundle 594 KB) plus a `lexicon-json` cache (10 entries); manifest is `standalone` with
     192/512 icons including maskable — installability criteria met.
-  **Not covered:** a true offline reload and the real install prompt. Both need a browser
-  affordance the automation harness does not expose, and the install banner is
-  engagement-gated. The precache contents are the evidence that an offline reload *would*
-  work; confirm on a real device before announcing.
+  **Confirmed on a real device 2026-07-31:** offline reload works, and the install prompt
+  appears. These two were the gap the automation could not close — neither a true offline
+  reload nor the engagement-gated install banner is reachable from the harness, so the
+  precache contents were only evidence that offline *should* work. Now verified directly.
 
 - [x] **12. Anonymous-first check.** — PASSED A brand-new visitor (cleared profile) is offered
   `Continue without an account →` alongside sign-up, and reaches every demo surface with no
@@ -213,10 +213,12 @@ Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (PR #66) �
 
 Remaining, in order:
 
-1. **P3 #9 (the open half)** — decide whether a public demo should expose leagues and accounts
-   at all. Both are on in production today. This is a product call, not a check.
-2. **On a real device** — an offline reload and the install prompt, the two parts of #11 the
-   automation harness cannot reach.
-3. **P2 #18** — the same German word can appear on several cards; needs a product decision.
+Every verification item is closed. What is left is two product decisions — no engineering
+work is outstanding:
 
-#7, #8 are nice-to-have.
+1. **P3 #9 (the open half)** — decide whether a public demo should expose leagues and accounts
+   at all. Both are on in production today.
+2. **P2 #18** — the same German word can appear on several cards; merge homographs, prefer one
+   part of speech, or accept it.
+
+#5 is won't-fix (measured). #7 is annotated acceptable. #8 is closed.
