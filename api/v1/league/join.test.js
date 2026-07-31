@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('../../_lib/supabase.js', () => ({ serviceClient: vi.fn() }));
 vi.mock('../../_lib/auth-middleware.js', () => ({ requireAuth: vi.fn() }));
@@ -36,7 +36,6 @@ it('creates a new league when no open league exists (create path)', async () => 
   const membersInsertSpy = vi.fn().mockResolvedValue({ error: null });
 
   // Build a mock chain that returns null for all lookups then delegates to spies
-  let memberCallCount = 0;
   const db = {
     from: vi.fn((table) => {
       if (table === 'leagues') {
@@ -51,7 +50,6 @@ it('creates a new league when no open league exists (create path)', async () => 
         };
       }
       // league_members table
-      memberCallCount += 1;
       const base = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),

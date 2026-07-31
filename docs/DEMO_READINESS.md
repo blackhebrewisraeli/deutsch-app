@@ -142,7 +142,15 @@ PWA precache 591 KiB.
   but not great for a first-load demo. **Fix:** route/tab-level `dynamic import()` or
   `manualChunks`.
 
-- [ ] **8. Nine lint warnings** (unused `describe` imports in test files). Zero errors.
+- [x] **8. Nine lint warnings.** — FIXED `npm run lint` is now silent. They were not all unused
+  `describe` imports as recorded: five were unused vitest imports (`describe`, `beforeEach`,
+  `afterEach`), and four were dead code in the league API mocks — `memberCallCount` and
+  `memberSelectCallCount` were incremented but never read, `membershipSelect` was built and
+  never wired in (its body was duplicated inline), and a `...args` rest parameter was unused.
+  The two counters were the only ones worth a second look: a counter that is incremented and
+  never asserted can mean a dropped assertion. Neither was ever read anywhere in its file, so
+  both were removed rather than given an invented assertion. `membershipSelect` is now used as
+  the chain's `select`, which removes the duplication too.
 
 - [ ] **18. The same German word can appear on several cards.** 333 surface forms resolve to
   more than one entry, adding 370 extra cards. Some are junk and were removed with the `alt-of`
