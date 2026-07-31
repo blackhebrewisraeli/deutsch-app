@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generatedAt": "2026-07-30T23:40:10.737Z",
+  "generatedAt": "2026-07-31T21:22:14.246Z",
   "sources": {
     "wiktextract": "https://kaikki.org/dictionary/German/kaikki.org-dictionary-German.jsonl",
     "tatoebaSentences": "https://downloads.tatoeba.org/exports/per_language/deu/deu_sentences.tsv.bz2",
@@ -8,7 +8,7 @@
     "tatoebaLinks": "https://downloads.tatoeba.org/exports/links.tar.bz2",
     "leipzig": "https://downloads.wortschatz-leipzig.de/corpora/deu_news_2023_100K.tar.gz"
   },
-  "total": 4480,
+  "total": 4201,
   "chunkSize": 500,
   "chunkCount": 9
 }

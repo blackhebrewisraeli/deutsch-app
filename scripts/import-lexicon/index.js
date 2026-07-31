@@ -10,6 +10,7 @@ import { assignRanks, topByRank, assignCefrBands } from './rankLeipzig.js';
 import { disambiguateIds } from './ids.js';
 import { mapEntry } from './mapEntry.js';
 import { applyFilter } from './filter.js';
+import { mergeHomographs } from './mergeHomographs.js';
 import { buildArtifacts, writeArtifacts } from './chunk.js';
 import { buildReport } from './report.js';
 
@@ -66,16 +67,32 @@ export async function run({ n = 5000, cacheDir, outDir } = {}) {
   const exIndex = buildExampleIndex(pairs);
   const ranked = topByRank(assignRanks(parsed, rankMap), n);
   const withIds = disambiguateIds(ranked); // adds .id
-  const mapped = withIds.map((w) => mapEntry({ ...w, examples: pickExamples(attachExamples(w, exIndex, 2), w.rawExamples ?? [], 2) }));
+  const mapped = withIds.map((w) =>
+    mapEntry({
+      ...w,
+      examples: pickExamples(attachExamples(w, exIndex, 2), w.rawExamples ?? [], 2),
+    })
+  );
   const { kept, rejected } = applyFilter(mapped);
-  // CEFR is banded by position within the KEPT set, so it must run here — after
-  // filtering, when the final lexicon is known (see assignCefrBands).
-  const banded = assignCefrBands(kept);
+  // After filtering, so a sense the filter already dropped is never folded into
+  // a survivor's answer; and after disambiguateIds, so every surviving entry
+  // keeps the id that keys a learner's saved progress (see mergeHomographs).
+  const { entries: merged, retiredIds } = mergeHomographs(kept);
+  // CEFR is banded by position within the FINAL set, so it must run here —
+  // after filtering and merging, when the shipped lexicon is known
+  // (see assignCefrBands).
+  const banded = assignCefrBands(merged);
 
   const artifacts = buildArtifacts(banded, { chunkSize: 500, sources: SOURCES });
   writeArtifacts(outDir, artifacts);
 
-  const report = buildReport({ parsedCount: parsed.length, rankedCount: ranked.length, kept, rejected });
+  const report = buildReport({
+    parsedCount: parsed.length,
+    rankedCount: ranked.length,
+    kept: merged,
+    rejected,
+    mergedAway: retiredIds.length,
+  });
   console.log(JSON.stringify(report, null, 2));
   return report;
 }

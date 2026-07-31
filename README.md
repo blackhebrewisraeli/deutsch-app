@@ -13,11 +13,11 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-773_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-798_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
   <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-38_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
   &nbsp;
-  <img alt="Lexicon" src="https://img.shields.io/badge/Lexicon-4,480_words-D62828?style=flat-square"/>
+  <img alt="Lexicon" src="https://img.shields.io/badge/Lexicon-4,201_words-D62828?style=flat-square"/>
   &nbsp;
   <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
 </p>
@@ -46,7 +46,7 @@
   <img src="docs/images/vocab-desktop.png" alt="The Vocab tab: a flashcard showing the German word 'in' with IPA and an example sentence, above four multiple-choice answers" width="820"/>
 </a>
 
-<sub><i>Active recall over a 4,480-word lexicon — every card carries IPA, an example sentence, gender and plural.</i></sub>
+<sub><i>Active recall over a 4,201-word lexicon — every card carries IPA, an example sentence, gender and plural.</i></sub>
 
 <br/>
 
@@ -91,7 +91,7 @@
 
 **Deutsch · Sprachschule** is an exercise-driven German learning app that runs in the browser and installs as a PWA. It does not wait for you to know what to do — it gives you a task, you respond, and it tells you whether you got it right.
 
-The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four exercise modules — guided conversation, alphabet recognition, vocabulary active recall, and translation — plus a **Stats tab** that records every interaction and resurfaces what you got wrong. Vocab draws on a **4,480-word German lexicon** — each entry with gender, plural, IPA, example sentences, and verb conjugation — scheduled by a **Leitner spaced-repetition** algorithm, so cards return at the right time, not on every visit.
+The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four exercise modules — guided conversation, alphabet recognition, vocabulary active recall, and translation — plus a **Stats tab** that records every interaction and resurfaces what you got wrong. Vocab draws on a **4,201-word German lexicon** — each entry with gender, plural, IPA, example sentences, and verb conjugation — scheduled by a **Leitner spaced-repetition** algorithm, so cards return at the right time, not on every visit.
 
 All AI features call **Claude Haiku 4.5** through a versioned server-side API (`/api/v1/ai/*` — validated, rate-limited, [contract-documented](./docs/api/ai.md)) — your API key never touches the browser.
 
@@ -106,12 +106,12 @@ All AI features call **Claude Haiku 4.5** through a versioned server-side API (`
 | **Live**             | [deutsch-app-dusky.vercel.app](https://deutsch-app-dusky.vercel.app) — installable PWA, works offline after first load |
 | **Exercise modules** | 5 — Chat · Alphabet · Vocab · Translate · Stats                                                                        |
 | **Levels**           | A1 · A2 · B1, each with its own exercise mode                                                                          |
-| **Vocabulary**       | 4,480 words · 13 generated decks + 4 hand-written starter decks                                                        |
+| **Vocabulary**       | 4,201 words · 13 generated decks + 4 hand-written starter decks                                                        |
 | **Scheduling**       | Leitner spaced repetition, 5 boxes (1d → 30d)                                                                          |
 | **Social**           | Weekly XP leagues, ~25-person cohorts, promotion / relegation                                                          |
 | **AI**               | Claude Haiku 4.5 behind `/api/v1/ai/*` — key stays server-side                                                         |
 | **Data**             | Local-first (`localStorage`), optional Supabase sync under row-level security                                          |
-| **Quality gates**    | 773 tests · 38 adversarial RLS tests · lint + format + full suite on every commit                                      |
+| **Quality gates**    | 798 tests · 38 adversarial RLS tests · lint + format + full suite on every commit                                      |
 
 ---
 
@@ -257,7 +257,7 @@ ROUND 4 · SCORE 3/3 · WHICH LETTER DID YOU HEAR?
 ---
 
 <details>
-<summary><b>03 · Vocab</b> — Active recall over a 4,480-word lexicon, scheduled by SRS</summary>
+<summary><b>03 · Vocab</b> — Active recall over a 4,201-word lexicon, scheduled by SRS</summary>
 <br/>
 
 Cards never just flip to reveal the answer — you have to produce it first.
@@ -305,7 +305,7 @@ Answers within **Levenshtein distance ≤ 2** (one or two typos) are marked **AL
 | Travel       | der Bahnhof, der Pass, links, geradeaus        |
 | Numbers      | eins through zehn                              |
 
-**The lexicon — 4,480 words.** Beyond the starter decks the app ships a full German
+**The lexicon — 4,201 words.** Beyond the starter decks the app ships a full German
 lexicon, imported from open datasets and lazy-loaded in chunks (cached for offline
 use after first visit). Every entry carries far more than a translation:
 
@@ -560,7 +560,7 @@ Everything described above is live at [deutsch-app-dusky.vercel.app](https://deu
 | Area                          | State                                                                                                                |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | **Five exercise modules**     | ✅ shipped                                                                                                           |
-| **4,480-word lexicon**        | ✅ shipped — one-command, byte-reproducible import                                                                   |
+| **4,201-word lexicon**        | ✅ shipped — one-command, byte-reproducible import                                                                   |
 | **Spaced repetition + stats** | ✅ shipped                                                                                                           |
 | **Accounts, sync, leagues**   | ✅ live in production, all optional                                                                                  |
 | **Error monitoring**          | ✅ Sentry, errors-only, EU region                                                                                    |
@@ -605,7 +605,7 @@ Known and deliberately open: the same German word can still appear on more than 
 | Error monitoring   | **Sentry** (errors-only)                                    | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay                                                                                                                                                                                                                                                                                         |
 | Linting            | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars                                                                                                                                                                                                                                                                                                                            |
 | Formatting         | **Prettier 3**                                              | Consistent code style, enforced on every commit                                                                                                                                                                                                                                                                                                                              |
-| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **773 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **38-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
+| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **798 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **38-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
 | CI                 | **GitHub Actions**                                          | Runs lint + test + build on every push to `main` and every PR                                                                                                                                                                                                                                                                                                                |
 | Pre-commit         | **Husky + lint-staged**                                     | Runs ESLint + Prettier + the full test suite before every `git commit`                                                                                                                                                                                                                                                                                                       |
 | PWA                | **vite-plugin-pwa** + Workbox                               | Installable on iOS/Android, offline-capable static assets                                                                                                                                                                                                                                                                                                                    |

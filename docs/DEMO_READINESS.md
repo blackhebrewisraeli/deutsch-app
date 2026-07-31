@@ -152,27 +152,39 @@ PWA precache 591 KiB.
   both were removed rather than given an invented assertion. `membershipSelect` is now used as
   the chain's `select`, which removes the duplication too.
 
-- [ ] **18. The same German word can appear on several cards.** 333 surface forms resolve to
-  more than one entry, adding 370 extra cards. Some are junk and were removed with the `alt-of`
-  fix (#14), but the rest are legitimate homographs across parts of speech — `in` as preposition
-  ("in, inside, within") and as adjective ("in, popular"), `Tag` as "day" and as "tag
-  (label)", `aber` as conjunction and adverb. A deck can therefore show the same German word
-  twice with different correct answers, and in multiple choice two options can both be
-  defensible. **Fix:** needs a product decision — merge homographs into one card with combined
-  glosses, prefer the highest-frequency part of speech, or leave as-is and accept it.
+- [x] **18. The same German word can appear on several cards.** — FIXED 2026-08-01 After the
+  `alt-of` fix (#14) the remainder were legitimate homographs across parts of speech — `in` as
+  preposition ("in, inside, within") and as adjective ("in, popular"), `Tag` as "day" and as
+  "tag (label)", `aber` as conjunction and adverb: 258 groups, 279 extra cards. A deck could
+  therefore show the same German word twice with different correct answers, and in multiple
+  choice two options could both be defensible.
+  Merged at import time by `scripts/import-lexicon/mergeHomographs.js`, which groups entries by
+  the German the learner actually sees (`article ? article + ' ' + de : de`) and keeps one card
+  per rendered form, answering with the first synonym of each sense joined by `" · "`, capped at
+  two. 4,480 → 4,201 entries. The 52 gender-distinguished lemmas (`der Tor` fool / `das Tor`
+  gate) are excluded structurally — the article is part of the key — so there is no exclusion
+  list to maintain. The merge runs after `disambiguateIds`, so every surviving card keeps its
+  id: **0 new ids** against the pre-merge baseline, and the 3,943 cards outside a merged group
+  are byte-identical apart from CEFR. 41 cards shift CEFR band, because `assignCefrBands` is
+  positional and now runs over 4,201 entries rather than 4,480.
+  **Cost:** 279 ids retire. Progress on each surviving card is preserved; a learner who had
+  learned a *secondary* sense's card loses that flag and its SRS scheduling. That is inherent to
+  merging, not a defect.
 
 ---
 
 ## P3 — Ops & verification before announcing
 
-- [~] **9. Confirm production feature flags.** — VERIFIED 2026-07-31, one decision still open.
+- [x] **9. Confirm production feature flags.** — VERIFIED 2026-07-31, decision closed 2026-08-01.
   All three are set in Vercel Production and confirmed *active on the live site*, not merely
   configured: leagues (`LEAGUES` sub-tab renders in Stats), sync/auth (`Create account` /
   `Sign in` offered), Sentry (`window.__SENTRY__` present, SDK 10.59.0). Checked behaviourally
   rather than by reading env values, because `VITE_*` vars are inlined at build time — the
   configured value can drift from what the last build shipped.
-  **Still open (product decision, not a check):** whether a public demo should expose
-  leagues/accounts at all. Both are currently on.
+  **DECIDED 2026-08-01 (owner):** the public demo keeps both leagues and accounts exposed.
+  `VITE_LEAGUES_ENABLED` and `VITE_SYNC_ENABLED` stay `true` in Production — no change to ship.
+  Worth watching: leagues render against a live cohort that a quiet demo can leave sparse, and
+  sign-up collects real addresses through Resend.
 
 - [x] **10. Local `.env` lacks the client flags.** — FIXED Added `VITE_LEAGUES_ENABLED=false`,
   `VITE_SYNC_ENABLED=false` and an empty `VITE_SENTRY_DSN` to the local `.env`, and documented
@@ -213,12 +225,11 @@ Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (PR #66) �
 
 Remaining, in order:
 
-Every verification item is closed. What is left is two product decisions — no engineering
-work is outstanding:
+Every item is closed. Both product decisions are resolved:
 
-1. **P3 #9 (the open half)** — decide whether a public demo should expose leagues and accounts
-   at all. Both are on in production today.
-2. **P2 #18** — the same German word can appear on several cards; merge homographs, prefer one
-   part of speech, or accept it.
+1. **P3 #9** — DECIDED 2026-08-01: the public demo keeps leagues and accounts exposed; no flag
+   change ships.
+2. **P2 #18** — FIXED 2026-08-01: homographs are merged at import time, 4,480 → 4,201 entries,
+   no surviving card's id changed.
 
 #5 is won't-fix (measured). #7 is annotated acceptable. #8 is closed.
