@@ -157,20 +157,44 @@ PWA precache 591 KiB.
 
 ## P3 — Ops & verification before announcing
 
-- [ ] **9. Confirm production feature flags** are in the intended demo state:
-  `VITE_LEAGUES_ENABLED`, `VITE_SYNC_ENABLED`, `VITE_SENTRY_DSN`. Decide whether a public
-  demo should expose leagues/accounts at all.
+- [~] **9. Confirm production feature flags.** — VERIFIED 2026-07-31, one decision still open.
+  All three are set in Vercel Production and confirmed *active on the live site*, not merely
+  configured: leagues (`LEAGUES` sub-tab renders in Stats), sync/auth (`Create account` /
+  `Sign in` offered), Sentry (`window.__SENTRY__` present, SDK 10.59.0). Checked behaviourally
+  rather than by reading env values, because `VITE_*` vars are inlined at build time — the
+  configured value can drift from what the last build shipped.
+  **Still open (product decision, not a check):** whether a public demo should expose
+  leagues/accounts at all. Both are currently on.
 
-- [ ] **10. Local `.env` lacks the client flags** (`VITE_LEAGUES_ENABLED`, `VITE_SYNC_ENABLED`,
-  `VITE_SENTRY_DSN`), so local dev never exercises leagues, sync, or error reporting. Add them
-  (even as `false`) so local matches deployed behaviour.
+- [x] **10. Local `.env` lacks the client flags.** — FIXED Added `VITE_LEAGUES_ENABLED=false`,
+  `VITE_SYNC_ENABLED=false` and an empty `VITE_SENTRY_DSN` to the local `.env`, and documented
+  all three in the tracked `.env.example`, which previously did not mention the two feature
+  flags at all. Sentry stays empty locally on purpose: a DSN only permits *sending*, so local
+  noise would pollute the production issue stream.
 
-- [ ] **11. Manual smoke pass on the live demo** — desktop + mobile: splash → level pick →
-  each of the five tabs → generate a custom deck → open a Topic and a CEFR deck → reload
-  offline (PWA) → install prompt.
+- [x] **11. Manual smoke pass on the live demo.** — DONE 2026-07-31 against
+  https://deutsch-app-dusky.vercel.app, as a guest with storage, service worker and caches
+  cleared first (an earlier run silently reused a primed profile and skipped the splash — the
+  result looked like a finding and was not).
+  - Desktop 1274px: splash → level pick → all five tabs render, 0 crashes.
+  - Topic deck (Sports, 122 cards) and CEFR deck (B1, 2240 cards) both load with the bounded
+    progress bar.
+  - Custom deck generation: 10 cards in 4s via the AI lane.
+  - Mobile 375px: all five tabs, 0px overflow each, page cannot scroll sideways, goal strip
+    present on every tab.
+  - 0 console errors across the whole pass.
+  - PWA: service worker active at root scope; precache holds the shell (`index.html` 731 B,
+    bundle 594 KB) plus a `lexicon-json` cache (10 entries); manifest is `standalone` with
+    192/512 icons including maskable — installability criteria met.
+  **Not covered:** a true offline reload and the real install prompt. Both need a browser
+  affordance the automation harness does not expose, and the install banner is
+  engagement-gated. The precache contents are the evidence that an offline reload *would*
+  work; confirm on a real device before announcing.
 
-- [ ] **12. Anonymous-first check:** confirm a brand-new visitor with no account can reach and
-  use every demo-relevant surface without hitting an auth wall.
+- [x] **12. Anonymous-first check.** — PASSED A brand-new visitor (cleared profile) is offered
+  `Continue without an account →` alongside sign-up, and reaches every demo surface with no
+  auth wall: all five tabs, both auto-deck families, and AI deck generation all work
+  unauthenticated.
 
 ---
 
@@ -181,8 +205,10 @@ Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (PR #66) �
 
 Remaining, in order:
 
-1. **P1 #14** — raw glosses are the most visible content problem left; needs a design pass and
-   an import re-run.
-2. **P3 #9–#12** — verification pass immediately before announcing.
+1. **P3 #9 (the open half)** — decide whether a public demo should expose leagues and accounts
+   at all. Both are on in production today. This is a product call, not a check.
+2. **On a real device** — an offline reload and the install prompt, the two parts of #11 the
+   automation harness cannot reach.
+3. **P2 #18** — the same German word can appear on several cards; needs a product decision.
 
 #7, #8 are nice-to-have.
