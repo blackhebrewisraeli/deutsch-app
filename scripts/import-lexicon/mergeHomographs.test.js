@@ -55,6 +55,28 @@ describe('mergedAnswer', () => {
     expect(mergedAnswer(senses)).toBe('after');
   });
 
+  // Caught by reading real merged output: `die Gleiche` answered a clean
+  // "equality" before the merge and came out
+  // "equality · nominalization of gleich: female equivalent of Gleicher".
+  it('skips a nominalization sense', () => {
+    const senses = [
+      entry({ id: 'n:gleiche:equality', en: ['equality'] }),
+      entry({
+        id: 'n:gleiche:nominalization',
+        en: ['nominalization of gleich: female equivalent of Gleicher: female equal'],
+      }),
+    ];
+    expect(mergedAnswer(senses)).toBe('equality');
+  });
+
+  it('skips a nominalization sense even when it is the primary', () => {
+    const senses = [
+      entry({ id: 'n:schoene:nominalization', en: ['nominalization of schön'] }),
+      entry({ id: 'n:schoene:beauty', en: ['beauty'] }),
+    ];
+    expect(mergedAnswer(senses)).toBe('beauty');
+  });
+
   it('caps at two senses', () => {
     const senses = [entry({ en: ['one'] }), entry({ en: ['two'] }), entry({ en: ['three'] })];
     expect(mergedAnswer(senses)).toBe('one · two');

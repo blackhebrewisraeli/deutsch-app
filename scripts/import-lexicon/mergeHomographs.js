@@ -17,8 +17,17 @@
 // teach a learner something false. There is no exclusion list to maintain.
 
 // Senses that describe grammar rather than meaning. "Separated form of nach"
-// is an answer no learner can give.
-const META_SENSE = /\b(form of|inflection of|preterite|abbreviation of|clipping of)\b/i;
+// is an answer no learner can give. `nominalization of` was added after reading
+// the real merged output: it turned `die Gleiche`'s clean "equality" into
+// "equality · nominalization of gleich: female equivalent of Gleicher".
+//
+// Deliberately NOT listed: the definitional prose Wiktionary writes for
+// function words ("indicating …", "Used to frame a statement …"). Those are the
+// only gloss such a word has — `ein` → "one · indicating concrete or abstract
+// /metaphorical motion into something" is accepted as-is by the gloss-cleanup
+// design, and skipping them would leave the card with no second sense at all.
+const META_SENSE =
+  /\b(form of|inflection of|preterite|abbreviation of|clipping of|nominalization of)\b/i;
 
 // At most two senses on one card: past that, the answer stops being readable
 // and the multiple-choice option overflows.
