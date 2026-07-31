@@ -150,7 +150,7 @@ installs and reloads offline.
   deck is enormous and A1 is thin.
   **Fix:** derive bands from percentiles over kept entries.
 
-- [ ] **5. Tatoeba lemma stemming — measured, recommend WON'T FIX.** Exact-token matching
+- [x] **5. Tatoeba lemma stemming.** — WON'T FIX (decided 2026-07-29, measured) Exact-token matching
   already covers 4,770/5,000 lemmas (95.4%); light stemming rescues only **47** (0.9%) while
   adding a stemmer and false-match risk. Documented here so it stops resurfacing as an idea.
 
@@ -175,9 +175,11 @@ installs and reloads offline.
   reproducible import) is not represented in the feature list — for a demo, the README is the
   front door.
 
-- [ ] **7. Bundle is one 577 KB chunk** (171 KB gzip), over Vite's 500 KB warning. Acceptable
-  but not great for a first-load demo. **Fix:** route/tab-level `dynamic import()` or
-  `manualChunks`.
+- [x] **7. Bundle is one 580 KB chunk** (172 KB gzip), over Vite's 500 KB warning. — ACCEPTED,
+  not fixed. Acceptable but not great for a first-load demo; closed as a deliberate trade rather
+  than work done, so the bundle is still a single chunk and Vite still warns on every build.
+  Re-measured 2026-08-01 at `579.84 kB / 172.11 kB gzip` (was 577/171 when first filed).
+  **If revisited:** route/tab-level `dynamic import()` or `manualChunks`.
 
 - [x] **8. Nine lint warnings.** — FIXED `npm run lint` is now silent. They were not all unused
   `describe` imports as recorded: five were unused vitest imports (`describe`, `beforeEach`,
