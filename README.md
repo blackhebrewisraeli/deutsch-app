@@ -42,6 +42,14 @@
 
 <br/>
 
+<a href="https://deutsch-app-dusky.vercel.app">
+  <img src="docs/images/vocab-desktop.png" alt="The Vocab tab: a flashcard showing the German word 'in' with IPA and an example sentence, above four multiple-choice answers" width="820"/>
+</a>
+
+<sub><i>Active recall over a 4,480-word lexicon — every card carries IPA, an example sentence, gender and plural.</i></sub>
+
+<br/>
+
 </div>
 
 ---
@@ -76,8 +84,6 @@
 
 </td></tr>
 </table>
-
-> **Reading tip** — the long sections below are collapsed. Click any ▸ heading to open it.
 
 ---
 
@@ -124,6 +130,28 @@ You can change your level at any time by clearing the onboarding state (or via r
 ---
 
 ## ✦ Features
+
+<table>
+<tr>
+<td width="50%" valign="top">
+<img src="docs/images/chat-desktop.png" alt="The Chat tab: Anna greets the learner in German with IPA and an English gloss, beside a task card reading 'Say hello and tell Anna your name'"/>
+<br/><sub><b>01 · Chat</b> — Anna sets a task, corrects your grammar inline, and advances when you complete it.</sub>
+</td>
+<td width="50%" valign="top">
+<img src="docs/images/stats-desktop.png" alt="The Stats tab: daily goal selector, a badge grid, and today's accuracy bar showing 9 exercises at 78% correct"/>
+<br/><sub><b>05 · Stats</b> — every graded answer, turned into goals, badges and an accuracy breakdown.</sub>
+</td>
+</tr>
+</table>
+
+<div align="center">
+<img src="docs/images/vocab-mobile.png" alt="The same Vocab exercise on a 390px phone screen, single column, with the progress bar and answer tiles wrapping cleanly" width="300"/>
+<br/><sub><b>Installable PWA</b> — the full app on a phone. Verified clean from 320px up; offline reload confirmed on-device.</sub>
+</div>
+
+<br/>
+
+Each module below is collapsed — click to open.
 
 <details>
 <summary><b>01 · Chat</b> — Guided conversation with an AI tutor that sets you a task</summary>
@@ -471,7 +499,7 @@ Leagues run on the Supabase lane under the same row-level security as sync: you 
 ## 🇩🇪 German Grammar & Vocabulary Coverage
 
 <details>
-<summary><b>Open</b> — what the exercise bank actually drills, level by level</summary>
+<summary><b>Grammar drilled at each level</b> — A1 word order · A2 cases &amp; adjective endings · B1 Konjunktiv, Perfekt, relative clauses</summary>
 <br/>
 
 ### Grammar topics by level
@@ -864,7 +892,7 @@ The `vercel.json` at the root configures the Vite framework preset and registers
 ## 📁 Project Structure
 
 <details>
-<summary><b>Open</b> — annotated tree of every directory</summary>
+<summary><b>Annotated directory tree</b> — where the API, the import pipeline, the packs and the components live</summary>
 <br/>
 
 ```
