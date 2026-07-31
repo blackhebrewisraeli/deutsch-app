@@ -70,7 +70,13 @@ The primary keeps its `id`, `pos`, `article`, `de`, `plural`, `ipa`, `cefr` and
 2. For each sense take its first gloss, then that gloss's **first synonym** — the
    text before the first `,` or `;`.
 3. Skip any sense whose gloss is meta-linguistic
-   (`/\b(form of|inflection of|preterite|abbreviation of|clipping of)\b/i`).
+   (`/\b(form of|inflection of|preterite|abbreviation of|clipping of|nominalization of)\b/i`).
+   `nominalization of` was added during implementation, after reading the real
+   merged output: without it `die Gleiche` went from a clean `"equality"` to
+   `"equality · nominalization of gleich: female equivalent of Gleicher"`.
+   The definitional prose Wiktionary writes for function words (`"indicating …"`,
+   `"Used to frame a statement …"`) is deliberately *not* skipped — it is the only
+   gloss such a word has, and `ein` is accepted as-is below.
 4. Deduplicate case-insensitively.
 5. Keep at most **2** senses, joined with `" · "`.
 6. If every sense was skipped or empty, fall back to the primary's first synonym.
@@ -85,7 +91,7 @@ da       → "there · since"
 der Tag  → "day · tag"
 denn     → "for · so"
 das Mal  → "time · a mark on the body"
-nach     → "after, past"              junk sense skipped, not merged in
+nach     → "after"                    junk sense skipped, not merged in
 seit     → "since"                    identical senses collapse
 ```
 
