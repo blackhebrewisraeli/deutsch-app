@@ -19,9 +19,19 @@ export default defineConfig({
         runtimeCaching: [
           {
             urlPattern: /\/lexicon\/.*\.json$/,
-            handler: 'CacheFirst',
+            // NOT CacheFirst. The lexicon URLs are unhashed (/lexicon/chunk-00.json),
+            // so a re-import writes new bytes to the same path and the cache key never
+            // changes — and runtimeCaching caches are not part of the precache
+            // manifest, so registerType:'autoUpdate' never purges them. Under
+            // CacheFirst a returning visitor kept the pre-merge lexicon, duplicate
+            // homograph cards included, until the 30-day expiry (verified against
+            // production 2026-08-01). StaleWhileRevalidate still answers instantly and
+            // still answers with no network at all — offline is unchanged — but every
+            // online load refreshes in the background, so the next one is current.
+            handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'lexicon-json',
+              // Under SWR this only evicts what nobody has opened in a month.
               expiration: { maxEntries: 64, maxAgeSeconds: 60 * 60 * 24 * 30 },
             },
           },

@@ -93,3 +93,66 @@ describe('resolveAutoDeck top and array tags', () => {
     expect(cards.map((c) => c.id).sort()).toEqual(['n:arbeit', 'n:bahnhof']);
   });
 });
+
+// Index and chunks are cached independently by the service worker
+// (StaleWhileRevalidate, one cache entry per URL), and a chunk is only revalidated
+// when a deck touches it. So a refreshed index can pair with a long-cached chunk.
+// Chunk packing is positional, so any import that changes the entry count reshuffles
+// ids across chunks and opens this window. See
+// docs/superpowers/specs/2026-08-01-lexicon-cache-freshness-design.md
+describe('resolveAutoDeck with a stale chunk', () => {
+  // A fresh index listing a card that the stale chunk-00 does not contain.
+  const indexWithExtra = [
+    ...index,
+    { id: 'n:neu', rank: 90, cefr: 'A1', tags: ['food'], chunk: 0 },
+  ];
+
+  const serve = (idx) => {
+    globalThis.fetch = vi.fn((url) => {
+      const u = String(url);
+      if (u.endsWith('/lexicon/index.json'))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(idx) });
+      if (u.endsWith('chunk-00.json'))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(chunk0) });
+      if (u.endsWith('chunk-01.json'))
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(chunk1) });
+      return Promise.resolve({ ok: false, status: 404 });
+    });
+  };
+
+  it('skips rows missing from the chunk instead of throwing', async () => {
+    serve(indexWithExtra);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } });
+    expect(cards.map((c) => c.id)).toEqual(['n:wasser', 'n:brot']); // n:neu dropped
+    warn.mockRestore();
+  });
+
+  it('keeps the surviving cards fully resolved and in rank order', async () => {
+    serve(indexWithExtra);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } });
+    expect(cards[0].de).toBe('das Wasser');
+    expect(cards.every((c) => c && c.id && c.en)).toBe(true);
+    warn.mockRestore();
+  });
+
+  it('warns once for the call, naming the missing id', async () => {
+    serve(indexWithExtra);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } });
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0][0]).toMatch(/n:neu/);
+    expect(warn.mock.calls[0][0]).toMatch(/1 row/);
+    warn.mockRestore();
+  });
+
+  it('does not warn when every row resolves', async () => {
+    serve(index);
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } });
+    expect(cards).toHaveLength(2);
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
+});
