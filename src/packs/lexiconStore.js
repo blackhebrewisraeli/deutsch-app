@@ -79,5 +79,23 @@ export function selectRows(index, auto) {
 export async function resolveAutoDeck(deckDef) {
   const rows = selectRows(await loadIndex(), deckDef.auto);
   const entries = await loadChunks(rows.map((r) => r.chunk));
-  return rows.map((r) => resolveCard(entries[r.id]));
+  // The service worker caches the index and each chunk as separate entries, and a
+  // chunk is only revalidated when a deck touches it — so a refreshed index can pair
+  // with a long-cached chunk. Chunk packing is positional (buildArtifacts assigns
+  // chunk = floor(i / chunkSize)), so ANY import that changes the entry count
+  // reshuffles ids across chunks and opens that window. resolveCard dereferences its
+  // argument immediately, so an unresolvable row would throw away the whole deck.
+  // Render what resolves; the next load self-heals once the chunk revalidates.
+  const missing = rows.filter((r) => !entries[r.id]);
+  if (missing.length > 0) {
+    // One warning per call, not per row: a stale chunk means ~500 missing ids.
+    console.warn(
+      `lexicon: ${missing.length} row(s) missing from loaded chunks, skipping — ` +
+        missing
+          .slice(0, 3)
+          .map((r) => r.id)
+          .join(', ')
+    );
+  }
+  return rows.filter((r) => entries[r.id]).map((r) => resolveCard(entries[r.id]));
 }
