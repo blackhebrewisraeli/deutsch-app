@@ -2,10 +2,12 @@
 
 Assessment date: 2026-07-13 · against `main` @ `ca95851` · live: https://deutsch-app-dusky.vercel.app
 Revised 2026-07-29: #3, #4, #6 closed (PRs #64, #65); #13 and #14 added from a live pass.
+Revised 2026-08-01: #18 fixed and #9 decided (PR #75); **#19 added and fixed** (PR #76) — found
+by verifying the deployment rather than the artifact.
 
-**Verified healthy:** build passes (1.8s), 768/768 tests green, lint 0 errors, live demo
-returns 200 and currently serves the 4,424-word lexicon (production, pre-`feat/gloss-cleanup`),
-PWA precache 591 KiB.
+**Verified healthy** (2026-08-01, `main` @ `361fe20`): 802/802 tests green, lint and
+`format:check` clean, live demo serves the 4,201-word lexicon with zero duplicate cards, PWA
+installs and reloads offline.
 
 ---
 
@@ -93,6 +95,41 @@ PWA precache 591 KiB.
   this in four separate places (vocab grid, chat grid, `LevelCard`, `GoalPicker`). Verified
   with the seeded year-long account: all five tabs `scrollWidth === clientWidth` at 320px and
   375px, page cannot scroll horizontally, desktop unchanged.
+
+- [x] **19. Lexicon fixes never reached returning visitors.** — FIXED 2026-08-01 in PR #76
+  (`vite.config.js`, `src/packs/lexiconStore.js`) The homograph merge (#18) deployed correctly
+  and reached **new visitors only**. Anyone who had opened the demo before that deploy kept the
+  pre-merge 4,480-entry lexicon — duplicate cards included — for up to 30 days.
+
+  `runtimeCaching` served `/lexicon/*.json` with `handler: 'CacheFirst'`. Three things combined:
+  `CacheFirst` never consults the network once an entry exists; the URLs are unhashed
+  (`/lexicon/chunk-00.json`), so a re-import writes new bytes to the same path and the cache key
+  never changes; and `registerType: 'autoUpdate'` refreshes only the *precache* — runtime caches
+  are not in the precache manifest and are never purged on activation. Nothing evicted
+  `lexicon-json` until the 30-day expiry.
+
+  **Fix:** `StaleWhileRevalidate` for lexicon JSON. The cache still answers instantly and still
+  answers with no network, so offline is unchanged, but every online load revalidates in the
+  background and the next load is current. Also guarded `resolveAutoDeck` against index/chunk
+  skew: the index is fetched every load but a chunk only when a deck touches it, so a refreshed
+  index can pair with a stale chunk — and chunk packing is positional, so *any* import that
+  changes the entry count reshuffles ids. `resolveCard` dereferences its argument immediately,
+  so one unresolvable row threw away the whole deck (`TypeError`, reproduced in tests before the
+  fix). Unresolvable rows are now skipped with one warning per call.
+
+  **Verified on a deployment, not in CI.** Seeding a returning visitor's cached chunk with a
+  sentinel and reloading rendered the sentinel under `CacheFirst` on every reload; under
+  `StaleWhileRevalidate` the cache entry was rewritten during that same load and the next load
+  was correct. Production `sw.js` now contains `StaleWhileRevalidate` and zero `CacheFirst`.
+  Offline re-verified with the network genuinely down (CDP `Offline`, control fetch failing):
+  full reload, Vocab tab and Core 100 deck all render from cache.
+
+  **Cost:** a returning visitor takes two to three loads to converge — the first still runs the
+  old worker, which then hands over. That is inherent to replacing a service worker, and it
+  self-heals without clearing site data, which the old behaviour never did.
+
+  **The lesson worth keeping:** every gate was green and the origin served perfect bytes. The
+  bug lived entirely between the CDN and the user. Verify the deployment, not the artifact.
 
 ---
 
@@ -220,16 +257,21 @@ PWA precache 591 KiB.
 
 ## Suggested order
 
-Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (PR #66) · #16, #17.
-#5 is closed as won't-fix.
+Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (PR #66) · #16, #17 ·
+#18, #9 (PR #75) · #19 (PR #76). #5 is closed as won't-fix; #7 is annotated acceptable.
 
-Remaining, in order:
-
-Every item is closed. Both product decisions are resolved:
+**Nothing is outstanding.** The last three to close:
 
 1. **P3 #9** — DECIDED 2026-08-01: the public demo keeps leagues and accounts exposed; no flag
    change ships.
 2. **P2 #18** — FIXED 2026-08-01: homographs are merged at import time, 4,480 → 4,201 entries,
    no surviving card's id changed.
+3. **P0 #19** — FIXED 2026-08-01: the #18 fix was reaching new visitors only. Lexicon JSON is
+   now revalidated instead of served cache-first.
+
+#19 is the one to remember. It was found only by checking the live site *after* shipping, and
+neither the test suite nor the CDN could have caught it — the origin was correct the whole time.
+Any future change to `public/lexicon/` should be confirmed on the deployed site, from a browser
+profile that has visited before, not just from a clean one.
 
 #5 is won't-fix (measured). #7 is annotated acceptable. #8 is closed.
