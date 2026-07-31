@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('../../_lib/supabase.js', () => ({ serviceClient: vi.fn() }));
 vi.mock('../../_lib/auth-middleware.js', () => ({ requireAuth: vi.fn() }));
@@ -51,12 +51,8 @@ it('computes weekly xp from stats and updates only the current-period league row
   const membersUpdate = vi.fn(() => ({ eq: updateEq1 }));
 
   // league_members from() must handle both select (membership lookup) and update calls
-  let memberSelectCallCount = 0;
   const membersChain = {
-    select: (...args) => {
-      memberSelectCallCount++;
-      return { eq: membershipEq1 };
-    },
+    select: membershipSelect,
     update: membersUpdate,
   };
 
