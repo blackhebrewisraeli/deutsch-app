@@ -54,8 +54,9 @@ Two rules fall out:
 
 ## Mechanism: CSS custom properties, set from JS
 
-The project has **no CSS files and no `<style>` block** — `AGENTS.md` mandates inline styles with
-tokens from `src/lib/theme.js`. That constraint drives the design.
+The project has **no CSS files**, and `AGENTS.md` mandates inline styles with tokens from
+`src/lib/theme.js`. There is exactly one `<style>` element in the whole app — `src/App.jsx:511`,
+which exists solely to `@import` Google Fonts. That constraint drives the design.
 
 Tokens become CSS custom properties written onto `document.documentElement`; `theme.js` exports
 `var(--…)` strings instead of hex literals.
@@ -107,14 +108,50 @@ pack/                             ← the entire surface a new language fills
   accentAlt.fill   { light: '#C92A2A', dark: '#FF6B6B' }
   accentAlt.onFill { light: '#FFFFFF', dark: '#0D0D0F' }
   progress                 [ground, accentAlt, accent]
+
+  font.display   "'Fraunces', Georgia, serif"          ← the language's voice
+  font.body      "'Fraunces', Georgia, serif"
+  font.mono      "'JetBrains Mono', 'Courier New', monospace"
+  font.families  [{ name:'Fraunces', weights:[…] }, …] ← what must be loaded
 ```
 
-Ten values per language. Everything else is inherited.
+Thirteen values per language. Everything else is inherited.
 
 **Semantic colours get mode variants too.** `error` is the clearest case: the same `#E03131` that
 reads at 4.51:1 on white drops to **4.30:1** on the dark ground and fails body text. Success and
 warning are re-tuned per mode for the same reason. *Structural* means "not supplied by the pack";
 it does not mean a single value across both themes.
+
+### Typography belongs to the pack
+
+Fraunces-for-German is the app's distinguishing idea, but it is *German's* voice, not the
+product's — a Portuguese pack may reasonably want a different display face. So `font.display`,
+`font.body` and `font.mono` move into the pack alongside the accents.
+
+`font.mono` is included even though it is arguably interface chrome. Excluding it would mean a
+pack could restyle the word on the card but not the IPA beneath it, which is an arbitrary seam. A
+pack that wants the house mono simply names it.
+
+**Font *loading* has to move with the tokens, and it is currently in poor shape.** Measured
+against production:
+
+- Fonts are pulled from Google Fonts by an `@import` inside a `<style>` tag rendered by
+  `App.jsx:511`. An `@import` nested in a stylesheet that React injects after mount is close to the
+  slowest possible discovery path — the browser cannot start the download until the app has
+  rendered.
+- **Nothing font-related is in the service worker precache.** `globPatterns` covers local
+  `woff2` files and the repo has none; `fonts.gstatic.com` is cross-origin and has no
+  `runtimeCaching` rule. Offline, the fonts survive **only via the browser's HTTP cache** — I
+  confirmed a genuinely offline reload still renders Fraunces, with the Google CSS served at
+  `transferSize: 0`. That is the same fragile mechanism that made a stale lexicon chunk look
+  cached in PR #76: it holds on a machine that has visited recently and evaporates on a cleared
+  cache or a fresh install.
+
+This spec therefore moves loading out of component render into the theme boot, driven by
+`font.families` from the active pack. **Self-hosting the woff2 files** — which would fix both the
+discovery path and durable offline typography — is the right end state but is deferred to
+sub-project 3 (assets), where the font files and their OFL licences belong. Documented here so it
+is a decision rather than an oversight.
 
 ### Pack wiring
 
@@ -167,6 +204,12 @@ a large refactor with no reliable gate.
 - **A Portuguese or Brazilian pack.** This proves the contract; it does not populate it.
 - **A language picker.** Roadmap Phase 4.
 - **Theme-aware graphics** (logo, OG image, favicon) — sub-project 3.
+- **Self-hosting the font files.** The typefaces stay on Google Fonts here; only *who decides which
+  families* and *when they are requested* changes. Shipping woff2 and precaching it is
+  sub-project 3, and it is what will make offline typography durable rather than dependent on the
+  browser's HTTP cache.
+- **Changing the typefaces themselves.** Fraunces and JetBrains Mono carry over unchanged; this
+  moves the decision into the pack, it does not exercise it.
 
 ## Testing
 
@@ -175,8 +218,8 @@ a large refactor with no reliable gate.
 - `src/lib/themeMode.test.js` — resolution order (explicit > `prefers-color-scheme` > dark);
   persistence round-trip; live response to a `prefers-color-scheme` change; unknown/corrupt stored
   values fall back rather than throw.
-- `src/packs/validate.test.js` — a pack missing `theme`, or missing any of the ten fields, fails
-  validation with a message naming the field.
+- `src/packs/validate.test.js` — a pack missing `theme`, or missing any of the thirteen fields,
+  fails validation with a message naming the field.
 - **A guard test that greps the component tree for raw hex literals and fails if any return.** This
   is the test that keeps the 17 from coming back; without it the rule is a comment in `AGENTS.md`
   that nothing enforces.
