@@ -8,6 +8,10 @@ vi.mock('../../lib/leagues', async (importOriginal) => {
   return { ...actual, LEAGUES_ENABLED: true, updateHandle: vi.fn().mockResolvedValue({}) };
 });
 
+// See AccountChip.test.jsx: pin the auth-configured state instead of inheriting it
+// from whatever .env happens to exist, which differs between a dev box and CI.
+vi.mock('../../lib/auth.js', () => ({ isAuthConfigured: () => true }));
+
 const signedIn = { email: 'sam@example.com' };
 
 describe('AccountSection', () => {
@@ -129,5 +133,18 @@ describe('AccountSection', () => {
     await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
     await userEvent.click(screen.getByRole('button', { name: /yes, delete everything/i }));
     expect(onDelete).toHaveBeenCalledTimes(1);
+  });
+});
+
+// See AccountChip.test.jsx — same production failure. A guest was still shown
+// "Sign in to sync →" pointing at a backend that no longer existed.
+describe('AccountSection when auth is not configured', () => {
+  it('renders nothing for a guest', async () => {
+    vi.resetModules();
+    vi.doMock('../../lib/auth.js', () => ({ isAuthConfigured: () => false }));
+    const { default: Section } = await import('./AccountSection');
+    const { container } = render(<Section user={null} onSignIn={() => {}} onSignOut={() => {}} />);
+    expect(container).toBeEmptyDOMElement();
+    vi.doUnmock('../../lib/auth.js');
   });
 });

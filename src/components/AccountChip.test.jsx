@@ -3,6 +3,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AccountChip from './AccountChip';
 
+// Pin the auth-configured state rather than inheriting it from the ambient env.
+// These tests previously passed locally only because a developer .env happened to
+// set VITE_SUPABASE_URL; CI has no .env, so isAuthConfigured() was false there and
+// the guest cases below broke. The state under test is now explicit either way.
+vi.mock('../lib/auth.js', () => ({ isAuthConfigured: () => true }));
+
 describe('AccountChip', () => {
   it('shows a Sign in affordance for guests', async () => {
     const onSignIn = vi.fn();
@@ -34,5 +40,29 @@ describe('AccountChip', () => {
       />
     );
     expect(screen.getByLabelText(/sync pending/i)).toBeInTheDocument();
+  });
+});
+
+// The account surface must disappear when auth is not configured. Production hit
+// this on 2026-08-01: the Supabase project behind the demo stopped resolving, and
+// WelcomeGate hid its buttons (it checks isAuthConfigured) while this chip kept
+// offering "Sign in" — a dead affordance on the live site.
+describe('AccountChip when auth is not configured', () => {
+  it('renders nothing for a guest', async () => {
+    vi.resetModules();
+    vi.doMock('../lib/auth.js', () => ({ isAuthConfigured: () => false }));
+    const { default: Chip } = await import('./AccountChip');
+    const { container } = render(<Chip user={null} onSignIn={() => {}} onSignOut={() => {}} />);
+    expect(container).toBeEmptyDOMElement();
+    vi.doUnmock('../lib/auth.js');
+  });
+
+  it('still renders for an already signed-in user so they can sign out', async () => {
+    vi.resetModules();
+    vi.doMock('../lib/auth.js', () => ({ isAuthConfigured: () => false }));
+    const { default: Chip } = await import('./AccountChip');
+    render(<Chip user={{ email: 'sam@example.com' }} onSignIn={() => {}} onSignOut={() => {}} />);
+    expect(screen.getByRole('button', { name: /account/i })).toBeInTheDocument();
+    vi.doUnmock('../lib/auth.js');
   });
 });

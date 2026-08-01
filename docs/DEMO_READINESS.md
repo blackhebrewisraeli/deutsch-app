@@ -220,10 +220,31 @@ installs and reloads offline.
   `Sign in` offered), Sentry (`window.__SENTRY__` present, SDK 10.59.0). Checked behaviourally
   rather than by reading env values, because `VITE_*` vars are inlined at build time — the
   configured value can drift from what the last build shipped.
-  **DECIDED 2026-08-01 (owner):** the public demo keeps both leagues and accounts exposed.
-  `VITE_LEAGUES_ENABLED` and `VITE_SYNC_ENABLED` stay `true` in Production — no change to ship.
-  Worth watching: leagues render against a live cohort that a quiet demo can leave sparse, and
-  sign-up collects real addresses through Resend.
+  **DECIDED 2026-08-01 (owner), then REVERSED the same day.** The original decision was to keep
+  both leagues and accounts exposed. That was made on the premise they worked. They did not:
+  the Supabase project behind production, `xcnnlczvxmuwcqwychox.supabase.co`, **no longer
+  resolves** — NXDOMAIN from Google, Cloudflare and Quad9, while `supabase.co` itself resolves.
+  A paused project keeps its DNS record; this one has none.
+
+  On the live site that meant clicking *Send me a sign-in link* did nothing at all — no error,
+  no confirmation, no disabled state. Accounts, cross-device sync and leagues were all dead
+  while still being advertised. Item #9's earlier "confirmed active on the live site" check saw
+  the UI *render*; it never exercised a round trip, which is exactly how this hid.
+
+  **Shipped 2026-08-01:** `VITE_LEAGUES_ENABLED=false` and `VITE_SYNC_ENABLED=false` in
+  Production, and `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` **removed from the Production
+  scope** (both still present in Preview and in the local `.env`, so this is reversible). The
+  dead host is no longer referenced anywhere in the shipped bundle.
+
+  The flags alone were not enough, and that is worth recording: `VITE_SYNC_ENABLED` gates the
+  sync *engine* (`App.jsx`), not the account UI. `WelcomeGate` gated on `isAuthConfigured()`,
+  but `AccountChip` and `AccountSection` rendered unconditionally — so the splash went clean
+  while the header and Stats kept offering a dead sign-in. Fixed in code alongside this entry:
+  all three now check `isAuthConfigured()`, and a signed-in user still keeps a way to sign out.
+
+  **Still open, for whoever restores the backend:** the server-side `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY` still point at the dead host. Durable rate limiting therefore
+  falls back to a per-instance memory store, so the AI lane works but is degraded.
 
 - [x] **10. Local `.env` lacks the client flags.** — FIXED Added `VITE_LEAGUES_ENABLED=false`,
   `VITE_SYNC_ENABLED=false` and an empty `VITE_SENTRY_DSN` to the local `.env`, and documented
@@ -264,8 +285,10 @@ Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (PR #66) �
 
 **Nothing is outstanding.** The last three to close:
 
-1. **P3 #9** — DECIDED 2026-08-01: the public demo keeps leagues and accounts exposed; no flag
-   change ships.
+1. **P3 #9** — DECIDED then REVERSED 2026-08-01: the demo was to keep leagues and accounts
+   exposed, but the Supabase project behind production stopped resolving, so both were dead
+   while still advertised. Leagues and sync are now off in Production and the account UI is
+   hidden. The demo is anonymous-only until a backend is restored.
 2. **P2 #18** — FIXED 2026-08-01: homographs are merged at import time, 4,480 → 4,201 entries,
    no surviving card's id changed.
 3. **P0 #19** — FIXED 2026-08-01: the #18 fix was reaching new visitors only. Lexicon JSON is

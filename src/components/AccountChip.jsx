@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW } from '../lib/theme';
+import { isAuthConfigured } from '../lib/auth.js';
 
 // Header account affordance. Guest: a quiet "Sign in" link. Signed-in: an
 // initial-in-a-circle that opens a small sheet (email · sign out). Full
 // management lives in the Stats AccountSection; this is the glance + escape.
 export default function AccountChip({ user, onSignIn, onSignOut, pending = false }) {
   const [open, setOpen] = useState(false);
+
+  // No auth backend configured → offer nothing to sign in to. WelcomeGate has
+  // always checked this; this chip did not, so when the demo's Supabase project
+  // stopped resolving (2026-08-01) the splash went clean while the header kept
+  // offering a dead "Sign in". An already signed-in user still gets the chip, so
+  // a session that outlives the config change keeps its way out.
+  if (!user && !isAuthConfigured()) return null;
 
   if (!user) {
     return (
