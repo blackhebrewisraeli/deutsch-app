@@ -6,12 +6,48 @@
 
 /** @typedef {'light' | 'dark'} ThemeMode */
 
+// Several tokens are the same colour at a different opacity. Writing them out by
+// hand meant 22 near-identical literals across the palettes — `#EDEBE810` sitting
+// next to `#EDEBE812`, where a one-character typo is invisible to review and to
+// every test. They are derived instead: change `fg` and its whole alpha family
+// follows. Each entry is [derived key, source key, 8-bit alpha as hex].
+const ALPHA_DERIVATIONS = [
+  ['fg-a10', 'fg', '10'],
+  ['fg-a12', 'fg', '12'],
+  ['fg-a20', 'fg', '20'],
+  ['fg-a30', 'fg', '30'],
+  ['fg-aa', 'fg', 'aa'],
+  ['fg-subtle-a08', 'fg-subtle', '08'],
+  ['ground-a50', 'ground', '50'],
+  ['ground-a60', 'ground', '60'],
+  ['ground-a80', 'ground', '80'],
+  ['error-a80', 'error', '80'],
+  ['error-a00', 'error', '00'],
+];
+
+// The stats heatmap ramp is one gold at two opacities and is identical in both
+// modes, so it is defined once rather than repeated per palette.
+const HEAT_RAMP = { 'heat-1': '#FFCE0040', 'heat-2': '#FFCE0090' };
+
+/**
+ * Expand a base palette with its derived alpha variants and the shared heat ramp.
+ * @param {Record<string,string>} base
+ * @returns {Record<string,string>}
+ */
+function withDerived(base) {
+  const out = { ...base, ...HEAT_RAMP };
+  for (const [key, from, alpha] of ALPHA_DERIVATIONS) {
+    out[key] = `${base[from]}${alpha}`;
+  }
+  return out;
+}
+
 /**
  * Per-mode structural colour values.
  * Light = current production palette. Dark = Nocturne.
  */
 export const MODE_COLORS = {
-  light: {
+  light: withDerived({
     ground: '#FDF3C0',
     surface: '#FFFFFF',
     'surface-alt': '#FFF8DC',
@@ -30,22 +66,9 @@ export const MODE_COLORS = {
     lip: '#D9CD9F',
     press: '#000000',
     'mute-deep': '#6b6354',
-    'fg-a10': '#16110b10',
-    'fg-a12': '#16110b12',
-    'fg-a20': '#16110b20',
-    'fg-a30': '#16110b30',
-    'fg-aa': '#16110baa',
-    'fg-subtle-a08': '#2a221808',
-    'ground-a50': '#FDF3C050',
-    'ground-a60': '#FDF3C060',
-    'ground-a80': '#FDF3C080',
-    'error-a80': '#D6282880',
-    'error-a00': '#D6282800',
-    'heat-1': '#FFCE0040',
-    'heat-2': '#FFCE0090',
     track: '#e7dcae',
-  },
-  dark: {
+  }),
+  dark: withDerived({
     ground: '#0D0D0F',
     surface: '#16161C',
     'surface-alt': '#1B1B22',
@@ -64,21 +87,8 @@ export const MODE_COLORS = {
     lip: '#2A2A34',
     press: '#000000',
     'mute-deep': '#6E6E78',
-    'fg-a10': '#EDEBE810',
-    'fg-a12': '#EDEBE812',
-    'fg-a20': '#EDEBE820',
-    'fg-a30': '#EDEBE830',
-    'fg-aa': '#EDEBE8aa',
-    'fg-subtle-a08': '#6E6E7808',
-    'ground-a50': '#0D0D0F50',
-    'ground-a60': '#0D0D0F60',
-    'ground-a80': '#0D0D0F80',
-    'error-a80': '#FF6B6B80',
-    'error-a00': '#FF6B6B00',
-    'heat-1': '#FFCE0040',
-    'heat-2': '#FFCE0090',
     track: '#2A2A34',
-  },
+  }),
 };
 
 /** Legacy accent defaults (pre-pack). Pack theme overlays these in applyTheme. */
