@@ -25,6 +25,7 @@ import AccountSection from './stats/AccountSection';
 import LeaderboardSection from './stats/LeaderboardSection';
 import ProfileCard from './stats/ProfileCard';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
+import { isAuthConfigured } from '../lib/auth.js';
 
 // Section 05 — practice dashboard. Reads the forward-only event log from
 // storage and composes six widgets (A–F). All aggregation lives in lib/stats
@@ -140,17 +141,22 @@ export default function StatsTab({
                 totalXp={totalXp(daily)}
                 learnedCount={stats.learnedCount ?? 0}
               />
-              <div style={{ marginTop: SPACE[5] }}>
-                <SectionLabel num="·" text="Account & sync" />
-                <AccountSection
-                  user={user}
-                  onSignIn={onSignIn}
-                  onSignOut={onSignOut}
-                  onExport={onExport}
-                  onDelete={onDelete}
-                  lastSyncedAt={lastSyncedAt}
-                />
-              </div>
+              {/* AccountSection renders null for a guest when no auth backend is
+                  configured; without this the "Account & sync" label would sit
+                  above an empty block. */}
+              {(user || isAuthConfigured()) && (
+                <div style={{ marginTop: SPACE[5] }}>
+                  <SectionLabel num="·" text="Account & sync" />
+                  <AccountSection
+                    user={user}
+                    onSignIn={onSignIn}
+                    onSignOut={onSignOut}
+                    onExport={onExport}
+                    onDelete={onDelete}
+                    lastSyncedAt={lastSyncedAt}
+                  />
+                </div>
+              )}
               <div style={{ marginTop: SPACE[5] }}>
                 <SectionLabel num="·" text="Daily goal" />
                 <GoalPicker

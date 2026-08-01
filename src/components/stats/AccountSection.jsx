@@ -10,6 +10,7 @@ import {
 } from '../../lib/theme';
 import Button from '../ui/Button';
 import { LEAGUES_ENABLED, updateHandle } from '../../lib/leagues';
+import { isAuthConfigured } from '../../lib/auth.js';
 
 function formatRelativeSync(ms) {
   if (!ms) return null;
@@ -38,6 +39,10 @@ export default function AccountSection({
   const [handle, setHandle] = useState('');
   const [avatar, setAvatar] = useState('');
   const [handleMsg, setHandleMsg] = useState(null); // { ok: bool, text: string }
+
+  // See AccountChip: with no auth backend configured there is nothing to sign in
+  // to, so don't advertise it. A signed-in user still gets the full section.
+  if (!user && !isAuthConfigured()) return null;
 
   if (!user) {
     return (

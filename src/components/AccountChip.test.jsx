@@ -36,3 +36,27 @@ describe('AccountChip', () => {
     expect(screen.getByLabelText(/sync pending/i)).toBeInTheDocument();
   });
 });
+
+// The account surface must disappear when auth is not configured. Production hit
+// this on 2026-08-01: the Supabase project behind the demo stopped resolving, and
+// WelcomeGate hid its buttons (it checks isAuthConfigured) while this chip kept
+// offering "Sign in" — a dead affordance on the live site.
+describe('AccountChip when auth is not configured', () => {
+  it('renders nothing for a guest', async () => {
+    vi.resetModules();
+    vi.doMock('../lib/auth.js', () => ({ isAuthConfigured: () => false }));
+    const { default: Chip } = await import('./AccountChip');
+    const { container } = render(<Chip user={null} onSignIn={() => {}} onSignOut={() => {}} />);
+    expect(container).toBeEmptyDOMElement();
+    vi.doUnmock('../lib/auth.js');
+  });
+
+  it('still renders for an already signed-in user so they can sign out', async () => {
+    vi.resetModules();
+    vi.doMock('../lib/auth.js', () => ({ isAuthConfigured: () => false }));
+    const { default: Chip } = await import('./AccountChip');
+    render(<Chip user={{ email: 'sam@example.com' }} onSignIn={() => {}} onSignOut={() => {}} />);
+    expect(screen.getByRole('button', { name: /account/i })).toBeInTheDocument();
+    vi.doUnmock('../lib/auth.js');
+  });
+});
