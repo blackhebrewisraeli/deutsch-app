@@ -1,24 +1,58 @@
 import { describe, it, expect } from 'vitest';
 import { contrastRatio, relativeLuminance } from './contrast';
 import { MODE_COLORS, DEFAULT_ACCENTS } from './themeTokens';
+import { deriveThemeRamps } from './ramp';
 import { accent, accentAlt } from '../packs/de/theme';
 
 const AA_NORMAL = 4.5;
 const AA_LARGE = 3;
 
 /**
+ * Resolve a pack accent field that may be a plain string or `{ light, dark }`.
+ * @param {string | { light: string, dark: string }} value
+ * @param {'light' | 'dark'} mode
+ */
+function resolveModeValue(value, mode) {
+  if (typeof value === 'string') return value;
+  return value[mode];
+}
+
+/** Resolved ramp tokens for a mode × tone using the German pack seeds. */
+function rampFor(mode, tone) {
+  const structural = MODE_COLORS[mode][tone];
+  const packAccent = resolveModeValue(accent.fill, mode);
+  const packAccentOn = resolveModeValue(accent.onFill, mode);
+  const packAltFill = resolveModeValue(accentAlt.fill, mode);
+  const packAltOn = resolveModeValue(accentAlt.onFill, mode);
+  return {
+    c: deriveThemeRamps(structural, mode, {
+      accent: packAccent,
+      accentOn: packAccentOn,
+      accentAlt: packAltFill,
+      accentAltOn: packAltOn,
+    }),
+    packAccent,
+    packAccentOn,
+    packAccentFg: accent.fg[mode],
+    packAltFill,
+    packAltOn,
+  };
+}
+
+/**
  * Pairings the token model is designed to support at WCAG AA,
- * for every mode × tone palette.
+ * for every mode × tone palette — including derived ramp steps.
+ *
+ * Roles:
+ * - soft steps are backgrounds (body ink on top)
+ * - accent / accent-deep are fills (onFill on top)
+ * - success-deep / error-deep are lip/press fills, not body text
  */
 function pairsFor(mode, tone) {
-  const c = MODE_COLORS[mode][tone];
-  const packAccent = accent.fill;
-  const packAccentOn = accent.onFill;
-  const packAccentFg = accent.fg[mode];
-  const packAltFill = accentAlt.fill[mode];
-  const packAltOn = accentAlt.onFill[mode];
+  const { c, packAccent, packAccentOn, packAccentFg, packAltFill, packAltOn } = rampFor(mode, tone);
   const label = `${mode}.${tone}`;
 
+  /** @type {{ fg: string, bg: string, min: number, name: string }[]} */
   const pairs = [
     { fg: c.fg, bg: c.ground, min: AA_NORMAL, name: `${label} fg on ground` },
     { fg: c.fg, bg: c.surface, min: AA_NORMAL, name: `${label} fg on surface` },
@@ -57,6 +91,58 @@ function pairsFor(mode, tone) {
       name: `${label} accentAlt.onFill on accentAlt.fill`,
     },
   ];
+
+  // Elevation ramp — body ink on every surface step
+  for (const sn of ['surface-1', 'surface-2', 'surface-3']) {
+    pairs.push({
+      fg: c.fg,
+      bg: c[sn],
+      min: AA_NORMAL,
+      name: `${label} fg on ${sn}`,
+    });
+    pairs.push({
+      fg: packAccentFg,
+      bg: c[sn],
+      min: AA_NORMAL,
+      name: `${label} accent.fg on ${sn}`,
+    });
+    pairs.push({
+      fg: c.error,
+      bg: c[sn],
+      min: AA_NORMAL,
+      name: `${label} error on ${sn}`,
+    });
+    pairs.push({
+      fg: c.success,
+      bg: c[sn],
+      min: AA_LARGE,
+      name: `${label} success on ${sn} (large)`,
+    });
+  }
+
+  // Soft tint backgrounds — body ink must remain readable on them
+  for (const soft of ['accent-soft', 'accent-alt-soft', 'success-soft', 'error-soft']) {
+    pairs.push({
+      fg: c.fg,
+      bg: c[soft],
+      min: AA_NORMAL,
+      name: `${label} fg on ${soft}`,
+    });
+  }
+
+  // Accent fills (solid + deep lip) carry onFill ink, not mode-flipping fg
+  pairs.push({
+    fg: packAccentOn,
+    bg: c['accent-deep'],
+    min: AA_NORMAL,
+    name: `${label} accent.onFill on accent-deep`,
+  });
+  pairs.push({
+    fg: packAltOn,
+    bg: c['accent-alt-deep'],
+    min: AA_NORMAL,
+    name: `${label} accentAlt.onFill on accent-alt-deep`,
+  });
 
   if (mode === 'dark') {
     pairs.push({

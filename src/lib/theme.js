@@ -11,25 +11,34 @@
 
 // ── Colours (var(--…) — resolved on :root by applyTheme) ─────
 export const COLORS = {
-  // Backgrounds
+  // Backgrounds — elevation ramp: ground → surface1 → surface2 → surface3
   paper: 'var(--c-ground)',
-  paperDeep: 'var(--c-surface-alt)',
-  card: 'var(--c-surface)',
+  paperDeep: 'var(--c-surface-alt)', // alias of surface-1 in light, surface-2 in dark
+  card: 'var(--c-surface)', // alias of surface-2 in light, surface-1 in dark
+  surface1: 'var(--c-surface-1)',
+  surface2: 'var(--c-surface-2)',
+  surface3: 'var(--c-surface-3)',
 
   // Text
   ink: 'var(--c-fg)',
   inkSoft: 'var(--c-fg-subtle)',
   mute: 'var(--c-fg-muted)',
 
-  // Accents (pack-supplied via applyTheme; structural aliases kept)
+  // Accents (pack seed → soft / fill / deep via applyTheme; structural aliases kept)
   red: 'var(--c-error)',
+  redSoft: 'var(--c-error-soft)',
   rust: 'var(--c-error-deep)',
   gold: 'var(--c-accent)',
+  goldSoft: 'var(--c-accent-soft)',
+  goldDeep: 'var(--c-accent-deep)',
+  accentAlt: 'var(--c-accent-alt)',
+  accentAltSoft: 'var(--c-accent-alt-soft)',
+  accentAltDeep: 'var(--c-accent-alt-deep)',
 
-  // Success / go
+  // Success / go — soft / base / deep (success-fill kept as soft alias)
   green: 'var(--c-success)',
   greenDeep: 'var(--c-success-deep)',
-  greenSoft: 'var(--c-success-fill)',
+  greenSoft: 'var(--c-success-soft)',
   lip: 'var(--c-lip)',
 
   // Alpha / companion tokens (hex-suffix concat is invalid with var(--…))
@@ -54,6 +63,7 @@ export const COLORS = {
   goldBright: 'var(--c-gold-bright)',
   accentFg: 'var(--c-accent-fg)',
   accentOn: 'var(--c-accent-on)',
+  accentAltOn: 'var(--c-accent-alt-on)',
 };
 
 // ── Typography ───────────────────────────────────────────────
