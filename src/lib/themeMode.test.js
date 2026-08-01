@@ -1,14 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   THEME_MODE_KEY,
+  THEME_TONE_KEY,
   readThemePreference,
   getThemePreferenceForUI,
+  readThemeTone,
+  getThemeToneForUI,
+  resolveThemeTone,
   getSystemMode,
   resolveThemeMode,
   setThemePreference,
+  setThemeTone,
   applyCurrentTheme,
   watchSystemTheme,
 } from './themeMode';
+import { MODE_COLORS, tokenToCssVar } from './themeTokens';
 
 vi.mock('../packs', () => ({
   activePack: {
@@ -77,6 +83,62 @@ describe('theme preference persistence', () => {
     setThemePreference('light');
     expect(() => setThemePreference('sepia')).not.toThrow();
     expect(readThemePreference()).toBe('light');
+  });
+});
+
+describe('theme tone persistence', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.documentElement.style.cssText = '';
+    delete document.documentElement.dataset.tone;
+  });
+
+  it('resolveThemeTone defaults unset/corrupt to day', () => {
+    expect(resolveThemeTone(null)).toBe('day');
+    expect(resolveThemeTone('day')).toBe('day');
+    expect(resolveThemeTone('night')).toBe('night');
+    expect(resolveThemeTone('sepia')).toBe('day');
+  });
+
+  it('round-trips day/night through localStorage and applies palette', () => {
+    setThemePreference('light');
+    setThemeTone('night');
+    expect(localStorage.getItem(THEME_TONE_KEY)).toBe('night');
+    expect(readThemeTone()).toBe('night');
+    expect(document.documentElement.dataset.tone).toBe('night');
+    expect(document.documentElement.style.getPropertyValue(tokenToCssVar('ground'))).toBe(
+      MODE_COLORS.light.night.ground
+    );
+
+    setThemeTone('day');
+    expect(readThemeTone()).toBe('day');
+    expect(document.documentElement.style.getPropertyValue(tokenToCssVar('ground'))).toBe(
+      MODE_COLORS.light.day.ground
+    );
+  });
+
+  it('applies dark.night when mode is dark and tone is night', () => {
+    setThemePreference('dark');
+    setThemeTone('night');
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(document.documentElement.dataset.tone).toBe('night');
+    expect(document.documentElement.style.getPropertyValue(tokenToCssVar('ground'))).toBe(
+      MODE_COLORS.dark.night.ground
+    );
+  });
+
+  it('treats corrupt tone as day rather than throwing', () => {
+    localStorage.setItem(THEME_TONE_KEY, 'twilight');
+    expect(readThemeTone()).toBeNull();
+    expect(getThemeToneForUI()).toBe('day');
+    expect(() => applyCurrentTheme()).not.toThrow();
+    expect(document.documentElement.dataset.tone).toBe('day');
+  });
+
+  it('ignores unknown setThemeTone values without throwing', () => {
+    setThemeTone('night');
+    expect(() => setThemeTone('sepia')).not.toThrow();
+    expect(readThemeTone()).toBe('night');
   });
 });
 

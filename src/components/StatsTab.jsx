@@ -21,13 +21,20 @@ import VocabSrsWidget from './stats/VocabSrsWidget';
 import LevelCard from './gamification/LevelCard';
 import GoalPicker from './gamification/GoalPicker';
 import AppearancePicker from './AppearancePicker';
+import TonePicker from './TonePicker';
 import BadgeGrid from './gamification/BadgeGrid';
 import AccountSection from './stats/AccountSection';
 import LeaderboardSection from './stats/LeaderboardSection';
 import ProfileCard from './stats/ProfileCard';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
 import { isAuthConfigured } from '../lib/auth.js';
-import { getThemePreferenceForUI, setThemePreference, watchSystemTheme } from '../lib/themeMode';
+import {
+  getThemePreferenceForUI,
+  setThemePreference,
+  getThemeToneForUI,
+  setThemeTone,
+  watchSystemTheme,
+} from '../lib/themeMode';
 
 // Section 05 — practice dashboard. Reads the forward-only event log from
 // storage and composes six widgets (A–F). All aggregation lives in lib/stats
@@ -48,6 +55,7 @@ export default function StatsTab({
   const [activeView, setActiveView] = useState('stats');
   const [selectedUser, setSelectedUser] = useState(null);
   const [themePref, setThemePref] = useState(() => getThemePreferenceForUI());
+  const [themeTone, setThemeToneState] = useState(() => getThemeToneForUI());
 
   // Keep the Appearance picker in sync if the OS scheme changes under System.
   useEffect(() => watchSystemTheme(() => setThemePref(getThemePreferenceForUI())), []);
@@ -172,6 +180,15 @@ export default function StatsTab({
                     setThemePref(pref);
                   }}
                 />
+                <div style={{ marginTop: SPACE[3] }}>
+                  <TonePicker
+                    tone={themeTone}
+                    onPick={(tone) => {
+                      setThemeTone(tone);
+                      setThemeToneState(tone);
+                    }}
+                  />
+                </div>
               </div>
               <div style={{ marginTop: SPACE[5] }}>
                 <SectionLabel num="·" text="Daily goal" />

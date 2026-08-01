@@ -7,68 +7,69 @@ const AA_NORMAL = 4.5;
 const AA_LARGE = 3;
 
 /**
- * Pairings the token model is designed to support at WCAG AA.
- *
- * Light parchment (`#FDF3C0`) leaves a few legacy pairs (mute/error/success
- * as text *on the page ground*) a hair under the floor — those colours are
- * used as fills or on `surface` in the UI. The architecture's hard guarantees
- * are: primary text, accent-as-fill, per-mode accent.fg, and dark-mode error.
+ * Pairings the token model is designed to support at WCAG AA,
+ * for every mode × tone palette.
  */
-function pairsForMode(mode) {
-  const c = MODE_COLORS[mode];
+function pairsFor(mode, tone) {
+  const c = MODE_COLORS[mode][tone];
   const packAccent = accent.fill;
   const packAccentOn = accent.onFill;
   const packAccentFg = accent.fg[mode];
   const packAltFill = accentAlt.fill[mode];
   const packAltOn = accentAlt.onFill[mode];
+  const label = `${mode}.${tone}`;
 
   const pairs = [
-    { fg: c.fg, bg: c.ground, min: AA_NORMAL, name: `${mode} fg on ground` },
-    { fg: c.fg, bg: c.surface, min: AA_NORMAL, name: `${mode} fg on surface` },
-    { fg: c.fg, bg: c['surface-alt'], min: AA_NORMAL, name: `${mode} fg on surface-alt` },
-    { fg: c['fg-muted'], bg: c.surface, min: AA_NORMAL, name: `${mode} fg-muted on surface` },
-    { fg: c.ground, bg: c.fg, min: AA_NORMAL, name: `${mode} ground on fg (inverted)` },
-    { fg: c.error, bg: c.surface, min: AA_NORMAL, name: `${mode} error on surface` },
-    { fg: c.success, bg: c.surface, min: AA_LARGE, name: `${mode} success on surface (large)` },
+    { fg: c.fg, bg: c.ground, min: AA_NORMAL, name: `${label} fg on ground` },
+    { fg: c.fg, bg: c.surface, min: AA_NORMAL, name: `${label} fg on surface` },
+    { fg: c.fg, bg: c['surface-alt'], min: AA_NORMAL, name: `${label} fg on surface-alt` },
+    { fg: c['fg-muted'], bg: c.surface, min: AA_NORMAL, name: `${label} fg-muted on surface` },
+    { fg: c.ground, bg: c.fg, min: AA_NORMAL, name: `${label} ground on fg (inverted)` },
+    { fg: c.error, bg: c.surface, min: AA_NORMAL, name: `${label} error on surface` },
+    { fg: c.success, bg: c.surface, min: AA_LARGE, name: `${label} success on surface (large)` },
     {
       fg: packAccentOn,
       bg: packAccent,
       min: AA_NORMAL,
-      name: `${mode} accent.onFill on accent.fill`,
+      name: `${label} accent.onFill on accent.fill`,
     },
     {
       fg: packAccentFg,
       bg: c.ground,
+      // Held to body AA in every palette. This previously carved out
+      // light.night at large-text-only because the accent failed there (3.59);
+      // the pack's light accent.fg was darkened instead, so the floor is now
+      // uniform. Relaxing a threshold for the one case that fails hides the
+      // failure rather than fixing it.
       min: AA_NORMAL,
-      name: `${mode} accent.fg on ground`,
+      name: `${label} accent.fg on ground`,
     },
     {
       fg: packAccentFg,
       bg: c.surface,
       min: AA_NORMAL,
-      name: `${mode} accent.fg on surface`,
+      name: `${label} accent.fg on surface`,
     },
     {
       fg: packAltOn,
       bg: packAltFill,
       min: AA_NORMAL,
-      name: `${mode} accentAlt.onFill on accentAlt.fill`,
+      name: `${label} accentAlt.onFill on accentAlt.fill`,
     },
   ];
 
-  // Dark mode: error must work as body text on the page ground (the 4.30 bug).
   if (mode === 'dark') {
     pairs.push({
       fg: c.error,
       bg: c.ground,
       min: AA_NORMAL,
-      name: 'dark error on ground',
+      name: `${label} error on ground`,
     });
     pairs.push({
       fg: c['fg-muted'],
       bg: c.ground,
       min: AA_NORMAL,
-      name: 'dark fg-muted on ground',
+      name: `${label} fg-muted on ground`,
     });
   }
 
@@ -89,28 +90,30 @@ describe('contrast helpers', () => {
   });
 });
 
-describe('token model contrast (both modes)', () => {
+describe('token model contrast (all mode × tone palettes)', () => {
   for (const mode of ['light', 'dark']) {
-    describe(mode, () => {
-      for (const pair of pairsForMode(mode)) {
-        it(`${pair.name} ≥ ${pair.min}:1`, () => {
-          const ratio = contrastRatio(pair.fg, pair.bg);
-          expect(
-            ratio,
-            `${pair.name}: ${pair.fg} on ${pair.bg} = ${ratio.toFixed(2)}:1 (need ${pair.min})`
-          ).toBeGreaterThanOrEqual(pair.min);
-        });
-      }
-    });
+    for (const tone of ['day', 'night']) {
+      describe(`${mode}.${tone}`, () => {
+        for (const pair of pairsFor(mode, tone)) {
+          it(`${pair.name} ≥ ${pair.min}:1`, () => {
+            const ratio = contrastRatio(pair.fg, pair.bg);
+            expect(
+              ratio,
+              `${pair.name}: ${pair.fg} on ${pair.bg} = ${ratio.toFixed(2)}:1 (need ${pair.min})`
+            ).toBeGreaterThanOrEqual(pair.min);
+          });
+        }
+      });
+    }
   }
 
   it('fails with the offending pair named when a foreground is darkened', () => {
-    const name = 'dark fg on ground';
+    const name = 'dark.day fg on ground';
     const fg = '#3a3a3a';
-    const bg = MODE_COLORS.dark.ground;
+    const bg = MODE_COLORS.dark.day.ground;
     const ratio = contrastRatio(fg, bg);
     expect(ratio).toBeLessThan(AA_NORMAL);
-    expect(`${name}: ${fg} on ${bg} = ${ratio.toFixed(2)}:1`).toMatch(/dark fg on ground/);
+    expect(`${name}: ${fg} on ${bg} = ${ratio.toFixed(2)}:1`).toMatch(/dark\.day fg on ground/);
   });
 });
 

@@ -6,7 +6,11 @@ import { activePack } from '../packs';
 /** Per-device preference — NOT part of synced `deutsch-app-state-v1`. */
 export const THEME_MODE_KEY = 'deutsch-theme-mode';
 
+/** Per-device Day-light / Night-light tone — also NOT synced. */
+export const THEME_TONE_KEY = 'deutsch-theme-tone';
+
 export const THEME_PREFS = ['system', 'light', 'dark'];
+export const THEME_TONES = ['day', 'night'];
 
 /**
  * Read the stored preference. Returns null when unset or corrupt so resolution
@@ -27,6 +31,35 @@ export function readThemePreference() {
 /** Preference shown in the UI — unset maps to System. */
 export function getThemePreferenceForUI() {
   return readThemePreference() ?? 'system';
+}
+
+/**
+ * Read the stored tone. Returns null when unset or corrupt.
+ * @returns {'day' | 'night' | null}
+ */
+export function readThemeTone() {
+  try {
+    const v = localStorage.getItem(THEME_TONE_KEY);
+    if (v == null) return null;
+    if (THEME_TONES.includes(v)) return v;
+  } catch {
+    // private mode / blocked storage
+  }
+  return null;
+}
+
+/** Tone shown in the UI — unset/corrupt maps to Day-light. */
+export function getThemeToneForUI() {
+  return readThemeTone() ?? 'day';
+}
+
+/**
+ * Resolve tone for apply — corrupt/unset → day.
+ * @param {'day' | 'night' | null} tone
+ * @returns {'day' | 'night'}
+ */
+export function resolveThemeTone(tone) {
+  return tone === 'night' ? 'night' : 'day';
 }
 
 /**
@@ -55,11 +88,12 @@ export function resolveThemeMode(preference, systemMode) {
   return 'dark';
 }
 
-/** Apply the currently resolved mode to :root. */
+/** Apply the currently resolved mode × tone to :root. */
 export function applyCurrentTheme() {
   const preference = readThemePreference();
   const mode = resolveThemeMode(preference, getSystemMode());
-  applyTheme(mode, activePack.theme);
+  const tone = resolveThemeTone(readThemeTone());
+  applyTheme(mode, activePack.theme, tone);
   return mode;
 }
 
@@ -74,6 +108,23 @@ export function setThemePreference(preference) {
   }
   try {
     localStorage.setItem(THEME_MODE_KEY, preference);
+  } catch {
+    // still apply in-memory for this session
+  }
+  return applyCurrentTheme();
+}
+
+/**
+ * Persist Day-light / Night-light tone and re-apply. Unknown values ignored.
+ * @param {string} tone
+ * @returns {'light' | 'dark' | null}
+ */
+export function setThemeTone(tone) {
+  if (!THEME_TONES.includes(tone)) {
+    return applyCurrentTheme();
+  }
+  try {
+    localStorage.setItem(THEME_TONE_KEY, tone);
   } catch {
     // still apply in-memory for this session
   }
