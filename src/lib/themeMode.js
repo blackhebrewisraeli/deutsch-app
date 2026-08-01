@@ -1,4 +1,6 @@
 import { applyTheme } from './applyTheme';
+import { injectFonts } from './injectFonts';
+import { injectGlobalStyles } from './injectGlobalStyles';
 import { activePack } from '../packs';
 
 /** Per-device preference — NOT part of synced `deutsch-app-state-v1`. */
@@ -105,6 +107,8 @@ export function watchSystemTheme(onChange) {
 
 /** Boot: apply once before React mounts, then watch the OS. */
 export function bootTheme() {
+  injectGlobalStyles();
+  injectFonts(activePack.theme?.font?.families);
   applyCurrentTheme();
   return watchSystemTheme();
 }

@@ -507,31 +507,6 @@ export default function App() {
         </div>
       )}
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=JetBrains+Mono:wght@400;500;700&display=swap');
-        * { box-sizing: border-box; }
-        body { margin: 0; }
-        button { font-family: inherit; cursor: pointer; }
-        ::-webkit-scrollbar { width: 6px; height: 6px; }
-        ::-webkit-scrollbar-track { background: ${COLORS.paperDeep}; }
-        ::-webkit-scrollbar-thumb { background: ${COLORS.ink}; border: 2px solid ${COLORS.paperDeep}; }
-        @keyframes blink      { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0; } }
-        @keyframes pulse-red  { 0%, 100% { box-shadow: 0 0 0 0 ${COLORS.redA80}; } 50% { box-shadow: 0 0 0 12px ${COLORS.redA00}; } }
-        @keyframes slide-up   { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes bounce     { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
-        @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,197,24,0.7); } 50% { box-shadow: 0 0 0 10px rgba(245,197,24,0); } }
-        @keyframes shimmer    { 0% { background-position: -200% center; } 100% { background-position: 200% center; } }
-        .slide-up { animation: slide-up 0.3s ease-out; }
-        @keyframes pop      { 0% { transform: scale(0.9); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
-        @keyframes wiggle   { 0%, 100% { transform: translateX(0) rotate(0); } 25% { transform: translateX(-4px) rotate(-1.5deg); } 75% { transform: translateX(4px) rotate(1.5deg); } }
-        @keyframes confetti { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), 120px) rotate(var(--rot)); opacity: 0; } }
-        .pop    { animation: pop 0.28s ease-out; }
-        .wiggle { animation: wiggle 0.30s ease-in-out; }
-        @media (prefers-reduced-motion: reduce) {
-          .pop, .wiggle, .slide-up { animation: none !important; }
-          .confetti-layer { display: none !important; }
-        }
-      `}</style>
 
       {/* ── Header ───────────────────────────────────────────── */}
       <header
