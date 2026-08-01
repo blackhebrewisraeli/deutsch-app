@@ -261,9 +261,21 @@ installs and reloads offline.
   `isAuthConfigured()`; a signed-in user still keeps a way to sign out. This stands on its own
   merits — dead affordances should never render, whatever the cause.
 
-  **Recurrence risk:** free-tier projects pause again after about a week of inactivity. Either the
-  demo needs steady traffic, uptime monitoring that exercises a real auth round trip, or the
-  project moves off the free tier.
+  **Recurrence risk — mitigated 2026-08-01.** Free-tier projects pause again after about a week
+  of inactivity. `.github/workflows/uptime.yml` now runs every 6 hours and fails loudly if any
+  hop is down: the demo root, the lexicon manifest (`total > 0`), GoTrue `/health`, GoTrue
+  `/settings` returning parseable JSON, and PostgREST answering at all. Alerting is GitHub's
+  built-in notification on a failed scheduled run.
+
+  Three things it deliberately does *not* do. It never `POST`s to `/auth/v1/otp`, so it never
+  sends mail. It does not assert that PostgREST returns 200 for the anon key — the
+  `revoke_legacy_data_api_privileges` migration leaves `anon` with **no table grants at all**, so
+  401 is the healthy answer there and only 000/5xx is a fault. And it does not claim to prove the
+  database itself is up, only that the Supabase API surface answers.
+
+  The 6-hourly request should also keep the project from auto-pausing, since API traffic counts
+  as activity — but that is a side effect, not the mechanism. The monitor's job is to say so when
+  it pauses anyway. Note GitHub disables scheduled workflows after 60 days of repo inactivity.
 
   **Was open during the outage, now resolved:** the server-side `SUPABASE_URL` and
   `SUPABASE_SERVICE_ROLE_KEY` were never changed, so they pointed at the paused host and durable
