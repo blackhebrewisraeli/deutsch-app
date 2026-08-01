@@ -1,0 +1,102 @@
+# Uptime monitor for the live demo and its backend.
+#
+# Exists because of DEMO_READINESS #9: the Supabase project auto-paused (free tier
+# pauses after ~a week idle) and the demo kept advertising accounts, sync and
+# leagues for as long as nobody clicked them. The pre-existing check had confirmed
+# the flags were "active on the live site" by seeing the UI *render* — it never
+# issued a request. Render is not reach. Every check below is a real round trip.
+#
+# Read-only on purpose: no POST /auth/v1/otp, so this never sends mail.
+#
+# Secondary benefit: these requests are themselves Supabase activity, which should
+# keep the free-tier project from auto-pausing. That is a side effect, not the
+# point — the job is to tell you when something is down, including when the
+# anti-pause effect fails.
+#
+# Alerting is GitHub's built-in notification on a failed scheduled run. Note that
+# GitHub disables scheduled workflows after 60 days with no repo activity.
+
+name: Uptime
+
+on:
+  schedule:
+    - cron: '0 */6 * * *' # every 6 hours, well inside the ~7-day pause window
+  workflow_dispatch: # and on demand
+
+permissions:
+  contents: read
+
+jobs:
+  reachability:
+    name: Demo · Lexicon · Auth · REST
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check every hop
+        env:
+          APP_URL: https://deutsch-app-dusky.vercel.app
+          SUPABASE_URL: ${{ secrets.MONITOR_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.MONITOR_SUPABASE_ANON_KEY }}
+        run: |
+          set -uo pipefail
+          failures=0
+
+          fail() { echo "::error::$1"; failures=$((failures + 1)); }
+          ok()   { echo "  ok — $1"; }
+
+          if [ -z "${SUPABASE_URL}" ] || [ -z "${SUPABASE_ANON_KEY}" ]; then
+            echo "::error::MONITOR_SUPABASE_URL / MONITOR_SUPABASE_ANON_KEY are not set on this repo"
+            exit 1
+          fi
+
+          echo "1. demo responds"
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$APP_URL/") || code=000
+          [ "$code" = "200" ] && ok "HTTP $code" || fail "demo root returned HTTP $code (expected 200)"
+
+          echo "2. lexicon is served and non-empty"
+          body=$(curl -sS --max-time 30 "$APP_URL/lexicon/manifest.json") || body=''
+          total=$(printf '%s' "$body" | jq -r '.total // 0' 2>/dev/null || echo 0)
+          if [ "${total:-0}" -gt 0 ] 2>/dev/null; then
+            ok "manifest.total = $total"
+          else
+            fail "lexicon manifest missing or empty (total=${total:-unparseable})"
+          fi
+
+          # 3-5 are the round trips the old "is it configured?" check never made.
+          echo "3. supabase auth reachable (GoTrue health)"
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+                 -H "apikey: $SUPABASE_ANON_KEY" \
+                 "$SUPABASE_URL/auth/v1/health") || code=000
+          [ "$code" = "200" ] && ok "HTTP $code" || fail "auth health returned HTTP $code (expected 200; a paused project stops resolving and yields 000)"
+
+          echo "4. supabase auth is serving real config, not an error page"
+          body=$(curl -sS --max-time 30 -H "apikey: $SUPABASE_ANON_KEY" \
+                 "$SUPABASE_URL/auth/v1/settings") || body=''
+          if printf '%s' "$body" | jq -e 'has("external")' >/dev/null 2>&1; then
+            ok "settings parsed, providers advertised"
+          else
+            fail "auth settings did not return usable JSON (got: $(printf '%s' "$body" | head -c 120))"
+          fi
+
+          # PostgREST is expected to REFUSE the anon key: the
+          # revoke_legacy_data_api_privileges migration leaves the anon role with no
+          # table grants at all, so 401 is the healthy answer and 200 would also be
+          # fine if grants ever widen. What matters is that something answered —
+          # a paused project yields 000, and a broken gateway yields 5xx.
+          echo "5. supabase rest is answering (anon is intentionally denied)"
+          code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 \
+                 -H "apikey: $SUPABASE_ANON_KEY" \
+                 "$SUPABASE_URL/rest/v1/") || code=000
+          case "$code" in
+            200|401) ok "HTTP $code — PostgREST responded" ;;
+            *)       fail "rest root returned HTTP $code (expected 200 or 401; 000 means the host is gone)" ;;
+          esac
+
+          echo
+          if [ "$failures" -gt 0 ]; then
+            echo "$failures check(s) failed."
+            echo "If auth and rest both failed while the demo itself is up, the Supabase project has"
+            echo "most likely auto-paused. Confirm with the Management API (project status INACTIVE)"
+            echo "rather than by DNS — a paused project stops resolving, exactly like a deleted one."
+            exit 1
+          fi
+          echo "All checks passed."
