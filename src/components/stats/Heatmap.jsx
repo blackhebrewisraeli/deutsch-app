@@ -37,7 +37,7 @@ export default function Heatmap({ data, mobile }) {
             width: cellSize,
             height: cellSize,
             background: INTENSITY_COLORS[day.intensity],
-            border: `1px solid ${COLORS.ink}20`,
+            border: `1px solid ${COLORS.inkA20}`,
           }}
         />
       ))}
@@ -79,7 +79,7 @@ export function HeatmapLegend() {
             width: 10,
             height: 10,
             background: c,
-            border: `1px solid ${COLORS.ink}20`,
+            border: `1px solid ${COLORS.inkA20}`,
           }}
         />
       ))}

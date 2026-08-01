@@ -63,7 +63,7 @@ export default function ReviewFeed({ items, onReview }) {
               padding: `${SPACE[3]}px ${SPACE[4]}px`,
               background: COLORS.paper,
               border: 'none',
-              borderBottom: i < items.length - 1 ? `1px solid ${COLORS.ink}10` : 'none',
+              borderBottom: i < items.length - 1 ? `1px solid ${COLORS.inkA10}` : 'none',
               cursor: 'pointer',
               transition: 'background 0.12s ease',
               color: COLORS.ink,

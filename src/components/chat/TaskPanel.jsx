@@ -139,7 +139,7 @@ export default function TaskPanel({
                 onClick={() => setHintVisible((v) => !v)}
                 style={{
                   background: 'transparent',
-                  border: `1px solid ${COLORS.paper}60`,
+                  border: `1px solid ${COLORS.paperA60}`,
                   color: COLORS.paper,
                   fontFamily: FONTS.mono,
                   fontSize: FONT_SIZE.tag,
@@ -154,7 +154,7 @@ export default function TaskPanel({
                 <div
                   style={{
                     marginTop: SPACE[3],
-                    borderTop: `1px dashed ${COLORS.paper}50`,
+                    borderTop: `1px dashed ${COLORS.paperA50}`,
                     paddingTop: SPACE[3],
                     fontFamily: FONTS.mono,
                     fontSize: FONT_SIZE.sm,

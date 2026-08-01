@@ -4,6 +4,11 @@ import { SpeedInsights } from '@vercel/speed-insights/react';
 import App from './App.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
 import { initObservability } from './lib/observability.js';
+import { applyTheme } from './lib/applyTheme.js';
+
+// Resolve CSS custom properties before React mounts — no flash of wrong theme.
+// Pack accents/fonts land in Task 3; until then applyTheme uses legacy defaults.
+applyTheme('light');
 
 // Start error monitoring before anything renders, so early errors are captured.
 // No-op unless VITE_SENTRY_DSN is set.

@@ -93,7 +93,7 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
           <div
             style={{
               minHeight: 52,
-              border: `2px dashed ${COLORS.ink}30`,
+              border: `2px dashed ${COLORS.inkA30}`,
               borderRadius: RADIUS.md,
               background: COLORS.card,
               padding: SPACE[3],

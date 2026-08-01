@@ -16,7 +16,7 @@ export default function ChatInput({
   return (
     <div
       style={{
-        borderTop: `1px solid ${COLORS.ink}12`,
+        borderTop: `1px solid ${COLORS.inkA12}`,
         padding: 16,
         display: 'flex',
         gap: 12,

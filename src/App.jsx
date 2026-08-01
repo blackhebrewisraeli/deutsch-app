@@ -454,7 +454,7 @@ export default function App() {
             style={{
               position: 'fixed',
               inset: 0,
-              background: `${COLORS.ink}aa`,
+              background: COLORS.inkAa,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
@@ -497,7 +497,7 @@ export default function App() {
         background: COLORS.paper,
         color: COLORS.ink,
         fontFamily: FONT_BODY,
-        backgroundImage: `radial-gradient(circle at 1px 1px, ${COLORS.inkSoft}08 1px, transparent 0)`,
+        backgroundImage: `radial-gradient(circle at 1px 1px, ${COLORS.inkSoftA08} 1px, transparent 0)`,
         backgroundSize: '24px 24px',
       }}
     >
@@ -516,7 +516,7 @@ export default function App() {
         ::-webkit-scrollbar-track { background: ${COLORS.paperDeep}; }
         ::-webkit-scrollbar-thumb { background: ${COLORS.ink}; border: 2px solid ${COLORS.paperDeep}; }
         @keyframes blink      { 0%, 60% { opacity: 1; } 61%, 100% { opacity: 0; } }
-        @keyframes pulse-red  { 0%, 100% { box-shadow: 0 0 0 0 ${COLORS.red}80; } 50% { box-shadow: 0 0 0 12px ${COLORS.red}00; } }
+        @keyframes pulse-red  { 0%, 100% { box-shadow: 0 0 0 0 ${COLORS.redA80}; } 50% { box-shadow: 0 0 0 12px ${COLORS.redA00}; } }
         @keyframes slide-up   { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes bounce     { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.18); } }
         @keyframes pulse-gold { 0%, 100% { box-shadow: 0 0 0 0 rgba(245,197,24,0.7); } 50% { box-shadow: 0 0 0 10px rgba(245,197,24,0); } }

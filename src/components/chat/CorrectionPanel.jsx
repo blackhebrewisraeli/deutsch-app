@@ -94,7 +94,7 @@ export default function CorrectionPanel({ correction, mobile }) {
             </div>
             <div
               style={{
-                borderTop: `1px dashed ${COLORS.paper}80`,
+                borderTop: `1px dashed ${COLORS.paperA80}`,
                 paddingTop: 12,
                 fontFamily: FONT_BODY,
                 fontSize: 13,

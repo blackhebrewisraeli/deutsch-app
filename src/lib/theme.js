@@ -1,52 +1,66 @@
 // ═══════════════════════════════════════════════════════════════
 //  DESIGN SYSTEM — Deutsch App
 //
-//  All visual decisions live here.
-//  Change a token → it propagates to every component that uses it.
-//  Never hardcode colours, font sizes, or spacing in components.
-//
-//  Usage in components:
-//    import { COLORS, FONTS, FONT_SIZE, BUTTON, CARD, TEXT } from '../lib/theme';
-//    style={{ ...BUTTON.primary, width: '100%' }}
-//
-//  Structure:
-//    1. Primitives  — raw values (colour, type, space, motion)
-//    2. Composites  — component-level style objects (BUTTON, CARD, TEXT)
+//  Colour values are CSS custom properties written by applyTheme().
+//  The export shape is stable — components keep using COLORS.ink etc.
 // ═══════════════════════════════════════════════════════════════
 
 // ─────────────────────────────────────────────────────────────
 //  1. PRIMITIVES
 // ─────────────────────────────────────────────────────────────
 
-// ── Colours ──────────────────────────────────────────────────
+// ── Colours (var(--…) — resolved on :root by applyTheme) ─────
 export const COLORS = {
   // Backgrounds
-  paper: '#FDF3C0', // gold-tint parchment — main page background
-  paperDeep: '#FFF8DC', // cornsilk  — sidebars, inset panels
-  card: '#FFFFFF', // white     — flashcards, chat bubbles
+  paper: 'var(--c-ground)',
+  paperDeep: 'var(--c-surface-alt)',
+  card: 'var(--c-surface)',
 
   // Text
-  ink: '#16110b', // near-black — primary text + borders
-  inkSoft: '#2a2218', // softer black — body copy
-  mute: '#7a6e5c', // warm grey   — secondary labels, placeholders
+  ink: 'var(--c-fg)',
+  inkSoft: 'var(--c-fg-subtle)',
+  mute: 'var(--c-fg-muted)',
 
-  // Accents (German flag palette)
-  red: '#D62828', // flag red  — CTAs, errors, corrections
-  rust: '#a82020', // deep red  — hover / pressed state, red button lip
-  gold: '#F5C518', // flag gold — streak, rewards, Anna bubble
+  // Accents (pack-supplied via applyTheme; structural aliases kept)
+  red: 'var(--c-error)',
+  rust: 'var(--c-error-deep)',
+  gold: 'var(--c-accent)',
 
-  // Playful redesign additions
-  green: '#3FA34D', // "correct / go" — success, Send/Check CTA
-  greenDeep: '#2F7D3A', // 3D bottom-lip under green buttons
-  greenSoft: '#E7F3E9', // subtle success backgrounds
-  lip: '#D9CD9F', // 3D bottom-lip under white/paper buttons (tan parchment-shadow)
+  // Success / go
+  green: 'var(--c-success)',
+  greenDeep: 'var(--c-success-deep)',
+  greenSoft: 'var(--c-success-fill)',
+  lip: 'var(--c-lip)',
+
+  // Alpha / companion tokens (hex-suffix concat is invalid with var(--…))
+  inkA10: 'var(--c-fg-a10)',
+  inkA12: 'var(--c-fg-a12)',
+  inkA20: 'var(--c-fg-a20)',
+  inkA30: 'var(--c-fg-a30)',
+  inkAa: 'var(--c-fg-aa)',
+  inkSoftA08: 'var(--c-fg-subtle-a08)',
+  paperA50: 'var(--c-ground-a50)',
+  paperA60: 'var(--c-ground-a60)',
+  paperA80: 'var(--c-ground-a80)',
+  redA80: 'var(--c-error-a80)',
+  redA00: 'var(--c-error-a00)',
+  heat1: 'var(--c-heat-1)',
+  heat2: 'var(--c-heat-2)',
+  track: 'var(--c-track)',
+  press: 'var(--c-press)',
+  muteDeep: 'var(--c-mute-deep)',
+  goldLip: 'var(--c-gold-lip)',
+  goldLipSoft: 'var(--c-gold-lip-soft)',
+  goldBright: 'var(--c-gold-bright)',
+  accentFg: 'var(--c-accent-fg)',
+  accentOn: 'var(--c-accent-on)',
 };
 
 // ── Typography ───────────────────────────────────────────────
 export const FONTS = {
-  display: "'Fraunces', 'Playfair Display', Georgia, serif",
-  mono: "'JetBrains Mono', 'Courier New', monospace",
-  body: "'Fraunces', Georgia, serif",
+  display: 'var(--f-display)',
+  mono: 'var(--f-mono)',
+  body: 'var(--f-body)',
 };
 
 // Backward-compat aliases — existing components import these directly
@@ -55,20 +69,20 @@ export const FONT_MONO = FONTS.mono;
 export const FONT_BODY = FONTS.body;
 
 export const FONT_SIZE = {
-  label: 9, // tiny mono labels (e.g. "STREAK", number indices)
-  tag: 10, // small-caps tags, section numbers, captions
-  ipa: 11, // IPA / phonetic notation
-  sm: 12, // small mono text, keyboard hints
-  base: 13, // body paragraph, tip text
-  md: 15, // input fields, read-mode text
-  lg: 16, // nav labels, deck names
-  xl: 18, // card sub-headings, translation output
-  '2xl': 20, // nav tab labels, scenario names
-  '3xl': 24, // section titles (translation output panel)
-  '4xl': 36, // hero / header logo
-  '5xl': 48, // flashcard detail panel words
-  '6xl': 64, // flashcard main word, chat bubbles
-  hero: 120, // alphabet letter detail overlay
+  label: 9,
+  tag: 10,
+  ipa: 11,
+  sm: 12,
+  base: 13,
+  md: 15,
+  lg: 16,
+  xl: 18,
+  '2xl': 20,
+  '3xl': 24,
+  '4xl': 36,
+  '5xl': 48,
+  '6xl': 64,
+  hero: 120,
 };
 
 export const FONT_WEIGHT = {
@@ -80,18 +94,17 @@ export const FONT_WEIGHT = {
 };
 
 export const LETTER_SPACING = {
-  tight: '-0.04em', // display headings
+  tight: '-0.04em',
   normal: '0em',
-  wide: '0.05em', // grammar notes
-  wider: '0.1em', // scenario subtitles
-  widest: '0.15em', // button labels, stat labels
-  caps: '0.2em', // all-caps mono labels
-  ultra: '0.25em', // section label text
-  hero: '0.3em', // kicker text above hero
+  wide: '0.05em',
+  wider: '0.1em',
+  widest: '0.15em',
+  caps: '0.2em',
+  ultra: '0.25em',
+  hero: '0.3em',
 };
 
 // ── Spacing ──────────────────────────────────────────────────
-// Base unit: 4px. Use SPACE[n] to get n × 4px.
 export const SPACE = {
   1: 4,
   2: 8,
@@ -106,30 +119,26 @@ export const SPACE = {
 
 // ── Borders ──────────────────────────────────────────────────
 export const BORDER = {
-  standard: `2px solid ${COLORS.ink}`, // used on almost every panel
-  subtle: `1px solid ${COLORS.ink}`, // dividers within panels
-  dashed: `1px dashed ${COLORS.ink}`, // separator in correction panel
-  ghost: `1px solid ${COLORS.paper}50`, // on dark backgrounds
+  standard: `2px solid ${COLORS.ink}`,
+  subtle: `1px solid ${COLORS.ink}`,
+  dashed: `1px dashed ${COLORS.ink}`,
+  ghost: `1px solid ${COLORS.paperA50}`,
 };
 
 // ── Radius ───────────────────────────────────────────────────
 export const RADIUS = {
-  sm: 10, // tiles, small chips
-  md: 14, // buttons, inputs
-  lg: 16, // standard cards, nav pills
-  xl: 22, // hero cards (flashcard, panels)
-  pill: 999, // fully round (avatars, badges, progress pills)
+  sm: 10,
+  md: 14,
+  lg: 16,
+  xl: 22,
+  pill: 999,
 };
 
 // ── Elevation ────────────────────────────────────────────────
 export const SHADOW = {
-  // 3D-press button lip: hard offset, no blur. Pair with translateY on press.
   press: (lipColor) => `0 4px 0 ${lipColor}`,
-  // soft floating card lift
   card: '0 6px 16px rgba(22,17,11,0.08)',
-  // chunky hero card — hard parchment drop (flashcard)
   cardChunk: '0 8px 0 rgba(22,17,11,0.10)',
-  // nav / sticky bars
   bar: '0 6px 18px rgba(22,17,11,0.08)',
 };
 
@@ -144,23 +153,15 @@ export const TRANSITION = {
 export const Z = {
   base: 0,
   raised: 10,
-  nav: 49, // sticky nav bar
-  header: 50, // sticky header (above nav)
+  nav: 49,
+  header: 50,
   modal: 100,
 };
 
 // ─────────────────────────────────────────────────────────────
-//  2. COMPONENT TOKENS  (composite style objects)
-//
-//  These are plain JS objects — spread them into inline styles:
-//    <button style={{ ...BUTTON.primary, width: '100%' }}>
-//
-//  Override individual properties after the spread as needed.
+//  2. COMPONENT TOKENS
 // ─────────────────────────────────────────────────────────────
 
-// ── Buttons ──────────────────────────────────────────────────
-// Resting styles only. The <Button> primitive (components/ui/Button.jsx)
-// adds the press interaction (translateY + lip-shrink) on pointer-down.
 const btnBase = {
   border: 'none',
   borderRadius: RADIUS.md,
@@ -179,35 +180,30 @@ const btnBase = {
 };
 
 export const BUTTON = {
-  // Green — the main "correct / go" CTA (Check, Send, continue)
   go: {
     ...btnBase,
     background: COLORS.green,
     color: COLORS.paper,
     boxShadow: SHADOW.press(COLORS.greenDeep),
   },
-  // Ink — neutral primary (Next, nav-style)
   primary: {
     ...btnBase,
     background: COLORS.ink,
     color: COLORS.paper,
-    boxShadow: SHADOW.press('#000000'),
+    boxShadow: SHADOW.press(COLORS.press),
   },
-  // Red — alert / destructive CTA
   danger: {
     ...btnBase,
     background: COLORS.red,
     color: COLORS.paper,
     boxShadow: SHADOW.press(COLORS.rust),
   },
-  // White — answer tiles / multiple choice / word tiles
   tile: {
     ...btnBase,
     background: COLORS.card,
     color: COLORS.ink,
     boxShadow: SHADOW.press(COLORS.lip),
   },
-  // White, flex:1 — secondary actions (kept name for back-compat)
   secondary: {
     ...btnBase,
     background: COLORS.card,
@@ -215,7 +211,6 @@ export const BUTTON = {
     boxShadow: SHADOW.press(COLORS.lip),
     flex: 1,
   },
-  // Transparent — on dark surfaces (HEAR IT, correction). No lip.
   ghost: {
     ...btnBase,
     background: 'transparent',
@@ -229,34 +224,26 @@ export const BUTTON = {
   },
 };
 
-// Backward-compat alias — VocabTab imports this from UI.jsx which re-exports it
 export const btnSecondary = BUTTON.secondary;
 
-// ── Cards / panels ───────────────────────────────────────────
 export const CARD = {
-  // Default light card — flashcards, info blocks
   base: {
     background: COLORS.card,
     borderRadius: RADIUS.xl,
     boxShadow: SHADOW.card,
     color: COLORS.ink,
   },
-  // Inverted dark panel — chat output, translation result
   dark: { background: COLORS.ink, borderRadius: RADIUS.lg, color: COLORS.paper },
-  // Soft/warm panel — sidebars, inset areas, tip boxes
   soft: {
     background: COLORS.paperDeep,
     borderRadius: RADIUS.lg,
     boxShadow: SHADOW.card,
     color: COLORS.ink,
   },
-  // Alert / correction state
   alert: { background: COLORS.red, borderRadius: RADIUS.lg, color: COLORS.paper },
 };
 
-// ── Text styles ──────────────────────────────────────────────
 export const TEXT = {
-  // Small uppercase mono label (e.g. "STREAK", "01", "SCENARIO")
   label: {
     fontFamily: FONTS.mono,
     fontSize: FONT_SIZE.tag,
@@ -264,8 +251,6 @@ export const TEXT = {
     textTransform: 'uppercase',
     color: COLORS.mute,
   },
-
-  // Larger mono tag with ink background (section numbers like "A", "B")
   tag: {
     fontFamily: FONTS.mono,
     fontSize: FONT_SIZE.ipa,
@@ -274,31 +259,23 @@ export const TEXT = {
     color: COLORS.paper,
     padding: `2px ${SPACE[2]}px`,
   },
-
-  // Large editorial heading
   display: {
     fontFamily: FONTS.display,
     fontWeight: FONT_WEIGHT.black,
     letterSpacing: LETTER_SPACING.tight,
     lineHeight: 1,
   },
-
-  // IPA / phonetic notation
   ipa: {
     fontFamily: FONTS.mono,
     fontSize: FONT_SIZE.ipa,
     opacity: 0.65,
   },
-
-  // Italic translation / English subtitle
   translation: {
     fontFamily: FONTS.body,
     fontStyle: 'italic',
     fontSize: FONT_SIZE.base,
     opacity: 0.75,
   },
-
-  // Kicker text above a hero heading (e.g. "Section 03")
   kicker: {
     fontFamily: FONTS.mono,
     fontSize: FONT_SIZE.tag,
