@@ -20,12 +20,14 @@ import ReviewFeed from './stats/ReviewFeed';
 import VocabSrsWidget from './stats/VocabSrsWidget';
 import LevelCard from './gamification/LevelCard';
 import GoalPicker from './gamification/GoalPicker';
+import AppearancePicker from './AppearancePicker';
 import BadgeGrid from './gamification/BadgeGrid';
 import AccountSection from './stats/AccountSection';
 import LeaderboardSection from './stats/LeaderboardSection';
 import ProfileCard from './stats/ProfileCard';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
 import { isAuthConfigured } from '../lib/auth.js';
+import { getThemePreferenceForUI, setThemePreference, watchSystemTheme } from '../lib/themeMode';
 
 // Section 05 — practice dashboard. Reads the forward-only event log from
 // storage and composes six widgets (A–F). All aggregation lives in lib/stats
@@ -45,6 +47,10 @@ export default function StatsTab({
   const [state, setState] = useState(() => loadState() ?? {});
   const [activeView, setActiveView] = useState('stats');
   const [selectedUser, setSelectedUser] = useState(null);
+  const [themePref, setThemePref] = useState(() => getThemePreferenceForUI());
+
+  // Keep the Appearance picker in sync if the OS scheme changes under System.
+  useEffect(() => watchSystemTheme(() => setThemePref(getThemePreferenceForUI())), []);
 
   // Re-read on focus so switching tabs picks up new events.
   useEffect(() => {
@@ -157,6 +163,16 @@ export default function StatsTab({
                   />
                 </div>
               )}
+              <div style={{ marginTop: SPACE[5] }}>
+                <SectionLabel num="·" text="Appearance" />
+                <AppearancePicker
+                  mode={themePref}
+                  onPick={(pref) => {
+                    setThemePreference(pref);
+                    setThemePref(pref);
+                  }}
+                />
+              </div>
               <div style={{ marginTop: SPACE[5] }}>
                 <SectionLabel num="·" text="Daily goal" />
                 <GoalPicker

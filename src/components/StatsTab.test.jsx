@@ -36,7 +36,13 @@ vi.mock('./stats/VocabSrsWidget.jsx', () => ({ default: () => <div /> }));
 vi.mock('./stats/AccountSection.jsx', () => ({ default: () => <div /> }));
 vi.mock('./gamification/LevelCard.jsx', () => ({ default: () => <div /> }));
 vi.mock('./gamification/GoalPicker.jsx', () => ({ default: () => <div /> }));
+vi.mock('./AppearancePicker.jsx', () => ({ default: () => <div /> }));
 vi.mock('./gamification/BadgeGrid.jsx', () => ({ default: () => <div /> }));
+vi.mock('../lib/themeMode', () => ({
+  getThemePreferenceForUI: () => 'system',
+  setThemePreference: () => {},
+  watchSystemTheme: () => () => {},
+}));
 
 // --- Leagues-specific stubs ---
 vi.mock('./stats/LeaderboardSection.jsx', () => ({
