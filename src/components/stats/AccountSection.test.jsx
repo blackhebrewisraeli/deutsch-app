@@ -8,6 +8,10 @@ vi.mock('../../lib/leagues', async (importOriginal) => {
   return { ...actual, LEAGUES_ENABLED: true, updateHandle: vi.fn().mockResolvedValue({}) };
 });
 
+// See AccountChip.test.jsx: pin the auth-configured state instead of inheriting it
+// from whatever .env happens to exist, which differs between a dev box and CI.
+vi.mock('../../lib/auth.js', () => ({ isAuthConfigured: () => true }));
+
 const signedIn = { email: 'sam@example.com' };
 
 describe('AccountSection', () => {

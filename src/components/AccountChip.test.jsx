@@ -3,6 +3,12 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AccountChip from './AccountChip';
 
+// Pin the auth-configured state rather than inheriting it from the ambient env.
+// These tests previously passed locally only because a developer .env happened to
+// set VITE_SUPABASE_URL; CI has no .env, so isAuthConfigured() was false there and
+// the guest cases below broke. The state under test is now explicit either way.
+vi.mock('../lib/auth.js', () => ({ isAuthConfigured: () => true }));
+
 describe('AccountChip', () => {
   it('shows a Sign in affordance for guests', async () => {
     const onSignIn = vi.fn();
