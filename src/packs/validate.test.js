@@ -1,6 +1,25 @@
 import { describe, it, expect } from 'vitest';
 import { validateLanguagePack } from './validate';
 
+const validTheme = {
+  accent: {
+    fill: '#FFCE00',
+    onFill: '#0D0D0F',
+    fg: { light: '#8A6A00', dark: '#FFCE00' },
+  },
+  accentAlt: {
+    fill: { light: '#C92A2A', dark: '#FF6B6B' },
+    onFill: { light: '#FFFFFF', dark: '#0D0D0F' },
+  },
+  progress: ['ground', 'accentAlt', 'accent'],
+  font: {
+    display: "'Fraunces', Georgia, serif",
+    body: "'Fraunces', Georgia, serif",
+    mono: "'JetBrains Mono', monospace",
+    families: [{ name: 'Fraunces', weights: [400] }],
+  },
+};
+
 const validPack = {
   meta: {
     id: 'xx',
@@ -24,6 +43,7 @@ const validPack = {
   cardId: (c) => c.de,
   grammar: {},
   prompts: {},
+  theme: validTheme,
 };
 
 describe('validateLanguagePack', () => {
@@ -43,6 +63,43 @@ describe('validateLanguagePack', () => {
         content: { ...validPack.content, translateSentences: {} },
       })
     ).toThrow(/translateSentences/);
+  });
+
+  it('throws when theme is missing', () => {
+    const { theme: _t, ...noTheme } = validPack;
+    expect(() => validateLanguagePack(noTheme)).toThrow(/theme/);
+  });
+
+  it('throws naming the missing theme field', () => {
+    expect(() =>
+      validateLanguagePack({
+        ...validPack,
+        theme: { ...validTheme, accent: { ...validTheme.accent, fill: undefined } },
+      })
+    ).toThrow(/theme\.accent\.fill/);
+
+    expect(() =>
+      validateLanguagePack({
+        ...validPack,
+        theme: {
+          ...validTheme,
+          font: { ...validTheme.font, families: undefined },
+        },
+      })
+    ).toThrow(/theme\.font\.families/);
+
+    expect(() =>
+      validateLanguagePack({
+        ...validPack,
+        theme: {
+          ...validTheme,
+          accentAlt: {
+            ...validTheme.accentAlt,
+            fill: { light: '#C92A2A' },
+          },
+        },
+      })
+    ).toThrow(/theme\.accentAlt\.fill\.dark/);
   });
 });
 

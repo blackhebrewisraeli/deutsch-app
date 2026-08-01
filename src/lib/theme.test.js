@@ -16,11 +16,21 @@ import {
   TEXT,
 } from './theme';
 
+const HEX = /^#[0-9A-Fa-f]{3,8}$/;
+const CSS_VAR = /^var\(--[a-z0-9-]+\)$/;
+
 describe('theme tokens', () => {
-  it('exports core colour tokens as hex strings', () => {
-    expect(COLORS.paper).toMatch(/^#[0-9A-Fa-f]{6}$/);
-    expect(COLORS.ink).toMatch(/^#[0-9A-Fa-f]{6}$/);
-    expect(COLORS.red).toBe('#D62828');
+  it('exports every colour as a CSS custom-property reference (no raw hex)', () => {
+    for (const [key, value] of Object.entries(COLORS)) {
+      expect(value, `COLORS.${key}`).toMatch(CSS_VAR);
+      expect(value, `COLORS.${key}`).not.toMatch(HEX);
+    }
+  });
+
+  it('exports fonts as CSS custom-property references', () => {
+    expect(FONTS.display).toMatch(CSS_VAR);
+    expect(FONTS.mono).toMatch(CSS_VAR);
+    expect(FONTS.body).toMatch(CSS_VAR);
   });
 
   it('keeps backward-compat font aliases in sync with FONTS', () => {
@@ -39,6 +49,10 @@ describe('theme tokens', () => {
     expect(BORDER.standard).toContain(COLORS.ink);
   });
 
+  it('BORDER.ghost uses an alpha token rather than hex-suffix concat', () => {
+    expect(BORDER.ghost).toBe(`1px solid ${COLORS.paperA50}`);
+  });
+
   it('SHADOW.press builds a hard-offset shadow from a lip colour', () => {
     expect(SHADOW.press('#abcdef')).toBe('0 4px 0 #abcdef');
   });
@@ -48,6 +62,7 @@ describe('theme tokens', () => {
     expect(BUTTON.primary.background).toBe(COLORS.ink);
     expect(BUTTON.danger.background).toBe(COLORS.red);
     expect(BUTTON.go.fontFamily).toBe(FONTS.mono);
+    expect(BUTTON.primary.boxShadow).toBe(SHADOW.press(COLORS.press));
   });
 
   it('btnSecondary alias matches BUTTON.secondary', () => {

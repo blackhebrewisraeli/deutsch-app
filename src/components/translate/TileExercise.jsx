@@ -59,7 +59,7 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
     fontSize: FONT_SIZE.md,
     border: 'none',
     borderRadius: RADIUS.sm,
-    boxShadow: SHADOW.press(active ? '#000000' : COLORS.lip),
+    boxShadow: SHADOW.press(active ? COLORS.press : COLORS.lip),
     background: active ? COLORS.ink : COLORS.card,
     color: active ? COLORS.paper : COLORS.ink,
     cursor: 'pointer',
@@ -93,7 +93,7 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
           <div
             style={{
               minHeight: 52,
-              border: `2px dashed ${COLORS.ink}30`,
+              border: `2px dashed ${COLORS.inkA30}`,
               borderRadius: RADIUS.md,
               background: COLORS.card,
               padding: SPACE[3],

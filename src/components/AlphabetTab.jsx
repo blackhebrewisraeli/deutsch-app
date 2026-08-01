@@ -189,7 +189,7 @@ export default function AlphabetTab({
               borderRadius: '50%',
               background: COLORS.gold,
               border: 'none',
-              boxShadow: SHADOW.press('#caa10f'),
+              boxShadow: SHADOW.press(COLORS.goldLip),
               fontSize: 40,
               cursor: 'pointer',
               display: 'flex',
@@ -334,11 +334,11 @@ export default function AlphabetTab({
                     background: isActive ? COLORS.red : isSpecial ? COLORS.paperDeep : COLORS.paper,
                     color: isActive ? COLORS.paper : COLORS.ink,
                     border: 'none',
-                    borderRight: (i + 1) % 6 === 0 ? 'none' : `1px solid ${COLORS.ink}12`,
+                    borderRight: (i + 1) % 6 === 0 ? 'none' : `1px solid ${COLORS.inkA12}`,
                     borderBottom:
                       i >= ALPHABET.length - (ALPHABET.length % 6 || 6)
                         ? 'none'
-                        : `1px solid ${COLORS.ink}12`,
+                        : `1px solid ${COLORS.inkA12}`,
                     display: 'flex',
                     flexDirection: 'column',
                     alignItems: 'center',

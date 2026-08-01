@@ -36,7 +36,7 @@ export default function MagicLinkForm({ heading, onSuccess }) {
   // Clear interval on unmount.
   useEffect(() => () => clearInterval(intervalRef.current), []);
 
-  // BORDER.standard = "2px solid #16110b" — no .width property exists in theme.
+  // BORDER.standard is a full border shorthand — no .width property exists in theme.
   const input = {
     width: '100%',
     padding: '12px 14px',

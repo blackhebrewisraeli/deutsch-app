@@ -16,7 +16,7 @@ export default function ChatInput({
   return (
     <div
       style={{
-        borderTop: `1px solid ${COLORS.ink}12`,
+        borderTop: `1px solid ${COLORS.inkA12}`,
         padding: 16,
         display: 'flex',
         gap: 12,
@@ -34,7 +34,7 @@ export default function ChatInput({
           color: COLORS.paper,
           border: 'none',
           borderRadius: RADIUS.md,
-          boxShadow: SHADOW.press(listening ? COLORS.rust : '#000000'),
+          boxShadow: SHADOW.press(listening ? COLORS.rust : COLORS.press),
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -73,7 +73,7 @@ export default function ChatInput({
           color: COLORS.paper,
           border: 'none',
           borderRadius: RADIUS.md,
-          boxShadow: SHADOW.press(input.trim() && !thinking ? COLORS.greenDeep : '#6b6354'),
+          boxShadow: SHADOW.press(input.trim() && !thinking ? COLORS.greenDeep : COLORS.muteDeep),
           fontFamily: FONT_MONO,
           fontWeight: 700,
           fontSize: 12,

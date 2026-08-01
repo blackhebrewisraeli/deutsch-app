@@ -1,13 +1,5 @@
 import { GOAL_PRESETS } from '../../lib/gamification';
-import {
-  COLORS,
-  FONTS,
-  FONT_SIZE,
-  FONT_WEIGHT,
-  LETTER_SPACING,
-  SPACE,
-  RADIUS,
-} from '../../lib/theme';
+import SegmentedPicker from '../ui/SegmentedPicker';
 
 const OPTIONS = [
   { key: 'casual', label: 'Casual', xp: GOAL_PRESETS.casual },
@@ -17,50 +9,13 @@ const OPTIONS = [
 
 // Daily-goal preset picker. Selecting calls onPick(xpValue).
 export default function GoalPicker({ goal, onPick }) {
+  const active = OPTIONS.find((o) => o.xp === goal);
   return (
-    <div
-      style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: SPACE[3] }}
-    >
-      {OPTIONS.map((o) => {
-        const active = goal === o.xp;
-        return (
-          <button
-            key={o.key}
-            type="button"
-            onClick={() => onPick(o.xp)}
-            style={{
-              border: 'none',
-              borderRadius: RADIUS.md,
-              boxShadow: `0 4px 0 ${active ? COLORS.greenDeep : COLORS.lip}`,
-              background: active ? COLORS.green : COLORS.card,
-              color: active ? COLORS.paper : COLORS.ink,
-              padding: SPACE[4],
-              cursor: 'pointer',
-              fontFamily: FONTS.mono,
-              textAlign: 'center',
-            }}
-          >
-            <div
-              style={{
-                fontWeight: FONT_WEIGHT.bold,
-                letterSpacing: LETTER_SPACING.widest,
-                fontSize: FONT_SIZE.sm,
-              }}
-            >
-              {o.label.toUpperCase()}
-            </div>
-            <div
-              style={{
-                fontFamily: FONTS.display,
-                fontSize: FONT_SIZE.xl,
-                fontWeight: FONT_WEIGHT.bold,
-              }}
-            >
-              {o.xp} XP
-            </div>
-          </button>
-        );
-      })}
-    </div>
+    <SegmentedPicker
+      options={OPTIONS.map((o) => ({ ...o, detail: `${o.xp} XP` }))}
+      activeKey={active?.key}
+      onPick={(o) => onPick(o.xp)}
+      ariaLabel="Daily goal"
+    />
   );
 }

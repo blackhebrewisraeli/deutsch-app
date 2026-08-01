@@ -2,7 +2,9 @@
 import { activePack } from '../packs';
 
 export const speak = (text, lang = activePack.meta.locale, rate = 0.9) => {
-  if (!('speechSynthesis' in window)) return;
+  // Guard window: ChatTab schedules speak() on a timeout that can fire after
+  // jsdom teardown when the suite is slow (unhandled ReferenceError → red hook).
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
   window.speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = lang;

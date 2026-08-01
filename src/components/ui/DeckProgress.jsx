@@ -6,8 +6,6 @@ import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, RADIUS } from '../../lib/them
 // decks and a generated one, 10 cards each — keep the dots.
 const DOT_THRESHOLD = 12;
 
-const TRACK = '#e7dcae';
-
 // Per-card progress for the active deck: dots for small decks, a bounded bar
 // plus a count for lexicon-sized ones. Bounded DOM either way.
 export default function DeckProgress({ cards, learnedWords }) {
@@ -28,7 +26,7 @@ export default function DeckProgress({ cards, learnedWords }) {
               width: 26,
               height: 8,
               borderRadius: RADIUS.pill,
-              background: learnedWords[c.id] ? COLORS.green : TRACK,
+              background: learnedWords[c.id] ? COLORS.green : COLORS.track,
             }}
           />
         ))}
@@ -48,7 +46,7 @@ export default function DeckProgress({ cards, learnedWords }) {
           width: 120,
           height: 8,
           borderRadius: RADIUS.pill,
-          background: TRACK,
+          background: COLORS.track,
           overflow: 'hidden',
         }}
       >

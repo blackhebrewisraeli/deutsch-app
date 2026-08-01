@@ -3,8 +3,8 @@ import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE } from '../../lib/theme
 // Heatmap intensity palette (0 = no activity … 4 = 20+ exercises).
 const INTENSITY_COLORS = [
   COLORS.paperDeep, // 0 — no activity
-  '#F5C51840', // 1 — 1–3 events  (gold 25%)
-  '#F5C51890', // 2 — 4–9 events  (gold 56%)
+  COLORS.heat1, // 1 — 1–3 events  (gold + alpha, per mode)
+  COLORS.heat2, // 2 — 4–9 events
   COLORS.gold, // 3 — 10–19 events
   COLORS.red, // 4 — 20+ events
 ];
@@ -37,7 +37,7 @@ export default function Heatmap({ data, mobile }) {
             width: cellSize,
             height: cellSize,
             background: INTENSITY_COLORS[day.intensity],
-            border: `1px solid ${COLORS.ink}20`,
+            border: `1px solid ${COLORS.inkA20}`,
           }}
         />
       ))}
@@ -79,7 +79,7 @@ export function HeatmapLegend() {
             width: 10,
             height: 10,
             background: c,
-            border: `1px solid ${COLORS.ink}20`,
+            border: `1px solid ${COLORS.inkA20}`,
           }}
         />
       ))}
