@@ -1,4 +1,4 @@
-import { MODE_COLORS, DEFAULT_ACCENTS, tokenToCssVar } from './themeTokens';
+import { DEFAULT_ACCENTS, tokenToCssVar, resolvePalette } from './themeTokens';
 
 /**
  * Resolve pack accent fields that may be a plain string or `{ light, dark }`.
@@ -16,16 +16,19 @@ function resolveModeValue(value, mode) {
  * custom properties. Safe to call before React mounts (and in tests).
  *
  * @param {'light' | 'dark'} mode
- * @param {object} [packTheme] — `activePack.theme` when available (Task 3+)
+ * @param {object} [packTheme] — `activePack.theme` when available
+ * @param {'day' | 'night'} [tone='day'] — Day-light / Night-light alternate
  */
-export function applyTheme(mode = 'light', packTheme) {
+export function applyTheme(mode = 'light', packTheme, tone = 'day') {
   if (typeof document === 'undefined') return;
 
   const resolved = mode === 'dark' ? 'dark' : 'light';
+  const resolvedTone = tone === 'night' ? 'night' : 'day';
   const root = document.documentElement;
   root.dataset.theme = resolved;
+  root.dataset.tone = resolvedTone;
 
-  const structural = MODE_COLORS[resolved];
+  const structural = resolvePalette(resolved, resolvedTone);
   for (const [key, value] of Object.entries(structural)) {
     root.style.setProperty(tokenToCssVar(key), value);
   }
@@ -57,7 +60,7 @@ export function applyTheme(mode = 'light', packTheme) {
   root.style.setProperty('--c-gold-lip-soft', defaults.goldLipSoft);
   root.style.setProperty('--c-gold-bright', defaults.goldBright);
 
-  // Fonts from pack (Task 3/5); fall back to current house faces
+  // Fonts from pack; fall back to current house faces
   const font = packTheme?.font;
   root.style.setProperty(
     '--f-display',
