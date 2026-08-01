@@ -13,7 +13,7 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-798_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-805_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
   <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-38_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
   &nbsp;
@@ -111,7 +111,7 @@ All AI features call **Claude Haiku 4.5** through a versioned server-side API (`
 | **Social**           | Weekly XP leagues, ~25-person cohorts, promotion / relegation                                                          |
 | **AI**               | Claude Haiku 4.5 behind `/api/v1/ai/*` — key stays server-side                                                         |
 | **Data**             | Local-first (`localStorage`), optional Supabase sync under row-level security                                          |
-| **Quality gates**    | 798 tests · 38 adversarial RLS tests · lint + format + full suite on every commit                                      |
+| **Quality gates**    | 805 tests · 38 adversarial RLS tests · lint + format + full suite on every commit                                      |
 
 ---
 
@@ -579,8 +579,9 @@ A pre-demo readiness pass ([`docs/DEMO_READINESS.md`](./docs/DEMO_READINESS.md))
 | **Mobile layout**           | Five separate overflows at 375px, four of them a bare `1fr` grid track refusing to shrink below its content. Every `gridTemplateColumns` now uses `minmax(0, …)`.            |
 | **Flashcard answers**       | Raw Wiktionary glosses ("ARCHAIC FORM OF STANDEN, FIRST/THIRD-PERSON PLURAL PRETERITE OF STEHEN") are cleaned at import; `alt-of` records no longer ship as their own cards. |
 | **Entry-id stability**      | Entry ids key saved progress, so the import derives them from the _raw_ gloss — cleaning display text never silently resets a learner's SRS state.                           |
-
-Known and deliberately open: the same German word can still appear on more than one card when senses genuinely differ (`in` as preposition _and_ adjective).
+| **Homograph cards**         | The same German word could appear on several cards with different correct answers — `in` as preposition _and_ adjective, so two multiple-choice options were both defensible. Merged at import into one card per rendered form (4,480 → 4,201 entries), keyed on the German the learner actually sees so gender pairs like `der Tor` / `das Tor` stay apart. |
+| **Cache freshness**         | Lexicon JSON was served `CacheFirst` from unhashed URLs, so a re-import reached new visitors only — returning ones kept the old lexicon for up to 30 days. Now `StaleWhileRevalidate`: still instant, still offline, but current on the next load.                                                                                                          |
+| **Uptime monitoring**       | The readiness check had confirmed features were live by watching the UI _render_, never by issuing a request — so a paused backend sat behind a working-looking demo. A 6-hourly workflow now exercises real round trips.                                                                                                                                   |
 
 </details>
 
@@ -605,10 +606,11 @@ Known and deliberately open: the same German word can still appear on more than 
 | Error monitoring   | **Sentry** (errors-only)                                    | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay                                                                                                                                                                                                                                                                                         |
 | Linting            | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars                                                                                                                                                                                                                                                                                                                            |
 | Formatting         | **Prettier 3**                                              | Consistent code style, enforced on every commit                                                                                                                                                                                                                                                                                                                              |
-| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **798 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **38-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
-| CI                 | **GitHub Actions**                                          | Runs lint + test + build on every push to `main` and every PR                                                                                                                                                                                                                                                                                                                |
+| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **805 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **38-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
+| CI                 | **GitHub Actions**                                          | `ci.yml` runs lint + test + build on every push to `main` and every PR, plus the RLS suite against a local Supabase                                                                                                                                                                                                                                                           |
+| Uptime             | **GitHub Actions** (`uptime.yml`)                           | Every 6h, exercises real round trips — demo root, lexicon manifest, GoTrue `/health` and `/settings`, PostgREST — and fails loudly if any hop is down. Read-only; never sends mail                                                                                                                                                                                            |
 | Pre-commit         | **Husky + lint-staged**                                     | Runs ESLint + Prettier + the full test suite before every `git commit`                                                                                                                                                                                                                                                                                                       |
-| PWA                | **vite-plugin-pwa** + Workbox                               | Installable on iOS/Android, offline-capable static assets                                                                                                                                                                                                                                                                                                                    |
+| PWA                | **vite-plugin-pwa** + Workbox                               | Installable on iOS/Android. App shell precached; lexicon chunks cached `StaleWhileRevalidate` so a full reload works with no network and still picks up a re-import on the next load                                                                                                                                                                                          |
 | Responsive         | `useWindowWidth` hook                                       | Live viewport width → inline style breakpoints (mobile < 640px)                                                                                                                                                                                                                                                                                                              |
 | Accessibility      | Semantic HTML + ARIA                                        | Labeled icon controls, keyboard-operable widgets, visible focus states                                                                                                                                                                                                                                                                                                       |
 | Deployment         | **Vercel**                                                  | Static SPA + versioned `/api/v1/*` serverless functions (+ legacy `/api/chat` alias)                                                                                                                                                                                                                                                                                         |
@@ -835,8 +837,13 @@ reason + a random sample) — spot-check it before committing `public/lexicon/`.
 
 Output lands in `public/lexicon/` as a set of JSON chunk files plus an
 `index.json` and a `manifest.json`. The app loads these chunks on demand and
-caches them via the Workbox `CacheFirst` strategy (cache name `lexicon-json`,
-30-day TTL).
+caches them via the Workbox `StaleWhileRevalidate` strategy (cache name
+`lexicon-json`, 30-day TTL). The cache answers instantly and still answers with
+no network at all, so offline is unaffected — but every online load also
+revalidates in the background, so a re-import reaches returning visitors on
+their next load. It was `CacheFirst` until 2026-08-01, which meant a returning
+visitor kept the old lexicon for up to 30 days: the URLs are unhashed, so a
+re-import writes new bytes to the same path and the cache key never changes.
 
 See [CONTENT_LICENSE.md](./CONTENT_LICENSE.md) for full licensing details.
 Content derives from Wiktionary (CC BY-SA 4.0), Tatoeba (CC BY 2.0 FR), and
@@ -897,6 +904,10 @@ The `vercel.json` at the root configures the Vite framework preset and registers
 
 ```
 deutsch-app/
+│
+├── .github/workflows/
+│   ├── ci.yml                 ← Lint · test · build, plus the RLS suite on a local Supabase
+│   └── uptime.yml             ← Every 6h: real round trips to the demo, lexicon, GoTrue, PostgREST
 │
 ├── api/
 │   ├── _lib/                  ← Shared middleware, each with co-located tests:
