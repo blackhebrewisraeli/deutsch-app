@@ -189,7 +189,7 @@ export default function AlphabetTab({
               borderRadius: '50%',
               background: COLORS.gold,
               border: 'none',
-              boxShadow: SHADOW.press('#caa10f'),
+              boxShadow: SHADOW.press(COLORS.goldLip),
               fontSize: 40,
               cursor: 'pointer',
               display: 'flex',

@@ -20,7 +20,7 @@ describe('DeckProgress', () => {
     render(<DeckProgress cards={deck(3)} learnedWords={{ c1: true }} />);
     const dots = screen.getAllByTestId('deck-progress-dot');
     expect(dots[1]).toHaveStyle({ background: 'var(--c-success)' });
-    expect(dots[0]).toHaveStyle({ background: '#e7dcae' });
+    expect(dots[0]).toHaveStyle({ background: 'var(--c-track)' });
   });
 
   it('switches to a progress bar above the threshold', () => {

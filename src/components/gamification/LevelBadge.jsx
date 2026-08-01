@@ -12,7 +12,14 @@ export default function LevelBadge({ level, progress, rank, size = 52 }) {
       style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}
     >
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e7dcae" strokeWidth="5" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={COLORS.track}
+          strokeWidth="5"
+        />
         <circle
           cx={size / 2}
           cy={size / 2}

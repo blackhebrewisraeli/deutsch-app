@@ -23,7 +23,7 @@ export default function MessageBubble({ msg }) {
             height: 40,
             borderRadius: RADIUS.pill,
             background: COLORS.gold,
-            boxShadow: SHADOW.press('#d9ab10'),
+            boxShadow: SHADOW.press(COLORS.goldLipSoft),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
@@ -53,7 +53,7 @@ export default function MessageBubble({ msg }) {
             background: isUser ? COLORS.ink : COLORS.gold,
             color: isUser ? COLORS.paper : COLORS.ink,
             borderRadius: isUser ? '20px 20px 6px 20px' : '20px 20px 20px 6px',
-            boxShadow: SHADOW.press(isUser ? '#000000' : '#d9ab10'),
+            boxShadow: SHADOW.press(isUser ? COLORS.press : COLORS.goldLipSoft),
           }}
         >
           <div

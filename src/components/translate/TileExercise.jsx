@@ -59,7 +59,7 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
     fontSize: FONT_SIZE.md,
     border: 'none',
     borderRadius: RADIUS.sm,
-    boxShadow: SHADOW.press(active ? '#000000' : COLORS.lip),
+    boxShadow: SHADOW.press(active ? COLORS.press : COLORS.lip),
     background: active ? COLORS.ink : COLORS.card,
     color: active ? COLORS.paper : COLORS.ink,
     cursor: 'pointer',

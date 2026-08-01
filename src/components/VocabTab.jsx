@@ -470,7 +470,7 @@ export default function VocabTab({
                   style={{
                     position: 'relative',
                     overflow: 'hidden',
-                    background: 'linear-gradient(90deg, #F5C518 0%, #FFE44D 50%, #F5C518 100%)',
+                    background: `linear-gradient(90deg, ${COLORS.gold} 0%, ${COLORS.goldBright} 50%, ${COLORS.gold} 100%)`,
                     backgroundSize: '200% auto',
                     animation: 'shimmer 2s linear infinite',
                     borderRadius: RADIUS.lg,

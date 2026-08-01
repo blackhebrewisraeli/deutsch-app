@@ -58,7 +58,7 @@ export default function TaskPanel({
         <div
           style={{
             borderRadius: RADIUS.lg,
-            boxShadow: SHADOW.press('#d9ab10'),
+            boxShadow: SHADOW.press(COLORS.goldLipSoft),
             background: COLORS.gold,
             color: COLORS.ink,
             padding: SPACE[5],
