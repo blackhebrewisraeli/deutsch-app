@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
+import { todayKey } from './lib/stats';
 
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 
@@ -14,6 +15,25 @@ const setViewportWidth = (width) => {
     value: width,
   });
 };
+
+/** Seed ~14 qualifying days so streak + freeze chip both render. */
+function seedPopulatedAccount() {
+  const qual = { byLevel: { a1: { correct: 6, almost: 0, wrong: 0 } } };
+  const daily = {};
+  const today = todayKey();
+  const [y, m, d] = today.split('-').map(Number);
+  for (let i = 14; i >= 1; i -= 1) {
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    dt.setUTCDate(dt.getUTCDate() - i);
+    const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+    const dd = String(dt.getUTCDate()).padStart(2, '0');
+    daily[`${dt.getUTCFullYear()}-${mm}-${dd}`] = qual;
+  }
+  localStorage.setItem(
+    'deutsch-app-state-v1',
+    JSON.stringify({ daily, gamification: { goal: 50 }, stats: { streak: 0, learnedCount: 40 } })
+  );
+}
 
 describe('App navigation a11y', () => {
   beforeEach(() => {
@@ -163,5 +183,36 @@ describe('header at mobile width', () => {
     render(<App />);
     expect(goalStrip()).not.toBeInTheDocument();
     expect(within(screen.getByRole('banner')).getByTitle(/Daily goal/)).toBeInTheDocument();
+  });
+
+  it('exposes Appearance from the header ThemeChip on every viewport', () => {
+    setViewportWidth(390);
+    render(<App />);
+    expect(
+      within(screen.getByRole('banner')).getByRole('button', { name: /^appearance$/i })
+    ).toBeInTheDocument();
+  });
+
+  it.each([320, 390, 1280])(
+    'keeps the populated header (with freeze chip) within %ipx without horizontal overflow',
+    (width) => {
+      setViewportWidth(width);
+      seedPopulatedAccount();
+      render(<App />);
+      const header = screen.getByRole('banner');
+      expect(within(header).getByTitle(/streak freeze/i)).toBeInTheDocument();
+      expect(within(header).getByRole('button', { name: /^appearance$/i })).toBeInTheDocument();
+      // jsdom layout is approximate; still catch a cluster that refuses to shrink.
+      expect(header.scrollWidth).toBeLessThanOrEqual(width + 1);
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth + 1);
+    }
+  );
+
+  it('no longer offers Appearance inside Stats (header is the single control)', async () => {
+    setViewportWidth(1280);
+    const user = userEvent.setup();
+    render(<App />);
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
+    expect(screen.queryByText(/^Appearance$/i)).not.toBeInTheDocument();
   });
 });
