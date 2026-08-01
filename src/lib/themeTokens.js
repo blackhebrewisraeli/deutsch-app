@@ -41,8 +41,8 @@ export const MODE_COLORS = {
     'ground-a80': '#FDF3C080',
     'error-a80': '#D6282880',
     'error-a00': '#D6282800',
-    'heat-1': '#F5C51840',
-    'heat-2': '#F5C51890',
+    'heat-1': '#FFCE0040',
+    'heat-2': '#FFCE0090',
     track: '#e7dcae',
   },
   dark: {

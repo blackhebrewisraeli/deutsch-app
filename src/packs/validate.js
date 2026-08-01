@@ -37,7 +37,48 @@ export function validateLanguagePack(pack) {
   if (typeof pack.cardId !== 'function') {
     fail('cardId must be a function');
   }
+
+  validatePackTheme(pack.theme, fail);
+
   return true;
+}
+
+/**
+ * Theme contract — thirteen fields the pack must supply.
+ * Failures name the missing field so a bad pack fails loudly at startup.
+ * @param {object} theme
+ * @param {(msg: string) => never} fail
+ */
+function validatePackTheme(theme, fail) {
+  if (!theme || typeof theme !== 'object') fail('theme is required');
+
+  const accent = theme.accent;
+  if (!accent || typeof accent !== 'object') fail('theme.accent is required');
+  if (typeof accent.fill !== 'string') fail('theme.accent.fill is required');
+  if (typeof accent.onFill !== 'string') fail('theme.accent.onFill is required');
+  if (!accent.fg || typeof accent.fg !== 'object') fail('theme.accent.fg is required');
+  if (typeof accent.fg.light !== 'string') fail('theme.accent.fg.light is required');
+  if (typeof accent.fg.dark !== 'string') fail('theme.accent.fg.dark is required');
+
+  const accentAlt = theme.accentAlt;
+  if (!accentAlt || typeof accentAlt !== 'object') fail('theme.accentAlt is required');
+  if (!accentAlt.fill || typeof accentAlt.fill !== 'object')
+    fail('theme.accentAlt.fill is required');
+  if (typeof accentAlt.fill.light !== 'string') fail('theme.accentAlt.fill.light is required');
+  if (typeof accentAlt.fill.dark !== 'string') fail('theme.accentAlt.fill.dark is required');
+  if (!accentAlt.onFill || typeof accentAlt.onFill !== 'object')
+    fail('theme.accentAlt.onFill is required');
+  if (typeof accentAlt.onFill.light !== 'string') fail('theme.accentAlt.onFill.light is required');
+  if (typeof accentAlt.onFill.dark !== 'string') fail('theme.accentAlt.onFill.dark is required');
+
+  if (!Array.isArray(theme.progress)) fail('theme.progress is required');
+
+  const font = theme.font;
+  if (!font || typeof font !== 'object') fail('theme.font is required');
+  if (typeof font.display !== 'string') fail('theme.font.display is required');
+  if (typeof font.body !== 'string') fail('theme.font.body is required');
+  if (typeof font.mono !== 'string') fail('theme.font.mono is required');
+  if (!Array.isArray(font.families)) fail('theme.font.families is required');
 }
 
 export const POS = ['noun', 'verb', 'adj', 'adv', 'prep', 'num', 'phrase', 'pron', 'conj'];
