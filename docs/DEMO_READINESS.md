@@ -220,31 +220,55 @@ installs and reloads offline.
   `Sign in` offered), Sentry (`window.__SENTRY__` present, SDK 10.59.0). Checked behaviourally
   rather than by reading env values, because `VITE_*` vars are inlined at build time — the
   configured value can drift from what the last build shipped.
-  **DECIDED 2026-08-01 (owner), then REVERSED the same day.** The original decision was to keep
-  both leagues and accounts exposed. That was made on the premise they worked. They did not:
-  the Supabase project behind production, `xcnnlczvxmuwcqwychox.supabase.co`, **no longer
-  resolves** — NXDOMAIN from Google, Cloudflare and Quad9, while `supabase.co` itself resolves.
-  A paused project keeps its DNS record; this one has none.
+  **DECIDED 2026-08-01 (owner):** keep both leagues and accounts exposed. Briefly reversed the
+  same day while the backend was down, then restored. Final state: **both on.**
 
-  On the live site that meant clicking *Send me a sign-in link* did nothing at all — no error,
-  no confirmation, no disabled state. Accounts, cross-device sync and leagues were all dead
-  while still being advertised. Item #9's earlier "confirmed active on the live site" check saw
-  the UI *render*; it never exercised a round trip, which is exactly how this hid.
+  **The outage.** The Supabase project behind production, `Sprachschule`
+  (`xcnnlczvxmuwcqwychox`), was **paused** — Supabase status `INACTIVE`, which free-tier projects
+  enter automatically after roughly a week of inactivity. On the live site that meant clicking
+  *Send me a sign-in link* did nothing at all: no error, no confirmation, no disabled state.
+  Accounts, sync and leagues were dead while still being advertised.
 
-  **Shipped 2026-08-01:** `VITE_LEAGUES_ENABLED=false` and `VITE_SYNC_ENABLED=false` in
-  Production, and `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` **removed from the Production
-  scope** (both still present in Preview and in the local `.env`, so this is reversible). The
-  dead host is no longer referenced anywhere in the shipped bundle.
+  Item #9's earlier "confirmed active on the live site" check saw the UI *render*; it never
+  exercised a round trip. That is exactly how this hid, and it is the check to keep: **render is
+  not reach.**
 
-  The flags alone were not enough, and that is worth recording: `VITE_SYNC_ENABLED` gates the
-  sync *engine* (`App.jsx`), not the account UI. `WelcomeGate` gated on `isAuthConfigured()`,
-  but `AccountChip` and `AccountSection` rendered unconditionally — so the splash went clean
-  while the header and Stats kept offering a dead sign-in. Fixed in code alongside this entry:
-  all three now check `isAuthConfigured()`, and a signed-in user still keeps a way to sign out.
+  **A pause is indistinguishable from a deletion by DNS alone.** `xcnnlczvxmuwcqwychox.supabase.co`
+  returned NXDOMAIN from Google, Cloudflare and Quad9 while `supabase.co` itself resolved — this
+  was initially read as the project having been deleted, which was wrong. Supabase tears down the
+  API subdomain when it pauses a project. The Management API (`list_projects`, on a different and
+  fully reachable host) reports `status` directly and is the authoritative check. Use it first.
 
-  **Still open, for whoever restores the backend:** the server-side `SUPABASE_URL` and
-  `SUPABASE_SERVICE_ROLE_KEY` still point at the dead host. Durable rate limiting therefore
-  falls back to a per-instance memory store, so the AI lane works but is degraded.
+  **Restored 2026-08-01.** `restore_project` → `COMING_UP` → `ACTIVE_HEALTHY`. **All data intact:**
+  8 public tables, migrations schema present, 11 MB, the single account and its 39 SRS rows and
+  39 learned flags all still there. Nothing was lost to the pause.
+
+  A second lesson from the restore: querying while status was `COMING_UP` returned zero tables and
+  zero users, which looks exactly like data loss. It was a partially-initialised database. **Wait
+  for `ACTIVE_HEALTHY` before drawing any conclusion about contents.**
+
+  **Final production state.** `VITE_LEAGUES_ENABLED=true`, `VITE_SYNC_ENABLED=true`,
+  `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` restored to the Production scope, redeployed.
+  Verified by round trip, not by rendering: the app POSTs to `/auth/v1/otp` and reaches the
+  backend; the only failure in testing was Resend correctly rejecting an `example.com` test
+  address (`550 Invalid to field`), which confirms SMTP is connected. Leagues, the account
+  section and the header chip all render again.
+
+  **A real bug the outage exposed, fixed in PR #79.** `VITE_SYNC_ENABLED` gates the sync *engine*
+  (`App.jsx`), not the account UI. `WelcomeGate` gated on `isAuthConfigured()` but `AccountChip`
+  and `AccountSection` rendered unconditionally, so with the backend gone the splash went clean
+  while the header and Stats kept offering a dead sign-in. All three now check
+  `isAuthConfigured()`; a signed-in user still keeps a way to sign out. This stands on its own
+  merits — dead affordances should never render, whatever the cause.
+
+  **Recurrence risk:** free-tier projects pause again after about a week of inactivity. Either the
+  demo needs steady traffic, uptime monitoring that exercises a real auth round trip, or the
+  project moves off the free tier.
+
+  **Was open during the outage, now resolved:** the server-side `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY` were never changed, so they pointed at the paused host and durable
+  rate limiting fell back to a per-instance memory store. With the project restored they resolve
+  again and durable rate limiting is live.
 
 - [x] **10. Local `.env` lacks the client flags.** — FIXED Added `VITE_LEAGUES_ENABLED=false`,
   `VITE_SYNC_ENABLED=false` and an empty `VITE_SENTRY_DSN` to the local `.env`, and documented
@@ -285,10 +309,11 @@ Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (PR #66) �
 
 **Nothing is outstanding.** The last three to close:
 
-1. **P3 #9** — DECIDED then REVERSED 2026-08-01: the demo was to keep leagues and accounts
-   exposed, but the Supabase project behind production stopped resolving, so both were dead
-   while still advertised. Leagues and sync are now off in Production and the account UI is
-   hidden. The demo is anonymous-only until a backend is restored.
+1. **P3 #9** — DECIDED 2026-08-01: the demo keeps leagues and accounts exposed. Briefly turned
+   off the same day because the Supabase project had auto-paused (free tier) and both were dead
+   while still advertised; the project was restored with all data intact and both are back on.
+   Verified by an auth round trip rather than by the UI rendering — that distinction is what let
+   the outage hide in the first place.
 2. **P2 #18** — FIXED 2026-08-01: homographs are merged at import time, 4,480 → 4,201 entries,
    no surviving card's id changed.
 3. **P0 #19** — FIXED 2026-08-01: the #18 fix was reaching new visitors only. Lexicon JSON is
