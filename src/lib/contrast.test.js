@@ -36,9 +36,12 @@ function pairsFor(mode, tone) {
     {
       fg: packAccentFg,
       bg: c.ground,
-      // Pack accent.fg is mode-based, not tone-aware. On light.night's dimmer
-      // ground it clears large-text AA (wordmark/icon use); body AA on surface.
-      min: mode === 'light' && tone === 'night' ? AA_LARGE : AA_NORMAL,
+      // Held to body AA in every palette. This previously carved out
+      // light.night at large-text-only because the accent failed there (3.59);
+      // the pack's light accent.fg was darkened instead, so the floor is now
+      // uniform. Relaxing a threshold for the one case that fails hides the
+      // failure rather than fixing it.
+      min: AA_NORMAL,
       name: `${label} accent.fg on ground`,
     },
     {

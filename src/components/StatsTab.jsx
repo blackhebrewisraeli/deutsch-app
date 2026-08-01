@@ -180,13 +180,15 @@ export default function StatsTab({
                     setThemePref(pref);
                   }}
                 />
-                <TonePicker
-                  tone={themeTone}
-                  onPick={(tone) => {
-                    setThemeTone(tone);
-                    setThemeToneState(tone);
-                  }}
-                />
+                <div style={{ marginTop: SPACE[3] }}>
+                  <TonePicker
+                    tone={themeTone}
+                    onPick={(tone) => {
+                      setThemeTone(tone);
+                      setThemeToneState(tone);
+                    }}
+                  />
+                </div>
               </div>
               <div style={{ marginTop: SPACE[5] }}>
                 <SectionLabel num="·" text="Daily goal" />

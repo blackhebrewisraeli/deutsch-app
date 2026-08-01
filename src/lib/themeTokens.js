@@ -67,8 +67,8 @@ const LIGHT_DAY = withDerived({
 
 /** Dimmer warm parchment — Night-light alternate for Light mode.
  *  Surface stays near-white so body/error/success text clear AA; ground is
- *  the visibly darker plane. Pack accent.fg is mode-based (not tone), so on
- *  this ground it clears large-text AA only — see contrast.test.js. */
+ *  the visibly darker plane. The pack's light accent.fg is chosen to clear
+ *  body AA against this dimmer ground too — see packs/de/theme.js. */
 const LIGHT_NIGHT = withDerived({
   ground: '#E8D9A0',
   surface: '#FFFBF2',
@@ -100,7 +100,7 @@ const DARK_DAY = withDerived({
   'border-strong': '#3A3A46',
   fg: '#EDEBE8',
   'fg-muted': '#9A9AA4',
-  'fg-subtle': '#6E6E78',
+  'fg-subtle': '#8A8A96',
   success: '#3FA34D',
   'success-fill': '#1A2E1C',
   error: '#FF6B6B',
@@ -123,7 +123,7 @@ const DARK_NIGHT = withDerived({
   'border-strong': '#2E2E38',
   fg: '#EDEBE8',
   'fg-muted': '#9A9AA4',
-  'fg-subtle': '#6E6E78',
+  'fg-subtle': '#8A8A96',
   success: '#3FA34D',
   'success-fill': '#142418',
   error: '#FF6B6B',
@@ -151,7 +151,7 @@ export const DEFAULT_ACCENTS = {
   light: {
     accent: '#F5C518',
     accentOn: '#16110b',
-    accentFg: '#8A6A00',
+    accentFg: '#6E5400', // clears AA on both light grounds — see packs/de/theme.js
     accentAlt: '#D62828',
     accentAltOn: '#FFFFFF',
     goldLip: '#caa10f',

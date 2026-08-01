@@ -51,7 +51,10 @@ export default function MessageBubble({ msg }) {
           style={{
             padding: '14px 18px',
             background: isUser ? COLORS.ink : COLORS.gold,
-            color: isUser ? COLORS.paper : COLORS.ink,
+            // Anna's bubble is the accent FILL, which is the same gold in both
+            // modes — so its text must be accentOn, not the page fg. Using fg
+            // here rendered near-white on gold in dark mode at 1.25:1.
+            color: isUser ? COLORS.paper : COLORS.accentOn,
             borderRadius: isUser ? '20px 20px 6px 20px' : '20px 20px 20px 6px',
             boxShadow: SHADOW.press(isUser ? COLORS.press : COLORS.goldLipSoft),
           }}
@@ -96,7 +99,11 @@ export default function MessageBubble({ msg }) {
                 fontStyle: 'italic',
                 fontSize: 13,
                 opacity: 0.75,
-                borderTop: `1px solid ${isUser ? COLORS.paper + '30' : COLORS.ink + '30'}`,
+                // Derived from the bubble's own text colour rather than a token:
+                // the two bubbles have different foregrounds and both flip by
+                // mode. Appending '30' to a token stopped working when colours
+                // became CSS variables — `var(--c-fg)30` is not a colour.
+                borderTop: '1px solid color-mix(in srgb, currentColor 30%, transparent)',
                 paddingTop: 6,
               }}
             >

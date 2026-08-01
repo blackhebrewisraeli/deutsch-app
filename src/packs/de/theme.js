@@ -4,7 +4,13 @@
 export const accent = {
   fill: '#FFCE00', // mode-independent — always ink on top
   onFill: '#0D0D0F',
-  fg: { light: '#8A6A00', dark: '#FFCE00' }, // text / border / icon
+  // Text / border / icon — the one place the accent is a foreground rather than
+  // a fill, so it must clear AA against every ground and surface in its mode.
+  // `#8A6A00` cleared light.day (4.53) but only reached 3.59 on light.night's
+  // dimmer parchment; `#6E5400` clears all four light palettes (5.07 worst case)
+  // and lets the contrast test hold every palette to the same 4.5:1 floor.
+  // Worth revisiting in the redesign, when light mode leaves parchment entirely.
+  fg: { light: '#6E5400', dark: '#FFCE00' },
 };
 
 export const accentAlt = {
