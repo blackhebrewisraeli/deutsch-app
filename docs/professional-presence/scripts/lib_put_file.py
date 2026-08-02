@@ -78,15 +78,17 @@ def main() -> int:
         return 2
 
     owner, repo, path, local_file_arg = sys.argv[1:5]
-    token = os.environ.get("GH_TOKEN")
-    if not token:
-        print("GH_TOKEN required", file=sys.stderr)
-        return 2
 
+    # Validate the filesystem path before any other side effects or reads.
     try:
         local_file = resolve_local_file(local_file_arg)
     except ValueError as exc:
         print(str(exc), file=sys.stderr)
+        return 2
+
+    token = os.environ.get("GH_TOKEN")
+    if not token:
+        print("GH_TOKEN required", file=sys.stderr)
         return 2
 
     message = os.environ.get("COMMIT_MESSAGE", f"docs: update {path}")
