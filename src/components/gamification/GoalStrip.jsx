@@ -29,7 +29,7 @@ export default function GoalStrip({ streak, current, target, mult = 1 }) {
         }}
       >
         <Flame size={14} aria-hidden="true" /> {streak}
-        {mult > 1 && <span style={{ marginLeft: 6, color: COLORS.gold }}>×{mult}</span>}
+        {mult > 1 && <span style={{ marginLeft: 6, color: COLORS.accentFg }}>×{mult}</span>}
       </span>
       <div
         style={{

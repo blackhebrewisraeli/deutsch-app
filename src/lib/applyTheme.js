@@ -1,4 +1,5 @@
 import { DEFAULT_ACCENTS, tokenToCssVar, resolvePalette } from './themeTokens';
+import { deriveThemeRamps } from './ramp';
 
 /**
  * Resolve pack accent fields that may be a plain string or `{ light, dark }`.
@@ -29,31 +30,34 @@ export function applyTheme(mode = 'light', packTheme, tone = 'day') {
   root.dataset.tone = resolvedTone;
 
   const structural = resolvePalette(resolved, resolvedTone);
-  for (const [key, value] of Object.entries(structural)) {
-    root.style.setProperty(tokenToCssVar(key), value);
-  }
-
   const defaults = DEFAULT_ACCENTS[resolved];
   const accent = packTheme?.accent;
   const accentAlt = packTheme?.accentAlt;
 
-  root.style.setProperty('--c-accent', resolveModeValue(accent?.fill, resolved) ?? defaults.accent);
-  root.style.setProperty(
-    '--c-accent-on',
-    resolveModeValue(accent?.onFill, resolved) ?? defaults.accentOn
-  );
+  const accentFill = resolveModeValue(accent?.fill, resolved) ?? defaults.accent;
+  const accentOn = resolveModeValue(accent?.onFill, resolved) ?? defaults.accentOn;
+  const accentAltFill = resolveModeValue(accentAlt?.fill, resolved) ?? defaults.accentAlt;
+  const accentAltOn = resolveModeValue(accentAlt?.onFill, resolved) ?? defaults.accentAltOn;
+
+  // Derive elevation + accent/semantic ramps from seeds *before* they become
+  // var(--…) strings — once CSS variables, JS can no longer compute with them.
+  const tokens = deriveThemeRamps(structural, resolved, {
+    accent: accentFill,
+    accentOn,
+    accentAlt: accentAltFill,
+    accentAltOn,
+  });
+
+  for (const [key, value] of Object.entries(tokens)) {
+    root.style.setProperty(tokenToCssVar(key), value);
+  }
+
+  root.style.setProperty('--c-accent-on', accentOn);
   root.style.setProperty(
     '--c-accent-fg',
     resolveModeValue(accent?.fg, resolved) ?? defaults.accentFg
   );
-  root.style.setProperty(
-    '--c-accent-alt',
-    resolveModeValue(accentAlt?.fill, resolved) ?? defaults.accentAlt
-  );
-  root.style.setProperty(
-    '--c-accent-alt-on',
-    resolveModeValue(accentAlt?.onFill, resolved) ?? defaults.accentAltOn
-  );
+  root.style.setProperty('--c-accent-alt-on', accentAltOn);
 
   // Legacy lip shades used by chat/alphabet gold press shadows
   root.style.setProperty('--c-gold-lip', defaults.goldLip);

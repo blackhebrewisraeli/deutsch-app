@@ -70,4 +70,19 @@ describe('applyTheme', () => {
     expect(document.documentElement.style.getPropertyValue('--c-accent-alt')).toBe('#C92A2A');
     expect(document.documentElement.dataset.tone).toBe('night');
   });
+
+  it('writes derived elevation and accent ramp steps', () => {
+    applyTheme('light');
+    const root = document.documentElement.style;
+    expect(root.getPropertyValue('--c-surface-1')).toMatch(/^#/);
+    expect(root.getPropertyValue('--c-surface-2')).toMatch(/^#/);
+    expect(root.getPropertyValue('--c-surface-3')).toMatch(/^#/);
+    expect(root.getPropertyValue('--c-accent-soft')).toMatch(/^#/);
+    expect(root.getPropertyValue('--c-accent-deep')).toMatch(/^#/);
+    expect(root.getPropertyValue('--c-success-soft')).toBe(MODE_COLORS.light.day['success-fill']);
+    expect(root.getPropertyValue('--c-error-soft')).toBe(MODE_COLORS.light.day['error-fill']);
+    // Legacy aliases still resolve
+    expect(root.getPropertyValue('--c-surface')).toBe(MODE_COLORS.light.day.surface);
+    expect(root.getPropertyValue('--c-surface-alt')).toBe(MODE_COLORS.light.day['surface-alt']);
+  });
 });

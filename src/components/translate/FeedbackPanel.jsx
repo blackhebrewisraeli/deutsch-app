@@ -19,7 +19,8 @@ export default function FeedbackPanel({ verdict, correctText, note, xp, mult, on
   const isCorrect = verdict === 'correct';
   const isAlmost = verdict === 'almost';
   const bg = isCorrect ? COLORS.gold : isAlmost ? COLORS.paperDeep : COLORS.red;
-  const fg = isCorrect || isAlmost ? COLORS.ink : COLORS.paper;
+  // Gold fill needs accentOn; mode-flipping ink fails on gold in dark mode.
+  const fg = isCorrect ? COLORS.accentOn : isAlmost ? COLORS.ink : COLORS.paper;
   const label = isCorrect ? '✓ CORRECT' : isAlmost ? '≈ ALMOST' : '✗ NOT QUITE';
   const showCorrectText = !isCorrect && correctText;
   const showFlourish = (isCorrect || isAlmost) && xp > 0;
@@ -89,8 +90,8 @@ export default function FeedbackPanel({ verdict, correctText, note, xp, mult, on
         aria-label="Next exercise"
         style={{
           ...BUTTON.primary,
-          background: isCorrect ? COLORS.ink : COLORS.paper,
-          color: isCorrect ? COLORS.paper : COLORS.ink,
+          background: isCorrect ? COLORS.accentOn : COLORS.paper,
+          color: isCorrect ? COLORS.gold : COLORS.ink,
         }}
       >
         NEXT EXERCISE <ArrowRight size={14} aria-hidden="true" />

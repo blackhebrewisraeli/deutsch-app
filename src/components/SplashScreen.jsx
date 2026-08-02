@@ -133,7 +133,7 @@ export default function SplashScreen({ onComplete }) {
             fontFamily: FONTS.mono,
             fontSize: FONT_SIZE.tag,
             letterSpacing: LETTER_SPACING.caps,
-            color: COLORS.ink,
+            color: COLORS.accentOn,
             textTransform: 'uppercase',
           }}
         >

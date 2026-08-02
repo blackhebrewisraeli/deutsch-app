@@ -36,7 +36,7 @@ export function Toast({ icon, title, sub, onDone, ttl = 3200 }) {
           {title}
         </div>
         {sub && (
-          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, color: COLORS.gold }}>
+          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, color: COLORS.paper }}>
             {sub}
           </div>
         )}

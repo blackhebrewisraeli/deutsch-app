@@ -30,10 +30,16 @@ export default function WelcomeBanner({ mobile, onDismiss }) {
       <div>
         <div
           style={{
+            display: 'inline-block',
             fontFamily: FONT_MONO,
             fontSize: FONT_SIZE.tag,
             letterSpacing: LETTER_SPACING.caps,
-            color: COLORS.gold,
+            // Gold as foreground on the inverted ink chip fails in dark mode
+            // (ink flips to light). Keep gold as a fill with accentOn on top.
+            background: COLORS.gold,
+            color: COLORS.accentOn,
+            padding: `2px ${SPACE[2]}px`,
+            borderRadius: RADIUS.sm,
             marginBottom: SPACE[2],
           }}
         >

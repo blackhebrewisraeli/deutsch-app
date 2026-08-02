@@ -37,6 +37,7 @@ import SplashScreen from './components/SplashScreen';
 import WelcomeGate from './components/WelcomeGate';
 import MagicLinkForm from './components/auth/MagicLinkForm';
 import AccountChip from './components/AccountChip';
+import ThemeChip from './components/ThemeChip';
 import { useAuth, signOut, getAccessToken } from './lib/auth';
 import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
 import { useSyncStatus } from './lib/useSyncStatus';
@@ -589,6 +590,7 @@ export default function App() {
           {/* Dropped on mobile: the header cluster measured 389px on a 375px
               screen, and the ring duplicates the goal strip under the nav. */}
           {!mobile && <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />}
+          <ThemeChip />
           <AccountChip
             user={user}
             onSignIn={requestSignIn}

@@ -32,7 +32,8 @@ export function StatBlock({ label, value, icon, accent, pulsing }) {
           height: 36,
           borderRadius: RADIUS.pill,
           background: accent ? COLORS.gold : COLORS.ink,
-          color: accent ? COLORS.ink : COLORS.card,
+          // Gold is a fill — ink flips per mode and fails on gold in dark (1.25:1).
+          color: accent ? COLORS.accentOn : COLORS.card,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
