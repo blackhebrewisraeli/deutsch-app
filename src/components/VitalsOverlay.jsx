@@ -32,6 +32,7 @@ function Row({ label, value, tint, hint }) {
 export default function VitalsOverlay() {
   const [v, setV] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [revealed, setRevealed] = useState(false);
 
   useEffect(() => startVitals(setV), []);
 
@@ -45,13 +46,17 @@ export default function VitalsOverlay() {
     `ua: ${typeof navigator === 'undefined' ? '' : navigator.userAgent}`,
   ].join('\n');
 
+  // navigator.clipboard needs a secure context. Reading this on a phone over
+  // plain http (a LAN preview) is exactly the case that matters, and there the
+  // API is simply absent — so failure must reveal selectable text rather than
+  // no-op, or the report cannot leave the device at all.
   const copy = async () => {
     try {
       await navigator.clipboard.writeText(summary);
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch {
-      setCopied(false);
+      setRevealed(true);
     }
   };
 
@@ -123,8 +128,31 @@ export default function VitalsOverlay() {
           cursor: 'pointer',
         }}
       >
-        {copied ? 'copied' : 'copy report'}
+        {copied ? 'copied' : revealed ? 'select the text above' : 'copy report'}
       </button>
+      {revealed && (
+        <pre
+          style={{
+            pointerEvents: 'auto',
+            userSelect: 'text',
+            WebkitUserSelect: 'text',
+            whiteSpace: 'pre-wrap',
+            wordBreak: 'break-word',
+            margin: `${SPACE[2]}px 0 0`,
+            padding: SPACE[2],
+            maxHeight: '35vh',
+            overflow: 'auto',
+            background: COLORS.paper,
+            color: COLORS.ink,
+            border: `1px solid ${COLORS.ink}`,
+            borderRadius: RADIUS.sm,
+            fontFamily: FONTS.mono,
+            fontSize: FONT_SIZE.tag,
+          }}
+        >
+          {summary}
+        </pre>
+      )}
     </div>
   );
 }
