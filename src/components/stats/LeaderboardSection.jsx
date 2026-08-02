@@ -48,7 +48,7 @@ export default function LeaderboardSection({ onSelectUser }) {
       try {
         const league = await joinLeague();
         await refreshLeague();
-        const rows = await fetchStandings(getSupabase(), league.league_id);
+        const rows = await fetchStandings(await getSupabase(), league.league_id);
         if (!cancelled) setState({ status: 'ready', league, rows });
         // Reward claiming lives in the app-load useLeagueRewards hook so winners
         // are credited even without opening this tab.

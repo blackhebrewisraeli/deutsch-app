@@ -29,7 +29,8 @@ describe('initObservability', () => {
   it('initializes Sentry with an errors-only config when a DSN is set', async () => {
     vi.stubEnv('VITE_SENTRY_DSN', 'https://abc@o1.ingest.sentry.io/123');
     const { initObservability } = await import('./observability.js');
-    initObservability();
+    // Sentry is code-split, so init resolves only once the chunk lands.
+    await initObservability();
     expect(mockSentry.init).toHaveBeenCalledTimes(1);
     const config = mockSentry.init.mock.calls[0][0];
     expect(config.dsn).toBe('https://abc@o1.ingest.sentry.io/123');
@@ -43,8 +44,8 @@ describe('initObservability', () => {
   it('initializes at most once', async () => {
     vi.stubEnv('VITE_SENTRY_DSN', 'https://abc@o1.ingest.sentry.io/123');
     const { initObservability } = await import('./observability.js');
-    initObservability();
-    initObservability();
+    await Promise.all([initObservability(), initObservability()]);
+    await initObservability();
     expect(mockSentry.init).toHaveBeenCalledTimes(1);
   });
 });
@@ -62,9 +63,24 @@ describe('reportError', () => {
     const { reportError } = await import('./observability.js');
     const err = new Error('boom');
     reportError(err, { componentStack: '<App/>' });
-    expect(mockSentry.captureException).toHaveBeenCalledWith(err, {
-      extra: { componentStack: '<App/>' },
-    });
+    // Queued while the chunk loads, then flushed — hence the microtask flush.
+    await vi.waitFor(() =>
+      expect(mockSentry.captureException).toHaveBeenCalledWith(err, {
+        extra: { componentStack: '<App/>' },
+      })
+    );
+  });
+
+  it('does not lose errors reported before the Sentry chunk has loaded', async () => {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://abc@o1.ingest.sentry.io/123');
+    const { reportError, initObservability } = await import('./observability.js');
+    const early = new Error('thrown during startup');
+    // Deliberately report before init — the case deferring Sentry could regress.
+    reportError(early);
+    await initObservability();
+    await vi.waitFor(() =>
+      expect(mockSentry.captureException).toHaveBeenCalledWith(early, undefined)
+    );
   });
 });
 

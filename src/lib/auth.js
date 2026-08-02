@@ -3,7 +3,6 @@
 // by design; RLS is the authorization layer). When the vars are absent
 // (CI, or any environment before B2.3 wires them), the module no-ops and
 // isAuthConfigured() is false, so the app behaves exactly as it does today.
-import { createClient } from '@supabase/supabase-js';
 import { useState, useEffect } from 'react';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
@@ -13,21 +12,74 @@ export function isAuthConfigured() {
   return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 }
 
-let client = null;
+// @supabase/supabase-js pulls in ~816KB of source (auth, postgrest, storage,
+// realtime, functions) and none of it is needed to paint the app — a guest can
+// use every tab without it. It is loaded on demand instead, so it lands in its
+// own chunk rather than in the critical path.
+//
+// The promise is cached, not the client, so concurrent callers during the load
+// share one import and one createClient rather than racing to build several.
+// Notified the first time a client actually exists. useAuth uses this to pick
+// up a session for a visitor who arrived as a guest (so the chunk was skipped)
+// and then signed in — signing in loads the client, and this is how the hook
+// finds out it can finally subscribe.
+const clientReadyListeners = new Set();
+
+let clientPromise = null;
 function getClient() {
-  if (!isAuthConfigured()) return null;
-  if (!client) {
-    client = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: true, autoRefreshToken: true },
+  if (!isAuthConfigured()) return Promise.resolve(null);
+  if (!clientPromise) {
+    clientPromise = import('@supabase/supabase-js').then(({ createClient }) => {
+      const c = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: { persistSession: true, autoRefreshToken: true },
+      });
+      for (const fn of clientReadyListeners) fn(c);
+      return c;
     });
   }
-  return client;
+  return clientPromise;
+}
+
+/**
+ * Could this visitor possibly be signed in, without loading the SDK to ask?
+ *
+ * supabase-js persists its session in localStorage under `sb-<ref>-auth-token`.
+ * If no such key exists and the URL is not an auth callback, there is nothing
+ * for the client to restore — so a guest never pays for the 207KB chunk.
+ *
+ * Deliberately fail-open: every ambiguous case returns true and loads the SDK.
+ * The storage key is a supabase-js implementation detail, so if it ever changes
+ * the worst outcome is that we load the client exactly as we did before — never
+ * that someone silently stops being signed in.
+ */
+export function mayHaveSession() {
+  if (!isAuthConfigured()) return false;
+  if (typeof window === 'undefined') return true;
+
+  // A magic-link / OAuth return carries its credential in the query string
+  // (PKCE `?code=`) or the hash (implicit `#access_token=`). The client must
+  // load to exchange it, and localStorage is still empty at that point.
+  const { search, hash } = window.location;
+  if (/[?&](code|error|error_description)=/.test(search)) return true;
+  if (/access_token=|refresh_token=|type=(magiclink|recovery|invite|signup)/.test(hash))
+    return true;
+
+  try {
+    for (let i = 0; i < localStorage.length; i += 1) {
+      const key = localStorage.key(i);
+      if (key && /^sb-.*-auth-token$/.test(key) && localStorage.getItem(key)) return true;
+    }
+    return false;
+  } catch {
+    // localStorage unavailable (private mode) — cannot rule a session out.
+    return true;
+  }
 }
 
 const NOT_CONFIGURED = { error: { message: 'Sign-in is not available right now.' } };
 
 export async function signInWithMagicLink(email) {
-  const c = getClient();
+  const c = await getClient();
   if (!c) return NOT_CONFIGURED;
   return c.auth.signInWithOtp({
     email,
@@ -36,13 +88,13 @@ export async function signInWithMagicLink(email) {
 }
 
 export async function verifyCode(email, token) {
-  const c = getClient();
+  const c = await getClient();
   if (!c) return NOT_CONFIGURED;
   return c.auth.verifyOtp({ email, token, type: 'email' });
 }
 
 export async function signOut() {
-  const c = getClient();
+  const c = await getClient();
   // No client → already effectively signed out; report success, not an error
   // (unlike signIn/verify, which genuinely cannot proceed).
   if (!c) return { error: null };
@@ -57,38 +109,62 @@ export function useAuth() {
   const [status, setStatus] = useState('loading');
 
   useEffect(() => {
-    const c = getClient();
-    if (!c) {
-      setStatus('anonymous');
-      return;
-    }
     let active = true;
-    c.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setSession(data.session);
-      setStatus(data.session ? 'authenticated' : 'anonymous');
-    });
-    const { data: sub } = c.auth.onAuthStateChange((_event, next) => {
-      if (!active) return;
-      setSession(next);
-      setStatus(next ? 'authenticated' : 'anonymous');
-    });
+    let unsubscribe = null;
+
+    const attach = (c) => {
+      // The effect can be torn down while the client chunk is still in flight.
+      if (!active || !c || unsubscribe) return;
+      c.auth.getSession().then(({ data }) => {
+        if (!active) return;
+        setSession(data.session);
+        setStatus(data.session ? 'authenticated' : 'anonymous');
+      });
+      const { data: sub } = c.auth.onAuthStateChange((_event, next) => {
+        if (!active) return;
+        setSession(next);
+        setStatus(next ? 'authenticated' : 'anonymous');
+      });
+      unsubscribe = () => sub.subscription.unsubscribe();
+    };
+
+    if (mayHaveSession()) {
+      getClient().then((c) => {
+        if (!active) return;
+        if (!c) setStatus('anonymous');
+        else attach(c);
+      });
+    } else {
+      // Guest: settle immediately without fetching the Supabase chunk. If they
+      // then sign in, that loads the client and this listener attaches, so the
+      // UI still reacts to the new session.
+      setStatus('anonymous');
+      clientReadyListeners.add(attach);
+    }
+
     return () => {
       active = false;
-      sub.subscription.unsubscribe();
+      clientReadyListeners.delete(attach);
+      // Null when teardown beat the import; the `active` guard above then stops
+      // the subscription from ever being created.
+      unsubscribe?.();
     };
   }, []);
 
   return { session, user: session?.user ?? null, status };
 }
 
+/**
+ * The Supabase client, or null when auth is not configured.
+ * Returns a promise — the client is code-split, so callers must await it.
+ */
 export function getSupabase() {
   return getClient();
 }
 
 /** Returns the current session's JWT, or null if not signed in. */
 export async function getAccessToken() {
-  const c = getClient();
+  const c = await getClient();
   if (!c) return null;
   const { data } = await c.auth.getSession();
   return data?.session?.access_token ?? null;

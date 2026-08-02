@@ -11,6 +11,8 @@ bootTheme();
 
 // Start error monitoring before anything renders, so early errors are captured.
 // No-op unless VITE_SENTRY_DSN is set.
+// Fire-and-forget: the Sentry chunk loads off the critical path, and errors
+// raised while it is in flight are queued and replayed once it lands.
 initObservability();
 
 ReactDOM.createRoot(document.getElementById('root')).render(

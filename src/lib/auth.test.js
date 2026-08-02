@@ -97,12 +97,36 @@ describe('useAuth', () => {
   });
   afterEach(() => vi.unstubAllEnvs());
 
-  it('starts unauthenticated and subscribes to auth changes', async () => {
+  it('subscribes to auth changes when a persisted session may exist', async () => {
+    localStorage.setItem('sb-xcnn-auth-token', JSON.stringify({ access_token: 'x' }));
     const { useAuth } = await import('./auth.js');
     const { result } = renderHook(() => useAuth());
     await waitFor(() => expect(result.current.status).not.toBe('loading'));
     expect(result.current.session).toBeNull();
     expect(mockAuth.onAuthStateChange).toHaveBeenCalled();
+    localStorage.clear();
+  });
+
+  it('settles a guest as anonymous without loading the client at all', async () => {
+    localStorage.clear();
+    const { useAuth } = await import('./auth.js');
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.status).toBe('anonymous'));
+    // The whole point of the split: no session to restore, no 207KB chunk.
+    expect(mockAuth.onAuthStateChange).not.toHaveBeenCalled();
+  });
+
+  it('still subscribes if a guest signs in, which loads the client', async () => {
+    localStorage.clear();
+    const mod = await import('./auth.js');
+    const { result } = renderHook(() => mod.useAuth());
+    await waitFor(() => expect(result.current.status).toBe('anonymous'));
+    expect(mockAuth.onAuthStateChange).not.toHaveBeenCalled();
+
+    // Signing in is what pulls the client in — the hook must notice and attach,
+    // otherwise the UI would never reflect the new session.
+    await mod.signInWithMagicLink('a@b.com');
+    await waitFor(() => expect(mockAuth.onAuthStateChange).toHaveBeenCalled());
   });
 
   it('reports status "anonymous" when auth is not configured', async () => {
@@ -132,5 +156,60 @@ describe('isAuthConfigured', () => {
     vi.resetModules();
     const { isAuthConfigured } = await import('./auth.js');
     expect(isAuthConfigured()).toBe(true);
+  });
+});
+
+// The Supabase client is code-split. A guest must settle as anonymous without
+// ever fetching that chunk, but no real session may be missed to achieve it.
+describe('mayHaveSession', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://xcnn.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
+    vi.resetModules();
+    localStorage.clear();
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('is false for a clean guest, so the chunk is never fetched', async () => {
+    const { mayHaveSession } = await import('./auth.js');
+    expect(mayHaveSession()).toBe(false);
+  });
+
+  it('is true when a persisted supabase session key exists', async () => {
+    localStorage.setItem('sb-xcnn-auth-token', JSON.stringify({ access_token: 'x' }));
+    const { mayHaveSession } = await import('./auth.js');
+    expect(mayHaveSession()).toBe(true);
+  });
+
+  it('ignores an empty session key', async () => {
+    localStorage.setItem('sb-xcnn-auth-token', '');
+    const { mayHaveSession } = await import('./auth.js');
+    expect(mayHaveSession()).toBe(false);
+  });
+
+  it('is true on a PKCE callback, where storage is still empty', async () => {
+    window.history.replaceState({}, '', '/?code=abc123');
+    const { mayHaveSession } = await import('./auth.js');
+    expect(mayHaveSession()).toBe(true);
+  });
+
+  it('is true on an implicit-flow callback carried in the hash', async () => {
+    window.history.replaceState({}, '', '/#access_token=abc&type=magiclink');
+    const { mayHaveSession } = await import('./auth.js');
+    expect(mayHaveSession()).toBe(true);
+  });
+
+  it('is true when the callback reports an error, so it can be surfaced', async () => {
+    window.history.replaceState({}, '', '/?error=access_denied&error_description=expired');
+    const { mayHaveSession } = await import('./auth.js');
+    expect(mayHaveSession()).toBe(true);
+  });
+
+  it('is false when auth is not configured at all', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
+    vi.resetModules();
+    const { mayHaveSession } = await import('./auth.js');
+    expect(mayHaveSession()).toBe(false);
   });
 });
