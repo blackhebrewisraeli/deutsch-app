@@ -55,6 +55,30 @@ const TOLERANCE = Number(flag('tolerance', 0.25));
 // Blocked time is noisy run to run (a single tab mount swung 75→336ms across
 // three runs). Medians over a few passes are what make small deltas readable.
 const RUNS = Number(flag('runs', 3));
+// Blocked time is a CPU story; first paint is a network one. A phone reported
+// FCP 2856ms cold against 144ms warm, so load needs throttling to be visible at
+// all — on localhost every byte arrives instantly and FCP reads ~150ms.
+const NETWORK = flag('network', 'none');
+
+// Lighthouse's mobile presets, in bytes/sec.
+const NETWORK_PRESETS = {
+  none: null,
+  slow3g: {
+    latency: 400,
+    downloadThroughput: (400 * 1024) / 8,
+    uploadThroughput: (400 * 1024) / 8,
+  },
+  slow4g: {
+    latency: 150,
+    downloadThroughput: (1.6 * 1024 * 1024) / 8,
+    uploadThroughput: (750 * 1024) / 8,
+  },
+  fast4g: {
+    latency: 70,
+    downloadThroughput: (9 * 1024 * 1024) / 8,
+    uploadThroughput: (1.5 * 1024 * 1024) / 8,
+  },
+};
 
 /**
  * Build an app-state blob. `large` models a committed learner after a year:
@@ -189,6 +213,13 @@ async function runOnce() {
   const cdp = await context.newCDPSession(page);
   if (CPU > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: CPU });
 
+  const net = NETWORK_PRESETS[NETWORK];
+  if (net === undefined) throw new Error(`bench: unknown --network "${NETWORK}"`);
+  if (net) {
+    await cdp.send('Network.enable');
+    await cdp.send('Network.emulateNetworkConditions', { offline: false, ...net });
+  }
+
   await page.addInitScript(installCollector);
 
   // Seed before the measured load so the app boots against a realistic account.
@@ -322,7 +353,7 @@ async function main() {
   const pad = (s, n) => String(s).padEnd(n);
   const num = (s, n) => String(s).padStart(n);
   console.log(
-    `\nbench-perf · ${BASE} · CPU ${CPU}x · account=${ACCOUNT} (${report.stateKB}KB) · median of ${RUNS}`
+    `\nbench-perf · ${BASE} · CPU ${CPU}x · net ${NETWORK} · account=${ACCOUNT} (${report.stateKB}KB) · median of ${RUNS}`
   );
   console.log(`FCP ${report.fcpMs}ms · domInteractive ${report.domInteractiveMs}ms\n`);
   console.log(

@@ -24,6 +24,17 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>
 );
 
+// Drop the pre-JS shell from index.html once React has actually painted. Two
+// frames, not one: the first fires before the commit has been rasterised, and
+// removing the shell then reintroduces the blank flash it exists to prevent.
+const dropShell = () => document.getElementById('shell')?.remove();
+requestAnimationFrame(() => requestAnimationFrame(dropShell));
+// rAF does not run in a background tab, and the shell covers the whole
+// viewport — without this belt-and-braces timer, opening the app in an
+// unfocused tab leaves the wordmark sitting over the mounted app until the tab
+// is focused. Timers are throttled there but they do still fire.
+setTimeout(dropShell, 1500);
+
 // Debug-only live vitals readout: `?vitals=1`. Dynamically imported into its
 // own root so it is a separate chunk — users who never pass the flag never
 // download it, and it cannot re-render the app tree while measuring it.

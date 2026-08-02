@@ -8,8 +8,93 @@
     <meta name="theme-color" content="#16110b" />
     <meta name="description" content="Deutsch — a bold German learning app powered by Claude" />
     <title>Deutsch · Sprachschule</title>
+
+    <!--
+      Pre-JS shell. The app is client-rendered into an empty #root, so until the
+      entry chunk had downloaded, parsed and mounted, the screen was blank: a
+      phone on 4g measured FCP 2856ms cold against 144ms warm, with first paint
+      and largest paint landing on the same event — nothing had rendered at all.
+
+      This paints the wordmark with zero JavaScript and no network beyond the
+      HTML itself, so something correct appears immediately and React swaps it
+      out on mount. It moves *perceived* start-up only; the entry chunk still
+      has to arrive before the app is interactive.
+
+      The colours are duplicated from src/lib/themeTokens.js because CSS cannot
+      import them. src/shellTheme.test.js fails if the two ever drift apart.
+    -->
+    <style>
+      :root {
+        --shell-bg: #fdf3c0;
+        --shell-fg: #16110b;
+        --shell-dot: #c41e1e;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --shell-bg: #0d0d0f;
+          --shell-fg: #edebe8;
+          --shell-dot: #ff6b6b;
+        }
+      }
+      html {
+        background: var(--shell-bg);
+      }
+      body {
+        margin: 0;
+      }
+      #shell {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--shell-bg);
+        color: var(--shell-fg);
+        font-family: 'Fraunces', Georgia, serif;
+        font-weight: 900;
+        font-size: clamp(40px, 12vw, 72px);
+        letter-spacing: -0.04em;
+        line-height: 1;
+        /* Never intercept a tap. It is removed the frame after mount anyway,
+           but a full-screen overlay that could swallow input is not worth the
+           risk if that ever fails. */
+        pointer-events: none;
+      }
+      #shell span {
+        color: var(--shell-dot);
+      }
+    </style>
+    <script>
+      // Resolve the stored theme before first paint so the shell cannot flash
+      // the wrong ground. Mirrors themeMode.js; kept tiny and dependency-free
+      // because it runs ahead of every other byte of script.
+      (function () {
+        try {
+          var mode = localStorage.getItem('deutsch-theme-mode') || 'system';
+          var tone = localStorage.getItem('deutsch-theme-tone') || 'day';
+          if (mode === 'system') {
+            mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+          }
+          var g = {
+            'light-day': ['#fdf3c0', '#16110b', '#c41e1e'],
+            'light-night': ['#e8d9a0', '#16110b', '#a82020'],
+            'dark-day': ['#0d0d0f', '#edebe8', '#ff6b6b'],
+            'dark-night': ['#08080a', '#edebe8', '#ff6b6b'],
+          }[mode + '-' + (tone === 'night' ? 'night' : 'day')];
+          if (g) {
+            var s = document.documentElement.style;
+            s.setProperty('--shell-bg', g[0]);
+            s.setProperty('--shell-fg', g[1]);
+            s.setProperty('--shell-dot', g[2]);
+          }
+        } catch (e) {
+          /* private mode or storage disabled — the CSS defaults already apply */
+        }
+      })();
+    </script>
   </head>
   <body>
+    <div id="shell" aria-hidden="true">Deutsch<span>.</span></div>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
