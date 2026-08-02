@@ -27,6 +27,8 @@ describe('ThemeChip', () => {
     expect(localStorage.getItem(THEME_MODE_KEY)).toBe('dark');
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: /appearance/i })).not.toBeInTheDocument();
+    // Escape must hand focus back, not drop it on <body>.
+    expect(screen.getByRole('button', { name: /^appearance$/i })).toHaveFocus();
   });
 
   it('persists a tone pick', async () => {

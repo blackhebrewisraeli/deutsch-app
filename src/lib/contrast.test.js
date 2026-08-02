@@ -92,14 +92,24 @@ function pairsFor(mode, tone) {
     },
   ];
 
-  // Elevation ramp — body ink on every surface step
+  // Elevation ramp — body ink on every surface step.
+  // fg-muted and fg-subtle are body text too (COLORS.mute / COLORS.inkSoft), so
+  // a step that only clears AA against `fg` is a trap for the first component
+  // that adopts it: dark surface-3 sat at 4.0–4.2:1 against fg-subtle before
+  // these assertions existed.
   for (const sn of ['surface-1', 'surface-2', 'surface-3']) {
-    pairs.push({
-      fg: c.fg,
-      bg: c[sn],
-      min: AA_NORMAL,
-      name: `${label} fg on ${sn}`,
-    });
+    for (const [key, ink] of [
+      ['fg', c.fg],
+      ['fg-muted', c['fg-muted']],
+      ['fg-subtle', c['fg-subtle']],
+    ]) {
+      pairs.push({
+        fg: ink,
+        bg: c[sn],
+        min: AA_NORMAL,
+        name: `${label} ${key} on ${sn}`,
+      });
+    }
     pairs.push({
       fg: packAccentFg,
       bg: c[sn],

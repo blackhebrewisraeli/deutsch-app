@@ -55,6 +55,27 @@ export function deriveDeepFill(fill, onFill, prefer = 0.22) {
 }
 
 /**
+ * Lift a surface toward `target` by the largest step that still leaves every
+ * body ink at AA on it.
+ *
+ * Elevation is the one ramp that moves a *background* under text the component
+ * did not choose, so the lift has to answer to the weakest ink, not just `fg`.
+ * A flat 8% lift put dark surface-3 at 4.01:1 against `fg-subtle`.
+ *
+ * @param {string} from
+ * @param {string} target
+ * @param {string[]} inks — every foreground that can sit on this surface
+ * @param {number} prefer — the lift to use when it clears AA
+ */
+function liftSurface(from, target, inks, prefer) {
+  for (let t = prefer; t >= 0.01; t -= 0.005) {
+    const candidate = mixHex(from, target, t);
+    if (inks.every((ink) => contrastRatio(ink, candidate) >= AA_NORMAL)) return candidate;
+  }
+  return from;
+}
+
+/**
  * Surface elevation: ground → surface-1 → surface-2 → surface-3.
  * Existing `surface` / `surface-alt` keep their exact palette values.
  *
@@ -65,6 +86,7 @@ export function deriveSurfaceRamp(palette, mode) {
   const ground = palette.ground;
   const surface = palette.surface;
   const surfaceAlt = palette['surface-alt'];
+  const inks = [palette.fg, palette['fg-muted'], palette['fg-subtle']];
 
   let surface1;
   let surface2;
@@ -74,16 +96,16 @@ export function deriveSurfaceRamp(palette, mode) {
     // Brightness climbs: ground (parchment) → cream → white → lifted panel
     surface1 = surfaceAlt;
     surface2 = surface;
-    surface3 = mixHex(surface, '#FFFFFF', 0.55);
+    surface3 = liftSurface(surface, '#FFFFFF', inks, 0.55);
     if (surface3.toUpperCase() === surface2.toUpperCase()) {
       // Already pure white — nudge a hair cooler so elevation is visible
-      surface3 = mixHex(surface, '#F5F7FA', 0.12);
+      surface3 = liftSurface(surface, '#F5F7FA', inks, 0.12);
     }
   } else {
     // Dark: elevate by lightening — ground → surface → alt → one step further
     surface1 = surface;
     surface2 = surfaceAlt;
-    surface3 = mixHex(surfaceAlt, '#FFFFFF', 0.08);
+    surface3 = liftSurface(surfaceAlt, '#FFFFFF', inks, 0.08);
   }
 
   return {

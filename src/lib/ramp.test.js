@@ -6,6 +6,7 @@ import {
   deriveSemanticRamp,
   deriveThemeRamps,
 } from './ramp';
+import { contrastRatio } from './contrast';
 import { MODE_COLORS, DEFAULT_ACCENTS } from './themeTokens';
 
 describe('mixHex', () => {
@@ -39,6 +40,24 @@ describe('deriveSurfaceRamp', () => {
     expect(ramp['surface-1']).toBe(p.surface);
     expect(ramp['surface-2']).toBe(p['surface-alt']);
     expect(ramp['surface-3']).toBeTruthy();
+    expect(ramp['surface-3']).not.toBe(ramp['surface-2']);
+  });
+
+  it('lifts surface-3 only as far as every body ink stays at AA', () => {
+    // A flat 8% lift put dark surface-3 at 4.01:1 against fg-subtle. The lift is
+    // capped by the weakest ink, so elevation can never outrun legibility.
+    for (const mode of ['light', 'dark']) {
+      for (const tone of ['day', 'night']) {
+        const p = MODE_COLORS[mode][tone];
+        const s3 = deriveSurfaceRamp(p, mode)['surface-3'];
+        for (const ink of ['fg', 'fg-muted', 'fg-subtle']) {
+          expect(
+            contrastRatio(p[ink], s3),
+            `${mode}.${tone} ${ink} on surface-3`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
   });
 });
 

@@ -4,7 +4,8 @@
  *
  * Walks 2 modes × 2 tones × 5 tabs × 3 viewports with a populated account and
  * reports every text node whose contrast against its nearest opaque background
- * falls below WCAG AA (4.5:1 body / 3:1 large).
+ * falls below WCAG AA (4.5:1 body / 3:1 large), plus any header popover that
+ * renders outside the viewport (a class jsdom and scrollWidth both miss).
  *
  * Usage:
  *   npm run audit:contrast              # expects vite on :5290
@@ -85,8 +86,7 @@ function collectFindings(tabName) {
 
   // Emoji (and emoji ZWJ sequences) render in their own colours — a low
   // computed ratio on an emoji-only node is a false positive.
-  const EMOJI_ONLY =
-    /^(?:\p{Extended_Pictographic}|\uFE0F|\u200D|\u20E3|\uFE0E|\s)+$/u;
+  const EMOJI_ONLY = /^(?:\p{Extended_Pictographic}|\uFE0F|\u200D|\u20E3|\uFE0E|\s)+$/u;
 
   const out = [];
   for (const el of document.querySelectorAll('*')) {
@@ -125,6 +125,46 @@ function collectFindings(tabName) {
   return out;
 }
 
+/**
+ * Header popovers must stay inside the viewport. `scrollWidth` cannot see this:
+ * an absolutely-positioned sheet that hangs off the *left* edge is clipped, not
+ * scrolled, so every overflow assertion passes while the controls are cut off.
+ * The ThemeChip sheet shipped 65.7px off-screen at 320px for exactly that reason.
+ */
+function collectClippedSheets() {
+  const chip = [...document.querySelectorAll('button')].find(
+    (b) => (b.getAttribute('aria-label') || '').toLowerCase() === 'appearance'
+  );
+  if (!chip) return [{ reason: 'no Appearance chip in header' }];
+  chip.click();
+  const sheet = document.querySelector('[role="dialog"][aria-label="Appearance"]');
+  if (!sheet) return [{ reason: 'Appearance sheet did not open' }];
+  const vw = document.documentElement.clientWidth;
+  const out = [];
+  const r = sheet.getBoundingClientRect();
+  if (r.left < 0 || r.right > vw) {
+    out.push({
+      reason: 'sheet outside viewport',
+      left: +r.left.toFixed(1),
+      right: +r.right.toFixed(1),
+      vw,
+    });
+  }
+  for (const el of sheet.querySelectorAll('*')) {
+    if (![...el.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+    const b = el.getBoundingClientRect();
+    if (b.left < 0 || b.right > vw) {
+      out.push({
+        reason: 'sheet content clipped',
+        text: el.textContent.trim().slice(0, 24),
+        left: +b.left.toFixed(1),
+      });
+    }
+  }
+  chip.click();
+  return out;
+}
+
 async function applyTheme(page, mode, tone) {
   await page.evaluate(
     ({ mode: m, tone: t }) => {
@@ -157,6 +197,7 @@ async function main() {
   await page.evaluate(seedPopulatedAccount);
 
   const findings = [];
+  const layout = [];
   let combinations = 0;
 
   for (const mode of MODES) {
@@ -168,6 +209,10 @@ async function main() {
         await page.evaluate(seedPopulatedAccount);
         await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(400);
+
+        for (const l of await page.evaluate(collectClippedSheets)) {
+          layout.push({ ...l, mode, tone, viewport: vp.width });
+        }
 
         for (const tab of TABS) {
           combinations += 1;
@@ -200,9 +245,14 @@ async function main() {
 
   console.log(`Audited ${combinations} combinations (2×2×5×3).`);
   console.log(`Raw findings: ${findings.length}; unique: ${unique.length}`);
+  console.log(`Header sheet layout findings: ${layout.length}`);
 
-  if (unique.length === 0) {
-    console.log('✓ zero real contrast findings');
+  for (const l of layout) {
+    console.log(`[${l.mode}.${l.tone} @${l.viewport}] ${l.reason} ${JSON.stringify(l)}`);
+  }
+
+  if (unique.length === 0 && layout.length === 0) {
+    console.log('✓ zero real contrast findings, no clipped header sheets');
     process.exit(0);
   }
 
