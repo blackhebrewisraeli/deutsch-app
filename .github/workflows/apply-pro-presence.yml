@@ -1,0 +1,51 @@
+# One-shot applicator for the professional GitHub presence kit.
+# Does NOT run on push. Trigger manually after adding secret PRO_PRESENCE_PAT.
+#
+# Secret: PRO_PRESENCE_PAT
+#   - Classic PAT with `repo` scope, OR
+#   - Fine-grained PAT with Administration + Contents on:
+#       blackhebrewisraeli/blackhebrewisraeli
+#       blackhebrewisraeli/github-skills-journey
+#       and Administration on all skills-* exercise repos (to archive)
+name: Apply professional presence kit
+
+on:
+  workflow_dispatch:
+    inputs:
+      skip_archive:
+        description: "Skip archiving skills-* repos"
+        type: boolean
+        default: false
+      dry_run:
+        description: "Dry run (no writes)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Require PRO_PRESENCE_PAT
+        env:
+          PRO_PRESENCE_PAT: ${{ secrets.PRO_PRESENCE_PAT }}
+        run: |
+          if [ -z "$PRO_PRESENCE_PAT" ]; then
+            echo "::error::Add repository secret PRO_PRESENCE_PAT, then re-run this workflow."
+            exit 1
+          fi
+
+      - name: Apply kit
+        env:
+          GH_TOKEN: ${{ secrets.PRO_PRESENCE_PAT }}
+          SKIP_ARCHIVE: ${{ inputs.skip_archive && '1' || '0' }}
+          DRY_RUN: ${{ inputs.dry_run && '1' || '0' }}
+          SKIP_PINS: "1"
+        run: |
+          chmod +x docs/professional-presence/scripts/apply.sh
+          ./docs/professional-presence/scripts/apply.sh
