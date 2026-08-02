@@ -257,7 +257,7 @@ export default function AlphabetTab({
                 borderRadius: RADIUS.lg,
                 boxShadow: SHADOW.card,
                 background: quizResult === 'correct' ? COLORS.gold : COLORS.red,
-                color: quizResult === 'correct' ? COLORS.ink : COLORS.paper,
+                color: quizResult === 'correct' ? COLORS.accentOn : COLORS.paper,
                 padding: SPACE[5],
                 marginTop: SPACE[4],
               }}

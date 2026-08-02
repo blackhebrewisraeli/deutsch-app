@@ -708,7 +708,7 @@ export default function VocabTab({
                           : COLORS.red,
                     color:
                       result === 'correct'
-                        ? COLORS.ink
+                        ? COLORS.accentOn
                         : result === 'almost'
                           ? COLORS.ink
                           : COLORS.paper,

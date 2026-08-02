@@ -88,7 +88,7 @@ export default function TranslateTab({
           color: COLORS.mute,
         }}
       >
-        <Sparkles size={24} style={{ marginBottom: SPACE[4], color: COLORS.gold }} />
+        <Sparkles size={24} style={{ marginBottom: SPACE[4], color: COLORS.accentFg }} />
         <div>GENERATING NEW EXERCISES...</div>
       </div>
     );

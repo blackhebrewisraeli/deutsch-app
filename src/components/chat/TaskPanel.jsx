@@ -60,7 +60,7 @@ export default function TaskPanel({
             borderRadius: RADIUS.lg,
             boxShadow: SHADOW.press(COLORS.goldLipSoft),
             background: COLORS.gold,
-            color: COLORS.ink,
+            color: COLORS.accentOn,
             padding: SPACE[5],
           }}
         >
@@ -89,7 +89,8 @@ export default function TaskPanel({
             onClick={onResetTasks}
             style={{
               background: 'transparent',
-              border: `1px solid ${COLORS.ink}`,
+              border: `1px solid ${COLORS.accentOn}`,
+              color: COLORS.accentOn,
               fontFamily: FONTS.mono,
               fontSize: FONT_SIZE.tag,
               letterSpacing: LETTER_SPACING.wider,
