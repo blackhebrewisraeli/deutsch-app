@@ -8,6 +8,7 @@ import os
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 
 def request(method: str, url: str, token: str, data: dict | None = None) -> tuple[int, dict | list | str]:
@@ -37,6 +38,37 @@ def request(method: str, url: str, token: str, data: dict | None = None) -> tupl
         return e.code, parsed
 
 
+def resolve_local_file(local_file: str) -> Path:
+    """Resolve and validate a local path before any filesystem read.
+
+    Restricts reads to the professional-presence kit root (or PRO_PRESENCE_ROOT)
+    so CLI/LLM-supplied paths cannot escape via .. or absolute paths.
+    """
+    allowed_root = Path(
+        os.environ.get("PRO_PRESENCE_ROOT", Path(__file__).resolve().parents[1])
+    ).resolve()
+    if not local_file or local_file.strip() == "":
+        raise ValueError("local_file is empty")
+
+    candidate = Path(local_file).expanduser()
+    # Reject null bytes / odd inputs early
+    if "\x00" in str(candidate):
+        raise ValueError("local_file contains NUL")
+
+    resolved = candidate.resolve(strict=False)
+    try:
+        resolved.relative_to(allowed_root)
+    except ValueError as exc:
+        raise ValueError(
+            f"Refusing path outside allowed root {allowed_root}: {local_file}"
+        ) from exc
+
+    if not resolved.is_file():
+        raise ValueError(f"Not a readable file under allowed root: {local_file}")
+
+    return resolved
+
+
 def main() -> int:
     if len(sys.argv) != 5:
         print(
@@ -45,10 +77,16 @@ def main() -> int:
         )
         return 2
 
-    owner, repo, path, local_file = sys.argv[1:5]
+    owner, repo, path, local_file_arg = sys.argv[1:5]
     token = os.environ.get("GH_TOKEN")
     if not token:
         print("GH_TOKEN required", file=sys.stderr)
+        return 2
+
+    try:
+        local_file = resolve_local_file(local_file_arg)
+    except ValueError as exc:
+        print(str(exc), file=sys.stderr)
         return 2
 
     message = os.environ.get("COMMIT_MESSAGE", f"docs: update {path}")
@@ -58,7 +96,7 @@ def main() -> int:
     status, meta = request("GET", api + f"?ref={branch}", token)
     sha = meta.get("sha") if isinstance(meta, dict) and status == 200 else None
 
-    content_b64 = base64.b64encode(open(local_file, "rb").read()).decode()
+    content_b64 = base64.b64encode(local_file.read_bytes()).decode()
     payload: dict = {
         "message": message,
         "content": content_b64,

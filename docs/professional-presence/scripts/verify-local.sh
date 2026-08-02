@@ -5,8 +5,15 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 FAIL=0
 
-ok() { echo "OK  $1"; }
-bad() { echo "FAIL $1"; FAIL=1; }
+ok() {
+  local msg="$1"
+  echo "OK  ${msg}"
+}
+bad() {
+  local msg="$1"
+  echo "FAIL ${msg}"
+  FAIL=1
+}
 
 PROFILE="$ROOT/profile-repo/README.md"
 JOURNEY="$ROOT/skills-journey/README.md"
