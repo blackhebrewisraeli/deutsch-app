@@ -57,9 +57,14 @@ describe('breakpoint helpers', () => {
   it('isTiny treats widths under bp.tiny as tiny', () => {
     expect(isTiny(bp.tiny - 1)).toBe(true);
     expect(isTiny(bp.tiny)).toBe(false);
-    // the two devices that motivated the breakpoint
+    // The whole common phone range is "tiny" since the ThemeChip joined the
+    // header cluster: at 360/375/390 the wordmark plus the functional widgets
+    // ran 26/15/4px past the viewport and the page scrolled sideways.
     expect(isTiny(320)).toBe(true);
-    expect(isTiny(375)).toBe(false);
+    expect(isTiny(375)).toBe(true);
+    expect(isTiny(390)).toBe(true);
+    // …and it releases once there is genuinely room.
+    expect(isTiny(414)).toBe(false);
   });
 
   it('isMobile treats widths under bp.mobile as mobile', () => {

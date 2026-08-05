@@ -14,7 +14,7 @@ import CorrectionPanel from './chat/CorrectionPanel';
 
 const WELCOME_KEY = 'deutsch-welcome-dismissed';
 
-export default function ChatTab({ level = 'a1', mobile = false }) {
+export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
   const [scenario, setScenario] = useState('free');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -191,7 +191,11 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
           // minmax(0, …) rather than a bare 1fr: 1fr keeps min-width auto, so
           // the track refused to shrink below its content and pushed the page
           // 190px past a 375px viewport.
-          gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : '280px minmax(0, 1fr) 320px',
+          // The three-column form needs 712px (280 + 320 + 2×24 gap + 2×32 page
+          // padding), but `mobile` releases at 640 — so 640–719 rendered three
+          // columns in too little room and scrolled the page sideways. It waits
+          // for `bp.wide` instead of `!mobile`.
+          gridTemplateColumns: wide ? '280px minmax(0, 1fr) 320px' : 'minmax(0, 1fr)',
           gap: mobile ? 16 : 24,
           minHeight: mobile ? 'auto' : 'calc(100vh - 280px)',
         }}

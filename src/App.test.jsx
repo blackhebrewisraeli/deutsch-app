@@ -123,7 +123,9 @@ describe('header at mobile width', () => {
   // so the decorative wordmark scales with the viewport and the chrome tightens,
   // leaving every functional widget in place.
   it('scales the wordmark with the viewport on mobile and tightens the chrome', () => {
-    setViewportWidth(375);
+    // 480 is inside mobile (< bp.mobile) but past bp.tiny, so the wordmark
+    // is present and still viewport-scaled.
+    setViewportWidth(480);
     render(<App />);
     const header = screen.getByRole('banner');
     expect(header.style.padding).toBe('12px 10px');
@@ -159,8 +161,16 @@ describe('header at mobile width', () => {
     expect(within(screen.getByRole('banner')).queryByText(/Deutsch/)).not.toBeInTheDocument();
   });
 
-  it('keeps the wordmark at 360px and above', () => {
-    setViewportWidth(375);
+  // The wordmark is decoration and yields to the functional cluster, which grew
+  // a ThemeChip. It is hidden across the common phone range and returns at
+  // bp.tiny (414), where the header measurably fits again.
+  it('hides the wordmark across the phone range and restores it at bp.tiny', () => {
+    setViewportWidth(390);
+    const { unmount } = render(<App />);
+    expect(within(screen.getByRole('banner')).queryByText(/Deutsch/)).toBeNull();
+    unmount();
+
+    setViewportWidth(414);
     render(<App />);
     expect(within(screen.getByRole('banner')).getByText(/Deutsch/)).toBeInTheDocument();
   });

@@ -48,7 +48,7 @@ import LevelBadge from './components/gamification/LevelBadge';
 import GoalRing from './components/gamification/GoalRing';
 import GoalStrip from './components/gamification/GoalStrip';
 import { Analytics } from '@vercel/analytics/react';
-import { useWindowWidth, isMobile, isTiny } from './lib/useWindowWidth';
+import { useWindowWidth, isMobile, isTiny, bp } from './lib/useWindowWidth';
 
 export default function App() {
   const [tab, setTab] = useState('chat');
@@ -549,7 +549,10 @@ export default function App() {
             >
               Deutsch<span style={{ color: COLORS.red }}>.</span>
             </div>
-            {!mobile && (
+            {/* Tagline waits for bp.wide alongside the goal ring and the chat's
+                third column: appearing at 640 it left the header 2px wider than
+                the viewport, which is small but is still sideways scroll. */}
+            {width >= bp.wide && (
               <div
                 style={{
                   fontFamily: FONT_MONO,
@@ -587,9 +590,10 @@ export default function App() {
               ❄️{game.freezes}
             </span>
           )}
-          {/* Dropped on mobile: the header cluster measured 389px on a 375px
-              screen, and the ring duplicates the goal strip under the nav. */}
-          {!mobile && <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />}
+          {/* Held back until bp.wide: the desktop header wants 700px but
+              `mobile` flips at 640, so the ring overflowed by 60px in between.
+              It duplicates the goal strip under the nav, so it waits for room. */}
+          {width >= bp.wide && <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />}
           <ThemeChip />
           <AccountChip
             user={user}
@@ -624,6 +628,11 @@ export default function App() {
               aria-current={active ? 'page' : undefined}
               style={{
                 flex: 1,
+                // minWidth: 0 is the flex counterpart of the minmax(0, 1fr) rule
+                // in AGENTS.md — `flex: 1` leaves min-width at auto, so these
+                // buttons refused to shrink below their label and pushed the nav
+                // 28px past a 640px viewport, on every tab.
+                minWidth: 0,
                 padding: mobile ? '12px 6px' : '14px 18px',
                 background: active ? COLORS.ink : 'transparent',
                 color: active ? COLORS.paper : COLORS.ink,
@@ -720,7 +729,7 @@ export default function App() {
             mult={game.mult}
           />
         )}
-        {tab === 'chat' && <ChatTab level={level} mobile={mobile} />}
+        {tab === 'chat' && <ChatTab level={level} mobile={mobile} wide={width >= bp.wide} />}
         {tab === 'alphabet' && (
           <AlphabetTab
             level={level}
