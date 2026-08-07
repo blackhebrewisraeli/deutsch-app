@@ -26,8 +26,10 @@ let testClient = null;
 export function __setClientForTest(c) {
   testClient = c;
 }
-function client() {
-  return testClient ?? getSupabase();
+// getSupabase() resolves a code-split client, so this is async. `await` on the
+// injected test client is a no-op, which keeps __setClientForTest unchanged.
+async function client() {
+  return testClient ?? (await getSupabase());
 }
 
 const PACK = 'de';
@@ -35,7 +37,7 @@ const withUser = (rows, userId) => rows.map((r) => ({ ...r, user_id: userId, pac
 
 /** Pull → merge (additive daily + LWW srs/settings) → push. Single reconcile path. */
 export async function pullAndMerge(userId) {
-  const c = client();
+  const c = await client();
   if (!c) return;
   const s = loadState() ?? {};
   const meta = loadSyncMeta();

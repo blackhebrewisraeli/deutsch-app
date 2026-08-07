@@ -47,3 +47,4 @@ supabase/.branches/
 
 # Lexicon raw-download cache
 .cache/
+.bench-baseline.json

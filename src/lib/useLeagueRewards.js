@@ -24,7 +24,7 @@ export function useLeagueRewards(userId, onClaimed) {
     let cancelled = false;
     (async () => {
       try {
-        const results = await fetchMyResults(getSupabase(), userId);
+        const results = await fetchMyResults(await getSupabase(), userId);
         if (cancelled) return;
         const cur = loadState() ?? {};
         const { state, claimedCount } = claimWinnerRewards(cur, results, todayKey());

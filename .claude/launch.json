@@ -8,6 +8,18 @@
       "port": 5290
     },
     {
+      "name": "prod-preview",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview", "--", "--port", "4290", "--strictPort"],
+      "port": 4290
+    },
+    {
+      "name": "prod-preview-lan",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "preview", "--", "--port", "4291", "--strictPort", "--host", "0.0.0.0"],
+      "port": 4291
+    },
+    {
       "name": "vercel-dev",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev:full", "--", "--listen", "3010", "--yes"],
