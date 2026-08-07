@@ -83,3 +83,34 @@ silently.
 `.env*` is git-ignored; only `.env.example` is tracked. Never commit API keys.
 Production secrets (e.g. `ANTHROPIC_API_KEY`) live in Vercel project settings,
 not in the repo.
+
+## Cursor Cloud specific instructions
+
+Standard commands and setup live in the README "Quick Start" / "Available
+scripts" sections and `package.json`; this section only records the non-obvious
+caveats for running in the cloud VM. Dependencies are refreshed automatically
+by the startup update script (`npm install --legacy-peer-deps`).
+
+- **Node version:** `.nvmrc` pins Node 20, but the VM's default `node`
+  (`/exec-daemon/node`, currently v22) takes PATH priority over nvm and works
+  fine for the whole toolchain (install, `npm test`, `npm run build`, `vite`).
+  No need to fight the PATH to force Node 20.
+- **Which dev server:** use `npm run dev` (Vite only, port 5173) for UI and any
+  offline-first feature. `npm run dev:full` (`vercel dev`) is only needed for
+  the AI lane and requires `npx vercel link` **plus** `ANTHROPIC_API_KEY` — not
+  present in the VM by default, so prefer `npm run dev` unless you have those.
+- **What works without the AI backend / secrets:** Vocab multiple-choice
+  (preset decks + lexicon), Alphabet, A1 translate tiles, A2 fill-the-blanks,
+  Stats, streak/XP/SRS — all run fully under `npm run dev`. AI-dependent flows
+  (Chat tutor replies, B1 free-typing grading, custom deck generation, on-demand
+  sentence generation when a bank is exhausted) need `dev:full` + the key.
+- **A good no-secrets smoke test:** onboard (continue without account → pick a
+  level) → Vocab tab → start the "Greetings" preset deck → answer cards → watch
+  XP/level/Stats update. This exercises the core engine end to end.
+- **Sign-in / sync / leagues** are off unless the `VITE_SUPABASE_*` and
+  `VITE_*_ENABLED` flags in `.env` are set (see `.env.example`); the app is
+  anonymous-first, so their absence is expected, not a bug.
+- **RLS suite** (`npm run test:rls`) needs Docker + `supabase start` and is
+  intentionally excluded from `npm test` and the pre-commit hook.
+- **Pre-commit hook** (`.husky/pre-commit`) runs `lint-staged` **and the full
+  `npm test`**, so commits take ~30s; never bypass with `--no-verify`.
