@@ -4,10 +4,12 @@ Assessment date: 2026-07-13 · against `main` @ `ca95851` · live: https://deuts
 Revised 2026-07-29: #3, #4, #6 closed (PRs #64, #65); #13 and #14 added from a live pass.
 Revised 2026-08-01: #18 fixed and #9 decided (PR #75); **#19 added and fixed** (PR #76) — found
 by verifying the deployment rather than the artifact.
+Revised 2026-08-07: **#7 closed as genuinely fixed** (PR #91), having been accepted-not-fixed
+since it was filed. Light/dark theming with per-pack accents landed in between (#83–#85, #90).
 
-**Verified healthy** (2026-08-01, `main` @ `361fe20`): 802/802 tests green, lint and
+**Verified healthy** (2026-08-07, `main` @ `5d9400a`): 1040/1040 tests green, lint and
 `format:check` clean, live demo serves the 4,201-word lexicon with zero duplicate cards, PWA
-installs and reloads offline.
+installs and reloads offline, critical-path bundle 296 KB (92.89 KB gzip).
 
 ---
 
@@ -175,11 +177,29 @@ installs and reloads offline.
   reproducible import) is not represented in the feature list — for a demo, the README is the
   front door.
 
-- [x] **7. Bundle is one 580 KB chunk** (172 KB gzip), over Vite's 500 KB warning. — ACCEPTED,
-  not fixed. Acceptable but not great for a first-load demo; closed as a deliberate trade rather
-  than work done, so the bundle is still a single chunk and Vite still warns on every build.
-  Re-measured 2026-08-01 at `579.84 kB / 172.11 kB gzip` (was 577/171 when first filed).
-  **If revisited:** route/tab-level `dynamic import()` or `manualChunks`.
+- [x] **7. Bundle was one 580 KB chunk** (172 KB gzip), over Vite's 500 KB warning. — **FIXED
+  2026-08-07 in PR #91**, having been accepted-not-fixed since it was filed. The entry is
+  rewritten rather than annotated because every clause of it had become false: the bundle is no
+  longer a single chunk, and Vite no longer warns.
+
+  | | critical path | gzip |
+  | --- | ---: | ---: |
+  | before (`8a4cda0`) | 592.32 KB, one chunk | 176.16 KB |
+  | after (`5d9400a`) | **296.11 KB** | **92.89 KB** |
+
+  Supabase (212 KB) and the `?vitals=1` overlay (4.79 KB) became lazy chunks, so a guest who
+  never signs in never downloads the auth SDK. Verified end to end in a production build, not
+  inferred from the build table: with no session key present the Supabase chunk is **never
+  requested** — only the 296 KB entry chunk — while a seeded session loads it and renders the
+  account chip with no signed-out flash across 60 samples over 3 s.
+
+  Two details worth preserving, because both are easy to undo by accident:
+  - Sentry is imported by **named export** (`import('@sentry/react').then(({ init, captureException }) => …)`)
+    so Rollup does not retain `replayIntegration`, which drags in 258 KB of `@sentry/replay` the
+    app never uses. A bare namespace import gives most of the saving back.
+  - `mayHaveSession()` is deliberately **fail-open**: it guesses from supabase-js's
+    `sb-<ref>-auth-token` key, and every ambiguous case loads the SDK. If that key ever changes,
+    the worst outcome is loading exactly as before — never someone silently appearing signed out.
 
 - [x] **8. Nine lint warnings.** — FIXED `npm run lint` is now silent. They were not all unused
   `describe` imports as recorded: five were unused vitest imports (`describe`, `beforeEach`,
@@ -317,7 +337,7 @@ installs and reloads offline.
 ## Suggested order
 
 Closed: #1, #2 (PR #62) · #3, #4 (PR #64) · #6 (PR #65) · #13, #15 (PR #66) · #16, #17 ·
-#18, #9 (PR #75) · #19 (PR #76). #5 is closed as won't-fix; #7 is annotated acceptable.
+#18, #9 (PR #75) · #19 (PR #76) · #7 (PR #91). #5 is closed as won't-fix.
 
 **Nothing is outstanding.** The last three to close:
 
@@ -336,4 +356,4 @@ neither the test suite nor the CDN could have caught it — the origin was corre
 Any future change to `public/lexicon/` should be confirmed on the deployed site, from a browser
 profile that has visited before, not just from a clean one.
 
-#5 is won't-fix (measured). #7 is annotated acceptable. #8 is closed.
+#5 is won't-fix (measured). #7 is fixed (PR #91). #8 is closed.
