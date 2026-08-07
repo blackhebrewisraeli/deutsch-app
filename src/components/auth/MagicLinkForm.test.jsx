@@ -19,19 +19,21 @@ describe('MagicLinkForm', () => {
     verifyCode.mockClear();
   });
 
-  it('sends a link and moves to the inbox state', async () => {
+  it('sends a code email and moves to the inbox state', async () => {
     render(<MagicLinkForm heading="Sign in" onSuccess={() => {}} />);
     await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'a@b.com');
-    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+    await userEvent.click(screen.getByRole('button', { name: /email me a sign-in code/i }));
     expect(signInWithMagicLink).toHaveBeenCalledWith('a@b.com');
-    expect(await screen.findByText(/check your inbox/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/enter the 6-digit code — or tap the link in the email/i)
+    ).toBeInTheDocument();
   });
 
   it('verifies a typed 6-digit code and calls onSuccess', async () => {
     const onSuccess = vi.fn();
     render(<MagicLinkForm heading="Sign in" onSuccess={onSuccess} />);
     await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'a@b.com');
-    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+    await userEvent.click(screen.getByRole('button', { name: /email me a sign-in code/i }));
     await userEvent.type(await screen.findByRole('textbox', { name: /code/i }), '123456');
     await userEvent.click(screen.getByRole('button', { name: /verify/i }));
     expect(verifyCode).toHaveBeenCalledWith('a@b.com', '123456');
@@ -42,7 +44,7 @@ describe('MagicLinkForm', () => {
     signInWithMagicLink.mockResolvedValueOnce({ error: { message: 'Too many attempts' } });
     render(<MagicLinkForm heading="Sign in" onSuccess={() => {}} />);
     await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'a@b.com');
-    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+    await userEvent.click(screen.getByRole('button', { name: /email me a sign-in code/i }));
     expect(await screen.findByText(/too many attempts/i)).toBeInTheDocument();
   });
 
@@ -50,18 +52,18 @@ describe('MagicLinkForm', () => {
     verifyCode.mockResolvedValueOnce({ error: { message: 'Invalid code' } });
     render(<MagicLinkForm heading="Sign in" onSuccess={() => {}} />);
     await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'a@b.com');
-    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+    await userEvent.click(screen.getByRole('button', { name: /email me a sign-in code/i }));
     await userEvent.type(await screen.findByRole('textbox', { name: /code/i }), '123456');
     await userEvent.click(screen.getByRole('button', { name: /verify/i }));
     expect(await screen.findByText(/invalid code/i)).toBeInTheDocument();
   });
 
-  it('offers a resend in the inbox state and re-requests the link', async () => {
+  it('offers a resend in the inbox state and re-requests the email', async () => {
     render(<MagicLinkForm heading="Sign in" onSuccess={() => {}} />);
     await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'a@b.com');
-    await userEvent.click(screen.getByRole('button', { name: /send/i }));
+    await userEvent.click(screen.getByRole('button', { name: /email me a sign-in code/i }));
     // Wait for inbox state
-    await screen.findByText(/check your inbox/i);
+    await screen.findByText(/enter the 6-digit code — or tap the link in the email/i);
     // Resend button should be visible
     const resendBtn = screen.getByRole('button', { name: /resend/i });
     expect(resendBtn).toBeInTheDocument();
@@ -78,8 +80,8 @@ describe('MagicLinkForm', () => {
 
     // Reach inbox state with real timers so userEvent works normally.
     await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'a@b.com');
-    await userEvent.click(screen.getByRole('button', { name: /send/i }));
-    await screen.findByText(/check your inbox/i);
+    await userEvent.click(screen.getByRole('button', { name: /email me a sign-in code/i }));
+    await screen.findByText(/enter the 6-digit code — or tap the link in the email/i);
 
     // Install fake timers before triggering the cooldown interval.
     vi.useFakeTimers();

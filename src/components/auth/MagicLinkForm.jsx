@@ -4,8 +4,9 @@ import { signInWithMagicLink, verifyCode } from '../../lib/auth.js';
 import Button from '../ui/Button';
 
 // Two-state passwordless form: email entry → inbox/code entry. The email
-// carries both a magic link (opens whatever browser) and a 6-digit code
-// (typed here — the installed-PWA path). onSuccess fires after verifyOtp.
+// carries both a 6-digit code (typed here — the installed-PWA path) and a
+// magic link (browser convenience). Copy is code-first. onSuccess fires
+// after verifyOtp.
 export default function MagicLinkForm({ heading, onSuccess }) {
   const [sent, setSent] = useState(false);
   const [email, setEmail] = useState('');
@@ -94,12 +95,12 @@ export default function MagicLinkForm({ heading, onSuccess }) {
             onChange={(e) => setEmail(e.target.value)}
           />
           <Button onClick={send} disabled={busy || !email.includes('@')}>
-            Send me a sign-in link
+            Email me a sign-in code
           </Button>
         </>
       ) : (
         <>
-          <p>Check your inbox — tap the link, or enter the 6-digit code here.</p>
+          <p>Enter the 6-digit code — or tap the link in the email.</p>
           <label htmlFor="ml-code" style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag }}>
             Code
           </label>
