@@ -213,3 +213,42 @@ describe('mayHaveSession', () => {
     expect(mayHaveSession()).toBe(false);
   });
 });
+
+describe('authCallbackKind', () => {
+  beforeEach(() => {
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('returns null on a clean URL', async () => {
+    const { authCallbackKind } = await import('./auth.js');
+    expect(authCallbackKind()).toBeNull();
+  });
+
+  it('returns pending for a PKCE code', async () => {
+    window.history.replaceState({}, '', '/?code=abc123');
+    const { authCallbackKind } = await import('./auth.js');
+    expect(authCallbackKind()).toBe('pending');
+  });
+
+  it('returns pending for an implicit magic-link hash', async () => {
+    window.history.replaceState({}, '', '/#access_token=abc&type=magiclink');
+    const { authCallbackKind } = await import('./auth.js');
+    expect(authCallbackKind()).toBe('pending');
+  });
+
+  it('returns error for ?error= in the query string', async () => {
+    window.history.replaceState({}, '', '/?error=access_denied&error_code=otp_expired');
+    const { authCallbackKind } = await import('./auth.js');
+    expect(authCallbackKind()).toBe('error');
+  });
+
+  it('returns error for an expired-link hash', async () => {
+    window.history.replaceState(
+      {},
+      '',
+      '/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired'
+    );
+    const { authCallbackKind } = await import('./auth.js');
+    expect(authCallbackKind()).toBe('error');
+  });
+});

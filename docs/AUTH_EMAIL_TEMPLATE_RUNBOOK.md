@@ -51,8 +51,28 @@ one-time (and on-change) sync into production.
 ## Local development
 
 `supabase start` loads the template from `config.toml` automatically. No
-dashboard step for local GoTrue. Redirect URLs for local Vite are documented
-alongside `site_url` in `supabase/config.toml` (Phase C Task 4).
+dashboard step for local GoTrue.
+
+### Redirect allow-list (Vite on :5173)
+
+Local Auth must redirect back to the Vite dev server, not the default GoTrue
+`:3000` site:
+
+| Setting | Value |
+|---|---|
+| `site_url` | `http://localhost:5173` |
+| `additional_redirect_urls` | `http://localhost:5173`, `http://127.0.0.1:5173` |
+
+These live in `supabase/config.toml` and apply to local `supabase start` only.
+For the **hosted** project, set the same origins (plus production) under
+**Authentication → URL Configuration**:
+
+- Site URL → production origin (e.g. `https://deutsch-app-dusky.vercel.app`)
+- Redirect URLs → production origin, `http://localhost:5173`,
+  `http://127.0.0.1:5173` (exact match — no wildcards for the local pair)
+
+`signInWithMagicLink` already passes `emailRedirectTo: window.location.origin`,
+so the allow-list must include whichever origin the browser is on.
 
 ## Out of scope here
 

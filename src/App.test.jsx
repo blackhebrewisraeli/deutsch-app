@@ -245,6 +245,7 @@ describe('in-app AuthSheet', () => {
       signInWithMagicLink: vi.fn(() => Promise.resolve({ error: null })),
       verifyCode: vi.fn(() => Promise.resolve({ error: null })),
       mayHaveSession: () => false,
+      authCallbackKind: () => null,
       getSupabase: () => Promise.resolve(null),
     }));
 

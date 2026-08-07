@@ -41,6 +41,33 @@ function getClient() {
 }
 
 /**
+ * Classify the current URL as an auth callback without loading the SDK.
+ *
+ * - `'pending'` — credential present (PKCE `?code=` or implicit hash tokens)
+ * - `'error'` — provider reported failure (`?error=` / `#error=` / expired OTP)
+ * - `null` — not an auth callback
+ *
+ * Patterns live here once. `mayHaveSession()` reuses this so the detection
+ * regexes are never hand-copied (same defect class as duplicated palettes).
+ */
+export function authCallbackKind(loc = typeof window !== 'undefined' ? window.location : null) {
+  if (!loc) return null;
+  const search = loc.search || '';
+  const hash = loc.hash || '';
+
+  // Errors win — an expired-link hash still carries type=magiclink-style noise
+  // in some providers, but `error=` is the signal the user must see.
+  if (/[?&](error|error_description|error_code)=/.test(search)) return 'error';
+  if (/(?:^|[&#])(error|error_description|error_code)=/.test(hash)) return 'error';
+
+  if (/[?&]code=/.test(search)) return 'pending';
+  if (/access_token=|refresh_token=|type=(magiclink|recovery|invite|signup)/.test(hash)) {
+    return 'pending';
+  }
+  return null;
+}
+
+/**
  * Could this visitor possibly be signed in, without loading the SDK to ask?
  *
  * supabase-js persists its session in localStorage under `sb-<ref>-auth-token`.
@@ -56,13 +83,9 @@ export function mayHaveSession() {
   if (!isAuthConfigured()) return false;
   if (typeof window === 'undefined') return true;
 
-  // A magic-link / OAuth return carries its credential in the query string
-  // (PKCE `?code=`) or the hash (implicit `#access_token=`). The client must
-  // load to exchange it, and localStorage is still empty at that point.
-  const { search, hash } = window.location;
-  if (/[?&](code|error|error_description)=/.test(search)) return true;
-  if (/access_token=|refresh_token=|type=(magiclink|recovery|invite|signup)/.test(hash))
-    return true;
+  // Auth callback (pending credential or error) — client must load to finish
+  // or so the UI can explain the failure. Fail-open: keep loading the SDK.
+  if (authCallbackKind() !== null) return true;
 
   try {
     for (let i = 0; i < localStorage.length; i += 1) {

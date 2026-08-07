@@ -36,6 +36,7 @@ import StatsTab from './components/StatsTab';
 import SplashScreen from './components/SplashScreen';
 import WelcomeGate from './components/WelcomeGate';
 import AuthSheet from './components/auth/AuthSheet';
+import AuthCallbackLanding from './components/auth/AuthCallbackLanding';
 import AccountChip from './components/AccountChip';
 import ThemeChip from './components/ThemeChip';
 import { useAuth, signOut, getAccessToken, isAuthConfigured } from './lib/auth';
@@ -266,7 +267,7 @@ export default function App() {
   const tiny = isTiny(width);
 
   // Auth
-  const { user } = useAuth();
+  const { user, status: authStatus } = useAuth();
   const syncStatus = useSyncStatus();
   // Claim any league-winner rewards on load (not just when the Leagues tab
   // opens), and celebrate a fresh win with a toast.
@@ -295,13 +296,20 @@ export default function App() {
     setAuthModal('signin');
   };
 
-  const authSheet = (
-    <AuthSheet
-      open={Boolean(authModal)}
-      intent={authModal ?? 'signin'}
-      onClose={() => setAuthModal(null)}
-      onSuccess={handleAuthDone}
-    />
+  const authOverlay = (
+    <>
+      <AuthCallbackLanding
+        status={authStatus}
+        onSignedIn={handleAuthDone}
+        onRequestNew={requestSignIn}
+      />
+      <AuthSheet
+        open={Boolean(authModal)}
+        intent={authModal ?? 'signin'}
+        onClose={() => setAuthModal(null)}
+        onSuccess={handleAuthDone}
+      />
+    </>
   );
 
   const showToast = (title) => pushToasts([{ kind: 'info', title, sub: '', icon: 'ℹ️' }]);
@@ -457,7 +465,7 @@ export default function App() {
     return (
       <>
         <WelcomeGate onGuest={handleGuest} onAuth={(intent) => setAuthModal(intent)} />
-        {authSheet}
+        {authOverlay}
       </>
     );
   }
@@ -766,7 +774,7 @@ export default function App() {
       )}
 
       <Analytics />
-      {authSheet}
+      {authOverlay}
     </div>
   );
 }
