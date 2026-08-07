@@ -35,10 +35,11 @@ import TranslateTab from './components/TranslateTab';
 import StatsTab from './components/StatsTab';
 import SplashScreen from './components/SplashScreen';
 import WelcomeGate from './components/WelcomeGate';
-import MagicLinkForm from './components/auth/MagicLinkForm';
+import AuthSheet from './components/auth/AuthSheet';
+import AuthCallbackLanding from './components/auth/AuthCallbackLanding';
 import AccountChip from './components/AccountChip';
 import ThemeChip from './components/ThemeChip';
-import { useAuth, signOut, getAccessToken } from './lib/auth';
+import { useAuth, signOut, getAccessToken, isAuthConfigured } from './lib/auth';
 import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
 import { useSyncStatus } from './lib/useSyncStatus';
 import { useLeagueRewards } from './lib/useLeagueRewards';
@@ -266,7 +267,7 @@ export default function App() {
   const tiny = isTiny(width);
 
   // Auth
-  const { user } = useAuth();
+  const { user, status: authStatus } = useAuth();
   const syncStatus = useSyncStatus();
   // Claim any league-winner rewards on load (not just when the Leagues tab
   // opens), and celebrate a fresh win with a toast.
@@ -289,13 +290,27 @@ export default function App() {
     setShowGate(false);
     localStorage.setItem('deutsch-onboarded', '1');
   };
-  // Re-surfaces the WelcomeGate with the sign-in modal open — the gate is the
-  // only host for the auth modal, so signing in from within the app routes back
-  // through it. (B2.2: an in-app modal host would avoid the gate round-trip.)
+  // Opens the shared AuthSheet in-place — no WelcomeGate round-trip.
   const requestSignIn = () => {
-    setShowGate(true);
+    if (!isAuthConfigured()) return;
     setAuthModal('signin');
   };
+
+  const authOverlay = (
+    <>
+      <AuthCallbackLanding
+        status={authStatus}
+        onSignedIn={handleAuthDone}
+        onRequestNew={requestSignIn}
+      />
+      <AuthSheet
+        open={Boolean(authModal)}
+        intent={authModal ?? 'signin'}
+        onClose={() => setAuthModal(null)}
+        onSuccess={handleAuthDone}
+      />
+    </>
+  );
 
   const showToast = (title) => pushToasts([{ kind: 'info', title, sub: '', icon: 'ℹ️' }]);
 
@@ -450,40 +465,7 @@ export default function App() {
     return (
       <>
         <WelcomeGate onGuest={handleGuest} onAuth={(intent) => setAuthModal(intent)} />
-        {authModal && (
-          <div
-            style={{
-              position: 'fixed',
-              inset: 0,
-              background: COLORS.inkAa,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              zIndex: 70,
-              padding: 24,
-            }}
-            onClick={() => setAuthModal(null)}
-          >
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-label={authModal === 'create' ? 'Create your account' : 'Sign in'}
-              style={{
-                background: COLORS.paper,
-                borderRadius: 16,
-                padding: 24,
-                maxWidth: 400,
-                width: '100%',
-              }}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MagicLinkForm
-                heading={authModal === 'create' ? 'Create your account' : 'Sign in'}
-                onSuccess={handleAuthDone}
-              />
-            </div>
-          </div>
-        )}
+        {authOverlay}
       </>
     );
   }
@@ -792,6 +774,7 @@ export default function App() {
       )}
 
       <Analytics />
+      {authOverlay}
     </div>
   );
 }

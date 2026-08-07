@@ -226,3 +226,40 @@ describe('header at mobile width', () => {
     expect(screen.queryByText(/^Appearance$/i)).not.toBeInTheDocument();
   });
 });
+
+// Mid-app sign-in used to re-open WelcomeGate (the gate was the only auth-modal
+// host). AuthSheet is now shared — signing in from Stats must not flash the gate.
+describe('in-app AuthSheet', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.setItem('deutsch-onboarded', '1');
+    vi.resetModules();
+  });
+
+  it('opens from Stats without resurfacing the WelcomeGate', async () => {
+    vi.doMock('./lib/auth.js', () => ({
+      isAuthConfigured: () => true,
+      useAuth: () => ({ user: null, session: null, status: 'anonymous' }),
+      signOut: vi.fn(() => Promise.resolve({ error: null })),
+      getAccessToken: vi.fn(() => Promise.resolve(null)),
+      signInWithMagicLink: vi.fn(() => Promise.resolve({ error: null })),
+      verifyCode: vi.fn(() => Promise.resolve({ error: null })),
+      mayHaveSession: () => false,
+      authCallbackKind: () => null,
+      getSupabase: () => Promise.resolve(null),
+    }));
+
+    const { default: AppWithAuth } = await import('./App.jsx');
+    setViewportWidth(1280);
+    const user = userEvent.setup();
+    render(<AppWithAuth />);
+
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
+    await user.click(screen.getByRole('button', { name: /sign in to sync/i }));
+
+    expect(screen.getByRole('dialog', { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /email me a sign-in code/i })).toBeInTheDocument();
+    // Gate brand lives on the dark full-screen WelcomeGate — must stay gone.
+    expect(screen.queryByText(/Learn German with an AI tutor/i)).not.toBeInTheDocument();
+  });
+});

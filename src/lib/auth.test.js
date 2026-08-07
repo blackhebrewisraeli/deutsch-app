@@ -213,3 +213,56 @@ describe('mayHaveSession', () => {
     expect(mayHaveSession()).toBe(false);
   });
 });
+
+describe('humanAuthError', () => {
+  it('maps rate limits', async () => {
+    const { humanAuthError } = await import('./auth.js');
+    expect(humanAuthError({ status: 429, message: 'rate limit' })).toBe(
+      'Too many attempts — try again in a minute.'
+    );
+    expect(humanAuthError({ message: 'over_email_send_rate_limit' })).toBe(
+      'Too many attempts — try again in a minute.'
+    );
+  });
+
+  it('maps expired codes', async () => {
+    const { humanAuthError } = await import('./auth.js');
+    expect(humanAuthError({ message: 'Token has expired', code: 'otp_expired' })).toBe(
+      'That code expired — resend.'
+    );
+  });
+
+  it('falls back without leaking raw SDK text', async () => {
+    const { humanAuthError } = await import('./auth.js');
+    expect(humanAuthError({ message: 'AuthApiError: boom at stack' })).toBe(
+      'Something went wrong — try again.'
+    );
+    expect(humanAuthError(null)).toBe('');
+  });
+});
+
+describe('authCallbackKind', () => {
+  beforeEach(() => {
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('returns null on a clean URL', async () => {
+    const { authCallbackKind } = await import('./auth.js');
+    expect(authCallbackKind()).toBeNull();
+  });
+
+  it.each([
+    ['pending', 'a PKCE code', '/?code=abc123'],
+    ['pending', 'an implicit magic-link hash', '/#access_token=abc&type=magiclink'],
+    ['error', 'a query-string error', '/?error=access_denied&error_code=otp_expired'],
+    [
+      'error',
+      'an expired-link hash',
+      '/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired',
+    ],
+  ])('returns %s for %s', async (kind, _label, url) => {
+    window.history.replaceState({}, '', url);
+    const { authCallbackKind } = await import('./auth.js');
+    expect(authCallbackKind()).toBe(kind);
+  });
+});
