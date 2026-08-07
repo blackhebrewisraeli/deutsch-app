@@ -31,7 +31,6 @@ export default function AuthSheet({ open, intent = 'signin', onClose, onSuccess 
       style={{
         position: 'fixed',
         inset: 0,
-        background: COLORS.inkAa,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -39,14 +38,30 @@ export default function AuthSheet({ open, intent = 'signin', onClose, onSuccess 
         padding: SPACE[6],
         boxSizing: 'border-box',
       }}
-      onClick={onClose}
     >
-      <div
-        role="dialog"
+      <button
+        type="button"
+        aria-label="Dismiss sign-in"
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          border: 'none',
+          margin: 0,
+          padding: 0,
+          background: COLORS.inkAa,
+          cursor: 'pointer',
+        }}
+      />
+      <dialog
+        open
         aria-modal="true"
         aria-label={heading}
         style={{
           position: 'relative',
+          zIndex: 1,
+          margin: 0,
+          border: 'none',
           background: COLORS.paper,
           borderRadius: RADIUS.xl,
           padding: SPACE[6],
@@ -56,7 +71,6 @@ export default function AuthSheet({ open, intent = 'signin', onClose, onSuccess 
           boxShadow: SHADOW.bar,
           boxSizing: 'border-box',
         }}
-        onClick={(e) => e.stopPropagation()}
       >
         <button
           type="button"
@@ -83,7 +97,7 @@ export default function AuthSheet({ open, intent = 'signin', onClose, onSuccess 
           <X size={16} aria-hidden="true" />
         </button>
         <MagicLinkForm heading={heading} onSuccess={onSuccess} />
-      </div>
+      </dialog>
     </div>
   );
 }

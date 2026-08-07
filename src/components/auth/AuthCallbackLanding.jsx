@@ -41,16 +41,18 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
 
   if (!isAuthConfigured() || !phase) return null;
 
-  const copy =
-    phase === 'pending'
-      ? { title: 'Signing you in…', body: null, action: null }
-      : phase === 'success'
-        ? { title: 'Signed in', body: 'Welcome back.', action: null }
-        : {
-            title: 'That link expired — request a new one',
-            body: 'Sign-in links only work once and time out. Ask for a fresh code.',
-            action: 'Email me a sign-in code',
-          };
+  let copy;
+  if (phase === 'pending') {
+    copy = { title: 'Signing you in…', body: null, action: null };
+  } else if (phase === 'success') {
+    copy = { title: 'Signed in', body: 'Welcome back.', action: null };
+  } else {
+    copy = {
+      title: 'That link expired — request a new one',
+      body: 'Sign-in links only work once and time out. Ask for a fresh code.',
+      action: 'Email me a sign-in code',
+    };
+  }
 
   return (
     <div

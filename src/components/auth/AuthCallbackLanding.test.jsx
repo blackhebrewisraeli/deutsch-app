@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const { isAuthConfigured, authCallbackKind } = vi.hoisted(() => ({
@@ -66,7 +66,7 @@ describe('AuthCallbackLanding', () => {
     rerender(
       <AuthCallbackLanding status="authenticated" onSignedIn={onSignedIn} onRequestNew={() => {}} />
     );
-    await waitFor(() => expect(screen.getByText(/signed in/i)).toBeInTheDocument());
+    expect(await screen.findByText(/signed in/i)).toBeInTheDocument();
     expect(onSignedIn).toHaveBeenCalled();
   });
 

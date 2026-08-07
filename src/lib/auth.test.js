@@ -251,31 +251,18 @@ describe('authCallbackKind', () => {
     expect(authCallbackKind()).toBeNull();
   });
 
-  it('returns pending for a PKCE code', async () => {
-    window.history.replaceState({}, '', '/?code=abc123');
+  it.each([
+    ['pending', 'a PKCE code', '/?code=abc123'],
+    ['pending', 'an implicit magic-link hash', '/#access_token=abc&type=magiclink'],
+    ['error', 'a query-string error', '/?error=access_denied&error_code=otp_expired'],
+    [
+      'error',
+      'an expired-link hash',
+      '/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired',
+    ],
+  ])('returns %s for %s', async (kind, _label, url) => {
+    window.history.replaceState({}, '', url);
     const { authCallbackKind } = await import('./auth.js');
-    expect(authCallbackKind()).toBe('pending');
-  });
-
-  it('returns pending for an implicit magic-link hash', async () => {
-    window.history.replaceState({}, '', '/#access_token=abc&type=magiclink');
-    const { authCallbackKind } = await import('./auth.js');
-    expect(authCallbackKind()).toBe('pending');
-  });
-
-  it('returns error for ?error= in the query string', async () => {
-    window.history.replaceState({}, '', '/?error=access_denied&error_code=otp_expired');
-    const { authCallbackKind } = await import('./auth.js');
-    expect(authCallbackKind()).toBe('error');
-  });
-
-  it('returns error for an expired-link hash', async () => {
-    window.history.replaceState(
-      {},
-      '',
-      '/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired'
-    );
-    const { authCallbackKind } = await import('./auth.js');
-    expect(authCallbackKind()).toBe('error');
+    expect(authCallbackKind()).toBe(kind);
   });
 });

@@ -64,8 +64,7 @@ describe('AuthSheet', () => {
   it('dismisses when the backdrop is clicked', async () => {
     const onClose = vi.fn();
     render(<AuthSheet open intent="signin" onClose={onClose} onSuccess={() => {}} />);
-    // Click the overlay (dialog's parent), not the dialog itself.
-    await userEvent.click(screen.getByRole('dialog').parentElement);
+    await userEvent.click(screen.getByRole('button', { name: /dismiss sign-in/i }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 });
