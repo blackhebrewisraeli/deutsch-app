@@ -214,6 +214,33 @@ describe('mayHaveSession', () => {
   });
 });
 
+describe('humanAuthError', () => {
+  it('maps rate limits', async () => {
+    const { humanAuthError } = await import('./auth.js');
+    expect(humanAuthError({ status: 429, message: 'rate limit' })).toBe(
+      'Too many attempts — try again in a minute.'
+    );
+    expect(humanAuthError({ message: 'over_email_send_rate_limit' })).toBe(
+      'Too many attempts — try again in a minute.'
+    );
+  });
+
+  it('maps expired codes', async () => {
+    const { humanAuthError } = await import('./auth.js');
+    expect(humanAuthError({ message: 'Token has expired', code: 'otp_expired' })).toBe(
+      'That code expired — resend.'
+    );
+  });
+
+  it('falls back without leaking raw SDK text', async () => {
+    const { humanAuthError } = await import('./auth.js');
+    expect(humanAuthError({ message: 'AuthApiError: boom at stack' })).toBe(
+      'Something went wrong — try again.'
+    );
+    expect(humanAuthError(null)).toBe('');
+  });
+});
+
 describe('authCallbackKind', () => {
   beforeEach(() => {
     window.history.replaceState({}, '', '/');

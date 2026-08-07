@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { COLORS, FONTS, FONT_SIZE, RADIUS, BORDER } from '../../lib/theme';
-import { signInWithMagicLink, verifyCode } from '../../lib/auth.js';
+import { signInWithMagicLink, verifyCode, humanAuthError } from '../../lib/auth.js';
 import Button from '../ui/Button';
 
 // Two-state passwordless form: email entry → inbox/code entry. The email
@@ -55,7 +55,7 @@ export default function MagicLinkForm({ heading, onSuccess }) {
     setError('');
     const { error: e } = await signInWithMagicLink(email.trim());
     setBusy(false);
-    if (e) setError(e.message);
+    if (e) setError(humanAuthError(e));
     else setSent(true);
   };
 
@@ -65,7 +65,7 @@ export default function MagicLinkForm({ heading, onSuccess }) {
     setError('');
     const { error: e } = await signInWithMagicLink(email.trim());
     setBusy(false);
-    if (e) setError(e.message);
+    if (e) setError(humanAuthError(e));
     else startCooldown(30);
   };
 
@@ -75,7 +75,7 @@ export default function MagicLinkForm({ heading, onSuccess }) {
     setError('');
     const { error: e } = await verifyCode(email.trim(), code.trim());
     setBusy(false);
-    if (e) setError(e.message);
+    if (e) setError(humanAuthError(e));
     else onSuccess();
   };
 

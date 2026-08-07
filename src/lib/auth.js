@@ -101,6 +101,20 @@ export function mayHaveSession() {
 
 const NOT_CONFIGURED = { error: { message: 'Sign-in is not available right now.' } };
 
+/** Map Supabase/auth errors to short human copy — never surface raw SDK text. */
+export function humanAuthError(error) {
+  if (!error) return '';
+  const raw = `${error.message || ''} ${error.code || ''} ${error.error_description || ''}`;
+  const msg = raw.toLowerCase();
+  if (error.status === 429 || /rate.?limit|too many|over_email_send_rate_limit/.test(msg)) {
+    return 'Too many attempts — try again in a minute.';
+  }
+  if (/expired|otp_expired|token has expired|email link is invalid/.test(msg)) {
+    return 'That code expired — resend.';
+  }
+  return 'Something went wrong — try again.';
+}
+
 export async function signInWithMagicLink(email) {
   const c = await getClient();
   if (!c) return NOT_CONFIGURED;
