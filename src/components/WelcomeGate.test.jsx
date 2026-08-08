@@ -7,11 +7,14 @@ vi.mock('../lib/auth.js', () => ({ isAuthConfigured: () => true }));
 import WelcomeGate from './WelcomeGate';
 
 describe('WelcomeGate', () => {
-  it('routes the guest path', async () => {
+  // The guest path is now a bounded trial, so the gate says so up front — a
+  // wall later is only fair if the door promised a trial, not a free ride.
+  it('routes the guest path, offered as a trial', async () => {
     const onGuest = vi.fn();
     render(<WelcomeGate onGuest={onGuest} onAuth={() => {}} />);
-    await userEvent.click(screen.getByRole('button', { name: /continue without an account/i }));
+    await userEvent.click(screen.getByRole('button', { name: 'Try it first — free →' }));
     expect(onGuest).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/continue without an account/i)).not.toBeInTheDocument();
   });
 
   it('routes create / sign-in to the auth callback with the right intent', async () => {
