@@ -47,6 +47,8 @@ export default function MagicLinkForm({ heading, onSuccess }) {
     borderRadius: RADIUS.md,
     marginBottom: 12,
     boxSizing: 'border-box',
+    background: COLORS.card,
+    color: COLORS.ink,
   };
 
   const send = async () => {
@@ -80,11 +82,14 @@ export default function MagicLinkForm({ heading, onSuccess }) {
   };
 
   return (
-    <div style={{ maxWidth: 360, margin: '0 auto', fontFamily: FONTS.body }}>
-      <h2 style={{ fontFamily: FONTS.display }}>{heading}</h2>
+    <div style={{ maxWidth: 360, margin: '0 auto', fontFamily: FONTS.body, color: COLORS.ink }}>
+      <h2 style={{ fontFamily: FONTS.display, color: COLORS.ink }}>{heading}</h2>
       {!sent ? (
         <>
-          <label htmlFor="ml-email" style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag }}>
+          <label
+            htmlFor="ml-email"
+            style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, color: COLORS.mute }}
+          >
             Email
           </label>
           <input
@@ -100,8 +105,13 @@ export default function MagicLinkForm({ heading, onSuccess }) {
         </>
       ) : (
         <>
-          <p>Enter the 6-digit code — or tap the link in the email.</p>
-          <label htmlFor="ml-code" style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag }}>
+          <p style={{ color: COLORS.ink }}>
+            Enter the 6-digit code — or tap the link in the email.
+          </p>
+          <label
+            htmlFor="ml-code"
+            style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, color: COLORS.mute }}
+          >
             Code
           </label>
           <input

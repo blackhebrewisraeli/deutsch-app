@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { COLORS } from '../../lib/theme';
 
 const { isAuthConfigured } = vi.hoisted(() => ({
   isAuthConfigured: vi.fn(() => true),
@@ -42,7 +43,9 @@ describe('AuthSheet', () => {
 
   it('shows the sign-in form when open', () => {
     render(<AuthSheet open intent="signin" onClose={() => {}} onSuccess={() => {}} />);
-    expect(screen.getByRole('dialog', { name: /sign in/i })).toBeInTheDocument();
+    const dialog = screen.getByRole('dialog', { name: /sign in/i });
+    expect(dialog).toBeInTheDocument();
+    expect(dialog).toHaveStyle({ color: COLORS.ink, background: COLORS.paper });
     expect(screen.getByTestId('magic-link-form')).toHaveTextContent('Sign in');
   });
 
