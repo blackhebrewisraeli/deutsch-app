@@ -12,6 +12,19 @@ export function isAuthConfigured() {
   return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 }
 
+/**
+ * Google sign-in needs both an auth backend AND the flag, because the flag
+ * alone cannot tell you whether an owner finished the Google Cloud + Supabase
+ * provider setup (docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md). Absent var means OFF,
+ * matching SYNC_ENABLED / LEAGUES_ENABLED.
+ *
+ * NOTE: Vite inlines env at build time, so flipping this in a dashboard does
+ * nothing until the app is rebuilt.
+ */
+export function isGoogleAuthConfigured() {
+  return isAuthConfigured() && import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
+}
+
 // @supabase/supabase-js pulls in ~816KB of source (auth, postgrest, storage,
 // realtime, functions) and none of it is needed to paint the app — a guest can
 // use every tab without it. It is loaded on demand instead, so it lands in its
@@ -121,6 +134,25 @@ export async function signInWithMagicLink(email) {
   return c.auth.signInWithOtp({
     email,
     options: { emailRedirectTo: window.location.origin },
+  });
+}
+
+/**
+ * Start the Google OAuth round trip. `redirectTo` is window.location.origin —
+ * deliberately the same value signInWithMagicLink passes as emailRedirectTo,
+ * so both flows need one allow-list entry per environment instead of two.
+ *
+ * The flag is checked here as well as in the UI: a stale tab left open across
+ * a deploy that switched Google off must not be able to start a flow into a
+ * provider that is no longer configured.
+ */
+export async function signInWithGoogle() {
+  if (!isGoogleAuthConfigured()) return NOT_CONFIGURED;
+  const c = await getClient();
+  if (!c) return NOT_CONFIGURED;
+  return c.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
   });
 }
 
