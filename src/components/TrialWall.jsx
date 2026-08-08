@@ -1,5 +1,7 @@
 import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, RADIUS, SHADOW, SPACE } from '../lib/theme';
+import { isGoogleAuthConfigured } from '../lib/auth.js';
 import Button from './ui/Button';
+import GoogleButton from './auth/GoogleButton';
 
 // The mono caption treatment used twice below — small uppercase mute label,
 // the same voice as WelcomeGate's tagline.
@@ -25,11 +27,25 @@ const caption = {
  * No `aria-modal` either — the header and nav stay operable by design, so
  * claiming a modal would lie to assistive tech about what is reachable.
  */
-export default function TrialWall({ roundsUsed = 0, mobile = false, onCreateAccount, onSignIn }) {
+export default function TrialWall({
+  roundsUsed = 0,
+  mobile = false,
+  onCreateAccount,
+  onSignIn,
+  onGoogle,
+  googleBusy = false,
+}) {
   // Clearance under App's sticky header + nav, which stack to ~113px on mobile
   // and ~132px on desktop. This is a gap, not an alignment, so it only has to
   // be about right — the card must simply never dock underneath the nav.
   const stickyTop = mobile ? 121 : 140;
+
+  // When Google is on, every existing action demotes one step: Google takes
+  // primary, "Create a free account" drops to secondary, and "I already have
+  // an account" becomes the bare-text tertiary — the same third-action
+  // treatment WelcomeGate already uses for its guest link. Flag off, this is
+  // byte-for-byte the wall that shipped in #95.
+  const googleOn = isGoogleAuthConfigured();
 
   return (
     <div
@@ -89,13 +105,46 @@ export default function TrialWall({ roundsUsed = 0, mobile = false, onCreateAcco
         </p>
 
         {/* autoFocus rides Button's ...rest through to the <button>: focus has
-            to follow the wall, which interrupts the practice flow. */}
-        <Button autoFocus onClick={onCreateAccount}>
+            to follow the wall, which interrupts the practice flow. It belongs
+            on whichever action is currently primary. */}
+        {googleOn && <GoogleButton onClick={onGoogle} busy={googleBusy} autoFocus />}
+        <Button
+          variant={googleOn ? 'secondary' : 'primary'}
+          autoFocus={!googleOn}
+          onClick={onCreateAccount}
+        >
           Create a free account
         </Button>
-        <Button variant="secondary" onClick={onSignIn}>
-          I already have an account
-        </Button>
+        {googleOn ? (
+          <>
+            {/* Inline styles can't express :focus-visible; a scoped rule gives
+                the bare tertiary a visible ring, as WelcomeGate does. */}
+            <style>{`.trial-tertiary:focus-visible { outline: 2px solid ${COLORS.ink}; outline-offset: 2px; border-radius: 4px; }`}</style>
+            <button
+              className="trial-tertiary"
+              type="button"
+              onClick={onSignIn}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: COLORS.mute,
+                fontFamily: FONTS.mono,
+                fontSize: FONT_SIZE.tag,
+                letterSpacing: LETTER_SPACING.caps,
+                textTransform: 'uppercase',
+                textDecoration: 'underline',
+                cursor: 'pointer',
+                padding: SPACE[2],
+              }}
+            >
+              I already have an account
+            </button>
+          </>
+        ) : (
+          <Button variant="secondary" onClick={onSignIn}>
+            I already have an account
+          </Button>
+        )}
 
         <p style={caption}>Your stats stay open — tap Stats below.</p>
       </div>

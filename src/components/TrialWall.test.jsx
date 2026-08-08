@@ -1,6 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+const { isGoogleAuthConfigured } = vi.hoisted(() => ({
+  isGoogleAuthConfigured: vi.fn(() => false),
+}));
+vi.mock('../lib/auth.js', () => ({ isGoogleAuthConfigured }));
+
 import TrialWall from './TrialWall';
 
 function setup(props = {}) {
@@ -13,6 +18,11 @@ function setup(props = {}) {
 }
 
 describe('TrialWall', () => {
+  beforeEach(() => {
+    // Flag off is the merge state and the one CI runs.
+    isGoogleAuthConfigured.mockReturnValue(false);
+  });
+
   it('renders the spec copy', () => {
     setup();
     expect(screen.getByRole('heading', { name: 'Save your progress' })).toBeInTheDocument();
@@ -93,5 +103,62 @@ describe('TrialWall', () => {
     expect(onCreateAccount).not.toHaveBeenCalled();
     expect(onSignIn).not.toHaveBeenCalled();
     expect(screen.getByRole('dialog', { name: 'Save your progress' })).toBeInTheDocument();
+  });
+
+  // With the flag off this is byte-for-byte the wall that shipped in #95.
+  it('keeps the two-CTA wall unchanged while Google is off', () => {
+    setup();
+    expect(screen.queryByRole('button', { name: /continue with google/i })).toBeNull();
+    const buttons = screen.getAllByRole('button');
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]).toHaveAccessibleName('Create a free account');
+    expect(buttons[1]).toHaveAccessibleName('I already have an account');
+    expect(buttons[0]).toHaveFocus();
+  });
+
+  describe('with Google on', () => {
+    beforeEach(() => isGoogleAuthConfigured.mockReturnValue(true));
+
+    // Every existing action demotes one step rather than a fourth appearing:
+    // at 320px a fourth action turns the wall into a menu.
+    it('demotes each action one step and stays at three', () => {
+      setup();
+      const buttons = screen.getAllByRole('button');
+      expect(buttons).toHaveLength(3);
+      expect(buttons[0]).toHaveAccessibleName('Continue with Google');
+      expect(buttons[1]).toHaveAccessibleName('Create a free account');
+      expect(buttons[2]).toHaveAccessibleName('I already have an account');
+    });
+
+    it('moves focus to Google, which is now the primary CTA', () => {
+      setup();
+      expect(screen.getByRole('button', { name: 'Continue with Google' })).toHaveFocus();
+    });
+
+    it('still fires the create and sign-in callbacks', async () => {
+      const user = userEvent.setup();
+      const { onCreateAccount, onSignIn } = setup();
+      await user.click(screen.getByRole('button', { name: 'Create a free account' }));
+      expect(onCreateAccount).toHaveBeenCalledTimes(1);
+      await user.click(screen.getByRole('button', { name: 'I already have an account' }));
+      expect(onSignIn).toHaveBeenCalledTimes(1);
+    });
+
+    it('routes Google to the handler App passes', async () => {
+      const user = userEvent.setup();
+      const onGoogle = vi.fn();
+      setup({ onGoogle });
+      await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
+      expect(onGoogle).toHaveBeenCalledTimes(1);
+    });
+
+    it('is still not dismissible', async () => {
+      const user = userEvent.setup();
+      const { onCreateAccount, onSignIn } = setup();
+      await user.keyboard('{Escape}');
+      expect(onCreateAccount).not.toHaveBeenCalled();
+      expect(onSignIn).not.toHaveBeenCalled();
+      expect(screen.getByRole('dialog', { name: 'Save your progress' })).toBeInTheDocument();
+    });
   });
 });

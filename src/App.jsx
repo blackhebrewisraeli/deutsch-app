@@ -41,7 +41,14 @@ import AuthSheet from './components/auth/AuthSheet';
 import AuthCallbackLanding from './components/auth/AuthCallbackLanding';
 import AccountChip from './components/AccountChip';
 import ThemeChip from './components/ThemeChip';
-import { useAuth, signOut, getAccessToken, isAuthConfigured } from './lib/auth';
+import {
+  useAuth,
+  signOut,
+  getAccessToken,
+  isAuthConfigured,
+  signInWithGoogle,
+  humanAuthError,
+} from './lib/auth';
 import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
 import { useSyncStatus } from './lib/useSyncStatus';
 import { useLeagueRewards } from './lib/useLeagueRewards';
@@ -302,6 +309,22 @@ export default function App() {
     setAuthModal('signin');
   };
 
+  // One Google entry point for all three surfaces — the sheet, the gate and
+  // the trial wall each render the same button and call this. On success the
+  // browser leaves for Google, so `busy` is deliberately never cleared: the
+  // page is going away, and clearing it would re-enable the button for the
+  // moment before it does.
+  const [googleBusy, setGoogleBusy] = useState(false);
+  const handleGoogle = async () => {
+    if (googleBusy) return;
+    setGoogleBusy(true);
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setGoogleBusy(false);
+      showToast(humanAuthError(error));
+    }
+  };
+
   const authOverlay = (
     <>
       <AuthCallbackLanding
@@ -314,6 +337,8 @@ export default function App() {
         intent={authModal ?? 'signin'}
         onClose={() => setAuthModal(null)}
         onSuccess={handleAuthDone}
+        onGoogle={handleGoogle}
+        googleBusy={googleBusy}
       />
     </>
   );
@@ -491,7 +516,12 @@ export default function App() {
   if (showGate && !user) {
     return (
       <>
-        <WelcomeGate onGuest={handleGuest} onAuth={(intent) => setAuthModal(intent)} />
+        <WelcomeGate
+          onGuest={handleGuest}
+          onAuth={(intent) => setAuthModal(intent)}
+          onGoogle={handleGoogle}
+          googleBusy={googleBusy}
+        />
         {authOverlay}
       </>
     );
@@ -777,6 +807,8 @@ export default function App() {
                 mobile={mobile}
                 onCreateAccount={() => setAuthModal('create')}
                 onSignIn={requestSignIn}
+                onGoogle={handleGoogle}
+                googleBusy={googleBusy}
               />
             )}
           </div>

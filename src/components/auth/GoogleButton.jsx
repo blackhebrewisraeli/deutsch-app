@@ -20,7 +20,7 @@ import Button from '../ui/Button';
  * The label is Google's required wording: "Continue with Google", not "Sign in
  * with Google" alongside the mark.
  */
-export default function GoogleButton({ onClick, busy = false }) {
+export default function GoogleButton({ onClick, busy = false, autoFocus = false }) {
   if (!isGoogleAuthConfigured()) return null;
 
   return (
@@ -28,6 +28,7 @@ export default function GoogleButton({ onClick, busy = false }) {
       onClick={onClick}
       // A redirect takes a beat; a double-tap must not start two round trips.
       disabled={busy}
+      autoFocus={autoFocus}
       style={{
         display: 'flex',
         alignItems: 'center',
