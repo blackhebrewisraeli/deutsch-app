@@ -7,6 +7,8 @@ import {
   STREAK_MILESTONES,
   FREEZE,
   MULTIPLIER_TIERS,
+  TRIAL_ROUND_CAP,
+  TRIAL_REQUIRES,
 } from './gameConfig';
 
 describe('gameConfig', () => {
@@ -25,6 +27,10 @@ describe('gameConfig', () => {
   });
   it('defines the freeze economy', () => {
     expect(FREEZE).toEqual({ earnEveryDays: 7, maxHeld: 2 });
+  });
+  it('defines the guest-trial bounds', () => {
+    expect(TRIAL_ROUND_CAP).toBe(60);
+    expect(TRIAL_REQUIRES).toEqual({ allTabs: true, firstGoal: true });
   });
   it('defines multiplier tiers', () => {
     expect(MULTIPLIER_TIERS[0]).toEqual({ minStreak: 0, mult: 1.0 });
