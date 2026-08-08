@@ -12,6 +12,19 @@ export function isAuthConfigured() {
   return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 }
 
+/**
+ * Google sign-in needs both an auth backend AND the flag, because the flag
+ * alone cannot tell you whether an owner finished the Google Cloud + Supabase
+ * provider setup (docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md). Absent var means OFF,
+ * matching SYNC_ENABLED / LEAGUES_ENABLED.
+ *
+ * NOTE: Vite inlines env at build time, so flipping this in a dashboard does
+ * nothing until the app is rebuilt.
+ */
+export function isGoogleAuthConfigured() {
+  return isAuthConfigured() && import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
+}
+
 // @supabase/supabase-js pulls in ~816KB of source (auth, postgrest, storage,
 // realtime, functions) and none of it is needed to paint the app — a guest can
 // use every tab without it. It is loaded on demand instead, so it lands in its
@@ -68,6 +81,42 @@ export function authCallbackKind(loc = typeof window !== 'undefined' ? window.lo
 }
 
 /**
+ * Why did this auth callback fail? Companion to authCallbackKind — the URL
+ * patterns live here, in one place, and are never re-derived in a component.
+ *
+ * - `'cancelled'` — the user backed out of the provider's consent screen
+ * - `'expired'`   — a magic link that timed out or was already used
+ * - `'failed'`    — any other reported error
+ * - `null`        — not an error callback at all
+ *
+ * ORDER MATTERS. Supabase reports an expired magic link as
+ * `error=access_denied&error_code=otp_expired&…` — BOTH signals in one URL —
+ * so testing access_denied first would label every expired link a
+ * cancellation. Expired is checked first for exactly that reason.
+ *
+ * Deliberately separate from authCallbackKind rather than folded into it:
+ * that function's `'pending' | 'error' | null` contract is what
+ * mayHaveSession() branches on, and mayHaveSession() must stay fail-open.
+ */
+export function authCallbackReason(loc = typeof window !== 'undefined' ? window.location : null) {
+  if (!loc) return null;
+  if (authCallbackKind(loc) !== 'error') return null;
+
+  const raw = `${loc.search || ''}${loc.hash || ''}`;
+  let blob;
+  try {
+    blob = decodeURIComponent(raw).toLowerCase();
+  } catch {
+    // A malformed percent-escape is not a reason to lose the error entirely.
+    blob = raw.toLowerCase();
+  }
+
+  if (/otp_expired|expired/.test(blob)) return 'expired';
+  if (/access_denied|user_denied|user_cancelled|consent_required/.test(blob)) return 'cancelled';
+  return 'failed';
+}
+
+/**
  * Could this visitor possibly be signed in, without loading the SDK to ask?
  *
  * supabase-js persists its session in localStorage under `sb-<ref>-auth-token`.
@@ -121,6 +170,25 @@ export async function signInWithMagicLink(email) {
   return c.auth.signInWithOtp({
     email,
     options: { emailRedirectTo: window.location.origin },
+  });
+}
+
+/**
+ * Start the Google OAuth round trip. `redirectTo` is window.location.origin —
+ * deliberately the same value signInWithMagicLink passes as emailRedirectTo,
+ * so both flows need one allow-list entry per environment instead of two.
+ *
+ * The flag is checked here as well as in the UI: a stale tab left open across
+ * a deploy that switched Google off must not be able to start a flow into a
+ * provider that is no longer configured.
+ */
+export async function signInWithGoogle() {
+  if (!isGoogleAuthConfigured()) return NOT_CONFIGURED;
+  const c = await getClient();
+  if (!c) return NOT_CONFIGURED;
+  return c.auth.signInWithOAuth({
+    provider: 'google',
+    options: { redirectTo: window.location.origin },
   });
 }
 

@@ -239,6 +239,9 @@ describe('in-app AuthSheet', () => {
   it('opens from Stats without resurfacing the WelcomeGate', async () => {
     vi.doMock('./lib/auth.js', () => ({
       isAuthConfigured: () => true,
+      isGoogleAuthConfigured: () => false,
+      signInWithGoogle: vi.fn(() => Promise.resolve({ error: null })),
+      humanAuthError: () => 'Something went wrong — try again.',
       useAuth: () => ({ user: null, session: null, status: 'anonymous' }),
       signOut: vi.fn(() => Promise.resolve({ error: null })),
       getAccessToken: vi.fn(() => Promise.resolve(null)),
@@ -246,6 +249,7 @@ describe('in-app AuthSheet', () => {
       verifyCode: vi.fn(() => Promise.resolve({ error: null })),
       mayHaveSession: () => false,
       authCallbackKind: () => null,
+      authCallbackReason: () => null,
       getSupabase: () => Promise.resolve(null),
     }));
 
@@ -304,10 +308,21 @@ describe('guest trial wall', () => {
     vi.resetModules();
   });
 
-  async function renderApp({ configured = true, status = 'anonymous', state = EXHAUSTED } = {}) {
+  let signInWithGoogle;
+
+  async function renderApp({
+    configured = true,
+    status = 'anonymous',
+    state = EXHAUSTED,
+    googleOn = false,
+  } = {}) {
     localStorage.setItem('deutsch-app-state-v1', JSON.stringify(state));
+    signInWithGoogle = vi.fn(() => Promise.resolve({ error: null }));
     vi.doMock('./lib/auth.js', () => ({
       isAuthConfigured: () => configured,
+      isGoogleAuthConfigured: () => googleOn,
+      signInWithGoogle,
+      humanAuthError: () => 'Something went wrong — try again.',
       useAuth: () => ({
         user: status === 'authenticated' ? { id: 'u1', email: 'a@b.co' } : null,
         session: null,
@@ -319,6 +334,7 @@ describe('guest trial wall', () => {
       verifyCode: vi.fn(() => Promise.resolve({ error: null })),
       mayHaveSession: () => false,
       authCallbackKind: () => null,
+      authCallbackReason: () => null,
       getSupabase: () => Promise.resolve(null),
     }));
     const { default: AppWithAuth } = await import('./App.jsx');
@@ -452,5 +468,32 @@ describe('guest trial wall', () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  // The wall's Google button must reach the real signInWithGoogle through
+  // App's single handler — not a second sign-in path bolted onto the wall.
+  it('starts the Google flow from the wall when the flag is on', async () => {
+    const user = userEvent.setup();
+    await renderApp({ googleOn: true });
+    await user.click(screen.getByRole('button', { name: 'Continue with Google' }));
+    expect(signInWithGoogle).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows no Google button on the wall when the flag is off', async () => {
+    await renderApp();
+    expect(wall()).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /continue with google/i })).toBeNull();
+    expect(signInWithGoogle).not.toHaveBeenCalled();
+  });
+
+  // A redirect takes a beat and the page is on its way out; a second tap must
+  // not start a second round trip.
+  it('does not start a second flow on a double tap', async () => {
+    const user = userEvent.setup();
+    await renderApp({ googleOn: true });
+    const button = screen.getByRole('button', { name: 'Continue with Google' });
+    await user.click(button);
+    await user.click(button);
+    expect(signInWithGoogle).toHaveBeenCalledTimes(1);
   });
 });

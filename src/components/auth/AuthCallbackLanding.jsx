@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../../lib/theme';
-import { authCallbackKind, isAuthConfigured } from '../../lib/auth.js';
+import { authCallbackKind, authCallbackReason, isAuthConfigured } from '../../lib/auth.js';
 import Button from '../ui/Button';
 
 function clearAuthParamsFromUrl() {
@@ -17,6 +17,9 @@ function clearAuthParamsFromUrl() {
  */
 export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }) {
   const [kind] = useState(() => (isAuthConfigured() ? authCallbackKind() : null));
+  // Captured at mount: clearAuthParamsFromUrl() wipes the URL, so reading the
+  // reason lazily later would always come back null.
+  const [reason] = useState(() => (isAuthConfigured() ? authCallbackReason() : null));
   const [phase, setPhase] = useState(() => {
     if (!kind) return null;
     return kind === 'error' ? 'error' : 'pending';
@@ -46,11 +49,26 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
     copy = { title: 'Signing you in…', body: null, action: null };
   } else if (phase === 'success') {
     copy = { title: 'Signed in', body: 'Welcome back.', action: null };
-  } else {
+  } else if (reason === 'cancelled') {
+    copy = {
+      title: 'Sign-in cancelled',
+      body: 'No problem — you can try again whenever you like.',
+      action: 'Sign in again',
+    };
+  } else if (reason === 'expired') {
     copy = {
       title: 'That link expired — request a new one',
       body: 'Sign-in links only work once and time out. Ask for a fresh code.',
-      action: 'Email me a sign-in code',
+      action: 'Sign in again',
+    };
+  } else {
+    // 'failed', or a pending callback that timed out (reason null — the URL
+    // carried a credential, not an error). Never surface the provider's raw
+    // message or a URL fragment; neither is written for a person to read.
+    copy = {
+      title: "That didn't work",
+      body: 'Something went wrong finishing sign-in. Please try again.',
+      action: 'Sign in again',
     };
   }
 

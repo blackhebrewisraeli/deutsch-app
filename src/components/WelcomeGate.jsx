@@ -1,11 +1,13 @@
 import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING } from '../lib/theme';
 import { isAuthConfigured } from '../lib/auth.js';
 import Button from './ui/Button';
+import GoogleButton from './auth/GoogleButton';
 
 // First-visit screen. The guest path is always available (anonymous-first);
 // the account actions render only when auth is configured, so no environment
-// ever shows a dead button.
-export default function WelcomeGate({ onGuest, onAuth }) {
+// ever shows a dead button. GoogleButton self-guards on its own flag, so it
+// simply is not there until an owner turns Google on.
+export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = false }) {
   const authOn = isAuthConfigured();
   return (
     <div
@@ -44,6 +46,7 @@ export default function WelcomeGate({ onGuest, onAuth }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 260 }}>
         {authOn && (
           <>
+            <GoogleButton onClick={onGoogle} busy={googleBusy} />
             <Button onClick={() => onAuth('create')}>Create account</Button>
             <Button variant="secondary" onClick={() => onAuth('signin')}>
               Sign in

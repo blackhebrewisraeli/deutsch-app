@@ -3,6 +3,7 @@ import { renderHook, waitFor } from '@testing-library/react';
 
 const mockAuth = {
   signInWithOtp: vi.fn(() => Promise.resolve({ data: {}, error: null })),
+  signInWithOAuth: vi.fn(() => Promise.resolve({ data: {}, error: null })),
   verifyOtp: vi.fn(() => Promise.resolve({ data: {}, error: null })),
   signOut: vi.fn(() => Promise.resolve({ error: null })),
   getSession: vi.fn(() => Promise.resolve({ data: { session: null } })),
@@ -264,5 +265,151 @@ describe('authCallbackKind', () => {
     window.history.replaceState({}, '', url);
     const { authCallbackKind } = await import('./auth.js');
     expect(authCallbackKind()).toBe(kind);
+  });
+});
+
+// Google is gated by two independent facts: an auth backend exists, and an
+// owner finished the Google Cloud + Supabase provider setup. Only the second
+// needs a flag — nothing in the bundle can see a provider's dashboard state.
+describe('signInWithGoogle', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://x.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
+    vi.stubEnv('VITE_GOOGLE_AUTH_ENABLED', 'true');
+    vi.resetModules();
+    Object.values(mockAuth).forEach((fn) => fn.mockClear?.());
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('starts the OAuth round trip with the app origin as redirectTo', async () => {
+    const { signInWithGoogle } = await import('./auth.js');
+    const { error } = await signInWithGoogle();
+    expect(error).toBeNull();
+    expect(mockAuth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'google',
+      options: { redirectTo: window.location.origin },
+    });
+  });
+
+  // One allow-list entry per environment instead of two.
+  it('uses the same redirect target the magic link does', async () => {
+    const { signInWithGoogle, signInWithMagicLink } = await import('./auth.js');
+    await signInWithGoogle();
+    await signInWithMagicLink('a@b.com');
+    expect(mockAuth.signInWithOAuth.mock.calls[0][0].options.redirectTo).toBe(
+      mockAuth.signInWithOtp.mock.calls[0][0].options.emailRedirectTo
+    );
+  });
+
+  it('refuses when auth is unconfigured, even with the flag on', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
+    vi.resetModules();
+    const { signInWithGoogle } = await import('./auth.js');
+    const { error } = await signInWithGoogle();
+    expect(error).toBeTruthy();
+    expect(mockAuth.signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  // A stale tab left open across a deploy that switched Google off must not be
+  // able to start a flow into a provider that is no longer configured.
+  it('refuses when the flag is off, even though auth is configured', async () => {
+    vi.stubEnv('VITE_GOOGLE_AUTH_ENABLED', 'false');
+    vi.resetModules();
+    const { signInWithGoogle } = await import('./auth.js');
+    const { error } = await signInWithGoogle();
+    expect(error).toBeTruthy();
+    expect(mockAuth.signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  it('refuses when the flag is absent entirely', async () => {
+    vi.stubEnv('VITE_GOOGLE_AUTH_ENABLED', undefined);
+    vi.resetModules();
+    const { signInWithGoogle } = await import('./auth.js');
+    expect((await signInWithGoogle()).error).toBeTruthy();
+    expect(mockAuth.signInWithOAuth).not.toHaveBeenCalled();
+  });
+});
+
+describe('isGoogleAuthConfigured', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  const load = async (url, key, flag) => {
+    vi.stubEnv('VITE_SUPABASE_URL', url);
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', key);
+    vi.stubEnv('VITE_GOOGLE_AUTH_ENABLED', flag);
+    vi.resetModules();
+    return (await import('./auth.js')).isGoogleAuthConfigured();
+  };
+
+  it('is true only when auth is configured AND the flag is exactly "true"', async () => {
+    expect(await load('https://x.supabase.co', 'anon-key', 'true')).toBe(true);
+    expect(await load('https://x.supabase.co', 'anon-key', 'false')).toBe(false);
+    expect(await load('https://x.supabase.co', 'anon-key', undefined)).toBe(false);
+    expect(await load('', '', 'true')).toBe(false);
+  });
+
+  // The flag is a string compared to 'true' — nothing truthy-but-different
+  // may switch a provider on by accident.
+  it('does not accept truthy near-misses', async () => {
+    expect(await load('https://x.supabase.co', 'anon-key', '1')).toBe(false);
+    expect(await load('https://x.supabase.co', 'anon-key', 'TRUE')).toBe(false);
+    expect(await load('https://x.supabase.co', 'anon-key', 'yes')).toBe(false);
+  });
+});
+
+// Phase C rendered one story for every failure — "That link expired" — which
+// is false after a user backs out of Google's consent screen. The patterns
+// live here beside authCallbackKind so the component never re-derives them.
+describe('authCallbackReason', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://x.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
+    vi.resetModules();
+    window.history.replaceState({}, '', '/');
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each([
+    // Google consent screen → Cancel.
+    ['cancelled', 'a Google cancel hash', '/#error=access_denied&error_description=User+denied'],
+    ['cancelled', 'a user_denied error_code', '/#error=server_error&error_code=user_denied'],
+    ['cancelled', 'an access_denied query', '/?error=access_denied'],
+    // THE TRAP: Supabase reports an expired magic link with access_denied AND
+    // otp_expired in the same URL. Expired has to win, or every expired link
+    // is mislabelled a cancellation.
+    [
+      'expired',
+      'an expired magic-link hash carrying access_denied too',
+      '/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired',
+    ],
+    ['expired', 'an otp_expired query', '/?error=access_denied&error_code=otp_expired'],
+    ['failed', 'an unrecognised server error', '/?error=server_error&error_description=boom'],
+    ['failed', 'a bare error_description', '/#error_description=something+broke'],
+    // Not an error callback at all.
+    [null, 'a clean URL', '/'],
+    [null, 'a pending PKCE code', '/?code=abc123'],
+    [null, 'a pending implicit hash', '/#access_token=abc&type=magiclink'],
+  ])('returns %s for %s', async (reason, _label, url) => {
+    window.history.replaceState({}, '', url);
+    const { authCallbackReason } = await import('./auth.js');
+    expect(authCallbackReason()).toBe(reason);
+  });
+
+  it('survives a malformed percent-escape rather than losing the error', async () => {
+    window.history.replaceState({}, '', '/#error=access_denied&error_description=100%');
+    const { authCallbackReason } = await import('./auth.js');
+    expect(authCallbackReason()).toBe('cancelled');
+  });
+
+  // These two are load-bearing elsewhere and must not drift with the new
+  // companion: mayHaveSession() branches on authCallbackKind's three-value
+  // contract, and it has to stay fail-open — a stricter version risks a
+  // signed-in user silently appearing signed out.
+  it('leaves authCallbackKind and mayHaveSession untouched for a cancelled URL', async () => {
+    window.history.replaceState({}, '', '/#error=access_denied&error_description=User+denied');
+    const { authCallbackKind, mayHaveSession } = await import('./auth.js');
+    expect(authCallbackKind()).toBe('error');
+    expect(mayHaveSession()).toBe(true);
   });
 });

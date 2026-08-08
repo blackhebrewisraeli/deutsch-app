@@ -1,0 +1,43 @@
+import { SPACE } from '../../lib/theme';
+import { isGoogleAuthConfigured } from '../../lib/auth.js';
+import Button from '../ui/Button';
+
+/**
+ * "Continue with Google" — the primary CTA on every auth surface once the
+ * flag is on.
+ *
+ * Renders nothing when Google is not configured. The guard lives HERE, not at
+ * the three call sites: AuthSheet already self-guards on isAuthConfigured()
+ * for exactly this reason, and a per-call-site check is the one someone
+ * forgets at the fourth surface.
+ *
+ * The mark is a static file rendered with <img>, not an inlined SVG. Google's
+ * brand terms require it unmodified and un-themed, and it is multicolour hex
+ * by definition — which noHardcodedHex.test.js forbids in any component
+ * source. vite.config.js's workbox globPatterns already precache **\/*.svg,
+ * so it works offline and inside the installed PWA with no config change.
+ *
+ * The label is Google's required wording: "Continue with Google", not "Sign in
+ * with Google" alongside the mark.
+ */
+export default function GoogleButton({ onClick, busy = false, autoFocus = false }) {
+  if (!isGoogleAuthConfigured()) return null;
+
+  return (
+    <Button
+      onClick={onClick}
+      // A redirect takes a beat; a double-tap must not start two round trips.
+      disabled={busy}
+      autoFocus={autoFocus}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: SPACE[3],
+      }}
+    >
+      <img src="/google-g.svg" alt="" aria-hidden="true" width={18} height={18} />
+      Continue with Google
+    </Button>
+  );
+}
