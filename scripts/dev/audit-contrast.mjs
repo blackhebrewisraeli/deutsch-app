@@ -125,20 +125,25 @@ function collectFindings(tabName) {
   return out;
 }
 
-/**
- * Header popovers must stay inside the viewport. `scrollWidth` cannot see this:
- * an absolutely-positioned sheet that hangs off the *left* edge is clipped, not
- * scrolled, so every overflow assertion passes while the controls are cut off.
- * The ThemeChip sheet shipped 65.7px off-screen at 320px for exactly that reason.
- */
-function collectClippedSheets() {
+const SHEET_SELECTOR = '[role="dialog"][aria-label="Appearance"]';
+
+/** Toggle the Appearance chip. Returns false when the header has no chip. */
+function clickThemeChip() {
   const chip = [...document.querySelectorAll('button')].find(
     (b) => (b.getAttribute('aria-label') || '').toLowerCase() === 'appearance'
   );
-  if (!chip) return [{ reason: 'no Appearance chip in header' }];
+  if (!chip) return false;
   chip.click();
+  return true;
+}
+
+/**
+ * Measure an already-open sheet. Kept as a string so Playwright can serialize
+ * it, and deliberately free of clicking — see auditThemeSheet below.
+ */
+function measureOpenSheet() {
   const sheet = document.querySelector('[role="dialog"][aria-label="Appearance"]');
-  if (!sheet) return [{ reason: 'Appearance sheet did not open' }];
+  if (!sheet) return [{ reason: 'Appearance sheet vanished before measurement' }];
   const vw = document.documentElement.clientWidth;
   const out = [];
   const r = sheet.getBoundingClientRect();
@@ -161,7 +166,35 @@ function collectClippedSheets() {
       });
     }
   }
-  chip.click();
+  return out;
+}
+
+/**
+ * Header popovers must stay inside the viewport. `scrollWidth` cannot see this:
+ * an absolutely-positioned sheet that hangs off the *left* edge is clipped, not
+ * scrolled, so every overflow assertion passes while the controls are cut off.
+ * The ThemeChip sheet shipped 65.7px off-screen at 320px for exactly that reason.
+ *
+ * The click and the measurement have to be separate round trips. Doing both
+ * inside one page.evaluate reads the DOM before React has rendered the sheet,
+ * which reported "sheet did not open" for all 12 mode×tone×viewport
+ * combinations and made this script exit 1 unconditionally — the reason it was
+ * never wired into CI.
+ */
+async function auditThemeSheet(page) {
+  if (!(await page.evaluate(clickThemeChip))) {
+    return [{ reason: 'no Appearance chip in header' }];
+  }
+  try {
+    await page.waitForSelector(SHEET_SELECTOR, { state: 'visible', timeout: 3000 });
+  } catch {
+    return [{ reason: 'Appearance sheet did not open' }];
+  }
+  // The sheet places itself in an effect after mount; measuring before that
+  // runs would report the pre-placement position as clipped.
+  await page.waitForTimeout(200);
+  const out = await page.evaluate(measureOpenSheet);
+  await page.evaluate(clickThemeChip); // close again before the tab walk
   return out;
 }
 
@@ -210,7 +243,7 @@ async function main() {
         await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(400);
 
-        for (const l of await page.evaluate(collectClippedSheets)) {
+        for (const l of await auditThemeSheet(page)) {
           layout.push({ ...l, mode, tone, viewport: vp.width });
         }
 
