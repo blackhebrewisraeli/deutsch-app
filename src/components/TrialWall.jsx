@@ -25,7 +25,12 @@ const caption = {
  * No `aria-modal` either — the header and nav stay operable by design, so
  * claiming a modal would lie to assistive tech about what is reachable.
  */
-export default function TrialWall({ roundsUsed = 0, onCreateAccount, onSignIn }) {
+export default function TrialWall({ roundsUsed = 0, mobile = false, onCreateAccount, onSignIn }) {
+  // Clearance under App's sticky header + nav, which stack to ~113px on mobile
+  // and ~132px on desktop. This is a gap, not an alignment, so it only has to
+  // be about right — the card must simply never dock underneath the nav.
+  const stickyTop = mobile ? 121 : 140;
+
   return (
     <div
       role="dialog"
@@ -33,9 +38,15 @@ export default function TrialWall({ roundsUsed = 0, onCreateAccount, onSignIn })
       style={{
         position: 'absolute',
         inset: 0,
-        zIndex: 60,
+        // BELOW App's nav (49) and header (50) on purpose. The practice
+        // surface is the only thing this may cover; once the page scrolls, a
+        // higher z-index paints the scrim straight over the sticky chrome and
+        // takes the Stats tab — the wall's own escape hatch — with it.
+        zIndex: 40,
         display: 'flex',
-        alignItems: 'center',
+        // Top-aligned, not centred: the practice surface runs well past the
+        // fold, and a centred card lands below it on a phone.
+        alignItems: 'flex-start',
         justifyContent: 'center',
         background: COLORS.inkAa,
         padding: SPACE[6],
@@ -44,6 +55,12 @@ export default function TrialWall({ roundsUsed = 0, onCreateAccount, onSignIn })
     >
       <div
         style={{
+          // Sticky so the wall stays with the user down a long practice
+          // surface instead of scrolling away from the scrim it belongs to.
+          position: 'sticky',
+          top: stickyTop,
+          maxHeight: `calc(100vh - ${stickyTop + SPACE[6]}px)`,
+          overflowY: 'auto',
           background: COLORS.paper,
           color: COLORS.ink,
           borderRadius: RADIUS.xl,

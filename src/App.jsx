@@ -774,6 +774,7 @@ export default function App() {
             {trialWallUp && (
               <TrialWall
                 roundsUsed={game.trial.roundsUsed}
+                mobile={mobile}
                 onCreateAccount={() => setAuthModal('create')}
                 onSignIn={requestSignIn}
               />

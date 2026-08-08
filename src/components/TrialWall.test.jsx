@@ -66,6 +66,26 @@ describe('TrialWall', () => {
     expect(screen.getAllByRole('button')).toHaveLength(2);
   });
 
+  // Regression: the scrim first shipped at z-index 60, above App's sticky
+  // header (50) and nav (49). It looked right at scroll 0 — the practice
+  // surface starts below both — but the moment the page scrolled, the scrim
+  // painted straight over the chrome and swallowed the Stats tab, which is
+  // the wall's own escape hatch.
+  it('sits below the sticky header and nav so the chrome stays clickable', () => {
+    setup();
+    const scrim = screen.getByRole('dialog', { name: 'Save your progress' });
+    expect(Number(scrim.style.zIndex)).toBeLessThan(49);
+  });
+
+  // The practice surface runs well past the fold, so a centred card lands
+  // below it on a phone. Top-aligned + sticky keeps it on screen.
+  it('keeps the card at the top of the surface rather than centring it', () => {
+    setup();
+    const scrim = screen.getByRole('dialog', { name: 'Save your progress' });
+    expect(scrim.style.alignItems).toBe('flex-start');
+    expect(scrim.firstElementChild.style.position).toBe('sticky');
+  });
+
   it('ignores Escape — the wall is not dismissible', async () => {
     const user = userEvent.setup();
     const { onCreateAccount, onSignIn } = setup();
