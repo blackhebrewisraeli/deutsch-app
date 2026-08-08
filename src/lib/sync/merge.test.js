@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { mergeSrs, addCounters, subCounters, mergeDailyAdditive, mergeSettings } from './merge.js';
+import { trialStatus } from '../trial.js';
+import { TRIAL_ROUND_CAP } from '../gameConfig.js';
 
 describe('mergeSrs', () => {
   const card = (lastReviewed, box) => ({ box, lastReviewed, nextDue: lastReviewed + 1, reps: 1 });
@@ -141,5 +143,87 @@ describe('mergeSettings', () => {
     expect(out.gamification.frozenDays).toEqual({ '2026-06-08': true, '2026-06-10': true });
     expect(out.gamification.bestStreak).toBe(9); // max wins even though remote is older
     expect(out.gamification.goal).toBe(50); // scalar gamification still LWW (local newer)
+  });
+});
+
+// The spec's success criterion for the guest trial is that "a trial user who
+// signs in keeps 100% of trial progress". The merge engine already delivers
+// that — this proves it rather than changing it. If this block ever goes red,
+// merge.js is not the thing to edit: the trial's promise is broken.
+describe('guest trial data survives sign-in', () => {
+  const day = (byTab, correct) => ({
+    total: Object.values(byTab).reduce((a, b) => a + b, 0),
+    byTab: { chat: 0, alphabet: 0, vocab: 0, translate: 0, ...byTab },
+    byLevel: {
+      a1: { correct, almost: 0, wrong: 0 },
+      a2: { correct: 0, almost: 0, wrong: 0 },
+      b1: { correct: 0, almost: 0, wrong: 0 },
+    },
+  });
+
+  // A guest who ran the trial all the way to the hard cap: 62 rounds over
+  // three days, all four tabs sampled, a qualifying day in there.
+  const guestDaily = {
+    '2026-08-01': day({ chat: 12, alphabet: 9 }, 8),
+    '2026-08-02': day({ vocab: 14, translate: 7 }, 6),
+    '2026-08-03': day({ chat: 20 }, 11),
+  };
+
+  it('is at or past the trial cap before signing in', () => {
+    const before = trialStatus(guestDaily, { goal: 50 });
+    expect(before.roundsUsed).toBeGreaterThanOrEqual(TRIAL_ROUND_CAP);
+    expect(before.exhausted).toBe(true);
+    expect(before.tabsSampled).toBe(4);
+  });
+
+  // First sync after sign-in: the account has no rows and the device has no
+  // baseline, so the delta is the entire local value and every round lands.
+  it('folds every round into a fresh account on the first sync', () => {
+    const merged = {};
+    for (const [key, local] of Object.entries(guestDaily)) {
+      merged[key] = mergeDailyAdditive({ local, server: undefined, lastSynced: undefined }).server;
+    }
+    expect(merged).toEqual(guestDaily);
+
+    const before = trialStatus(guestDaily, { goal: 50 });
+    const after = trialStatus(merged, { goal: 50 });
+    expect(after).toEqual(before);
+  });
+
+  it('does not double-count the trial when the sync repeats', () => {
+    const first = {};
+    const baseline = {};
+    for (const [key, local] of Object.entries(guestDaily)) {
+      const out = mergeDailyAdditive({ local, server: undefined, lastSynced: undefined });
+      first[key] = out.server;
+      baseline[key] = out.lastSynced;
+    }
+    const second = {};
+    for (const [key, local] of Object.entries(guestDaily)) {
+      second[key] = mergeDailyAdditive({
+        local,
+        server: first[key],
+        lastSynced: baseline[key],
+      }).server;
+    }
+    expect(second).toEqual(guestDaily);
+    expect(trialStatus(second, { goal: 50 }).roundsUsed).toBe(
+      trialStatus(guestDaily, { goal: 50 }).roundsUsed
+    );
+  });
+
+  // Signing in on a device that already has account history adds to it — the
+  // trial rounds are never the thing that gets dropped.
+  it('adds the trial on top of rounds the account already had', () => {
+    const key = '2026-08-01';
+    const existing = day({ vocab: 30 }, 15);
+    const merged = mergeDailyAdditive({
+      local: guestDaily[key],
+      server: existing,
+      lastSynced: undefined,
+    }).server;
+    expect(merged.total).toBe(guestDaily[key].total + existing.total);
+    expect(merged.byTab.chat).toBe(12);
+    expect(merged.byTab.vocab).toBe(30);
   });
 });
