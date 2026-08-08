@@ -64,7 +64,7 @@ export default function WelcomeGate({ onGuest, onAuth }) {
             padding: 8,
           }}
         >
-          Continue without an account →
+          Try it first — free →
         </button>
       </div>
     </div>

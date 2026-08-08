@@ -3,7 +3,8 @@ import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'luci
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
-import { getReviewItems, todayKey } from './lib/stats';
+import { getReviewItems, todayKey, TABS } from './lib/stats';
+import { trialStatus } from './lib/trial';
 import { getDueCount } from './lib/srs';
 import {
   totalXp,
@@ -35,6 +36,7 @@ import TranslateTab from './components/TranslateTab';
 import StatsTab from './components/StatsTab';
 import SplashScreen from './components/SplashScreen';
 import WelcomeGate from './components/WelcomeGate';
+import TrialWall from './components/TrialWall';
 import AuthSheet from './components/auth/AuthSheet';
 import AuthCallbackLanding from './components/auth/AuthCallbackLanding';
 import AccountChip from './components/AccountChip';
@@ -74,6 +76,10 @@ export default function App() {
       streak: streakNow,
       freezes: freezesAvailable(s, todayKey()),
       mult: multiplier(streakNow),
+      // Guest-trial status rides along here so it refreshes with everything
+      // else: applyProgress re-runs deriveGame on every `deutsch:progress`
+      // event and on window focus. No extra effect, no extra listener.
+      trial: trialStatus(daily, s.gamification),
     };
   };
   const [game, setGame] = useState(deriveGame);
@@ -461,6 +467,27 @@ export default function App() {
   const streakPulsing =
     stats.streak > 0 && !qualifies((liveState.daily ?? {})[todayKey()], goalNow);
 
+  // The guest trial is spent: block earning new progress, leave everything
+  // else reachable. Every clause is load-bearing —
+  //   • isAuthConfigured — a wall with no sign-in behind it is PR #79's
+  //     dead-affordance bug again.
+  //   • 'anonymous' only — never for a signed-in user, and never while
+  //     'loading', or a returning account sees the wall flash before their
+  //     session resolves.
+  //   • practice tab only — Stats is the escape hatch, so it is never walled.
+  //   • no celebration running — the designed peak fires on the very round
+  //     that completes the first daily goal, i.e. the round that pushes the
+  //     "Tagesziel erreicht!" toast and the confetti burst. Waiting for both
+  //     to clear lets the celebration play in full; the wall lands after it,
+  //     before the next round can start.
+  const trialWallUp =
+    isAuthConfigured() &&
+    authStatus === 'anonymous' &&
+    game.trial.exhausted &&
+    TABS.includes(tab) &&
+    toasts.length === 0 &&
+    !streakBurst;
+
   if (showGate && !user) {
     return (
       <>
@@ -711,32 +738,48 @@ export default function App() {
             mult={game.mult}
           />
         )}
-        {tab === 'chat' && <ChatTab level={level} mobile={mobile} wide={width >= bp.wide} />}
-        {tab === 'alphabet' && (
-          <AlphabetTab
-            level={level}
-            mobile={mobile}
-            reviewTarget={reviewTarget?.tab === 'alphabet' ? reviewTarget : null}
-            onReviewConsumed={clearReviewTarget}
-          />
-        )}
-        {tab === 'vocab' && (
-          <VocabTab
-            learnedWords={learnedWords}
-            markLearned={markLearned}
-            level={level}
-            mobile={mobile}
-            reviewTarget={reviewTarget?.tab === 'vocab' ? reviewTarget : null}
-            onReviewConsumed={clearReviewTarget}
-          />
-        )}
-        {tab === 'translate' && (
-          <TranslateTab
-            level={level}
-            mobile={mobile}
-            reviewTarget={reviewTarget?.tab === 'translate' ? reviewTarget : null}
-            onReviewConsumed={clearReviewTarget}
-          />
+        {/* The four practice tabs share one positioned wrapper so the trial
+            wall can scrim THEM and nothing else. A position: fixed modal would
+            take the header and nav with it, and the wall is explicitly not
+            allowed to: Stats and settings stay reachable while it is up. */}
+        {TABS.includes(tab) && (
+          <div style={{ position: 'relative' }}>
+            {tab === 'chat' && <ChatTab level={level} mobile={mobile} wide={width >= bp.wide} />}
+            {tab === 'alphabet' && (
+              <AlphabetTab
+                level={level}
+                mobile={mobile}
+                reviewTarget={reviewTarget?.tab === 'alphabet' ? reviewTarget : null}
+                onReviewConsumed={clearReviewTarget}
+              />
+            )}
+            {tab === 'vocab' && (
+              <VocabTab
+                learnedWords={learnedWords}
+                markLearned={markLearned}
+                level={level}
+                mobile={mobile}
+                reviewTarget={reviewTarget?.tab === 'vocab' ? reviewTarget : null}
+                onReviewConsumed={clearReviewTarget}
+              />
+            )}
+            {tab === 'translate' && (
+              <TranslateTab
+                level={level}
+                mobile={mobile}
+                reviewTarget={reviewTarget?.tab === 'translate' ? reviewTarget : null}
+                onReviewConsumed={clearReviewTarget}
+              />
+            )}
+            {trialWallUp && (
+              <TrialWall
+                roundsUsed={game.trial.roundsUsed}
+                mobile={mobile}
+                onCreateAccount={() => setAuthModal('create')}
+                onSignIn={requestSignIn}
+              />
+            )}
+          </div>
         )}
         {tab === 'stats' && (
           <StatsTab

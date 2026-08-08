@@ -328,9 +328,16 @@ installs and reloads offline, critical-path bundle 296 KB (92.89 KB gzip).
   precache contents were only evidence that offline *should* work. Now verified directly.
 
 - [x] **12. Anonymous-first check.** — PASSED A brand-new visitor (cleared profile) is offered
-  `Continue without an account →` alongside sign-up, and reaches every demo surface with no
+  `Try it first — free →` alongside sign-up, and reaches every demo surface with no
   auth wall: all five tabs, both auto-deck families, and AI deck generation all work
   unauthenticated.
+
+  **Amended 2026-08-08 (guest trial wall):** the guest path is now *bounded*, so
+  "no auth wall" holds for the trial only. Practice is walled once the trial is
+  spent — all four gameplay tabs sampled and the first daily goal met, or 60
+  rounds, whichever comes first. Stats, settings and every existing round stay
+  reachable, and the wall never appears when auth is unconfigured, so a demo
+  build without Supabase env is unaffected.
 
 ---
 

@@ -8,6 +8,13 @@ export const DEFAULT_GOAL = 50;
 // A day counts toward the streak when its XP reaches the daily goal.
 export const QUALIFYING_DAY = 'goal';
 
+// Guest trial: the bounded free run before an account is required to keep
+// earning. TRIAL_REQUIRES holds the two halves of the "designed peak" cut —
+// switch either off to drop that requirement from the rule. TRIAL_ROUND_CAP is
+// the backstop that stops single-tab grinding from extending the trial forever.
+export const TRIAL_ROUND_CAP = 60;
+export const TRIAL_REQUIRES = { allTabs: true, firstGoal: true };
+
 // Streak lengths that earn a celebration (replaces the old every-7-days burst).
 export const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100];
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, within, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import { todayKey } from './lib/stats';
@@ -261,5 +261,196 @@ describe('in-app AuthSheet', () => {
     expect(screen.getByRole('button', { name: /email me a sign-in code/i })).toBeInTheDocument();
     // Gate brand lives on the dark full-screen WelcomeGate — must stay gone.
     expect(screen.queryByText(/Learn German with an AI tutor/i)).not.toBeInTheDocument();
+  });
+});
+
+// The guest trial is bounded: once it is spent, earning new progress is walled
+// but everything else stays reachable. Five conditions gate the wall and each
+// one has a failure mode worth pinning — a dead affordance with no auth
+// behind it (PR #79), a wall over a signed-in user, a wall over the Stats tab
+// the user is being told to go to, or a wall stamped over a live celebration.
+describe('guest trial wall', () => {
+  // Four tabs sampled and 60 XP on a 50 XP goal — both halves of the designed
+  // peak, so trialStatus reports exhausted.
+  const EXHAUSTED = {
+    daily: {
+      [todayKey()]: {
+        total: 8,
+        byTab: { chat: 2, alphabet: 2, vocab: 2, translate: 2 },
+        byLevel: { a1: { correct: 6, almost: 0, wrong: 0 } },
+      },
+    },
+    gamification: { goal: 50 },
+  };
+  // One tab, well under the cap, goal not met — trial still running.
+  const FRESH = {
+    daily: {
+      [todayKey()]: {
+        total: 2,
+        byTab: { chat: 2 },
+        byLevel: { a1: { correct: 1, almost: 0, wrong: 0 } },
+      },
+    },
+    gamification: { goal: 50 },
+  };
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    // The storage shim is one module-level instance shared by every test in
+    // the file — clear it so a seeded account from an earlier block cannot
+    // decide whether the trial is exhausted here.
+    localStorage.clear();
+    localStorage.setItem('deutsch-onboarded', '1');
+    vi.resetModules();
+  });
+
+  async function renderApp({ configured = true, status = 'anonymous', state = EXHAUSTED } = {}) {
+    localStorage.setItem('deutsch-app-state-v1', JSON.stringify(state));
+    vi.doMock('./lib/auth.js', () => ({
+      isAuthConfigured: () => configured,
+      useAuth: () => ({
+        user: status === 'authenticated' ? { id: 'u1', email: 'a@b.co' } : null,
+        session: null,
+        status,
+      }),
+      signOut: vi.fn(() => Promise.resolve({ error: null })),
+      getAccessToken: vi.fn(() => Promise.resolve(null)),
+      signInWithMagicLink: vi.fn(() => Promise.resolve({ error: null })),
+      verifyCode: vi.fn(() => Promise.resolve({ error: null })),
+      mayHaveSession: () => false,
+      authCallbackKind: () => null,
+      getSupabase: () => Promise.resolve(null),
+    }));
+    const { default: AppWithAuth } = await import('./App.jsx');
+    setViewportWidth(1280);
+    render(<AppWithAuth />);
+  }
+
+  const wall = () => screen.queryByRole('dialog', { name: 'Save your progress' });
+  const goToTab = (user, name) =>
+    user.click(within(screen.getByRole('navigation')).getByRole('button', { name }));
+
+  it('walls the practice surface for an exhausted anonymous guest', async () => {
+    await renderApp();
+    expect(wall()).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create a free account' })).toBeInTheDocument();
+  });
+
+  it('follows the guest across all four practice tabs', async () => {
+    const user = userEvent.setup();
+    await renderApp();
+    for (const name of ['Alphabet', 'Vocab', 'Translate', 'Chat']) {
+      await goToTab(user, name);
+      expect(wall()).toBeInTheDocument();
+    }
+  });
+
+  it('never walls the Stats tab — it is the escape hatch', async () => {
+    const user = userEvent.setup();
+    await renderApp();
+    await goToTab(user, 'Stats');
+    expect(wall()).not.toBeInTheDocument();
+  });
+
+  it('leaves the nav operable while the wall is up', async () => {
+    const user = userEvent.setup();
+    await renderApp();
+    expect(wall()).toBeInTheDocument();
+    // Reaching Stats from behind the wall is the whole point of scrimming the
+    // practice surface instead of the viewport.
+    await goToTab(user, 'Stats');
+    expect(wall()).not.toBeInTheDocument();
+    expect(
+      within(screen.getByRole('banner')).getByRole('button', { name: /^appearance$/i })
+    ).toBeInTheDocument();
+  });
+
+  it('never walls a signed-in user', async () => {
+    await renderApp({ status: 'authenticated' });
+    expect(wall()).not.toBeInTheDocument();
+  });
+
+  it('does not flash the wall while the session is still loading', async () => {
+    await renderApp({ status: 'loading' });
+    expect(wall()).not.toBeInTheDocument();
+  });
+
+  it('stays away when auth is unconfigured — no dead affordance', async () => {
+    await renderApp({ configured: false });
+    expect(wall()).not.toBeInTheDocument();
+  });
+
+  it('stays away while the trial still has room', async () => {
+    await renderApp({ state: FRESH });
+    expect(wall()).not.toBeInTheDocument();
+  });
+
+  it('opens the shared AuthSheet from the primary CTA without resurfacing the gate', async () => {
+    const user = userEvent.setup();
+    await renderApp();
+    await user.click(screen.getByRole('button', { name: 'Create a free account' }));
+
+    expect(screen.getByRole('dialog', { name: /create your account/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /email me a sign-in code/i })).toBeInTheDocument();
+    // Gate brand lives on the dark full-screen WelcomeGate — must stay gone.
+    expect(screen.queryByText(/Learn German with an AI tutor/i)).not.toBeInTheDocument();
+  });
+
+  it('opens the sign-in intent from the secondary CTA', async () => {
+    const user = userEvent.setup();
+    await renderApp();
+    await user.click(screen.getByRole('button', { name: 'I already have an account' }));
+    expect(screen.getByRole('dialog', { name: /^sign in$/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Learn German with an AI tutor/i)).not.toBeInTheDocument();
+  });
+
+  // Clause 5, the subtle one. The designed peak fires on the very round that
+  // completes the first daily goal — the same round that pushes the
+  // "Tagesziel erreicht!" toast and the confetti burst. The wall must wait for
+  // the celebration to finish rather than stamping itself over it.
+  it('waits for a running celebration to finish before it appears', async () => {
+    vi.useFakeTimers();
+    try {
+      // All four tabs sampled but only 40 XP against a 50 XP goal: one half of
+      // the peak met, so the trial is still running.
+      await renderApp({
+        state: {
+          daily: {
+            [todayKey()]: {
+              total: 8,
+              byTab: { chat: 2, alphabet: 2, vocab: 2, translate: 2 },
+              byLevel: { a1: { correct: 4, almost: 0, wrong: 0 } },
+            },
+          },
+          gamification: { goal: 50 },
+        },
+      });
+      expect(wall()).not.toBeInTheDocument();
+
+      // The round that tips the day over the goal. Preserve the gamification
+      // block App just wrote so this reads as one more round, not a reset.
+      const cur = JSON.parse(localStorage.getItem('deutsch-app-state-v1'));
+      cur.daily[todayKey()].total = 9;
+      cur.daily[todayKey()].byLevel.a1.correct = 6;
+      localStorage.setItem('deutsch-app-state-v1', JSON.stringify(cur));
+
+      act(() => {
+        window.dispatchEvent(new Event('deutsch:progress'));
+      });
+
+      // Trial is now exhausted, but the celebration owns the screen.
+      expect(screen.getByText('Tagesziel erreicht!')).toBeInTheDocument();
+      expect(wall()).not.toBeInTheDocument();
+
+      // Burst clears at 1600ms, the toast at 3200ms — then the wall lands,
+      // before the next round can start.
+      act(() => {
+        vi.advanceTimersByTime(4000);
+      });
+      expect(screen.queryByText('Tagesziel erreicht!')).not.toBeInTheDocument();
+      expect(wall()).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });
