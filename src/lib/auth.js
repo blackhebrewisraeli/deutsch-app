@@ -81,6 +81,42 @@ export function authCallbackKind(loc = typeof window !== 'undefined' ? window.lo
 }
 
 /**
+ * Why did this auth callback fail? Companion to authCallbackKind — the URL
+ * patterns live here, in one place, and are never re-derived in a component.
+ *
+ * - `'cancelled'` — the user backed out of the provider's consent screen
+ * - `'expired'`   — a magic link that timed out or was already used
+ * - `'failed'`    — any other reported error
+ * - `null`        — not an error callback at all
+ *
+ * ORDER MATTERS. Supabase reports an expired magic link as
+ * `error=access_denied&error_code=otp_expired&…` — BOTH signals in one URL —
+ * so testing access_denied first would label every expired link a
+ * cancellation. Expired is checked first for exactly that reason.
+ *
+ * Deliberately separate from authCallbackKind rather than folded into it:
+ * that function's `'pending' | 'error' | null` contract is what
+ * mayHaveSession() branches on, and mayHaveSession() must stay fail-open.
+ */
+export function authCallbackReason(loc = typeof window !== 'undefined' ? window.location : null) {
+  if (!loc) return null;
+  if (authCallbackKind(loc) !== 'error') return null;
+
+  const raw = `${loc.search || ''}${loc.hash || ''}`;
+  let blob;
+  try {
+    blob = decodeURIComponent(raw).toLowerCase();
+  } catch {
+    // A malformed percent-escape is not a reason to lose the error entirely.
+    blob = raw.toLowerCase();
+  }
+
+  if (/otp_expired|expired/.test(blob)) return 'expired';
+  if (/access_denied|user_denied|user_cancelled|consent_required/.test(blob)) return 'cancelled';
+  return 'failed';
+}
+
+/**
  * Could this visitor possibly be signed in, without loading the SDK to ask?
  *
  * supabase-js persists its session in localStorage under `sb-<ref>-auth-token`.

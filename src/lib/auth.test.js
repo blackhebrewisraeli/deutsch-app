@@ -357,3 +357,59 @@ describe('isGoogleAuthConfigured', () => {
     expect(await load('https://x.supabase.co', 'anon-key', 'yes')).toBe(false);
   });
 });
+
+// Phase C rendered one story for every failure — "That link expired" — which
+// is false after a user backs out of Google's consent screen. The patterns
+// live here beside authCallbackKind so the component never re-derives them.
+describe('authCallbackReason', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://x.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
+    vi.resetModules();
+    window.history.replaceState({}, '', '/');
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  it.each([
+    // Google consent screen → Cancel.
+    ['cancelled', 'a Google cancel hash', '/#error=access_denied&error_description=User+denied'],
+    ['cancelled', 'a user_denied error_code', '/#error=server_error&error_code=user_denied'],
+    ['cancelled', 'an access_denied query', '/?error=access_denied'],
+    // THE TRAP: Supabase reports an expired magic link with access_denied AND
+    // otp_expired in the same URL. Expired has to win, or every expired link
+    // is mislabelled a cancellation.
+    [
+      'expired',
+      'an expired magic-link hash carrying access_denied too',
+      '/#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired',
+    ],
+    ['expired', 'an otp_expired query', '/?error=access_denied&error_code=otp_expired'],
+    ['failed', 'an unrecognised server error', '/?error=server_error&error_description=boom'],
+    ['failed', 'a bare error_description', '/#error_description=something+broke'],
+    // Not an error callback at all.
+    [null, 'a clean URL', '/'],
+    [null, 'a pending PKCE code', '/?code=abc123'],
+    [null, 'a pending implicit hash', '/#access_token=abc&type=magiclink'],
+  ])('returns %s for %s', async (reason, _label, url) => {
+    window.history.replaceState({}, '', url);
+    const { authCallbackReason } = await import('./auth.js');
+    expect(authCallbackReason()).toBe(reason);
+  });
+
+  it('survives a malformed percent-escape rather than losing the error', async () => {
+    window.history.replaceState({}, '', '/#error=access_denied&error_description=100%');
+    const { authCallbackReason } = await import('./auth.js');
+    expect(authCallbackReason()).toBe('cancelled');
+  });
+
+  // These two are load-bearing elsewhere and must not drift with the new
+  // companion: mayHaveSession() branches on authCallbackKind's three-value
+  // contract, and it has to stay fail-open — a stricter version risks a
+  // signed-in user silently appearing signed out.
+  it('leaves authCallbackKind and mayHaveSession untouched for a cancelled URL', async () => {
+    window.history.replaceState({}, '', '/#error=access_denied&error_description=User+denied');
+    const { authCallbackKind, mayHaveSession } = await import('./auth.js');
+    expect(authCallbackKind()).toBe('error');
+    expect(mayHaveSession()).toBe(true);
+  });
+});

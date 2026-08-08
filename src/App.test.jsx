@@ -249,6 +249,7 @@ describe('in-app AuthSheet', () => {
       verifyCode: vi.fn(() => Promise.resolve({ error: null })),
       mayHaveSession: () => false,
       authCallbackKind: () => null,
+      authCallbackReason: () => null,
       getSupabase: () => Promise.resolve(null),
     }));
 
@@ -333,6 +334,7 @@ describe('guest trial wall', () => {
       verifyCode: vi.fn(() => Promise.resolve({ error: null })),
       mayHaveSession: () => false,
       authCallbackKind: () => null,
+      authCallbackReason: () => null,
       getSupabase: () => Promise.resolve(null),
     }));
     const { default: AppWithAuth } = await import('./App.jsx');
