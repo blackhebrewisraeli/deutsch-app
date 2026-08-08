@@ -7,6 +7,17 @@ import { parseHex, contrastRatio } from './contrast';
 
 const AA_NORMAL = 4.5;
 
+/**
+ * The smallest contrast ratio between two consecutive surfaces that still
+ * reads as a step. Below this the elevation is present in the token values
+ * but invisible on screen — `light.day` shipped surface-2 → surface-3 one
+ * unit per channel apart (1.008:1), which is no step at all.
+ *
+ * Exported so `ramp.test.js` holds every palette to the same bar rather than
+ * re-deciding it.
+ */
+export const MIN_SURFACE_STEP = 1.06;
+
 /** @param {number} n */
 function clampByte(n) {
   return Math.max(0, Math.min(255, Math.round(n)));
@@ -55,17 +66,18 @@ export function deriveDeepFill(fill, onFill, prefer = 0.22) {
 }
 
 /**
- * Lift a surface toward `target` by the largest step that still leaves every
- * body ink at AA on it.
+ * Move a surface toward `target` by the largest step that still leaves every
+ * body ink at AA on it. Used to lift (toward white) and, in light mode, to
+ * shade (toward the palette's ink) — mechanically the same operation.
  *
  * Elevation is the one ramp that moves a *background* under text the component
- * did not choose, so the lift has to answer to the weakest ink, not just `fg`.
+ * did not choose, so the step has to answer to the weakest ink, not just `fg`.
  * A flat 8% lift put dark surface-3 at 4.01:1 against `fg-subtle`.
  *
  * @param {string} from
  * @param {string} target
  * @param {string[]} inks — every foreground that can sit on this surface
- * @param {number} prefer — the lift to use when it clears AA
+ * @param {number} prefer — the step to use when it clears AA
  */
 function liftSurface(from, target, inks, prefer) {
   for (let t = prefer; t >= 0.01; t -= 0.005) {
@@ -97,9 +109,19 @@ export function deriveSurfaceRamp(palette, mode) {
     surface1 = surfaceAlt;
     surface2 = surface;
     surface3 = liftSurface(surface, '#FFFFFF', inks, 0.55);
-    if (surface3.toUpperCase() === surface2.toUpperCase()) {
-      // Already pure white — nudge a hair cooler so elevation is visible
-      surface3 = liftSurface(surface, '#F5F7FA', inks, 0.12);
+    if (contrastRatio(surface2, surface3) < MIN_SURFACE_STEP) {
+      // Nowhere brighter to go — light.day's `surface` is already #FFFFFF, so
+      // lifting toward white returns it unchanged and the step collapses.
+      // Above white, elevation has to read as a *shade* instead: a small move
+      // toward the palette's own ink, which keeps the panel in the parchment
+      // family (light.night lands warm at #F3EFE6) rather than importing a
+      // cool grey. The old fallback aimed at #F5F7FA, which is itself so
+      // close to white that no mix amount could ever produce a visible step.
+      //
+      // 5% matches the size of dark mode's existing lift (≈1.11:1), so the
+      // top step reads the same in all four palettes. AA has ~7:1 of headroom
+      // against the weakest ink here, so the loop above never binds.
+      surface3 = liftSurface(surface, palette.fg, inks, 0.05);
     }
   } else {
     // Dark: elevate by lightening — ground → surface → alt → one step further

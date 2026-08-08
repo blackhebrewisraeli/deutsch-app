@@ -5,6 +5,7 @@ import {
   deriveAccentRamp,
   deriveSemanticRamp,
   deriveThemeRamps,
+  MIN_SURFACE_STEP,
 } from './ramp';
 import { contrastRatio } from './contrast';
 import { MODE_COLORS, DEFAULT_ACCENTS } from './themeTokens';
@@ -41,6 +42,49 @@ describe('deriveSurfaceRamp', () => {
     expect(ramp['surface-2']).toBe(p['surface-alt']);
     expect(ramp['surface-3']).toBeTruthy();
     expect(ramp['surface-3']).not.toBe(ramp['surface-2']);
+  });
+
+  // Regression: light.day shipped surface-2 #FFFFFF → surface-3 #FEFEFE, one
+  // unit per channel — a step in the token values and nothing on screen. The
+  // cause was structural, not a typo: light mode elevates by brightening and
+  // that palette's `surface` is already pure white, so there was nowhere to go.
+  // Pinned for every palette, not just the one we noticed.
+  it('gives every palette a top elevation step that is actually visible', () => {
+    for (const mode of ['light', 'dark']) {
+      for (const tone of ['day', 'night']) {
+        const ramp = deriveSurfaceRamp(MODE_COLORS[mode][tone], mode);
+        expect(
+          contrastRatio(ramp['surface-2'], ramp['surface-3']),
+          `${mode}.${tone} surface-2 → surface-3`
+        ).toBeGreaterThanOrEqual(MIN_SURFACE_STEP);
+      }
+    }
+  });
+
+  // A weaker floor across the whole ladder, so no step can collapse the way
+  // the top one did. Dark.night's surface-1 → surface-2 is the tightest
+  // legitimate pair at ~1.036, so this bar sits just under it.
+  it('keeps every consecutive elevation pair distinguishable', () => {
+    for (const mode of ['light', 'dark']) {
+      for (const tone of ['day', 'night']) {
+        const r = deriveSurfaceRamp(MODE_COLORS[mode][tone], mode);
+        const ladder = [r.ground, r['surface-1'], r['surface-2'], r['surface-3']];
+        for (let i = 0; i < ladder.length - 1; i += 1) {
+          expect(
+            contrastRatio(ladder[i], ladder[i + 1]),
+            `${mode}.${tone} step ${i} → ${i + 1}`
+          ).toBeGreaterThan(1.03);
+        }
+      }
+    }
+  });
+
+  // Light mode shades the top step toward the palette's own ink rather than a
+  // fixed grey, so a warm palette keeps a warm panel.
+  it('shades light-mode surface-3 within the palette rather than to a cool grey', () => {
+    const r = deriveSurfaceRamp(MODE_COLORS.light.night, 'light');
+    const [red, , blue] = [1, 3, 5].map((i) => parseInt(r['surface-3'].slice(i, i + 2), 16));
+    expect(red, 'warm palette keeps red above blue in surface-3').toBeGreaterThan(blue);
   });
 
   it('lifts surface-3 only as far as every body ink stays at AA', () => {
