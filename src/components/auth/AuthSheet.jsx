@@ -62,7 +62,10 @@ export default function AuthSheet({ open, intent = 'signin', onClose, onSuccess 
           zIndex: 1,
           margin: 0,
           border: 'none',
+          // Explicit ink on paper — native <dialog> UA styles + WelcomeGate's
+          // dark page otherwise leave headings/labels as dark-on-dark.
           background: COLORS.paper,
+          color: COLORS.ink,
           borderRadius: RADIUS.xl,
           padding: SPACE[6],
           maxWidth: 400,
