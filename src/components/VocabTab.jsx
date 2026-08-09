@@ -18,6 +18,7 @@ const { decks: PRESET_DECKS } = activePack.content;
 import { Hero, SectionLabel } from './UI';
 import { shuffle } from '../lib/utils';
 import { fuzzyMatch } from '../lib/matching';
+import { ANSWER } from '../lib/textRules';
 import { recordEvent, recordItem } from '../lib/stats';
 import { getDueCards, recordVocabAnswer } from '../lib/srs';
 import { formatVerb } from '../lib/verbDisplay';
@@ -177,7 +178,7 @@ export default function VocabTab({
 
   const submitTyped = () => {
     if (!typedAnswer.trim() || !card || clickLockRef.current) return;
-    const { distance: dist } = fuzzyMatch(card.en, typedAnswer, activePack.validation.normalize);
+    const { distance: dist } = fuzzyMatch(card.en, typedAnswer, ANSWER);
     const res = dist === 0 ? 'correct' : dist <= 2 ? 'almost' : 'wrong';
     setAnswered(true);
     setResult(res);

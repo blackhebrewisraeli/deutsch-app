@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { activePack, getPack } from './index';
 import { validateLanguagePack } from './validate';
+import { normalizeText } from '../lib/textRules';
 import {
   ALPHABET,
   SCENARIOS,
@@ -38,8 +39,10 @@ describe('activePack', () => {
     expect(food[0].de).toBe('das Brot'); // display form
     expect(food[0].en).toBe('bread'); // primary gloss as a string
   });
-  it('ships a Phase-0 normalize equal to trim+lowercase', () => {
-    expect(activePack.validation.normalize('  Groß  ')).toBe('groß');
+  it('ships target text rules that fold keyboard substitutions', () => {
+    const norm = (s) => normalizeText(s, activePack.validation.target);
+    expect(norm('  Groß  ')).toBe('gross');
+    expect(norm('schön')).not.toBe(norm('schon'));
   });
   it('is resolvable by id via getPack', () => {
     expect(getPack('de')).toBe(activePack);

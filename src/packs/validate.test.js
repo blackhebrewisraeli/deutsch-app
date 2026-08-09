@@ -39,7 +39,9 @@ const validPack = {
     chatTasks: {},
     translateSentences: { A1: [] },
   },
-  validation: { normalize: (s) => s },
+  validation: {
+    target: { trim: true, caseFold: true, stripCombiningMarks: false, replacements: [] },
+  },
   cardId: (c) => c.de,
   grammar: {},
   prompts: {},
@@ -50,9 +52,62 @@ describe('validateLanguagePack', () => {
   it('returns true for a well-formed pack', () => {
     expect(validateLanguagePack(validPack)).toBe(true);
   });
-  it('throws when validation.normalize is missing', () => {
-    expect(() => validateLanguagePack({ ...validPack, validation: {} })).toThrow(/normalize/);
+  it('throws when validation is missing entirely', () => {
+    expect(() => validateLanguagePack({ ...validPack, validation: undefined })).toThrow(
+      /validation is required/
+    );
   });
+  it('throws when validation.target is missing', () => {
+    expect(() => validateLanguagePack({ ...validPack, validation: {} })).toThrow(
+      /validation\.target/
+    );
+  });
+
+  it('throws when a target flag is not a boolean', () => {
+    const bad = {
+      ...validPack,
+      validation: {
+        ...validPack.validation,
+        target: { ...validPack.validation.target, caseFold: 'yes' },
+      },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/caseFold/);
+  });
+
+  it('throws when replacements is not an array', () => {
+    const bad = {
+      ...validPack,
+      validation: {
+        ...validPack.validation,
+        target: { ...validPack.validation.target, replacements: {} },
+      },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/replacements/);
+  });
+
+  it('throws when a replacement is not a pair of strings', () => {
+    const bad = {
+      ...validPack,
+      validation: {
+        ...validPack.validation,
+        target: { ...validPack.validation.target, replacements: [['ß']] },
+      },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/pair of strings/);
+  });
+
+  // An empty `from` would make String.split explode the string into characters.
+  it('throws when a replacement has an empty from side', () => {
+    const bad = {
+      ...validPack,
+      validation: {
+        ...validPack.validation,
+        target: { ...validPack.validation.target, replacements: [['', 'x']] },
+      },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/must not be empty/);
+  });
+
   it('throws when cardId is not a function', () => {
     expect(() => validateLanguagePack({ ...validPack, cardId: undefined })).toThrow(/cardId/);
   });

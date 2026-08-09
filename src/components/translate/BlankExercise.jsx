@@ -12,7 +12,6 @@ import {
 } from '../../lib/theme';
 import { shuffle } from '../../lib/utils';
 import { recordEvent, recordItem } from '../../lib/stats';
-import { activePack } from '../../packs';
 import { exactMatch } from '../../lib/matching';
 import FeedbackPanel from './FeedbackPanel';
 
@@ -49,9 +48,7 @@ export default function BlankExercise({ exercise, level, onCorrect, onSkip }) {
   };
 
   const check = () => {
-    const correct = filled.every(
-      (t, i) => t && exactMatch(exercise.blanks[i].word, t.word, activePack.validation.normalize)
-    );
+    const correct = filled.every((t, i) => t && exactMatch(exercise.blanks[i].word, t.word));
     const verdict = correct ? 'correct' : 'wrong';
     setFeedback(verdict);
     const r = recordEvent('translate', level, verdict);

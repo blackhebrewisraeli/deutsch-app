@@ -45,7 +45,22 @@ export const dePack = {
     },
   },
   validation: {
-    normalize: (s) => s.trim().toLowerCase(),
+    // Keyboard substitutions German itself defines for keyboards lacking the
+    // characters. Deliberately NOT stripCombiningMarks: folding marks to bare
+    // vowels would collapse schön/schon, Bär/Bar and Würde/Wurde into false
+    // matches. Maße/Masse does collapse under ß→ss — an accepted cost, since a
+    // US keyboard cannot type Maße at all.
+    target: {
+      trim: true,
+      caseFold: true,
+      stripCombiningMarks: false,
+      replacements: [
+        ['ß', 'ss'],
+        ['ä', 'ae'],
+        ['ö', 'oe'],
+        ['ü', 'ue'],
+      ],
+    },
   },
   grammar: {},
   prompts: {},

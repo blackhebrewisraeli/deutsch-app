@@ -12,7 +12,6 @@ import {
 } from '../../lib/theme';
 import { shuffle } from '../../lib/utils';
 import { recordEvent, recordItem } from '../../lib/stats';
-import { activePack } from '../../packs';
 import { exactMatch } from '../../lib/matching';
 import FeedbackPanel from './FeedbackPanel';
 
@@ -44,7 +43,7 @@ export default function TileExercise({ exercise, level, onCorrect, onSkip }) {
   const check = () => {
     const answer = placed.map((t) => t.word).join(' ');
     const correct = exercise.words.join(' ');
-    const isCorrect = exactMatch(correct, answer, activePack.validation.normalize);
+    const isCorrect = exactMatch(correct, answer);
     const verdict = isCorrect ? 'correct' : 'wrong';
     setFeedback(verdict);
     const r = recordEvent('translate', level, verdict);
