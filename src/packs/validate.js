@@ -31,8 +31,23 @@ export function validateLanguagePack(pack) {
     }
   }
 
-  if (!pack.validation || typeof pack.validation.normalize !== 'function') {
+  const v = pack.validation;
+  if (!v || typeof v !== 'object') fail('validation is required');
+  if (typeof v.normalize !== 'function') {
     fail('validation.normalize must be a function');
+  }
+
+  const t = v.target;
+  if (!t || typeof t !== 'object') fail('validation.target must be an object');
+  for (const k of ['trim', 'caseFold', 'stripCombiningMarks']) {
+    if (typeof t[k] !== 'boolean') fail(`validation.target.${k} must be a boolean`);
+  }
+  if (!Array.isArray(t.replacements)) fail('validation.target.replacements must be an array');
+  for (const pair of t.replacements) {
+    if (!Array.isArray(pair) || pair.length !== 2 || !pair.every((x) => typeof x === 'string')) {
+      fail('each validation.target replacement must be a pair of strings');
+    }
+    if (pair[0] === '') fail('a validation.target replacement `from` must not be empty');
   }
   if (typeof pack.cardId !== 'function') {
     fail('cardId must be a function');
