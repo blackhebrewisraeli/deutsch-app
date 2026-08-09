@@ -61,8 +61,6 @@ export const dePack = {
         ['ü', 'ue'],
       ],
     },
-    // Removed in Task 4, once every consumer reads rule sets instead.
-    normalize: (s) => s.trim().toLowerCase(),
   },
   grammar: {},
   prompts: {},

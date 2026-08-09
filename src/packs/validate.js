@@ -33,10 +33,6 @@ export function validateLanguagePack(pack) {
 
   const v = pack.validation;
   if (!v || typeof v !== 'object') fail('validation is required');
-  if (typeof v.normalize !== 'function') {
-    fail('validation.normalize must be a function');
-  }
-
   const t = v.target;
   if (!t || typeof t !== 'object') fail('validation.target must be an object');
   for (const k of ['trim', 'caseFold', 'stripCombiningMarks']) {

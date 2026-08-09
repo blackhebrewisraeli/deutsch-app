@@ -41,7 +41,6 @@ const validPack = {
   },
   validation: {
     target: { trim: true, caseFold: true, stripCombiningMarks: false, replacements: [] },
-    normalize: (s) => s,
   },
   cardId: (c) => c.de,
   grammar: {},
@@ -53,13 +52,15 @@ describe('validateLanguagePack', () => {
   it('returns true for a well-formed pack', () => {
     expect(validateLanguagePack(validPack)).toBe(true);
   });
-  it('throws when validation.normalize is missing', () => {
-    expect(() => validateLanguagePack({ ...validPack, validation: {} })).toThrow(/normalize/);
+  it('throws when validation is missing entirely', () => {
+    expect(() => validateLanguagePack({ ...validPack, validation: undefined })).toThrow(
+      /validation is required/
+    );
   });
   it('throws when validation.target is missing', () => {
-    expect(() =>
-      validateLanguagePack({ ...validPack, validation: { normalize: (s) => s } })
-    ).toThrow(/validation\.target/);
+    expect(() => validateLanguagePack({ ...validPack, validation: {} })).toThrow(
+      /validation\.target/
+    );
   });
 
   it('throws when a target flag is not a boolean', () => {
