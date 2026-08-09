@@ -40,13 +40,22 @@ export function normalizeText(s, rules) {
 }
 
 /**
- * App-supplied strings compared to each other (tile exercises). There is no
- * human input to forgive, so nothing is folded — which is also what makes a
- * word/distractor collision such as `Fuß`/`Fuss` impossible by construction.
+ * App-supplied strings compared to each other, where the learner chose from a
+ * fixed set of tiles rather than typing (TileExercise, BlankExercise).
+ *
+ * Case IS folded: BlankExercise deliberately accepts a capitalised distractor
+ * for a lower-case answer — clicking `Bin` when the blank wants `bin` is
+ * correct, pinned by a test since PR #27. Capitalisation is not what those
+ * exercises are testing.
+ *
+ * Nothing else is folded, and `replacements` is empty by design. A pack's
+ * substitutions (German's `ß→ss`) never reach a tile comparison, so a
+ * word/distractor pair like `Fuß`/`Fuss` cannot collide here no matter what
+ * any pack declares.
  */
-export const STRICT = {
+export const CHOICE = {
   trim: true,
-  caseFold: false,
+  caseFold: true,
   stripCombiningMarks: false,
   replacements: [],
 };

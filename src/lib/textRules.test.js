@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeText, STRICT, ANSWER } from './textRules';
+import { normalizeText, CHOICE, ANSWER } from './textRules';
 
 const GERMAN = {
   trim: true,
@@ -66,9 +66,15 @@ describe('normalizeText', () => {
 });
 
 describe('engine rule sets', () => {
-  it('STRICT trims and nothing else — app-supplied strings have no variance to forgive', () => {
-    expect(normalizeText('  Die Katze  ', STRICT)).toBe('Die Katze');
-    expect(normalizeText('Groß', STRICT)).toBe('Groß');
+  it('CHOICE trims and folds case — tapped tiles vary only in capitalisation', () => {
+    expect(normalizeText('  Die Katze  ', CHOICE)).toBe('die katze');
+    expect(normalizeText('Bin', CHOICE)).toBe(normalizeText('bin', CHOICE));
+  });
+
+  // The pack's substitutions never reach a tile comparison, so no pack can
+  // make a word and a distractor collide there.
+  it('CHOICE carries no replacements, so Fuß and Fuss stay distinct', () => {
+    expect(normalizeText('Fuß', CHOICE)).not.toBe(normalizeText('Fuss', CHOICE));
   });
 
   it('ANSWER trims and case-folds, reproducing the old pack normalize exactly', () => {
@@ -81,5 +87,6 @@ describe('engine rule sets', () => {
   it('neither engine set folds diacritics — that is a pack concern', () => {
     expect(normalizeText('schön', ANSWER)).toBe('schön');
     expect(normalizeText('groß', ANSWER)).toBe('groß');
+    expect(normalizeText('schön', CHOICE)).toBe('schön');
   });
 });
