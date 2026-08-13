@@ -222,8 +222,8 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
             <div
               style={{ fontFamily: FONT_BODY, fontSize: 13, lineHeight: 1.5, fontStyle: 'italic' }}
             >
-              Click the mic and speak German. Anna corrects your mistakes — don&apos;t worry about
-              perfection.
+              Click the mic and speak German. {activePack.prompts.persona} corrects your mistakes —
+              don&apos;t worry about perfection.
             </div>
           </div>
         </aside>

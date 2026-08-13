@@ -1,7 +1,8 @@
 import { COLORS, FONT_MONO } from '../../lib/theme';
 import MessageBubble from './MessageBubble';
+import { activePack } from '../../packs';
 
-// Scrollable conversation column: message bubbles + Anna's typing indicator.
+// Scrollable conversation column: message bubbles + the tutor's typing indicator.
 // `endRef` is the parent's scroll anchor (kept in the parent so the scroll
 // effect stays with the conversation state).
 export default function MessageList({ messages, thinking, endRef }) {
@@ -31,7 +32,10 @@ export default function MessageList({ messages, thinking, endRef }) {
             fontSize: 12,
           }}
         >
-          <span>Anna tippt</span>
+          {/* KNOWN GAP: the persona name is pack-owned but "tippt" stays
+              German. That is UI-chrome localisation, a separate problem this
+              phase has no answer for. */}
+          <span>{activePack.prompts.persona} tippt</span>
           <span style={{ animation: 'blink 1.4s infinite' }}>●</span>
           <span style={{ animation: 'blink 1.4s infinite 0.2s' }}>●</span>
           <span style={{ animation: 'blink 1.4s infinite 0.4s' }}>●</span>
