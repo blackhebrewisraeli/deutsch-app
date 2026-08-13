@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { formatVerb } from './verbDisplay';
+import { grammar as de } from '../packs/de/grammar';
 
 const present = (over = {}) => ({
   ich: null,
@@ -11,18 +12,29 @@ const present = (over = {}) => ({
   ...over,
 });
 
+// The point of Phase 1.4: the same algorithm, a different language. If this
+// fixture produces German-shaped output, the abstraction only relocated German.
+const fr = {
+  articles: ['le', 'la', 'les'],
+  articleRequiredForNouns: true,
+  auxiliaries: { avoir: 'a', être: 'est' },
+  personKeys: ['je', 'tu', 'il', 'nous', 'vous', 'ils'],
+  displayPerson: 'il',
+  labels: { perfect: 'Passé composé', participle: 'Participe passé' },
+};
+
 describe('formatVerb', () => {
   it('returns [] for null / non-object', () => {
-    expect(formatVerb(null)).toEqual([]);
-    expect(formatVerb(undefined)).toEqual([]);
-    expect(formatVerb('nope')).toEqual([]);
+    expect(formatVerb(null, de)).toEqual([]);
+    expect(formatVerb(undefined, de)).toEqual([]);
+    expect(formatVerb('nope', de)).toEqual([]);
   });
   it('returns [] for an all-null block', () => {
-    expect(formatVerb({ aux: null, partizip2: null, present: present() })).toEqual([]);
+    expect(formatVerb({ aux: null, partizip2: null, present: present() }, de)).toEqual([]);
   });
   it('renders er-form + Perfekt with sein → ist', () => {
     expect(
-      formatVerb({ aux: 'sein', partizip2: 'gegangen', present: present({ er: 'geht' }) })
+      formatVerb({ aux: 'sein', partizip2: 'gegangen', present: present({ er: 'geht' }) }, de)
     ).toEqual([
       { label: 'er', value: 'geht' },
       { label: 'Perfekt', value: 'ist gegangen' },
@@ -30,7 +42,7 @@ describe('formatVerb', () => {
   });
   it('renders Perfekt with haben → hat', () => {
     expect(
-      formatVerb({ aux: 'haben', partizip2: 'gemacht', present: present({ er: 'macht' }) })
+      formatVerb({ aux: 'haben', partizip2: 'gemacht', present: present({ er: 'macht' }) }, de)
     ).toEqual([
       { label: 'er', value: 'macht' },
       { label: 'Perfekt', value: 'hat gemacht' },
@@ -38,20 +50,48 @@ describe('formatVerb', () => {
   });
   it('falls back to Part. II when aux is null', () => {
     expect(
-      formatVerb({ aux: null, partizip2: 'gemacht', present: present({ er: 'macht' }) })
+      formatVerb({ aux: null, partizip2: 'gemacht', present: present({ er: 'macht' }) }, de)
     ).toEqual([
       { label: 'er', value: 'macht' },
       { label: 'Part. II', value: 'gemacht' },
     ]);
   });
   it('renders only the er-form when there is no partizip2', () => {
-    expect(formatVerb({ aux: null, partizip2: null, present: present({ er: 'geht' }) })).toEqual([
-      { label: 'er', value: 'geht' },
-    ]);
+    expect(
+      formatVerb({ aux: null, partizip2: null, present: present({ er: 'geht' }) }, de)
+    ).toEqual([{ label: 'er', value: 'geht' }]);
   });
   it('renders only Perfekt when there is no er-form', () => {
-    expect(formatVerb({ aux: 'haben', partizip2: 'gesagt', present: present() })).toEqual([
+    expect(formatVerb({ aux: 'haben', partizip2: 'gesagt', present: present() }, de)).toEqual([
       { label: 'Perfekt', value: 'hat gesagt' },
+    ]);
+  });
+
+  // Previously `aux === 'sein' ? 'ist' : 'hat'` — anything not 'sein' silently
+  // got the haben form. Now an unknown aux falls through to the participle
+  // line. validateLexiconEntry gates aux, so only malformed data reaches this.
+  it('falls back to the participle line for an auxiliary the pack does not declare', () => {
+    expect(
+      formatVerb({ aux: 'essere', partizip2: 'gemacht', present: present({ er: 'macht' }) }, de)
+    ).toEqual([
+      { label: 'er', value: 'macht' },
+      { label: 'Part. II', value: 'gemacht' },
+    ]);
+  });
+
+  it('speaks French when handed a French grammar', () => {
+    expect(
+      formatVerb({ aux: 'être', partizip2: 'allé', present: { je: 'vais', il: 'va' } }, fr)
+    ).toEqual([
+      { label: 'il', value: 'va' },
+      { label: 'Passé composé', value: 'est allé' },
+    ]);
+  });
+
+  it('uses the French participle label when the auxiliary is unknown', () => {
+    expect(formatVerb({ aux: null, partizip2: 'allé', present: { il: 'va' } }, fr)).toEqual([
+      { label: 'il', value: 'va' },
+      { label: 'Participe passé', value: 'allé' },
     ]);
   });
 });

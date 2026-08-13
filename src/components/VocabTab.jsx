@@ -589,7 +589,7 @@ export default function VocabTab({
                     PL: {card.plural}
                   </div>
                 )}
-                {formatVerb(card.verb).map((line) => (
+                {formatVerb(card.verb, activePack.grammar).map((line) => (
                   <div
                     key={line.label}
                     style={{
