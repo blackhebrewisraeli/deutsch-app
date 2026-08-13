@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowRight, SkipForward } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, RADIUS, BUTTON } from '../../lib/theme';
 import { callClaude } from '../../lib/claude';
+import { activePack } from '../../packs';
+import { graderSystemPrompt } from '../../lib/prompts';
 import { recordEvent, recordItem } from '../../lib/stats';
 import FeedbackPanel from './FeedbackPanel';
 
@@ -29,16 +31,7 @@ export default function TypingExercise({ exercise, level, onCorrect, onSkip }) {
     if (!input.trim() || loading) return;
     setLoading(true);
     try {
-      const system = `You are a German language grader. The learner was asked to translate an English sentence into German.
-Evaluate their answer strictly but fairly. Respond ONLY with valid JSON, no markdown:
-{
-  "verdict": "correct" | "almost" | "wrong",
-  "corrected": "the ideal German translation",
-  "message": "one sentence of feedback in English explaining the main error or praising them"
-}
-Use "correct" if the translation is grammatically correct and conveys the full meaning, even if phrasing differs from the ideal.
-Use "almost" if there's a minor issue (a typo, a small grammar slip, a slightly off article or case) but the meaning is clearly there.
-Use "wrong" if there's a significant grammar mistake, wrong word choice, or the meaning is not conveyed.`;
+      const system = graderSystemPrompt({ prompts: activePack.prompts });
       const user = `English sentence: "${exercise.en}"\nIdeal German: "${exercise.de}"\nLearner's answer: "${input}"`;
       const raw = await callClaude(system, user, [], { endpoint: 'grade' });
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());

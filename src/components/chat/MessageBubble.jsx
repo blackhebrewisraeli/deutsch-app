@@ -1,8 +1,9 @@
 import { Volume2 } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from '../../lib/theme';
 import { speak } from '../../lib/speech';
+import { activePack } from '../../packs';
 
-// A single chat message — Anna's (gold, left, with avatar) or the learner's
+// A single chat message — the tutor's (gold, left, with avatar) or the learner's
 // (ink, right).
 export default function MessageBubble({ msg }) {
   const isUser = msg.role === 'user';
@@ -45,13 +46,15 @@ export default function MessageBubble({ msg }) {
             textAlign: isUser ? 'right' : 'left',
           }}
         >
-          {isUser ? 'DU' : '— ANNA'}
+          {/* 'DU' stays German — UI-chrome localisation is a separate problem
+              from persona, same as MessageList's "tippt". */}
+          {isUser ? 'DU' : `— ${activePack.prompts.persona.toUpperCase()}`}
         </div>
         <div
           style={{
             padding: '14px 18px',
             background: isUser ? COLORS.ink : COLORS.gold,
-            // Anna's bubble is the accent FILL, which is the same gold in both
+            // The tutor's bubble is the accent FILL, which is the same gold in both
             // modes — so its text must be accentOn, not the page fg. Using fg
             // here rendered near-white on gold in dark mode at 1.25:1.
             color: isUser ? COLORS.paper : COLORS.accentOn,
@@ -73,7 +76,7 @@ export default function MessageBubble({ msg }) {
               <button
                 type="button"
                 onClick={() => speak(msg.de)}
-                aria-label="Play Anna response audio"
+                aria-label={`Play ${activePack.prompts.persona} response audio`}
                 style={{
                   marginLeft: 10,
                   background: 'transparent',

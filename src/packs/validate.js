@@ -45,6 +45,28 @@ export function validateLanguagePack(pack) {
     }
     if (pair[0] === '') fail('a validation.target replacement `from` must not be empty');
   }
+  const p = pack.prompts;
+  const nonEmpty = (v) => typeof v === 'string' && v.trim().length > 0;
+  if (!p || typeof p !== 'object') fail('prompts is required');
+  if (!nonEmpty(p.persona)) fail('prompts.persona must be a non-empty string');
+  if (!nonEmpty(p.targetLanguage)) fail('prompts.targetLanguage must be a non-empty string');
+
+  // meta.cefrLevels is uppercase ('A1'); the prompt maps are keyed lowercase
+  // because that is the value components hold. A mismatch would not throw at
+  // runtime — it would interpolate the string "undefined" into a prompt.
+  for (const key of ['levels', 'exercises']) {
+    if (!p[key] || typeof p[key] !== 'object') fail(`prompts.${key} must be an object`);
+    for (const lvl of m.cefrLevels) {
+      const k = String(lvl).toLowerCase();
+      if (!nonEmpty(p[key][k])) fail(`prompts.${key}.${k} must be a non-empty string`);
+    }
+  }
+
+  if (!p.deck || typeof p.deck !== 'object') fail('prompts.deck must be an object');
+  for (const k of ['cardExample', 'ipaExample']) {
+    if (!nonEmpty(p.deck[k])) fail(`prompts.deck.${k} must be a non-empty string`);
+  }
+
   if (typeof pack.cardId !== 'function') {
     fail('cardId must be a function');
   }

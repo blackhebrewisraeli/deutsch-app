@@ -8,6 +8,7 @@ import {
   RADIUS,
   SHADOW,
 } from '../../lib/theme';
+import { activePack } from '../../packs';
 
 // One-time first-visit banner explaining the exercise model. Dismissal is
 // persisted by the parent (localStorage flag) via onDismiss.
@@ -52,10 +53,11 @@ export default function WelcomeBanner({ mobile, onDismiss }) {
             lineHeight: 1.5,
           }}
         >
-          Anna gives you a task each round — order a coffee, introduce yourself, ask for directions.
-          Type or tap the mic, and she'll correct you in real time. Tabs{' '}
-          <strong>02&ndash;04</strong> add alphabet drills, vocab cards, and translation exercises;{' '}
-          <strong>05 Stats</strong> tracks what you've learned and surfaces what to review.
+          {activePack.prompts.persona} gives you a task each round — order a coffee, introduce
+          yourself, ask for directions. Type or tap the mic, and she'll correct you in real time.
+          Tabs <strong>02&ndash;04</strong> add alphabet drills, vocab cards, and translation
+          exercises; <strong>05 Stats</strong> tracks what you've learned and surfaces what to
+          review.
         </div>
       </div>
       <button

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { COLORS, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from '../lib/theme';
 import { speak } from '../lib/speech';
 import { callClaude } from '../lib/claude';
+import { chatSystemPrompt } from '../lib/prompts';
 import { activePack } from '../packs';
 const { scenarios: SCENARIOS, chatTasks: CHAT_TASKS } = activePack.content;
 import { recordEvent } from '../lib/stats';
@@ -121,31 +122,12 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
 
     const scenarioDesc = SCENARIOS.find((s) => s.id === scenario)?.desc || 'open conversation';
 
-    const taskLine = currentTask
-      ? `The learner's current task is: "${currentTask.task}". Stay in this scenario and guide them toward completing this task. When the task is naturally complete, include "taskComplete": true in your JSON response; otherwise omit it or set it to false.`
-      : '';
-
-    const levelInstructions =
-      level === 'a1'
-        ? `The learner is A1 BEGINNER. Use very simple German, short sentences, common vocabulary only. Always provide English translation. Use lots of encouragement.`
-        : level === 'a2'
-          ? `The learner is A2 ELEMENTARY. Use natural but simple German. Provide English translation. Gently push them.`
-          : `The learner is B1 INTERMEDIATE. Use natural German, moderate complexity. Provide English translation but challenge them.`;
-
-    const systemPrompt = `You are a friendly German tutor named Anna for a language learner. The current scenario is: ${scenarioDesc}. ${taskLine}
-
-${levelInstructions}
-
-You MUST always respond with strict JSON only (no markdown, no extra text):
-{
-  "de": "your reply in German (1-2 sentences)",
-  "ipa": "IPA pronunciation of the German",
-  "en": "English translation",
-  "correction": null OR { "original": "what they said", "fixed": "corrected German", "explain": "brief friendly explanation in English" },
-  "taskComplete": false
-}
-
-Stay in the scenario. Only provide 'correction' if the user made a real grammar/vocabulary mistake.`;
+    const systemPrompt = chatSystemPrompt({
+      prompts: activePack.prompts,
+      scenarioDesc,
+      task: currentTask?.task,
+      level,
+    });
 
     const history = messages.slice(1).map((m) => ({
       role: m.role,
@@ -240,8 +222,8 @@ Stay in the scenario. Only provide 'correction' if the user made a real grammar/
             <div
               style={{ fontFamily: FONT_BODY, fontSize: 13, lineHeight: 1.5, fontStyle: 'italic' }}
             >
-              Click the mic and speak German. Anna corrects your mistakes — don&apos;t worry about
-              perfection.
+              Click the mic and speak German. {activePack.prompts.persona} corrects your mistakes —
+              don&apos;t worry about perfection.
             </div>
           </div>
         </aside>
