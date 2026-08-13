@@ -63,6 +63,31 @@ export const dePack = {
     },
   },
   grammar: {},
-  prompts: {},
+  prompts: {
+    persona: 'Anna',
+    targetLanguage: 'German',
+
+    // How the tutor speaks at each level. Lifted verbatim from the prompt that
+    // lived in ChatTab. Keys are lowercase — that is what components hold.
+    levels: {
+      a1: 'The learner is A1 BEGINNER. Use very simple German, short sentences, common vocabulary only. Always provide English translation. Use lots of encouragement.',
+      a2: 'The learner is A2 ELEMENTARY. Use natural but simple German. Provide English translation. Gently push them.',
+      b1: 'The learner is B1 INTERMEDIATE. Use natural German, moderate complexity. Provide English translation but challenge them.',
+    },
+
+    // What a generated exercise should drill. A different question from
+    // `levels`, so a separate map rather than one string hedging between both.
+    exercises: {
+      a1: 'A1 beginner (very simple sentences)',
+      a2: 'A2 elementary (focus on articles and prepositions)',
+      b1: 'B1 intermediate (complex grammar)',
+    },
+
+    // Concrete samples that teach the model the card shape.
+    deck: {
+      cardExample: 'der Hund',
+      ipaExample: '[deːɐ̯ hʊnt]',
+    },
+  },
   theme,
 };

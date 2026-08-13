@@ -29,7 +29,7 @@ const validPack = {
     direction: 'ltr',
     flag: '🏳',
     themeId: 'xx',
-    cefrLevels: ['A1'],
+    cefrLevels: ['A1', 'A2', 'B1'],
   },
   content: {
     alphabet: [],
@@ -37,14 +37,20 @@ const validPack = {
     decks: {},
     scenarios: [],
     chatTasks: {},
-    translateSentences: { A1: [] },
+    translateSentences: { A1: [], A2: [], B1: [] },
   },
   validation: {
     target: { trim: true, caseFold: true, stripCombiningMarks: false, replacements: [] },
   },
   cardId: (c) => c.de,
   grammar: {},
-  prompts: {},
+  prompts: {
+    persona: 'Ana',
+    targetLanguage: 'Xish',
+    levels: { a1: 'a1 pedagogy', a2: 'a2 pedagogy', b1: 'b1 pedagogy' },
+    exercises: { a1: 'a1 focus', a2: 'a2 focus', b1: 'b1 focus' },
+    deck: { cardExample: 'el perro', ipaExample: '[el ˈpero]' },
+  },
   theme: validTheme,
 };
 
@@ -106,6 +112,55 @@ describe('validateLanguagePack', () => {
       },
     };
     expect(() => validateLanguagePack(bad)).toThrow(/must not be empty/);
+  });
+
+  it('throws when prompts is missing', () => {
+    expect(() => validateLanguagePack({ ...validPack, prompts: undefined })).toThrow(
+      /prompts is required/
+    );
+  });
+
+  it('throws when persona is empty', () => {
+    const bad = { ...validPack, prompts: { ...validPack.prompts, persona: '  ' } };
+    expect(() => validateLanguagePack(bad)).toThrow(/prompts\.persona/);
+  });
+
+  it('throws when targetLanguage is missing', () => {
+    const bad = { ...validPack, prompts: { ...validPack.prompts, targetLanguage: undefined } };
+    expect(() => validateLanguagePack(bad)).toThrow(/prompts\.targetLanguage/);
+  });
+
+  // cefrLevels is ['A1','A2','B1']; the prompt maps are keyed lowercase.
+  it('throws when a declared CEFR level has no chat pedagogy', () => {
+    const bad = {
+      ...validPack,
+      prompts: { ...validPack.prompts, levels: { a1: 'x', a2: 'y' } },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/prompts\.levels\.b1/);
+  });
+
+  it('throws when a level pedagogy is an empty string', () => {
+    const bad = {
+      ...validPack,
+      prompts: { ...validPack.prompts, levels: { ...validPack.prompts.levels, a2: '' } },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/prompts\.levels\.a2/);
+  });
+
+  it('throws when a declared CEFR level has no exercise focus', () => {
+    const bad = {
+      ...validPack,
+      prompts: { ...validPack.prompts, exercises: { a1: 'x', b1: 'z' } },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/prompts\.exercises\.a2/);
+  });
+
+  it('throws when a deck example is missing', () => {
+    const bad = {
+      ...validPack,
+      prompts: { ...validPack.prompts, deck: { cardExample: 'el perro' } },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/prompts\.deck\.ipaExample/);
   });
 
   it('throws when cardId is not a function', () => {
