@@ -281,14 +281,14 @@ describe('validateLanguagePack', () => {
   });
 });
 
-import { validateLexiconEntry, POS, ARTICLES, CEFR } from './validate';
+import { validateLexiconEntry, POS } from './validate';
 
 const validNoun = {
   id: 'das Brot',
   de: 'Brot',
   en: ['bread'],
   pos: 'noun',
-  article: 'das',
+  article: 'el',
   ipa: '[das bʁoːt]',
   plural: 'Brote',
   cefr: 'A1',
@@ -315,44 +315,95 @@ const validPhrase = {
   source: { dict: 'authored', license: 'MIT' },
 };
 
+// Every entry-validation call needs the pack's grammar and CEFR scale now.
+const OPTS = { grammar: validPack.grammar, cefrLevels: validPack.meta.cefrLevels };
+const check = (entry) => validateLexiconEntry(entry, OPTS);
+
 describe('validateLexiconEntry', () => {
-  it('exports POS/ARTICLES/CEFR enums', () => {
+  // ARTICLES and CEFR are gone: articles come from the pack's grammar and the
+  // CEFR scale from meta.cefrLevels. POS stays engine-owned (spec §6).
+  it('exports the POS enum', () => {
     expect(POS).toContain('noun');
-    expect(ARTICLES).toEqual(['der', 'die', 'das']);
-    expect(CEFR).toEqual(['A1', 'A2', 'B1']);
+    expect(POS).toContain('verb');
+  });
+
+  it('accepts an article-less noun when the pack does not require one', () => {
+    const noArticle = {
+      grammar: { ...validPack.grammar, articleRequiredForNouns: false },
+      cefrLevels: validPack.meta.cefrLevels,
+    };
+    expect(validateLexiconEntry({ ...validNoun, article: null }, noArticle)).toBe(true);
+  });
+
+  // The same entry, two packs, two verdicts — decided entirely by grammar.
+  it('accepts a German noun under German grammar and rejects it under Spanish', () => {
+    const german = {
+      grammar: { ...validPack.grammar, articles: ['der', 'die', 'das'] },
+      cefrLevels: validPack.meta.cefrLevels,
+    };
+    const entry = { ...validNoun, article: 'der' };
+    expect(validateLexiconEntry(entry, german)).toBe(true);
+    expect(() => check(entry)).toThrow(/article/);
+  });
+
+  it('rejects an auxiliary the pack does not declare', () => {
+    const verbEntry = {
+      ...validPhrase,
+      pos: 'verb',
+      verb: {
+        aux: 'haben',
+        partizip2: null,
+        present: { yo: null, tu: null, el: null },
+      },
+    };
+    expect(() => check(verbEntry)).toThrow(/aux/);
+  });
+
+  it('checks the present block over the pack person keys', () => {
+    const verbEntry = {
+      ...validPhrase,
+      pos: 'verb',
+      verb: { aux: 'haber', partizip2: null, present: { yo: '', tu: null, el: null } },
+    };
+    expect(() => check(verbEntry)).toThrow(/verb\.present\.yo/);
+  });
+
+  it('validates cefr against the pack levels, not a fixed list', () => {
+    expect(() => check({ ...validNoun, cefr: 'C2' })).toThrow(/cefr/);
+    expect(check({ ...validNoun, cefr: 'B1' })).toBe(true);
   });
   it('returns true for a well-formed noun entry', () => {
-    expect(validateLexiconEntry(validNoun)).toBe(true);
+    expect(check(validNoun)).toBe(true);
   });
   it('returns true for a well-formed phrase with empty examples', () => {
-    expect(validateLexiconEntry(validPhrase)).toBe(true);
+    expect(check(validPhrase)).toBe(true);
   });
   it('throws when id is empty', () => {
-    expect(() => validateLexiconEntry({ ...validNoun, id: '' })).toThrow(/id/);
+    expect(() => check({ ...validNoun, id: '' })).toThrow(/id/);
   });
   it('throws when en is not a non-empty array', () => {
-    expect(() => validateLexiconEntry({ ...validNoun, en: [] })).toThrow(/en/);
+    expect(() => check({ ...validNoun, en: [] })).toThrow(/en/);
   });
   it('throws when pos is unknown', () => {
-    expect(() => validateLexiconEntry({ ...validNoun, pos: 'xyz' })).toThrow(/pos/);
+    expect(() => check({ ...validNoun, pos: 'xyz' })).toThrow(/pos/);
   });
   it('throws when a noun has no article', () => {
-    expect(() => validateLexiconEntry({ ...validNoun, article: null })).toThrow(/article/);
+    expect(() => check({ ...validNoun, article: null })).toThrow(/article/);
   });
   it('throws when article is invalid', () => {
-    expect(() => validateLexiconEntry({ ...validNoun, article: 'le' })).toThrow(/article/);
+    expect(() => check({ ...validNoun, article: 'le' })).toThrow(/article/);
   });
   it('throws when cefr is invalid', () => {
-    expect(() => validateLexiconEntry({ ...validNoun, cefr: 'C2' })).toThrow(/cefr/);
+    expect(() => check({ ...validNoun, cefr: 'C2' })).toThrow(/cefr/);
   });
   it('throws when an example is missing en', () => {
-    expect(() =>
-      validateLexiconEntry({ ...validNoun, examples: [{ de: 'x', source: 'authored' }] })
-    ).toThrow(/example/);
+    expect(() => check({ ...validNoun, examples: [{ de: 'x', source: 'authored' }] })).toThrow(
+      /example/
+    );
   });
   it('accepts a verb entry with a null verb block (best-effort)', () => {
     expect(
-      validateLexiconEntry({
+      check({
         ...validNoun,
         id: 'v:gehen',
         de: 'gehen',
@@ -366,7 +417,7 @@ describe('validateLexiconEntry', () => {
   });
   it('accepts a partial verb block (null aux, some present forms null)', () => {
     expect(
-      validateLexiconEntry({
+      check({
         ...validNoun,
         id: 'v:machen',
         de: 'machen',
@@ -376,15 +427,15 @@ describe('validateLexiconEntry', () => {
         plural: null,
         verb: {
           aux: null,
-          partizip2: 'gemacht',
-          present: { ich: 'mache', du: null, er: null, wir: null, ihr: null, sie: null },
+          partizip2: 'hecho',
+          present: { yo: 'hago', tu: null, el: null },
         },
       })
     ).toBe(true);
   });
   it('throws when verb.aux is not null/haben/sein', () => {
     expect(() =>
-      validateLexiconEntry({
+      check({
         ...validNoun,
         pos: 'verb',
         article: null,
@@ -398,7 +449,7 @@ describe('validateLexiconEntry', () => {
   });
   it('throws when a present key is missing from the verb block', () => {
     expect(() =>
-      validateLexiconEntry({
+      check({
         ...validNoun,
         pos: 'verb',
         article: null,
@@ -408,7 +459,7 @@ describe('validateLexiconEntry', () => {
   });
   it('accepts a valid verb entry', () => {
     expect(
-      validateLexiconEntry({
+      check({
         ...validNoun,
         id: 'gehen',
         de: 'gehen',
@@ -417,23 +468,16 @@ describe('validateLexiconEntry', () => {
         article: null,
         plural: null,
         verb: {
-          aux: 'sein',
-          partizip2: 'gegangen',
-          present: {
-            ich: 'gehe',
-            du: 'gehst',
-            er: 'geht',
-            wir: 'gehen',
-            ihr: 'geht',
-            sie: 'gehen',
-          },
+          aux: 'haber',
+          partizip2: 'ido',
+          present: { yo: 'voy', tu: 'vas', el: 'va' },
         },
       })
     ).toBe(true);
   });
   it('accepts an example with a null English translation', () => {
     expect(
-      validateLexiconEntry({
+      check({
         ...validNoun,
         examples: [{ de: 'Ich esse Brot.', en: null, source: 'wiktionary' }],
       })
@@ -441,7 +485,7 @@ describe('validateLexiconEntry', () => {
   });
   it('throws when an example has an empty-string en', () => {
     expect(() =>
-      validateLexiconEntry({
+      check({
         ...validNoun,
         examples: [{ de: 'Ich esse Brot.', en: '', source: 'wiktionary' }],
       })
@@ -449,7 +493,7 @@ describe('validateLexiconEntry', () => {
   });
   it('throws when an example has no de', () => {
     expect(() =>
-      validateLexiconEntry({
+      check({
         ...validNoun,
         examples: [{ de: '', en: 'I eat bread.', source: 'wiktionary' }],
       })

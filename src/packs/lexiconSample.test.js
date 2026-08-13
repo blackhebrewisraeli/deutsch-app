@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { validateLexiconEntry } from './validate';
+import { grammar } from './de/grammar';
+import { dePack } from './de/index';
 
 // Guards the REAL shipped lexicon artifacts under public/lexicon (produced by the
 // import pipeline), rather than a fixed hand-authored sample — so a bad import
@@ -32,7 +34,9 @@ describe('shipped lexicon artifacts', () => {
       expect(entry.id).toBe(row.id);
       expect(entry.freqRank).toBe(row.rank);
       expect(entry.cefr).toBe(row.cefr);
-      expect(validateLexiconEntry(entry)).toBe(true);
+      expect(validateLexiconEntry(entry, { grammar, cefrLevels: dePack.meta.cefrLevels })).toBe(
+        true
+      );
     }
   });
 

@@ -150,16 +150,20 @@ function validatePackTheme(theme, fail) {
 }
 
 export const POS = ['noun', 'verb', 'adj', 'adv', 'prep', 'num', 'phrase', 'pron', 'conj'];
-export const ARTICLES = ['der', 'die', 'das'];
-export const CEFR = ['A1', 'A2', 'B1'];
 
 /**
  * Asserts a value satisfies the LexiconEntry shape.
  * Throws an Error describing the first violation; returns true on success.
+ *
+ * Grammar comes from the pack, not from this module: which articles exist,
+ * whether nouns require one, which auxiliaries and persons a verb may use.
+ * `cefrLevels` is the pack's own meta.cefrLevels.
+ *
  * @param {object} entry
+ * @param {{ grammar: object, cefrLevels: string[] }} options
  * @returns {true}
  */
-export function validateLexiconEntry(entry) {
+export function validateLexiconEntry(entry, { grammar, cefrLevels }) {
   const fail = (msg) => {
     throw new Error(`Invalid LexiconEntry: ${msg}`);
   };
@@ -175,10 +179,10 @@ export function validateLexiconEntry(entry) {
 
   if (!POS.includes(entry.pos)) fail(`pos must be one of ${POS.join('|')}`);
 
-  if (entry.article !== null && !ARTICLES.includes(entry.article)) {
-    fail(`article must be null or one of ${ARTICLES.join('|')}`);
+  if (entry.article !== null && !grammar.articles.includes(entry.article)) {
+    fail(`article must be null or one of ${grammar.articles.join('|')}`);
   }
-  if (entry.pos === 'noun' && entry.article === null) {
+  if (entry.pos === 'noun' && entry.article === null && grammar.articleRequiredForNouns) {
     fail('article is required for nouns');
   }
 
@@ -186,8 +190,8 @@ export function validateLexiconEntry(entry) {
   if (entry.plural !== null && typeof entry.plural !== 'string')
     fail('plural must be null or a string');
 
-  if (entry.cefr !== null && !CEFR.includes(entry.cefr)) {
-    fail(`cefr must be null or one of ${CEFR.join('|')}`);
+  if (entry.cefr !== null && !cefrLevels.includes(entry.cefr)) {
+    fail(`cefr must be null or one of ${cefrLevels.join('|')}`);
   }
   if (entry.freqRank !== null && !(typeof entry.freqRank === 'number' && entry.freqRank > 0)) {
     fail('freqRank must be null or a positive number');
@@ -213,14 +217,14 @@ export function validateLexiconEntry(entry) {
   if (entry.verb !== null) {
     const v = entry.verb;
     if (!v || typeof v !== 'object') fail('verb must be null or an object');
-    if (v.aux !== null && !['haben', 'sein'].includes(v.aux)) {
-      fail('verb.aux must be null, haben, or sein');
+    if (v.aux !== null && !Object.keys(grammar.auxiliaries).includes(v.aux)) {
+      fail(`verb.aux must be null or one of ${Object.keys(grammar.auxiliaries).join('|')}`);
     }
     if (v.partizip2 !== null && typeof v.partizip2 !== 'string') {
       fail('verb.partizip2 must be null or a string');
     }
     if (!v.present || typeof v.present !== 'object') fail('verb.present must be an object');
-    for (const p of ['ich', 'du', 'er', 'wir', 'ihr', 'sie']) {
+    for (const p of grammar.personKeys) {
       if (v.present[p] !== null && !nonEmptyStr(v.present[p])) {
         fail(`verb.present.${p} must be null or a non-empty string`);
       }

@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { LEXICON } from './lexicon';
 import { validateLexiconEntry } from '../validate';
+import { grammar } from './grammar';
+import { dePack } from './index';
 
 const ids = Object.keys(LEXICON);
 
@@ -14,8 +16,9 @@ describe('LEXICON', () => {
     }
   });
   it('every entry satisfies validateLexiconEntry', () => {
+    const opts = { grammar, cefrLevels: dePack.meta.cefrLevels };
     for (const entry of Object.values(LEXICON)) {
-      expect(validateLexiconEntry(entry)).toBe(true);
+      expect(validateLexiconEntry(entry, opts)).toBe(true);
     }
   });
   it('noun display form (article + lemma) equals the legacy surface id', () => {
