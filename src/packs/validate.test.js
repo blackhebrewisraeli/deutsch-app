@@ -43,7 +43,14 @@ const validPack = {
     target: { trim: true, caseFold: true, stripCombiningMarks: false, replacements: [] },
   },
   cardId: (c) => c.de,
-  grammar: {},
+  grammar: {
+    articles: ['el', 'la'],
+    articleRequiredForNouns: true,
+    auxiliaries: { haber: 'ha' },
+    personKeys: ['yo', 'tu', 'el'],
+    displayPerson: 'el',
+    labels: { perfect: 'Pretérito perfecto', participle: 'Participio' },
+  },
   prompts: {
     persona: 'Ana',
     targetLanguage: 'Xish',
@@ -161,6 +168,67 @@ describe('validateLanguagePack', () => {
       prompts: { ...validPack.prompts, deck: { cardExample: 'el perro' } },
     };
     expect(() => validateLanguagePack(bad)).toThrow(/prompts\.deck\.ipaExample/);
+  });
+
+  it('throws when grammar is missing', () => {
+    expect(() => validateLanguagePack({ ...validPack, grammar: undefined })).toThrow(
+      /grammar is required/
+    );
+  });
+
+  it('throws when articles is not an array of strings', () => {
+    const bad = { ...validPack, grammar: { ...validPack.grammar, articles: 'el' } };
+    expect(() => validateLanguagePack(bad)).toThrow(/grammar\.articles/);
+  });
+
+  it('accepts an empty articles array — a language may have none', () => {
+    const ok = {
+      ...validPack,
+      grammar: { ...validPack.grammar, articles: [], articleRequiredForNouns: false },
+    };
+    expect(validateLanguagePack(ok)).toBe(true);
+  });
+
+  // Unsatisfiable: no article could ever pass, so every noun would fail.
+  it('throws when articles is empty but articleRequiredForNouns is true', () => {
+    const bad = {
+      ...validPack,
+      grammar: { ...validPack.grammar, articles: [], articleRequiredForNouns: true },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/articleRequiredForNouns/);
+  });
+
+  it('throws when articleRequiredForNouns is not a boolean', () => {
+    const bad = {
+      ...validPack,
+      grammar: { ...validPack.grammar, articleRequiredForNouns: 'yes' },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/articleRequiredForNouns/);
+  });
+
+  it('throws when an auxiliary maps to a non-string', () => {
+    const bad = { ...validPack, grammar: { ...validPack.grammar, auxiliaries: { haber: 1 } } };
+    expect(() => validateLanguagePack(bad)).toThrow(/grammar\.auxiliaries/);
+  });
+
+  it('throws when personKeys is empty', () => {
+    const bad = { ...validPack, grammar: { ...validPack.grammar, personKeys: [] } };
+    expect(() => validateLanguagePack(bad)).toThrow(/grammar\.personKeys/);
+  });
+
+  // The silent one: a displayPerson outside personKeys does not throw at render
+  // time, it just makes the conjugation row vanish from the vocab card.
+  it('throws when displayPerson is not one of personKeys', () => {
+    const bad = { ...validPack, grammar: { ...validPack.grammar, displayPerson: 'nosotros' } };
+    expect(() => validateLanguagePack(bad)).toThrow(/displayPerson/);
+  });
+
+  it('throws when a verb label is missing', () => {
+    const bad = {
+      ...validPack,
+      grammar: { ...validPack.grammar, labels: { perfect: 'Pretérito perfecto' } },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/grammar\.labels\.participle/);
   });
 
   it('throws when cardId is not a function', () => {

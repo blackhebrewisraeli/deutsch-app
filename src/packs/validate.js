@@ -67,6 +67,41 @@ export function validateLanguagePack(pack) {
     if (!nonEmpty(p.deck[k])) fail(`prompts.deck.${k} must be a non-empty string`);
   }
 
+  const g = pack.grammar;
+  if (!g || typeof g !== 'object') fail('grammar is required');
+
+  if (!Array.isArray(g.articles) || !g.articles.every(nonEmpty)) {
+    fail('grammar.articles must be an array of non-empty strings');
+  }
+  if (typeof g.articleRequiredForNouns !== 'boolean') {
+    fail('grammar.articleRequiredForNouns must be a boolean');
+  }
+  // Unsatisfiable combination: every noun would fail validation.
+  if (g.articles.length === 0 && g.articleRequiredForNouns) {
+    fail('grammar.articleRequiredForNouns cannot be true when grammar.articles is empty');
+  }
+
+  if (!g.auxiliaries || typeof g.auxiliaries !== 'object') {
+    fail('grammar.auxiliaries must be an object');
+  }
+  for (const [aux, third] of Object.entries(g.auxiliaries)) {
+    if (!nonEmpty(third)) fail(`grammar.auxiliaries.${aux} must be a non-empty string`);
+  }
+
+  if (!Array.isArray(g.personKeys) || g.personKeys.length === 0 || !g.personKeys.every(nonEmpty)) {
+    fail('grammar.personKeys must be a non-empty array of non-empty strings');
+  }
+  // A displayPerson outside personKeys fails silently at render time — the
+  // conjugation row simply never appears — so it is caught here instead.
+  if (!nonEmpty(g.displayPerson) || !g.personKeys.includes(g.displayPerson)) {
+    fail('grammar.displayPerson must be one of grammar.personKeys');
+  }
+
+  if (!g.labels || typeof g.labels !== 'object') fail('grammar.labels must be an object');
+  for (const k of ['perfect', 'participle']) {
+    if (!nonEmpty(g.labels[k])) fail(`grammar.labels.${k} must be a non-empty string`);
+  }
+
   if (typeof pack.cardId !== 'function') {
     fail('cardId must be a function');
   }

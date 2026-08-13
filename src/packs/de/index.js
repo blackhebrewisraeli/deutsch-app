@@ -14,6 +14,7 @@ import { LEXICON } from './lexicon';
 import { DECKS } from './decks';
 import { resolveDecks } from '../resolve';
 import { theme } from './theme';
+import { grammar } from './grammar';
 
 // Card identity for German: the surface form is the stable id.
 const cardId = (card) => card.de;
@@ -62,7 +63,7 @@ export const dePack = {
       ],
     },
   },
-  grammar: {},
+  grammar,
   prompts: {
     persona: 'Anna',
     targetLanguage: 'German',
