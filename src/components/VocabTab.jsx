@@ -19,6 +19,7 @@ import { Hero, SectionLabel } from './UI';
 import { shuffle } from '../lib/utils';
 import { fuzzyMatch } from '../lib/matching';
 import { ANSWER } from '../lib/textRules';
+import { deckPrompts } from '../lib/prompts';
 import { recordEvent, recordItem } from '../lib/stats';
 import { getDueCards, recordVocabAnswer } from '../lib/srs';
 import { formatVerb } from '../lib/verbDisplay';
@@ -191,8 +192,10 @@ export default function VocabTab({
     if (!customTopic.trim()) return;
     setGenerating(true);
     try {
-      const systemPrompt = `You generate German vocabulary flashcards for a beginner. Respond with ONLY a JSON array, no markdown, no extra text.`;
-      const userMsg = `Generate exactly 10 German flashcards on the topic: "${customTopic}". Return JSON array of objects with keys: de (German word with article if noun, e.g. "der Hund"), en (English translation), ipa (IPA pronunciation in brackets like "[deːɐ̯ hʊnt]"). No other text.`;
+      const { system: systemPrompt, user: userMsg } = deckPrompts({
+        prompts: activePack.prompts,
+        topic: customTopic,
+      });
       const raw = await callClaude(systemPrompt, userMsg, [], { endpoint: 'deck' });
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
