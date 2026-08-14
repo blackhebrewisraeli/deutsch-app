@@ -1,32 +1,24 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Sparkles } from 'lucide-react';
-import {
-  COLORS,
-  FONTS,
-  FONT_SIZE,
-  FONT_WEIGHT,
-  LETTER_SPACING,
-  SPACE,
-  BUTTON,
-  RADIUS,
-  SHADOW,
-} from '../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE } from '../lib/theme';
 import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
 const { decks: PRESET_DECKS } = activePack.content;
-import { Hero, SectionLabel } from './UI';
+import { Hero } from './UI';
 import { shuffle } from '../lib/utils';
 import { fuzzyMatch } from '../lib/matching';
 import { ANSWER } from '../lib/textRules';
 import { deckPrompts } from '../lib/prompts';
 import { recordEvent, recordItem } from '../lib/stats';
 import { getDueCards, recordVocabAnswer } from '../lib/srs';
-import { formatVerb } from '../lib/verbDisplay';
-import Confetti from './ui/Confetti';
 import DeckProgress from './ui/DeckProgress';
-import { AUTO_DECKS, DECK_GROUPS } from '../packs/de/autoDecks';
-import { resolveAutoDeck } from '../packs/lexiconStore';
+import DeckPicker from './vocab/DeckPicker';
+import CardFace from './vocab/CardFace';
+import ChoiceGrid from './vocab/ChoiceGrid';
+import TypedAnswer from './vocab/TypedAnswer';
+import VerdictPanel from './vocab/VerdictPanel';
+import DeckCompleteBanner from './vocab/DeckCompleteBanner';
+import useAutoDeck from './vocab/useAutoDeck';
 
 export default function VocabTab({
   level,
@@ -41,10 +33,14 @@ export default function VocabTab({
   const [customTopic, setCustomTopic] = useState('');
   const [generating, setGenerating] = useState(false);
   const [deckComplete, setDeckComplete] = useState(false);
-  const [asyncDeck, setAsyncDeck] = useState(null);
-  const [deckLoading, setDeckLoading] = useState(false);
-  const [deckError, setDeckError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
+
+  const {
+    isAuto,
+    cards: asyncDeck,
+    loading: deckLoading,
+    error: deckError,
+    retry,
+  } = useAutoDeck(deckId);
 
   const [answered, setAnswered] = useState(false);
   const [result, setResult] = useState(null); // 'correct' | 'almost' | 'wrong'
@@ -54,7 +50,6 @@ export default function VocabTab({
   // card first in the queue instead of starting fresh.
   const pendingReviewRef = useRef(null);
 
-  const isAuto = AUTO_DECKS.some((d) => d.id === deckId);
   const activeDeck =
     deckId === 'custom' && customCards
       ? customCards
@@ -82,35 +77,13 @@ export default function VocabTab({
     // activeDeck is derived from deckId+customCards+asyncDeck which are in deps — safe to omit
   }, [deckId, customCards, asyncDeck, level]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => {
-    const def = AUTO_DECKS.find((d) => d.id === deckId);
-    if (!def) return;
-    let cancelled = false;
-    setDeckLoading(true);
-    setDeckError(false);
-    setAsyncDeck(null);
-    resolveAutoDeck(def, activePack.grammar, activePack.meta.id)
-      .then((cards) => {
-        if (!cancelled) setAsyncDeck(cards);
-      })
-      .catch(() => {
-        if (!cancelled) setDeckError(true);
-      })
-      .finally(() => {
-        if (!cancelled) setDeckLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [deckId, retryCount]);
-
   // Brief lock to swallow the trailing click event that would otherwise pass
   // through to whatever button mounts at the SRS button's screen position on
   // the next card (e.g. clicking GOOD also clicking the new card's MC option
   // at the same coordinates).
   const clickLockRef = useRef(false);
 
-  // SRS verdict + queue advance, shared by all four buttons in the feedback panel.
+  // SRS verdict + queue advance, shared by all four buttons in the verdict panel.
   const handleSrsVerdict = (srsVerdict) => {
     if (!card || clickLockRef.current) return;
     clickLockRef.current = true;
@@ -188,6 +161,17 @@ export default function VocabTab({
     recordItem('vocab', deckId, card.id, card.en, res);
   };
 
+  const chooseOption = (choice) => {
+    if (clickLockRef.current) return; // swallow phantom clicks during transition
+    const correct = choice === card.en;
+    const verdict = correct ? 'correct' : 'wrong';
+    setAnswered(true);
+    setResult(verdict);
+    if (correct) markLearned(card.id);
+    recordEvent('vocab', level, verdict);
+    recordItem('vocab', deckId, card.id, card.en, verdict);
+  };
+
   const generateDeck = async () => {
     if (!customTopic.trim()) return;
     setGenerating(true);
@@ -210,12 +194,13 @@ export default function VocabTab({
     }
   };
 
-  const decks = [
-    { id: 'greetings', name: 'Greetings', count: 10 },
-    { id: 'food', name: 'Food & Drink', count: 10 },
-    { id: 'travel', name: 'Travel', count: 10 },
-    { id: 'numbers', name: 'Numbers', count: 10 },
-  ];
+  // Multiple choice needs four distinct options; below that, even A1 types.
+  // Spelled out rather than derived as `!showChoices`, which would additionally
+  // show the input for any level outside a1/a2/b1 — not reachable through the
+  // pack's cefrLevels today, but a behaviour change either way.
+  const isBeginner = level === 'a1' || level === 'a2';
+  const showChoices = isBeginner && activeDeck.length >= 4;
+  const showTyped = level === 'b1' || (isBeginner && activeDeck.length < 4);
 
   return (
     <div>
@@ -237,178 +222,15 @@ export default function VocabTab({
           marginTop: 32,
         }}
       >
-        {/* ── Left column: deck selector + generate ── */}
-        <div>
-          <SectionLabel num="A" text="Preset Decks" />
-          <div
-            style={{
-              borderRadius: RADIUS.lg,
-              boxShadow: SHADOW.card,
-              overflow: 'hidden',
-              marginBottom: 24,
-            }}
-          >
-            {decks.map((d, i) => {
-              const active = deckId === d.id;
-              return (
-                <button
-                  key={d.id}
-                  type="button"
-                  onClick={() => setDeckId(d.id)}
-                  aria-pressed={active}
-                  style={{
-                    width: '100%',
-                    padding: '14px 16px',
-                    background: active ? COLORS.ink : COLORS.card,
-                    color: active ? COLORS.paper : COLORS.ink,
-                    border: 'none',
-                    borderBottom: i < decks.length - 1 ? `1px solid ${COLORS.inkA12}` : 'none',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    fontFamily: FONTS.display,
-                    fontSize: FONT_SIZE.lg,
-                    fontWeight: FONT_WEIGHT.semibold,
-                    textAlign: 'left',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <span>{d.name}</span>
-                  <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.6 }}>
-                    {d.count} cards
-                  </span>
-                </button>
-              );
-            })}
-            {customCards && (
-              <button
-                type="button"
-                onClick={() => setDeckId('custom')}
-                aria-pressed={deckId === 'custom'}
-                style={{
-                  width: '100%',
-                  padding: '14px 16px',
-                  background: deckId === 'custom' ? COLORS.red : COLORS.paperDeep,
-                  color: deckId === 'custom' ? COLORS.paper : COLORS.ink,
-                  border: 'none',
-                  borderTop: `1px solid ${COLORS.inkA12}`,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  fontFamily: FONTS.display,
-                  fontSize: FONT_SIZE.lg,
-                  fontWeight: FONT_WEIGHT.semibold,
-                  textAlign: 'left',
-                  cursor: 'pointer',
-                }}
-              >
-                <span>✦ Your Deck</span>
-                <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.7 }}>
-                  {customCards.length} cards
-                </span>
-              </button>
-            )}
-          </div>
-
-          {DECK_GROUPS.filter((g) => g !== 'Curated').map((group) => (
-            <div key={group} style={{ marginBottom: 16 }}>
-              <SectionLabel num={group[0]} text={group} />
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {AUTO_DECKS.filter((d) => d.group === group).map((d) => (
-                  <button
-                    key={d.id}
-                    type="button"
-                    onClick={() => setDeckId(d.id)}
-                    aria-pressed={deckId === d.id}
-                    style={{
-                      padding: '8px 12px',
-                      background: deckId === d.id ? COLORS.ink : COLORS.card,
-                      color: deckId === d.id ? COLORS.paper : COLORS.ink,
-                      border: 'none',
-                      borderRadius: RADIUS.md,
-                      fontFamily: FONTS.display,
-                      fontSize: FONT_SIZE.base,
-                      cursor: 'pointer',
-                    }}
-                  >
-                    {d.icon} {d.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-
-          <SectionLabel num="B" text="Generate Custom" />
-          <div
-            style={{
-              borderRadius: RADIUS.lg,
-              boxShadow: SHADOW.card,
-              padding: 16,
-              background: COLORS.paperDeep,
-            }}
-          >
-            <input
-              aria-label="Custom deck topic"
-              value={customTopic}
-              onChange={(e) => setCustomTopic(e.target.value)}
-              onKeyDown={(e) => e.key === 'Enter' && generateDeck()}
-              placeholder="e.g. weather, animals, sports"
-              disabled={generating}
-              style={{
-                width: '100%',
-                boxSizing: 'border-box',
-                padding: 12,
-                background: COLORS.card,
-                border: 'none',
-                borderRadius: RADIUS.md,
-                boxShadow: 'inset 0 2px 5px rgba(22,17,11,0.06)',
-                fontFamily: FONTS.body,
-                fontSize: FONT_SIZE.md,
-                marginBottom: 12,
-                color: COLORS.ink,
-              }}
-            />
-            <button
-              onClick={generateDeck}
-              disabled={generating || !customTopic.trim()}
-              style={{
-                width: '100%',
-                padding: 14,
-                background: generating ? COLORS.mute : COLORS.red,
-                color: COLORS.card,
-                border: 'none',
-                fontFamily: FONTS.mono,
-                fontWeight: FONT_WEIGHT.bold,
-                fontSize: FONT_SIZE.sm,
-                letterSpacing: LETTER_SPACING.widest,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: 8,
-                cursor: generating ? 'not-allowed' : 'pointer',
-              }}
-            >
-              {generating ? (
-                'GENERATING...'
-              ) : (
-                <>
-                  <Sparkles size={14} aria-hidden="true" /> GENERATE 10 CARDS
-                </>
-              )}
-            </button>
-          </div>
-
-          <div
-            style={{
-              marginTop: 12,
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              color: COLORS.mute,
-            }}
-          >
-            Vocabulary from Wiktionary (CC BY-SA), Tatoeba &amp; Leipzig (CC BY).
-          </div>
-        </div>
+        <DeckPicker
+          deckId={deckId}
+          onSelect={setDeckId}
+          customCards={customCards}
+          customTopic={customTopic}
+          onTopicChange={setCustomTopic}
+          generating={generating}
+          onGenerate={generateDeck}
+        />
 
         {/* ── Right column: active recall UI ── */}
         <div>
@@ -434,11 +256,7 @@ export default function VocabTab({
               }}
             >
               Could not load this deck.{' '}
-              <button
-                type="button"
-                onClick={() => setRetryCount((c) => c + 1)}
-                style={{ textDecoration: 'underline' }}
-              >
+              <button type="button" onClick={retry} style={{ textDecoration: 'underline' }}>
                 Retry
               </button>
             </div>
@@ -467,323 +285,23 @@ export default function VocabTab({
                 <DeckProgress cards={activeDeck} learnedWords={learnedWords} />
               </div>
 
-              {/* Deck complete banner */}
               {deckComplete && (
-                <div
-                  className="slide-up pop"
-                  style={{
-                    position: 'relative',
-                    overflow: 'hidden',
-                    background: `linear-gradient(90deg, ${COLORS.gold} 0%, ${COLORS.goldBright} 50%, ${COLORS.gold} 100%)`,
-                    backgroundSize: '200% auto',
-                    animation: 'shimmer 2s linear infinite',
-                    borderRadius: RADIUS.lg,
-                    boxShadow: SHADOW.card,
-                    padding: '16px 20px',
-                    marginBottom: 16,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                  }}
-                >
-                  <Confetti />
-                  <span
-                    style={{
-                      fontFamily: FONTS.display,
-                      fontSize: FONT_SIZE.xl,
-                      fontWeight: FONT_WEIGHT.bold,
-                      color: COLORS.ink,
-                    }}
-                  >
-                    🎉 Deck complete — {activeDeck.filter((c) => learnedWords[c.id]).length} words
-                    learned
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setDeckComplete(false)}
-                    style={{
-                      background: 'transparent',
-                      border: `1px solid ${COLORS.ink}`,
-                      borderRadius: RADIUS.sm,
-                      fontFamily: FONTS.mono,
-                      fontSize: FONT_SIZE.tag,
-                      letterSpacing: LETTER_SPACING.widest,
-                      padding: '4px 10px',
-                      cursor: 'pointer',
-                      color: COLORS.ink,
-                    }}
-                  >
-                    DISMISS
-                  </button>
-                </div>
+                <DeckCompleteBanner
+                  learnedCount={activeDeck.filter((c) => learnedWords[c.id]).length}
+                  onDismiss={() => setDeckComplete(false)}
+                />
               )}
 
-              {/* Card face — always shows German */}
-              <div
-                style={{
-                  borderRadius: RADIUS.xl,
-                  boxShadow: SHADOW.cardChunk,
-                  background: COLORS.card,
-                  minHeight: 200,
-                  // 48px of padding on each side costs a quarter of a 375px
-                  // phone screen — step it down so the word gets the room.
-                  padding: mobile ? SPACE[5] : SPACE[12],
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  textAlign: 'center',
-                  marginBottom: SPACE[5],
-                  position: 'relative',
-                }}
-              >
-                {learnedWords[card.id] && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      top: SPACE[3],
-                      left: SPACE[3],
-                      background: COLORS.green,
-                      color: COLORS.paper,
-                      padding: '4px 10px',
-                      borderRadius: RADIUS.pill,
-                      fontFamily: FONTS.mono,
-                      fontSize: FONT_SIZE.tag,
-                      letterSpacing: LETTER_SPACING.widest,
-                    }}
-                  >
-                    ✓ LEARNED
-                  </div>
-                )}
-                <div
-                  style={{
-                    fontFamily: FONTS.display,
-                    fontSize: mobile ? FONT_SIZE['5xl'] : FONT_SIZE['6xl'],
-                    fontWeight: FONT_WEIGHT.bold,
-                    letterSpacing: LETTER_SPACING.tight,
-                    marginBottom: SPACE[4],
-                    // German compounds are long and unbreakable by default, so
-                    // the word sets the card's min-content width and drags the
-                    // whole page wider than the viewport. Let it break instead.
-                    overflowWrap: 'anywhere',
-                    maxWidth: '100%',
-                  }}
-                >
-                  {card.de}
-                </div>
-                {card.ipa && (
-                  <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.6 }}>
-                    {card.ipa}
-                  </div>
-                )}
-                {card.plural && (
-                  <div
-                    style={{
-                      fontFamily: FONTS.mono,
-                      fontSize: FONT_SIZE.tag,
-                      letterSpacing: LETTER_SPACING.caps,
-                      color: COLORS.mute,
-                      marginTop: SPACE[2],
-                    }}
-                  >
-                    PL: {card.plural}
-                  </div>
-                )}
-                {formatVerb(card.verb, activePack.grammar).map((line) => (
-                  <div
-                    key={line.label}
-                    style={{
-                      fontFamily: FONTS.mono,
-                      fontSize: FONT_SIZE.tag,
-                      letterSpacing: LETTER_SPACING.caps,
-                      color: COLORS.mute,
-                      marginTop: SPACE[2],
-                    }}
-                  >
-                    {line.label}: {line.value}
-                  </div>
-                ))}
-                {card.examples?.length > 0 && (
-                  <div
-                    style={{
-                      marginTop: SPACE[3],
-                      fontFamily: FONTS.body,
-                      fontSize: FONT_SIZE.md,
-                      fontStyle: 'italic',
-                      opacity: 0.75,
-                    }}
-                  >
-                    {card.examples[0].de}
-                  </div>
-                )}
-              </div>
+              <CardFace card={card} learned={!!learnedWords[card.id]} mobile={mobile} />
 
-              {/* A1/A2 — multiple choice */}
-              {(level === 'a1' || level === 'a2') &&
-                !answered &&
-                currentIdx !== null &&
-                activeDeck.length >= 4 && (
-                  <div
-                    style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-                      gap: SPACE[3],
-                    }}
-                  >
-                    {choices.map((choice) => (
-                      <button
-                        key={choice}
-                        type="button"
-                        onClick={() => {
-                          if (clickLockRef.current) return; // swallow phantom clicks during transition
-                          const correct = choice === card.en;
-                          const verdict = correct ? 'correct' : 'wrong';
-                          setAnswered(true);
-                          setResult(verdict);
-                          if (correct) markLearned(card.id);
-                          recordEvent('vocab', level, verdict);
-                          recordItem('vocab', deckId, card.id, card.en, verdict);
-                        }}
-                        style={{
-                          ...BUTTON.tile,
-                          padding: SPACE[4],
-                        }}
-                      >
-                        {choice}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              {showChoices && !answered && <ChoiceGrid choices={choices} onChoose={chooseOption} />}
 
-              {/* B1 — type the meaning */}
-              {(level === 'b1' || ((level === 'a1' || level === 'a2') && activeDeck.length < 4)) &&
-                !answered && (
-                  <div>
-                    <input
-                      aria-label="Type the English meaning"
-                      type="text"
-                      value={typedAnswer}
-                      onChange={(e) => setTypedAnswer(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') submitTyped();
-                      }}
-                      placeholder="Type the English meaning…"
-                      style={{
-                        width: '100%',
-                        boxSizing: 'border-box',
-                        padding: SPACE[4],
-                        border: 'none',
-                        borderRadius: RADIUS.md,
-                        boxShadow: 'inset 0 2px 5px rgba(22,17,11,0.06)',
-                        fontFamily: FONTS.display,
-                        fontSize: FONT_SIZE.xl,
-                        background: COLORS.card,
-                        marginBottom: SPACE[3],
-                        color: COLORS.ink,
-                      }}
-                    />
-                    <button
-                      type="button"
-                      onClick={submitTyped}
-                      disabled={!typedAnswer.trim()}
-                      style={{
-                        ...BUTTON.go,
-                        width: '100%',
-                        opacity: typedAnswer.trim() ? 1 : 0.4,
-                      }}
-                    >
-                      CHECK →
-                    </button>
-                  </div>
-                )}
+              {showTyped && !answered && (
+                <TypedAnswer value={typedAnswer} onChange={setTypedAnswer} onSubmit={submitTyped} />
+              )}
 
-              {/* Feedback after answering */}
               {answered && (
-                <div
-                  className={result === 'wrong' ? 'wiggle' : 'pop'}
-                  style={{
-                    borderRadius: RADIUS.lg,
-                    boxShadow: SHADOW.card,
-                    background:
-                      result === 'correct'
-                        ? COLORS.gold
-                        : result === 'almost'
-                          ? COLORS.paperDeep
-                          : COLORS.red,
-                    color:
-                      result === 'correct'
-                        ? COLORS.accentOn
-                        : result === 'almost'
-                          ? COLORS.ink
-                          : COLORS.paper,
-                    padding: SPACE[4],
-                    marginTop: SPACE[3],
-                  }}
-                >
-                  <div
-                    style={{
-                      fontFamily: FONTS.mono,
-                      fontSize: FONT_SIZE.tag,
-                      letterSpacing: LETTER_SPACING.caps,
-                      marginBottom: SPACE[2],
-                    }}
-                  >
-                    {result === 'correct'
-                      ? '✓ CORRECT'
-                      : result === 'almost'
-                        ? '≈ ALMOST — CHECK SPELLING'
-                        : '✗ NOT QUITE'}
-                  </div>
-                  <div
-                    style={{
-                      fontFamily: FONTS.display,
-                      fontSize: FONT_SIZE.xl,
-                      fontWeight: FONT_WEIGHT.semibold,
-                      marginBottom: SPACE[3],
-                    }}
-                  >
-                    {card.en}
-                  </div>
-                  {result === 'wrong' ? (
-                    <button
-                      type="button"
-                      onClick={() => handleSrsVerdict('again')}
-                      style={{ ...BUTTON.primary, width: '100%' }}
-                    >
-                      AGAIN — REVIEW SOON →
-                    </button>
-                  ) : (
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-                        gap: SPACE[2],
-                      }}
-                    >
-                      <button
-                        type="button"
-                        onClick={() => handleSrsVerdict('hard')}
-                        style={{ ...BUTTON.tile }}
-                      >
-                        HARD
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSrsVerdict('good')}
-                        style={{ ...BUTTON.primary }}
-                      >
-                        GOOD
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleSrsVerdict('easy')}
-                        style={{ ...BUTTON.go }}
-                      >
-                        EASY
-                      </button>
-                    </div>
-                  )}
-                </div>
+                <VerdictPanel result={result} answer={card.en} onVerdict={handleSrsVerdict} />
               )}
             </>
           )}
