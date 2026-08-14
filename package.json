@@ -23,7 +23,8 @@
     "bench:perf": "node scripts/dev/bench-perf.mjs",
     "clean": "node scripts/clean.js",
     "prepare": "husky",
-    "import:lexicon": "node --max-old-space-size=4096 scripts/import-lexicon/index.js"
+    "vendor:fonts": "node scripts/vendor-fonts/index.js",
+  "import:lexicon": "node --max-old-space-size=4096 scripts/import-lexicon/index.js"
   },
   "dependencies": {
     "@sentry/react": "^10.59.0",

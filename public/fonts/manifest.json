@@ -1,0 +1,58 @@
+{
+  "generatedFrom": "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300..900&family=JetBrains+Mono:wght@400..700&display=swap",
+  "subsets": [
+    "latin",
+    "latin-ext"
+  ],
+  "families": {
+    "Fraunces": {
+      "slug": "fraunces",
+      "axes": "opsz,wght@9..144,300..900",
+      "files": [
+        {
+          "file": "fraunces-latin-ext-normal-300-900.woff2",
+          "subset": "latin-ext",
+          "weight": "300 900",
+          "style": "normal",
+          "from": "https://fonts.gstatic.com/s/fraunces/v38/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxCFTeP2Xz5fU8w.woff2",
+          "bytes": 59540,
+          "sha256": "f120089b9440f3e35a980a2137347b1851ad46ee4b8ad5c63b6c07e053fa40e2"
+        },
+        {
+          "file": "fraunces-latin-normal-300-900.woff2",
+          "subset": "latin",
+          "weight": "300 900",
+          "style": "normal",
+          "from": "https://fonts.gstatic.com/s/fraunces/v38/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeP2Xz5c.woff2",
+          "bytes": 67388,
+          "sha256": "48282a415ec22e31beaf0a0666e6fae0c8cbddcd0b1f6e729f27c3ade8a64e43"
+        }
+      ]
+    },
+    "JetBrains Mono": {
+      "slug": "jetbrains-mono",
+      "axes": "wght@400..700",
+      "files": [
+        {
+          "file": "jetbrains-mono-latin-ext-normal-400-700.woff2",
+          "subset": "latin-ext",
+          "weight": "400 700",
+          "style": "normal",
+          "from": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPx7cwgknk-6nFg.woff2",
+          "bytes": 11596,
+          "sha256": "9c38cb2d0d2d93c1ee6e21fa78db76f13ea7e15e15cc64214c7ca89b6aaa35c4"
+        },
+        {
+          "file": "jetbrains-mono-latin-normal-400-700.woff2",
+          "subset": "latin",
+          "weight": "400 700",
+          "style": "normal",
+          "from": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwgknk-4.woff2",
+          "bytes": 31340,
+          "sha256": "2c32b9b3ee358c119e210f6f5195f9bd34894d78a785ff2e95d60e718e400af4"
+        }
+      ]
+    }
+  },
+  "totalBytes": 169864
+}

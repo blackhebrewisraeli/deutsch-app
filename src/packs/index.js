@@ -1,6 +1,6 @@
 // Pack registry. Phase 0: German only. The active pack is a module singleton;
 // a Context/hook can wrap it in Phase 4 when the language picker arrives.
-import { dePack } from './de';
+import { dePack } from './de/index.js';
 
 const PACKS = { de: dePack };
 
