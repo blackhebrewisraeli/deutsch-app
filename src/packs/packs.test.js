@@ -13,6 +13,9 @@ describe('activePack', () => {
   it('satisfies the LanguagePack contract', () => {
     expect(validateLanguagePack(activePack)).toBe(true);
   });
+  it('resolves the active pack through the registry, not a direct import', () => {
+    expect(activePack).toBe(getPack('de'));
+  });
   it('is German', () => {
     expect(activePack.meta.id).toBe('de');
     expect(activePack.meta.locale).toBe('de-DE');
