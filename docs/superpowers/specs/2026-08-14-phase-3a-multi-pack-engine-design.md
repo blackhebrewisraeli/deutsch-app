@@ -215,8 +215,16 @@ prove the move did not corrupt or lose the artifacts. `lexiconStore.test.js`
 is unaffected on this point — it runs against `src/packs/__fixtures__/lexicon`,
 not the shipped files.
 
-**Component tests must pass unmodified.** `VocabTab` gains one argument at one
-call site; the rendered deck is identical. Test churn is expected in
+**One component test needs its fetch mock re-keyed.** Found during execution,
+after this spec was written: `VocabTab.test.jsx` carries its *own* mock (lines
+273-275 and 296-298) keyed `'/lexicon/index.json'` and friends, so the deck
+never loads once the store requests `/lexicon/de/`. Six URL strings change; no
+assertion, no rendered output, no component behaviour. It is the same category
+as `lexiconStore.test.js`'s fixture keys — this spec simply catalogued the two
+tests that read from *disk* and missed the one that mocks the *network*.
+
+**No component test's assertions may change.** `VocabTab` gains one argument at
+one call site; the rendered deck is identical. Test churn is expected in
 `src/packs/lexiconStore.test.js` (signatures) and in the two disk readers
 above (paths).
 
@@ -251,6 +259,7 @@ plan.
 | `scripts/import-lexicon/index.js` | default `outDir` gains the pack segment |
 | `src/packs/lexiconSample.test.js` | `DIR` constant: `public/lexicon` → `public/lexicon/de` |
 | `src/packs/de/autoDecks.population.test.js` | reads `public/lexicon/de/index.json` |
+| `src/components/VocabTab.test.jsx` | its own `fetch` mock is keyed by the old flat URLs |
 
 ---
 

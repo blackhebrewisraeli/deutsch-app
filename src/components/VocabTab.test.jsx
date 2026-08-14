@@ -270,9 +270,9 @@ describe('VocabTab', () => {
     beforeEach(() => {
       __resetCache();
       const fixtures = {
-        '/lexicon/index.json': indexJson,
-        '/lexicon/chunk-00.json': chunk0,
-        '/lexicon/chunk-01.json': chunk1,
+        '/lexicon/de/index.json': indexJson,
+        '/lexicon/de/chunk-00.json': chunk0,
+        '/lexicon/de/chunk-01.json': chunk1,
       };
       globalThis.fetch = vi.fn((url) => {
         const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
@@ -293,9 +293,9 @@ describe('VocabTab', () => {
     it('Retry button re-fetches after a failed load and shows deck cards', async () => {
       const user = userEvent.setup();
       const fixtures = {
-        '/lexicon/index.json': indexJson,
-        '/lexicon/chunk-00.json': chunk0,
-        '/lexicon/chunk-01.json': chunk1,
+        '/lexicon/de/index.json': indexJson,
+        '/lexicon/de/chunk-00.json': chunk0,
+        '/lexicon/de/chunk-01.json': chunk1,
       };
       let callCount = 0;
       globalThis.fetch = vi.fn((url) => {

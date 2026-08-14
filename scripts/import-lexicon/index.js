@@ -56,7 +56,7 @@ async function readRankMap(freqTsv) {
 
 export async function run({ n = 5000, cacheDir, outDir } = {}) {
   cacheDir = cacheDir || join(ROOT, '.cache', 'lexicon-raw');
-  outDir = outDir || join(ROOT, 'public', 'lexicon');
+  outDir = outDir || join(ROOT, 'public', 'lexicon', 'de');
 
   await ensureRaw(cacheDir);
   await ensurePrepared(cacheDir);

@@ -1,51 +1,62 @@
 import { resolveCard } from './resolve';
 
-const BASE = '/lexicon';
-let indexPromise = null;
-const chunkPromises = new Map();
+// Artifacts live under a per-pack directory so two packs can ship a lexicon
+// without colliding: /lexicon/de/index.json, /lexicon/es/index.json, …
+const base = (packId) => `/lexicon/${packId}`;
+
+// Both caches are keyed by pack. Keying chunks on the chunk NUMBER alone —
+// as this module did before Phase 3a — returns one pack's chunk for another's
+// request. The shapes match, so nothing throws; the app just renders the wrong
+// language.
+const indexPromises = new Map(); // packId → Promise
+const chunkPromises = new Map(); // `${packId}:${chunk}` → Promise
 
 export function __resetCache() {
-  indexPromise = null;
+  indexPromises.clear();
   chunkPromises.clear();
 }
 
-export function loadIndex() {
-  if (!indexPromise) {
-    indexPromise = fetch(`${BASE}/index.json`)
+export function loadIndex(packId) {
+  if (!indexPromises.has(packId)) {
+    const p = fetch(`${base(packId)}/index.json`)
       .then((r) => {
         if (!r.ok) throw new Error(`lexicon index ${r.status}`);
         return r.json();
       })
       .catch((err) => {
-        indexPromise = null; // allow retry on next call
+        indexPromises.delete(packId); // allow retry on next call
         throw err;
       });
+    indexPromises.set(packId, p);
   }
-  return indexPromise;
+  return indexPromises.get(packId);
 }
 
 function chunkName(chunk) {
   return `chunk-${String(chunk).padStart(2, '0')}.json`;
 }
 
-function loadChunk(chunk) {
-  if (!chunkPromises.has(chunk)) {
-    const p = fetch(`${BASE}/${chunkName(chunk)}`)
+function loadChunk(packId, chunk) {
+  const key = `${packId}:${chunk}`;
+  if (!chunkPromises.has(key)) {
+    const p = fetch(`${base(packId)}/${chunkName(chunk)}`)
       .then((r) => {
         if (!r.ok) throw new Error(`lexicon ${chunkName(chunk)} ${r.status}`);
         return r.json();
       })
       .catch((err) => {
-        chunkPromises.delete(chunk); // allow retry on next call
+        chunkPromises.delete(key); // allow retry on next call
         throw err;
       });
-    chunkPromises.set(chunk, p);
+    chunkPromises.set(key, p);
   }
-  return chunkPromises.get(chunk);
+  return chunkPromises.get(key);
 }
 
-export async function loadChunks(chunkIds) {
-  const datas = await Promise.all([...new Set(chunkIds)].map(loadChunk));
+export async function loadChunks(packId, chunkIds) {
+  // An explicit arrow, NOT .map(loadChunk): map passes (element, index, array),
+  // so the bare reference would hand the array index to `chunk`.
+  const datas = await Promise.all([...new Set(chunkIds)].map((c) => loadChunk(packId, c)));
   return Object.assign({}, ...datas);
 }
 
@@ -76,9 +87,12 @@ export function selectRows(index, auto) {
   return rows;
 }
 
-export async function resolveAutoDeck(deckDef, grammar) {
-  const rows = selectRows(await loadIndex(), deckDef.auto);
-  const entries = await loadChunks(rows.map((r) => r.chunk));
+export async function resolveAutoDeck(deckDef, grammar, packId) {
+  const rows = selectRows(await loadIndex(packId), deckDef.auto);
+  const entries = await loadChunks(
+    packId,
+    rows.map((r) => r.chunk)
+  );
   // The service worker caches the index and each chunk as separate entries, and a
   // chunk is only revalidated when a deck touches it — so a refreshed index can pair
   // with a long-cached chunk. Chunk packing is positional (buildArtifacts assigns

@@ -9,7 +9,7 @@ import { dePack } from './de/index';
 // can't ship silently. vitest runs from the repo root, so repo-relative paths
 // resolve here without a file:// URL. Deterministic-fixture tests that need
 // specific ids live in lexiconStore.test.js against src/packs/__fixtures__/lexicon.
-const DIR = 'public/lexicon';
+const DIR = 'public/lexicon/de';
 const read = (f) => JSON.parse(readFileSync(`${DIR}/${f}`, 'utf8'));
 
 describe('shipped lexicon artifacts', () => {

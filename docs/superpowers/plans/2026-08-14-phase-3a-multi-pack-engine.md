@@ -20,12 +20,18 @@
 - **Never bypass `.husky/pre-commit`** (`lint-staged` + full `npm test`). `--no-verify` is forbidden.
 - **Branch from up-to-date `main`; land via a non-draft PR targeting `main`.** CI only runs on PRs targeting `main`.
 
-## Four facts that will confuse you
+## Five facts that will confuse you
 
 1. **`.map(loadChunk)` is an arity trap.** `loadChunks` currently does `[...new Set(chunkIds)].map(loadChunk)`, which passes `(element, index, array)`. `loadChunk(chunk)` ignores the extras today. Give it a second parameter without rewriting that line and the array **index** becomes the pack id — fetching `/lexicon/0/chunk-…`. Step 3 rewrites it to an explicit arrow.
 2. **The test fixture map matches by URL suffix.** `lexiconStore.test.js` builds `fixtures` keyed `'/lexicon/index.json'` and finds them with `url.endsWith(k)`. Once paths nest, `/lexicon/de/index.json` no longer ends with `/lexicon/index.json`, so every key must gain the `de` segment or every fetch 404s.
-3. **Two tests read the shipped artifacts straight off disk**, bypassing `lexiconStore` entirely: `src/packs/lexiconSample.test.js:12` (`const DIR = 'public/lexicon'`) and `src/packs/de/autoDecks.population.test.js:13` (`readFileSync('public/lexicon/index.json')`). Threading does not touch them; they need the path edit or they fail on the move.
-4. **`selectRows` needs nothing.** It is pure — it filters an index that has already been fetched. Only `loadIndex`, `loadChunks` and `resolveAutoDeck` take a `packId`.
+3. **`VocabTab.test.jsx` mocks the lexicon fetch itself.** Lines 273-275 and
+   296-298 key a fixture map by `'/lexicon/index.json'` and friends. Once the
+   store requests `/lexicon/de/`, the mock 404s and the auto-deck test fails
+   with "Unable to find an element with the text: das Haus". Six URL strings
+   change; nothing else in that file does. (Missed when this plan was written
+   and found during execution.)
+4. **Two tests read the shipped artifacts straight off disk**, bypassing `lexiconStore` entirely: `src/packs/lexiconSample.test.js:12` (`const DIR = 'public/lexicon'`) and `src/packs/de/autoDecks.population.test.js:13` (`readFileSync('public/lexicon/index.json')`). Threading does not touch them; they need the path edit or they fail on the move.
+5. **`selectRows` needs nothing.** It is pure — it filters an index that has already been fetched. Only `loadIndex`, `loadChunks` and `resolveAutoDeck` take a `packId`.
 
 ---
 
@@ -40,6 +46,7 @@
 | `src/packs/de/autoDecks.population.test.js` | index path gains the `de` segment |
 | `scripts/import-lexicon/index.js` | default `outDir` gains the pack segment |
 | `src/components/VocabTab.jsx` | passes `activePack.meta.id` |
+| `src/components/VocabTab.test.jsx` | fetch-mock URLs gain the `de` segment |
 | `src/packs/index.js` | `activePack` resolves via `getPack(DEFAULT_PACK_ID)` |
 
 ---
@@ -54,6 +61,7 @@
 - Modify: `src/packs/de/autoDecks.population.test.js:13`
 - Modify: `scripts/import-lexicon/index.js:59`
 - Modify: `src/components/VocabTab.jsx:92`
+- Modify: `src/components/VocabTab.test.jsx:273-275,296-298` (fetch-mock URLs only)
 
 **Interfaces:**
 - Consumes: `resolveCard(entry, grammar)` from `src/packs/resolve.js` (unchanged).

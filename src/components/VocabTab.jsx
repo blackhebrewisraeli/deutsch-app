@@ -89,7 +89,7 @@ export default function VocabTab({
     setDeckLoading(true);
     setDeckError(false);
     setAsyncDeck(null);
-    resolveAutoDeck(def, activePack.grammar)
+    resolveAutoDeck(def, activePack.grammar, activePack.meta.id)
       .then((cards) => {
         if (!cancelled) setAsyncDeck(cards);
       })
