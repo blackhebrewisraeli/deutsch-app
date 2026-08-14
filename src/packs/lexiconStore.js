@@ -76,7 +76,7 @@ export function selectRows(index, auto) {
   return rows;
 }
 
-export async function resolveAutoDeck(deckDef) {
+export async function resolveAutoDeck(deckDef, grammar) {
   const rows = selectRows(await loadIndex(), deckDef.auto);
   const entries = await loadChunks(rows.map((r) => r.chunk));
   // The service worker caches the index and each chunk as separate entries, and a
@@ -97,5 +97,5 @@ export async function resolveAutoDeck(deckDef) {
           .join(', ')
     );
   }
-  return rows.filter((r) => entries[r.id]).map((r) => resolveCard(entries[r.id]));
+  return rows.filter((r) => entries[r.id]).map((r) => resolveCard(entries[r.id], grammar));
 }

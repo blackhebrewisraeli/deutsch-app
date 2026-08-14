@@ -35,7 +35,7 @@ export const dePack = {
     alphabetQuiz: ALPHABET_QUIZ_GROUPS,
     lexicon: LEXICON,
     deckDefs: DECKS,
-    decks: resolveDecks(DECKS, LEXICON),
+    decks: resolveDecks(DECKS, LEXICON, grammar),
     scenarios: SCENARIOS,
     chatTasks: CHAT_TASKS,
     translateSentences: {

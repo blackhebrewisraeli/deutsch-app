@@ -54,6 +54,7 @@ const validPack = {
   grammar: {
     articles: ['el', 'la'],
     articleRequiredForNouns: true,
+    articlePosition: 'before',
     auxiliaries: { haber: 'ha' },
     personKeys: ['yo', 'tu', 'el'],
     displayPerson: 'el',
@@ -236,6 +237,11 @@ describe('validateLanguagePack', () => {
       grammar: { ...validPack.grammar, articleRequiredForNouns: 'yes' },
     };
     expect(() => validateLanguagePack(bad)).toThrow(/articleRequiredForNouns/);
+  });
+
+  it('throws when articlePosition is not before or after', () => {
+    const bad = { ...validPack, grammar: { ...validPack.grammar, articlePosition: 'middle' } };
+    expect(() => validateLanguagePack(bad)).toThrow(/articlePosition/);
   });
 
   it('throws when an auxiliary maps to a non-string', () => {

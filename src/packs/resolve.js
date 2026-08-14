@@ -2,10 +2,17 @@
 // array-of-cards shape the UI and SRS consume.
 
 /** @param {object} entry LexiconEntry @returns {object} resolved card */
-export function resolveCard(entry) {
+export function resolveCard(entry, grammar) {
+  // Where the article sits is the pack's call: "der Hund" for German,
+  // lemma-first for a language that suffixes its article.
+  const display = entry.article
+    ? grammar.articlePosition === 'after'
+      ? `${entry.de} ${entry.article}`
+      : `${entry.article} ${entry.de}`
+    : entry.de;
   return {
     id: entry.id,
-    de: entry.article ? `${entry.article} ${entry.de}` : entry.de,
+    de: display,
     en: entry.en[0],
     glosses: entry.en,
     ipa: entry.ipa,
@@ -25,12 +32,12 @@ export function resolveCard(entry) {
  * @param {Record<string, object>} lexicon
  * @returns {object[]}
  */
-export function resolveDeck(deckDef, lexicon) {
+export function resolveDeck(deckDef, lexicon, grammar) {
   if (Array.isArray(deckDef.cardIds)) {
     return deckDef.cardIds.map((id) => {
       const entry = lexicon[id];
       if (!entry) throw new Error(`resolveDeck: unknown cardId "${id}"`);
-      return resolveCard(entry);
+      return resolveCard(entry, grammar);
     });
   }
   if (deckDef.auto) {
@@ -44,20 +51,24 @@ export function resolveDeck(deckDef, lexicon) {
       return all
         .filter((e) => e.freqRank !== null && e.freqRank >= min && e.freqRank <= max)
         .sort((a, b) => a.freqRank - b.freqRank)
-        .map(resolveCard);
+        .map((e) => resolveCard(e, grammar));
     }
     if (deckDef.auto.by === 'top') {
-      return all.slice().sort(byRank).slice(0, deckDef.auto.count).map(resolveCard);
+      return all
+        .slice()
+        .sort(byRank)
+        .slice(0, deckDef.auto.count)
+        .map((e) => resolveCard(e, grammar));
     }
     if (deckDef.auto.by === 'cefr') {
-      return all.filter((e) => e.cefr === deckDef.auto.level).map(resolveCard);
+      return all.filter((e) => e.cefr === deckDef.auto.level).map((e) => resolveCard(e, grammar));
     }
     if (deckDef.auto.by === 'tag') {
       const wanted = Array.isArray(deckDef.auto.tag) ? deckDef.auto.tag : [deckDef.auto.tag];
       return all
         .filter((e) => Array.isArray(e.tags) && e.tags.some((t) => wanted.includes(t)))
         .sort(byRank)
-        .map(resolveCard);
+        .map((e) => resolveCard(e, grammar));
     }
     throw new Error(`resolveDeck: unknown auto.by "${deckDef.auto.by}"`);
   }
@@ -69,8 +80,8 @@ export function resolveDeck(deckDef, lexicon) {
  * @param {Record<string, object>} lexicon
  * @returns {Record<string, object[]>}
  */
-export function resolveDecks(deckDefs, lexicon) {
+export function resolveDecks(deckDefs, lexicon, grammar) {
   return Object.fromEntries(
-    Object.entries(deckDefs).map(([id, def]) => [id, resolveDeck(def, lexicon)])
+    Object.entries(deckDefs).map(([id, def]) => [id, resolveDeck(def, lexicon, grammar)])
   );
 }

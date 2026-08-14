@@ -93,6 +93,10 @@ export function validateLanguagePack(pack) {
     fail('grammar.articleRequiredForNouns cannot be true when grammar.articles is empty');
   }
 
+  if (!['before', 'after'].includes(g.articlePosition)) {
+    fail("grammar.articlePosition must be 'before' or 'after'");
+  }
+
   if (!g.auxiliaries || typeof g.auxiliaries !== 'object') {
     fail('grammar.auxiliaries must be an object');
   }
