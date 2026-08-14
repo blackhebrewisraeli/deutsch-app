@@ -11,7 +11,9 @@ import { createHash } from 'node:crypto';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { activePack } from '../../src/packs/index.js';
-import { buildGoogleFontsUrl, familySlug } from './googleFontsUrl.js';
+import { buildGoogleFontsUrl } from './googleFontsUrl.js';
+// One definition, shared with the runtime that reads these directories.
+import { familySlug } from '../../src/lib/injectFonts.js';
 import { parseFaces, renderFaceCss, localFileName } from './css.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
