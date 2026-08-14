@@ -27,10 +27,10 @@ export const ALPHABET = [
   { l: 'X', w: 'Xylophon', e: 'xylophone' },
   { l: 'Y', w: 'Yoga', e: 'yoga' },
   { l: 'Z', w: 'Zeit', e: 'time' },
-  { l: 'Ä', w: 'Äpfel', e: 'apples' },
-  { l: 'Ö', w: 'Öl', e: 'oil' },
-  { l: 'Ü', w: 'Über', e: 'over' },
-  { l: 'ß', w: 'Straße', e: 'street' },
+  { l: 'Ä', w: 'Äpfel', e: 'apples', special: true },
+  { l: 'Ö', w: 'Öl', e: 'oil', special: true },
+  { l: 'Ü', w: 'Über', e: 'over', special: true },
+  { l: 'ß', w: 'Straße', e: 'street', special: true },
 ];
 
 export const ALPHABET_QUIZ_GROUPS = [

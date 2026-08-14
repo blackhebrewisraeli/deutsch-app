@@ -77,3 +77,18 @@ describe('ALPHABET_QUIZ_GROUPS', () => {
     }
   });
 });
+
+describe('special letters', () => {
+  it('flags exactly the four letters outside the base Latin set', () => {
+    const special = ALPHABET.filter((x) => x.special).map((x) => x.l);
+    expect(special).toEqual(['Ä', 'Ö', 'Ü', 'ß']);
+  });
+
+  it('leaves every other entry unflagged', () => {
+    const plain = ALPHABET.filter((x) => !x.special);
+    expect(plain).toHaveLength(26);
+    for (const entry of plain) {
+      expect(entry.special).toBeUndefined();
+    }
+  });
+});

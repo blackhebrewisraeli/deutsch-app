@@ -322,7 +322,7 @@ export default function AlphabetTab({
           >
             {ALPHABET.map((letter, i) => {
               const isActive = selected?.l === letter.l;
-              const isSpecial = ['Ä', 'Ö', 'Ü', 'ß'].includes(letter.l);
+              const isSpecial = Boolean(letter.special);
               return (
                 <button
                   key={letter.l}
