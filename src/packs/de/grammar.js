@@ -8,6 +8,8 @@ export const grammar = {
   // ── Nouns ──────────────────────────────────────────────────
   articles: ['der', 'die', 'das'],
   articleRequiredForNouns: true,
+  // Where the article sits relative to the lemma: "der Hund", not "Hund der".
+  articlePosition: 'before',
 
   // ── Verbs ──────────────────────────────────────────────────
   // aux key → the third-person-singular form used to build the perfect:

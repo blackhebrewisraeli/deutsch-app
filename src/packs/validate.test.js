@@ -35,7 +35,15 @@ const validPack = {
     alphabet: [],
     alphabetQuiz: [],
     decks: {},
-    scenarios: [],
+    scenarios: [
+      {
+        id: 'free',
+        name: 'Free',
+        icon: '◆',
+        desc: 'open',
+        greeting: { de: 'Hola', ipa: '[ˈola]', en: 'Hello' },
+      },
+    ],
     chatTasks: {},
     translateSentences: { A1: [], A2: [], B1: [] },
   },
@@ -46,6 +54,7 @@ const validPack = {
   grammar: {
     articles: ['el', 'la'],
     articleRequiredForNouns: true,
+    articlePosition: 'before',
     auxiliaries: { haber: 'ha' },
     personKeys: ['yo', 'tu', 'el'],
     displayPerson: 'el',
@@ -170,6 +179,30 @@ describe('validateLanguagePack', () => {
     expect(() => validateLanguagePack(bad)).toThrow(/prompts\.deck\.ipaExample/);
   });
 
+  it('throws when a scenario has no greeting', () => {
+    const bad = {
+      ...validPack,
+      content: {
+        ...validPack.content,
+        scenarios: [{ id: 'free', name: 'F', icon: '◆', desc: 'o' }],
+      },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/scenarios\[0\]\.greeting/);
+  });
+
+  it('throws when a greeting is missing a field', () => {
+    const bad = {
+      ...validPack,
+      content: {
+        ...validPack.content,
+        scenarios: [
+          { id: 'free', name: 'F', icon: '◆', desc: 'o', greeting: { de: 'Hola', en: 'Hello' } },
+        ],
+      },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/greeting\.ipa/);
+  });
+
   it('throws when grammar is missing', () => {
     expect(() => validateLanguagePack({ ...validPack, grammar: undefined })).toThrow(
       /grammar is required/
@@ -204,6 +237,11 @@ describe('validateLanguagePack', () => {
       grammar: { ...validPack.grammar, articleRequiredForNouns: 'yes' },
     };
     expect(() => validateLanguagePack(bad)).toThrow(/articleRequiredForNouns/);
+  });
+
+  it('throws when articlePosition is not before or after', () => {
+    const bad = { ...validPack, grammar: { ...validPack.grammar, articlePosition: 'middle' } };
+    expect(() => validateLanguagePack(bad)).toThrow(/articlePosition/);
   });
 
   it('throws when an auxiliary maps to a non-string', () => {

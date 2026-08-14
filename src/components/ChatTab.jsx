@@ -57,31 +57,11 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
   }, [scenario, level]);
 
   useEffect(() => {
-    const intros = {
-      free: {
-        de: 'Hallo! Womit möchtest du heute üben?',
-        ipa: '[ˈhalo vomɪt ˈmœçtəst duː ˈhɔɪ̯tə ˈyːbn̩]',
-        en: 'Hello! What would you like to practice today?',
-      },
-      coffee: {
-        de: 'Willkommen im Café! Was möchten Sie bestellen?',
-        ipa: '[vɪlˈkɔmən ɪm kaˈfeː vas ˈmœçtən ziː bəˈʃtɛlən]',
-        en: 'Welcome to the café! What would you like to order?',
-      },
-      meet: {
-        de: 'Hallo! Ich bin Anna. Wie heißt du?',
-        ipa: '[ˈhalo ɪç bɪn ˈana viː haɪ̯st duː]',
-        en: "Hello! I'm Anna. What's your name?",
-      },
-      airport: {
-        de: 'Guten Tag, willkommen am Flughafen. Wohin reisen Sie?',
-        ipa: '[ˈɡuːtn̩ taːk vɪlˈkɔmən am ˈfluːkhaːfn̩ voˈhɪn ˈʁaɪ̯zn̩ ziː]',
-        en: 'Good day, welcome to the airport. Where are you traveling?',
-      },
-    };
-    setMessages([{ role: 'assistant', ...intros[scenario] }]);
+    const greeting = SCENARIOS.find((s) => s.id === scenario)?.greeting;
+    if (!greeting) return;
+    setMessages([{ role: 'assistant', ...greeting }]);
     setCorrection(null);
-    setTimeout(() => speak(intros[scenario].de), 400);
+    setTimeout(() => speak(greeting.de), 400);
   }, [scenario, level]);
 
   const startListening = () => {

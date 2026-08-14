@@ -2,13 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { activePack, getPack } from './index';
 import { validateLanguagePack } from './validate';
 import { normalizeText } from '../lib/textRules';
-import {
-  ALPHABET,
-  SCENARIOS,
-  CHAT_TASKS,
-  TRANSLATE_SENTENCES_A1,
-  ALPHABET_QUIZ_GROUPS,
-} from '../data/content';
+import { ALPHABET, ALPHABET_QUIZ_GROUPS } from './de/alphabet';
+import { SCENARIOS } from './de/scenarios';
+import { CHAT_TASKS } from './de/chatTasks';
+import { TRANSLATE_SENTENCES_A1 } from './de/translate';
 import { LEXICON } from './de/lexicon';
 import { DECKS } from './de/decks';
 

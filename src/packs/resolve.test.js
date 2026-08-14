@@ -33,20 +33,36 @@ const phrase = {
 };
 const lexicon = { 'das Brot': noun, Hallo: phrase };
 
+// Only the field resolveCard reads. `suffixed` stands in for a language that
+// puts the article after the lemma.
+const de = { articlePosition: 'before' };
+const suffixed = { articlePosition: 'after' };
+
 describe('resolveCard', () => {
+  // The Phase 1.5 point: composition is pack-driven, not merely relocated.
+  it('composes the display form from the pack article position', () => {
+    expect(resolveCard(noun, de).de).toBe('das Brot');
+    expect(resolveCard(noun, suffixed).de).toBe('Brot das');
+  });
+
+  it('leaves an article-less entry alone whatever the position', () => {
+    expect(resolveCard(phrase, de).de).toBe('Hallo');
+    expect(resolveCard(phrase, suffixed).de).toBe('Hallo');
+  });
+
   it('composes noun display form from article + lemma', () => {
-    expect(resolveCard(noun).de).toBe('das Brot');
+    expect(resolveCard(noun, de).de).toBe('das Brot');
   });
   it('leaves non-noun de unchanged', () => {
-    expect(resolveCard(phrase).de).toBe('Hallo');
+    expect(resolveCard(phrase, de).de).toBe('Hallo');
   });
   it('exposes en as the primary gloss string and glosses as the full array', () => {
-    const c = resolveCard(noun);
+    const c = resolveCard(noun, de);
     expect(c.en).toBe('bread');
     expect(c.glosses).toEqual(['bread', 'loaf']);
   });
   it('preserves the id and rich fields', () => {
-    const c = resolveCard(noun);
+    const c = resolveCard(noun, de);
     expect(c.id).toBe('das Brot');
     expect(c.plural).toBe('Brote');
     expect(c.examples).toEqual(noun.examples);
@@ -55,29 +71,29 @@ describe('resolveCard', () => {
 
 describe('resolveDeck', () => {
   it('resolves a curated deck by cardIds, preserving order', () => {
-    const cards = resolveDeck({ cardIds: ['Hallo', 'das Brot'] }, lexicon);
+    const cards = resolveDeck({ cardIds: ['Hallo', 'das Brot'] }, lexicon, de);
     expect(cards.map((c) => c.id)).toEqual(['Hallo', 'das Brot']);
     expect(cards.map((c) => c.de)).toEqual(['Hallo', 'das Brot']);
   });
   it('throws on a missing cardId', () => {
-    expect(() => resolveDeck({ cardIds: ['nope'] }, lexicon)).toThrow(/nope/);
+    expect(() => resolveDeck({ cardIds: ['nope'] }, lexicon, de)).toThrow(/nope/);
   });
   it('resolves an auto freq-band deck sorted by freqRank', () => {
-    const cards = resolveDeck({ auto: { by: 'freq', range: [1, 50] } }, lexicon);
+    const cards = resolveDeck({ auto: { by: 'freq', range: [1, 50] } }, lexicon, de);
     expect(cards.map((c) => c.id)).toEqual(['das Brot']); // freqRank 5 in [1,50]; Hallo 100 excluded
   });
   it('resolves an auto cefr deck', () => {
-    const cards = resolveDeck({ auto: { by: 'cefr', level: 'A1' } }, lexicon);
+    const cards = resolveDeck({ auto: { by: 'cefr', level: 'A1' } }, lexicon, de);
     expect(cards.map((c) => c.id).sort()).toEqual(['Hallo', 'das Brot']);
   });
   it('throws on an unrecognized deck def', () => {
-    expect(() => resolveDeck({}, lexicon)).toThrow();
+    expect(() => resolveDeck({}, lexicon, de)).toThrow();
   });
 });
 
 describe('resolveDecks', () => {
   it('resolves every deck in a map', () => {
-    const out = resolveDecks({ a: { cardIds: ['Hallo'] } }, lexicon);
+    const out = resolveDecks({ a: { cardIds: ['Hallo'] } }, lexicon, de);
     expect(out.a.map((c) => c.id)).toEqual(['Hallo']);
   });
 });
@@ -104,15 +120,15 @@ describe('resolveDeck auto.by=tag and sort coverage', () => {
     'n:c': e('n:c', 2, 'A2', ['travel']),
   };
   it('filters by tag and sorts ascending by freqRank', () => {
-    const cards = resolveDeck({ auto: { by: 'tag', tag: 'food' } }, lex);
+    const cards = resolveDeck({ auto: { by: 'tag', tag: 'food' } }, lex, de);
     expect(cards.map((c) => c.id)).toEqual(['n:b', 'n:a']);
   });
   it('freq band sorts multiple entries ascending', () => {
-    const cards = resolveDeck({ auto: { by: 'freq', range: [1, 3] } }, lex);
+    const cards = resolveDeck({ auto: { by: 'freq', range: [1, 3] } }, lex, de);
     expect(cards.map((c) => c.id)).toEqual(['n:b', 'n:c', 'n:a']);
   });
   it('throws on an unknown auto.by', () => {
-    expect(() => resolveDeck({ auto: { by: 'bogus' } }, lex)).toThrow(/bogus/);
+    expect(() => resolveDeck({ auto: { by: 'bogus' } }, lex, de)).toThrow(/bogus/);
   });
 });
 
@@ -140,20 +156,20 @@ describe('resolveDeck auto.by=top and array tags', () => {
   };
 
   it('top returns the N lowest-rank cards in rank order', () => {
-    const cards = resolveDeck({ auto: { by: 'top', count: 2 } }, lex);
+    const cards = resolveDeck({ auto: { by: 'top', count: 2 } }, lex, de);
     expect(cards.map((c) => c.id)).toEqual(['n:b', 'n:c']);
   });
   it('top never exceeds count and puts null ranks last', () => {
-    const cards = resolveDeck({ auto: { by: 'top', count: 10 } }, lex);
+    const cards = resolveDeck({ auto: { by: 'top', count: 10 } }, lex, de);
     expect(cards).toHaveLength(4);
     expect(cards[3].id).toBe('n:d');
   });
   it('tag still accepts a single string', () => {
-    const cards = resolveDeck({ auto: { by: 'tag', tag: 'sports' } }, lex);
+    const cards = resolveDeck({ auto: { by: 'tag', tag: 'sports' } }, lex, de);
     expect(cards.map((c) => c.id)).toEqual(['n:a', 'n:d']);
   });
   it('tag accepts an array and matches any of them', () => {
-    const cards = resolveDeck({ auto: { by: 'tag', tag: ['games', 'hobbies'] } }, lex);
+    const cards = resolveDeck({ auto: { by: 'tag', tag: ['games', 'hobbies'] } }, lex, de);
     expect(cards.map((c) => c.id)).toEqual(['n:b', 'n:c']);
   });
 });

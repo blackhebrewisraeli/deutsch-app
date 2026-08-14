@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { loadIndex, loadChunks, resolveAutoDeck, __resetCache } from './lexiconStore';
+import { grammar } from './de/grammar';
 import index from './__fixtures__/lexicon/index.json';
 import chunk0 from './__fixtures__/lexicon/chunk-00.json';
 import chunk1 from './__fixtures__/lexicon/chunk-01.json';
@@ -32,7 +33,7 @@ describe('loadIndex', () => {
 
 describe('resolveAutoDeck', () => {
   it('resolves a freq-band deck ordered by rank, loading only needed chunks', async () => {
-    const cards = await resolveAutoDeck({ auto: { by: 'freq', range: [1, 200] } });
+    const cards = await resolveAutoDeck({ auto: { by: 'freq', range: [1, 200] } }, grammar);
     // ranks in [1,200]: n:haus(60), n:wasser(88), n:brot(142) — all in chunk 0
     expect(cards.map((c) => c.id)).toEqual(['n:haus', 'n:wasser', 'n:brot']);
     expect(cards[0].de).toBe('das Haus'); // resolveCard display form
@@ -42,11 +43,11 @@ describe('resolveAutoDeck', () => {
     expect(chunk1Calls).toHaveLength(0); // chunk 1 not needed
   });
   it('resolves a cefr deck across chunks', async () => {
-    const cards = await resolveAutoDeck({ auto: { by: 'cefr', level: 'A2' } });
+    const cards = await resolveAutoDeck({ auto: { by: 'cefr', level: 'A2' } }, grammar);
     expect(cards.map((c) => c.id).sort()).toEqual(['n:arbeit', 'n:bahnhof']);
   });
   it('resolves a tag deck', async () => {
-    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } });
+    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } }, grammar);
     expect(cards.map((c) => c.id)).toEqual(['n:wasser', 'n:brot']); // 88 then 142
   });
 });
@@ -81,7 +82,7 @@ describe('transient failure recovery', () => {
 
 describe('resolveAutoDeck top and array tags', () => {
   it('top returns the N lowest-rank cards and loads only needed chunks', async () => {
-    const cards = await resolveAutoDeck({ auto: { by: 'top', count: 3 } });
+    const cards = await resolveAutoDeck({ auto: { by: 'top', count: 3 } }, grammar);
     expect(cards.map((c) => c.id)).toEqual(['n:haus', 'n:wasser', 'n:brot']);
     const chunk1Calls = globalThis.fetch.mock.calls.filter((c) =>
       String(c[0]).endsWith('chunk-01.json')
@@ -89,7 +90,7 @@ describe('resolveAutoDeck top and array tags', () => {
     expect(chunk1Calls).toHaveLength(0);
   });
   it('tag accepts an array and matches any of them', async () => {
-    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: ['travel', 'work'] } });
+    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: ['travel', 'work'] } }, grammar);
     expect(cards.map((c) => c.id).sort()).toEqual(['n:arbeit', 'n:bahnhof']);
   });
 });
@@ -123,7 +124,7 @@ describe('resolveAutoDeck with a stale chunk', () => {
   it('skips rows missing from the chunk instead of throwing', async () => {
     serve(indexWithExtra);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } });
+    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } }, grammar);
     expect(cards.map((c) => c.id)).toEqual(['n:wasser', 'n:brot']); // n:neu dropped
     warn.mockRestore();
   });
@@ -131,7 +132,7 @@ describe('resolveAutoDeck with a stale chunk', () => {
   it('keeps the surviving cards fully resolved and in rank order', async () => {
     serve(indexWithExtra);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } });
+    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } }, grammar);
     expect(cards[0].de).toBe('das Wasser');
     expect(cards.every((c) => c && c.id && c.en)).toBe(true);
     warn.mockRestore();
@@ -140,7 +141,7 @@ describe('resolveAutoDeck with a stale chunk', () => {
   it('warns once for the call, naming the missing id', async () => {
     serve(indexWithExtra);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } });
+    await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } }, grammar);
     expect(warn).toHaveBeenCalledTimes(1);
     expect(warn.mock.calls[0][0]).toMatch(/n:neu/);
     expect(warn.mock.calls[0][0]).toMatch(/1 row/);
@@ -150,7 +151,7 @@ describe('resolveAutoDeck with a stale chunk', () => {
   it('does not warn when every row resolves', async () => {
     serve(index);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } });
+    const cards = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } }, grammar);
     expect(cards).toHaveLength(2);
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
