@@ -28,3 +28,15 @@ describe('SCENARIOS', () => {
     }
   });
 });
+
+describe('scenario greetings', () => {
+  it('gives every scenario a greeting with all three fields', () => {
+    for (const s of SCENARIOS) {
+      expect(s.greeting, `${s.id} has no greeting`).toBeTruthy();
+      for (const field of ['de', 'ipa', 'en']) {
+        expect(typeof s.greeting[field], `${s.id}.greeting.${field}`).toBe('string');
+        expect(s.greeting[field].length, `${s.id}.greeting.${field} is empty`).toBeGreaterThan(0);
+      }
+    }
+  });
+});

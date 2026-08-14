@@ -35,7 +35,15 @@ const validPack = {
     alphabet: [],
     alphabetQuiz: [],
     decks: {},
-    scenarios: [],
+    scenarios: [
+      {
+        id: 'free',
+        name: 'Free',
+        icon: '◆',
+        desc: 'open',
+        greeting: { de: 'Hola', ipa: '[ˈola]', en: 'Hello' },
+      },
+    ],
     chatTasks: {},
     translateSentences: { A1: [], A2: [], B1: [] },
   },
@@ -168,6 +176,30 @@ describe('validateLanguagePack', () => {
       prompts: { ...validPack.prompts, deck: { cardExample: 'el perro' } },
     };
     expect(() => validateLanguagePack(bad)).toThrow(/prompts\.deck\.ipaExample/);
+  });
+
+  it('throws when a scenario has no greeting', () => {
+    const bad = {
+      ...validPack,
+      content: {
+        ...validPack.content,
+        scenarios: [{ id: 'free', name: 'F', icon: '◆', desc: 'o' }],
+      },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/scenarios\[0\]\.greeting/);
+  });
+
+  it('throws when a greeting is missing a field', () => {
+    const bad = {
+      ...validPack,
+      content: {
+        ...validPack.content,
+        scenarios: [
+          { id: 'free', name: 'F', icon: '◆', desc: 'o', greeting: { de: 'Hola', en: 'Hello' } },
+        ],
+      },
+    };
+    expect(() => validateLanguagePack(bad)).toThrow(/greeting\.ipa/);
   });
 
   it('throws when grammar is missing', () => {
