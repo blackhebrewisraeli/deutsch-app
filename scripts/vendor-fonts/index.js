@@ -47,12 +47,14 @@ async function fetchBytes(url) {
 }
 
 export async function vendorFonts({ out = OUT, pack = activePack, log = console.log } = {}) {
-  const { families, subsets } = pack.theme.font;
+  const { families } = pack.theme.font;
   if (!Array.isArray(families) || families.length === 0) {
     throw new Error('pack declares no font families');
   }
-  if (!Array.isArray(subsets) || subsets.length === 0) {
-    throw new Error('pack declares no font subsets — refusing to guess');
+  for (const f of families) {
+    if (!Array.isArray(f.subsets) || f.subsets.length === 0) {
+      throw new Error(`${f.name} declares no subsets — refusing to guess`);
+    }
   }
 
   const missing = families.map((f) => f.name).filter((n) => !LICENSES[n]);
@@ -68,25 +70,21 @@ export async function vendorFonts({ out = OUT, pack = activePack, log = console.
   }
 
   const all = parseFaces(css);
-  const wanted = all.filter((f) => subsets.includes(f.subset));
-  if (wanted.length === 0) {
-    throw new Error(`no faces matched subsets ${subsets.join(', ')}`);
-  }
-  log(`faces ${all.length} returned, ${wanted.length} kept (${subsets.join(', ')})`);
+  const wanted = all.filter((f) =>
+    (families.find((d) => d.name === f.family)?.subsets ?? []).includes(f.subset)
+  );
+  if (wanted.length === 0) throw new Error('no faces matched the declared subsets');
+  log(`faces ${all.length} returned, ${wanted.length} kept`);
 
-  // Rebuilt from scratch so a family or subset dropped from the pack cannot
-  // leave an orphan file behind that the precache would still ship.
-  if (existsSync(out)) rmSync(out, { recursive: true });
-  mkdirSync(out, { recursive: true });
-
-  const manifest = { generatedFrom: url, subsets, families: {} };
-  let total = 0;
-
+  // Everything is fetched before anything is written. css2 is served with
+  // stale-while-revalidate=604800, so an intermediary can hand back week-old
+  // CSS whose file URLs Google has already purged — one of these downloads
+  // really did 404 mid-run during development. Deleting the tree first left
+  // public/fonts holding one family and no fonts at all for the other, which a
+  // build would have happily shipped.
+  const staged = [];
   for (const family of families) {
     const slug = familySlug(family.name);
-    const dir = join(out, slug);
-    mkdirSync(dir, { recursive: true });
-
     const faces = wanted
       .filter((f) => f.family === family.name)
       .map((f) => ({ ...f, localName: localFileName(f, slug) }));
@@ -95,24 +93,64 @@ export async function vendorFonts({ out = OUT, pack = activePack, log = console.
     const files = [];
     for (const face of faces) {
       const bytes = await fetchBytes(face.url);
-      writeFileSync(join(dir, face.localName), bytes);
-      total += bytes.length;
       files.push({
-        file: face.localName,
-        subset: face.subset,
-        weight: face.weight,
-        style: face.style,
-        from: face.url,
-        bytes: bytes.length,
-        sha256: createHash('sha256').update(bytes).digest('hex'),
+        localName: face.localName,
+        bytes,
+        meta: {
+          file: face.localName,
+          subset: face.subset,
+          weight: face.weight,
+          style: face.style,
+          from: face.url,
+          bytes: bytes.length,
+          sha256: createHash('sha256').update(bytes).digest('hex'),
+        },
       });
     }
+    staged.push({
+      family,
+      slug,
+      files,
+      faceCss: renderFaceCss(faces, `/fonts/${slug}`),
+      license: await fetchText(LICENSES[family.name]),
+    });
+  }
 
-    writeFileSync(join(dir, 'face.css'), renderFaceCss(faces, `/fonts/${slug}`));
-    writeFileSync(join(dir, 'OFL.txt'), await fetchText(LICENSES[family.name]));
+  // Rebuilt from scratch so a family or subset dropped from the pack cannot
+  // leave an orphan file behind that the precache would still ship.
+  if (existsSync(out)) rmSync(out, { recursive: true });
+  mkdirSync(out, { recursive: true });
 
-    manifest.families[family.name] = { slug, axes: family.axes ?? null, files };
-    const kb = (files.reduce((a, f) => a + f.bytes, 0) / 1024).toFixed(1);
+  const manifest = { generatedFrom: url, families: {} };
+  let total = 0;
+
+  for (const { family, slug, files, faceCss, license } of staged) {
+    const dir = join(out, slug);
+    mkdirSync(dir, { recursive: true });
+
+    for (const f of files) {
+      writeFileSync(join(dir, f.localName), f.bytes);
+      total += f.bytes.length;
+    }
+    writeFileSync(join(dir, 'face.css'), faceCss);
+    writeFileSync(join(dir, 'OFL.txt'), license);
+
+    // The subsets Google offered and we chose not to ship. Recorded with their
+    // ranges so fontCoverage.test.js can tell "this glyph was never on offer"
+    // (emoji, mathematical alphanumerics — no text font has them) apart from
+    // "this glyph was on offer and we dropped it", which is a real regression.
+    const skipped = all
+      .filter((f) => f.family === family.name && !family.subsets.includes(f.subset))
+      .map((f) => ({ subset: f.subset, unicodeRange: f.unicodeRange }));
+
+    manifest.families[family.name] = {
+      slug,
+      axes: family.axes ?? null,
+      subsets: family.subsets,
+      files: files.map((f) => f.meta),
+      skipped,
+    };
+    const kb = (files.reduce((a, f) => a + f.bytes.length, 0) / 1024).toFixed(1);
     log(`  ${family.name.padEnd(16)} ${String(files.length).padStart(2)} files  ${kb} KB`);
   }
 
