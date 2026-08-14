@@ -1,19 +1,19 @@
 // German LanguagePack. Content is assembled from the rich lexicon + deck
 // definitions via the resolver; alphabet/scenarios/chat/translate live in
 // sibling modules in this folder.
-import { ALPHABET, ALPHABET_QUIZ_GROUPS } from './alphabet';
-import { SCENARIOS } from './scenarios';
-import { CHAT_TASKS } from './chatTasks';
+import { ALPHABET, ALPHABET_QUIZ_GROUPS } from './alphabet.js';
+import { SCENARIOS } from './scenarios.js';
+import { CHAT_TASKS } from './chatTasks.js';
 import {
   TRANSLATE_SENTENCES_A1,
   TRANSLATE_SENTENCES_A2,
   TRANSLATE_SENTENCES_B1,
-} from './translate';
-import { LEXICON } from './lexicon';
-import { DECKS } from './decks';
-import { resolveDecks } from '../resolve';
-import { theme } from './theme';
-import { grammar } from './grammar';
+} from './translate.js';
+import { LEXICON } from './lexicon.js';
+import { DECKS } from './decks.js';
+import { resolveDecks } from '../resolve.js';
+import { theme } from './theme.js';
+import { grammar } from './grammar.js';
 
 // Card identity for German: the surface form is the stable id.
 const cardId = (card) => card.de;

@@ -21,20 +21,35 @@ export const accentAlt = {
 /** Flag sweep for progress affordances: ground → red → gold. */
 export const progress = ['ground', 'accentAlt', 'accent'];
 
+// The families are vendored into public/fonts/ by `npm run vendor:fonts` and
+// served same-origin; nothing here is fetched from a CDN at runtime.
+//
+// `axes` asks for continuous ranges, not the discrete instances this used to
+// request. Google honours the difference literally: pinning six weights returns
+// six static files per subset, and the precache pulls all of them eagerly even
+// though a browser would have lazily fetched two or three. Measured over
+// latin+latin-ext that is 869.5 KB against 165.9 KB for the ranges below, which
+// cover every weight in between and keep `opsz` continuous as well.
+//
+// `subsets` sits on the family, not the pack, because the two faces render
+// different alphabets. Prose needs latin (ä ö ü ß and the „quotes" are all
+// inside it) plus latin-ext for the odd foreign proper noun. The mono face
+// additionally renders IPA — VocabTab shows every card's pronunciation in it —
+// and IPA borrows θ and χ from Greek, so dropping that subset would silently
+// fall those two glyphs back to a system font. It costs 6.6 KB.
+//
+// src/lib/fontCoverage.test.js fails if a subset that is carrying real content
+// gets dropped from either list.
 export const font = {
   display: "'Fraunces', Georgia, serif",
   body: "'Fraunces', Georgia, serif",
   mono: "'JetBrains Mono', 'Courier New', monospace",
   families: [
-    {
-      name: 'Fraunces',
-      weights: [300, 400, 500, 600, 700, 900],
-      axes: 'opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,900',
-    },
+    { name: 'Fraunces', axes: 'opsz,wght@9..144,300..900', subsets: ['latin', 'latin-ext'] },
     {
       name: 'JetBrains Mono',
-      weights: [400, 500, 700],
-      axes: 'wght@400;500;700',
+      axes: 'wght@400..700',
+      subsets: ['latin', 'latin-ext', 'greek', 'vietnamese'],
     },
   ],
 };
