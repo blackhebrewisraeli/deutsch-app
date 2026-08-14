@@ -9,5 +9,10 @@ export function getPack(id) {
   return PACKS[id];
 }
 
+// Phase 4 replaces this constant with a stored preference; the indirection
+// exists now so that change lands in one place. `PACKS` is declared above, so
+// getPack() resolves cleanly at module-eval time.
+const DEFAULT_PACK_ID = 'de';
+
 /** The active language pack. */
-export const activePack = dePack;
+export const activePack = getPack(DEFAULT_PACK_ID);

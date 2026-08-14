@@ -10,7 +10,7 @@ import { selectRows } from '../lexiconStore';
 // runs the real selectRows() from lexiconStore.js against the real index, so a
 // regression in production row-selection (e.g. tag matching) fails this test.
 const MIN_CARDS = 40;
-const index = JSON.parse(readFileSync('public/lexicon/index.json', 'utf8'));
+const index = JSON.parse(readFileSync('public/lexicon/de/index.json', 'utf8'));
 
 describe('shipped auto decks resolve against the real lexicon', () => {
   it.each(AUTO_DECKS.map((d) => [d.name, d]))(
