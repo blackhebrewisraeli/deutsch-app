@@ -1,15 +1,14 @@
 // German LanguagePack. Content is assembled from the rich lexicon + deck
-// definitions via the resolver; alphabet/scenarios/chat/translate still come
-// straight from content.js.
+// definitions via the resolver; alphabet/scenarios/chat/translate live in
+// sibling modules in this folder.
+import { ALPHABET, ALPHABET_QUIZ_GROUPS } from './alphabet';
+import { SCENARIOS } from './scenarios';
+import { CHAT_TASKS } from './chatTasks';
 import {
-  ALPHABET,
-  ALPHABET_QUIZ_GROUPS,
-  SCENARIOS,
-  CHAT_TASKS,
   TRANSLATE_SENTENCES_A1,
   TRANSLATE_SENTENCES_A2,
   TRANSLATE_SENTENCES_B1,
-} from '../../data/content';
+} from './translate';
 import { LEXICON } from './lexicon';
 import { DECKS } from './decks';
 import { resolveDecks } from '../resolve';
