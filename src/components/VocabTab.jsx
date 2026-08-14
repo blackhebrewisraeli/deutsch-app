@@ -4,7 +4,7 @@ import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
 const { decks: PRESET_DECKS } = activePack.content;
-import { Hero, SectionLabel } from './UI';
+import { Hero } from './UI';
 import { shuffle } from '../lib/utils';
 import { fuzzyMatch } from '../lib/matching';
 import { ANSWER } from '../lib/textRules';
