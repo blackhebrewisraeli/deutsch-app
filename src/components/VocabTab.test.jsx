@@ -50,6 +50,26 @@ const choiceButtons = (deckId = 'greetings') => {
   return screen.getAllByRole('button').filter((b) => ens.includes(b.textContent));
 };
 
+// Every suite that resolves an auto deck needs the same lexicon served from
+// fixtures. Repeating this five times was 13.2% duplication on new code and
+// failed the SonarCloud gate on #107 — the finding was correct, so it is
+// extracted rather than waved through.
+const LEXICON_FIXTURES = {
+  '/lexicon/de/index.json': indexJson,
+  '/lexicon/de/chunk-00.json': chunk0,
+  '/lexicon/de/chunk-01.json': chunk1,
+};
+
+const mockLexiconFetch = () => {
+  __resetCache();
+  globalThis.fetch = vi.fn((url) => {
+    const key = Object.keys(LEXICON_FIXTURES).find((k) => String(url).endsWith(k));
+    return key
+      ? Promise.resolve({ ok: true, json: () => Promise.resolve(LEXICON_FIXTURES[key]) })
+      : Promise.resolve({ ok: false, status: 404 });
+  });
+};
+
 describe('VocabTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -267,20 +287,7 @@ describe('VocabTab', () => {
   });
 
   describe('auto deck loading', () => {
-    beforeEach(() => {
-      __resetCache();
-      const fixtures = {
-        '/lexicon/de/index.json': indexJson,
-        '/lexicon/de/chunk-00.json': chunk0,
-        '/lexicon/de/chunk-01.json': chunk1,
-      };
-      globalThis.fetch = vi.fn((url) => {
-        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
-        return key
-          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
-          : Promise.resolve({ ok: false, status: 404 });
-      });
-    });
+    beforeEach(mockLexiconFetch);
 
     it('loads an auto deck and shows its cards', async () => {
       const user = userEvent.setup();
@@ -292,11 +299,6 @@ describe('VocabTab', () => {
 
     it('Retry button re-fetches after a failed load and shows deck cards', async () => {
       const user = userEvent.setup();
-      const fixtures = {
-        '/lexicon/de/index.json': indexJson,
-        '/lexicon/de/chunk-00.json': chunk0,
-        '/lexicon/de/chunk-01.json': chunk1,
-      };
       let callCount = 0;
       globalThis.fetch = vi.fn((url) => {
         callCount += 1;
@@ -304,9 +306,9 @@ describe('VocabTab', () => {
         if (callCount === 1) {
           return Promise.resolve({ ok: false, status: 500 });
         }
-        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
+        const key = Object.keys(LEXICON_FIXTURES).find((k) => String(url).endsWith(k));
         return key
-          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
+          ? Promise.resolve({ ok: true, json: () => Promise.resolve(LEXICON_FIXTURES[key]) })
           : Promise.resolve({ ok: false, status: 404 });
       });
 
@@ -395,20 +397,7 @@ describe('VocabTab', () => {
   });
 
   describe('Artikel decks drill gender', () => {
-    beforeEach(() => {
-      __resetCache();
-      const fixtures = {
-        '/lexicon/de/index.json': indexJson,
-        '/lexicon/de/chunk-00.json': chunk0,
-        '/lexicon/de/chunk-01.json': chunk1,
-      };
-      globalThis.fetch = vi.fn((url) => {
-        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
-        return key
-          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
-          : Promise.resolve({ ok: false, status: 404 });
-      });
-    });
+    beforeEach(mockLexiconFetch);
 
     it('shows the bare lemma, never the article that is being asked for', async () => {
       const user = userEvent.setup();
@@ -450,20 +439,7 @@ describe('VocabTab', () => {
   });
 
   describe('Plural decks drill plurals', () => {
-    beforeEach(() => {
-      __resetCache();
-      const fixtures = {
-        '/lexicon/de/index.json': indexJson,
-        '/lexicon/de/chunk-00.json': chunk0,
-        '/lexicon/de/chunk-01.json': chunk1,
-      };
-      globalThis.fetch = vi.fn((url) => {
-        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
-        return key
-          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
-          : Promise.resolve({ ok: false, status: 404 });
-      });
-    });
+    beforeEach(mockLexiconFetch);
 
     // The fixture's A1 nouns are n:haus (das Haus / Häuser), n:wasser and
     // n:brot. The deck is rank-ordered, so n:haus (rank 60) comes first.
@@ -528,20 +504,7 @@ describe('VocabTab', () => {
   });
 
   describe('Perfekt decks drill the perfect tense', () => {
-    beforeEach(() => {
-      __resetCache();
-      const fixtures = {
-        '/lexicon/de/index.json': indexJson,
-        '/lexicon/de/chunk-00.json': chunk0,
-        '/lexicon/de/chunk-01.json': chunk1,
-      };
-      globalThis.fetch = vi.fn((url) => {
-        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
-        return key
-          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
-          : Promise.resolve({ ok: false, status: 404 });
-      });
-    });
+    beforeEach(mockLexiconFetch);
 
     // The fixture's only verb is v:treffen — haben / getroffen / er trifft.
     const openDeck = async (user) => {
