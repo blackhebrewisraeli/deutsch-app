@@ -37,6 +37,11 @@ describe('shipped lexicon artifacts', () => {
       // The index carries pos so selectRows can filter by part of speech
       // without fetching chunks; it has to keep agreeing with the entry.
       expect(entry.pos).toBe(row.pos);
+      // The Perfekt decks select on `has: 'verb'`, which is only the answerable
+      // set while every verb block carries a participle. Currently 472/472.
+      // If an import breaks this, fail here rather than serving a card whose
+      // question has no answer.
+      if (entry.verb) expect(entry.verb.partizip2, `${entry.id} has no partizip2`).toBeTruthy();
       expect(validateLexiconEntry(entry, { grammar, cefrLevels: dePack.meta.cefrLevels })).toBe(
         true
       );

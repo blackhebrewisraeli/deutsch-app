@@ -50,6 +50,26 @@ const choiceButtons = (deckId = 'greetings') => {
   return screen.getAllByRole('button').filter((b) => ens.includes(b.textContent));
 };
 
+// Every suite that resolves an auto deck needs the same lexicon served from
+// fixtures. Repeating this five times was 13.2% duplication on new code and
+// failed the SonarCloud gate on #107 — the finding was correct, so it is
+// extracted rather than waved through.
+const LEXICON_FIXTURES = {
+  '/lexicon/de/index.json': indexJson,
+  '/lexicon/de/chunk-00.json': chunk0,
+  '/lexicon/de/chunk-01.json': chunk1,
+};
+
+const mockLexiconFetch = () => {
+  __resetCache();
+  globalThis.fetch = vi.fn((url) => {
+    const key = Object.keys(LEXICON_FIXTURES).find((k) => String(url).endsWith(k));
+    return key
+      ? Promise.resolve({ ok: true, json: () => Promise.resolve(LEXICON_FIXTURES[key]) })
+      : Promise.resolve({ ok: false, status: 404 });
+  });
+};
+
 describe('VocabTab', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -267,20 +287,7 @@ describe('VocabTab', () => {
   });
 
   describe('auto deck loading', () => {
-    beforeEach(() => {
-      __resetCache();
-      const fixtures = {
-        '/lexicon/de/index.json': indexJson,
-        '/lexicon/de/chunk-00.json': chunk0,
-        '/lexicon/de/chunk-01.json': chunk1,
-      };
-      globalThis.fetch = vi.fn((url) => {
-        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
-        return key
-          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
-          : Promise.resolve({ ok: false, status: 404 });
-      });
-    });
+    beforeEach(mockLexiconFetch);
 
     it('loads an auto deck and shows its cards', async () => {
       const user = userEvent.setup();
@@ -292,11 +299,6 @@ describe('VocabTab', () => {
 
     it('Retry button re-fetches after a failed load and shows deck cards', async () => {
       const user = userEvent.setup();
-      const fixtures = {
-        '/lexicon/de/index.json': indexJson,
-        '/lexicon/de/chunk-00.json': chunk0,
-        '/lexicon/de/chunk-01.json': chunk1,
-      };
       let callCount = 0;
       globalThis.fetch = vi.fn((url) => {
         callCount += 1;
@@ -304,9 +306,9 @@ describe('VocabTab', () => {
         if (callCount === 1) {
           return Promise.resolve({ ok: false, status: 500 });
         }
-        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
+        const key = Object.keys(LEXICON_FIXTURES).find((k) => String(url).endsWith(k));
         return key
-          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
+          ? Promise.resolve({ ok: true, json: () => Promise.resolve(LEXICON_FIXTURES[key]) })
           : Promise.resolve({ ok: false, status: 404 });
       });
 
@@ -395,20 +397,7 @@ describe('VocabTab', () => {
   });
 
   describe('Artikel decks drill gender', () => {
-    beforeEach(() => {
-      __resetCache();
-      const fixtures = {
-        '/lexicon/de/index.json': indexJson,
-        '/lexicon/de/chunk-00.json': chunk0,
-        '/lexicon/de/chunk-01.json': chunk1,
-      };
-      globalThis.fetch = vi.fn((url) => {
-        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
-        return key
-          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
-          : Promise.resolve({ ok: false, status: 404 });
-      });
-    });
+    beforeEach(mockLexiconFetch);
 
     it('shows the bare lemma, never the article that is being asked for', async () => {
       const user = userEvent.setup();
@@ -448,82 +437,118 @@ describe('VocabTab', () => {
       expect(markLearned).not.toHaveBeenCalled();
     });
   });
-});
 
-describe('Plural decks drill plurals', () => {
-  beforeEach(() => {
-    __resetCache();
-    const fixtures = {
-      '/lexicon/de/index.json': indexJson,
-      '/lexicon/de/chunk-00.json': chunk0,
-      '/lexicon/de/chunk-01.json': chunk1,
+  describe('Plural decks drill plurals', () => {
+    beforeEach(mockLexiconFetch);
+
+    // The fixture's A1 nouns are n:haus (das Haus / Häuser), n:wasser and
+    // n:brot. The deck is rank-ordered, so n:haus (rank 60) comes first.
+    const openDeck = async (user) => {
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /A1 Plurals/i }));
+      return screen.findByText('das Haus');
     };
-    globalThis.fetch = vi.fn((url) => {
-      const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
-      return key
-        ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
-        : Promise.resolve({ ok: false, status: 404 });
+
+    it('shows the articled singular and asks for the plural', async () => {
+      const user = userEvent.setup();
+      await openDeck(user);
+      // The article is shown on purpose: it is not the answer, and for die-nouns
+      // it is a real cue (90% take -n/-en).
+      expect(screen.getByRole('textbox', { name: 'Type the plural' })).toBeInTheDocument();
+    });
+
+    it('never prints the answer on the card', async () => {
+      // Regression: CardFace renders a "PL: Häuser" line, which sat directly above
+      // the input asking for it. Every unit test passed; the browser caught it.
+      const user = userEvent.setup();
+      await openDeck(user);
+      expect(screen.queryByText(/^PL:/)).not.toBeInTheDocument();
+      expect(screen.queryByText('Häuser')).not.toBeInTheDocument();
+    });
+
+    it('accepts the plural and does not mark the word learned', async () => {
+      const markLearned = vi.fn();
+      const user = userEvent.setup();
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
+      await user.click(screen.getByRole('button', { name: /A1 Plurals/i }));
+      await screen.findByText('das Haus');
+      await user.type(screen.getByRole('textbox', { name: 'Type the plural' }), 'Häuser');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
+      // Knowing a plural is not knowing the word.
+      expect(markLearned).not.toHaveBeenCalled();
+    });
+
+    it('accepts the keyboard spelling of an umlaut', async () => {
+      // validation.target folds ä→ae, the substitution German itself defines
+      // for keyboards that cannot type it. This drill is its first consumer.
+      const user = userEvent.setup();
+      await openDeck(user);
+      await user.type(screen.getByRole('textbox', { name: 'Type the plural' }), 'Haeuser');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
+    });
+
+    it('grades a near-miss plural WRONG, never almost', async () => {
+      // "Hauser" is one edit from "Häuser" and fuzzyMatch would call it almost,
+      // teaching that a wrong plural is nearly right. The umlaut IS the plural.
+      const user = userEvent.setup();
+      await openDeck(user);
+      await user.type(screen.getByRole('textbox', { name: 'Type the plural' }), 'Hauser');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2717 NOT QUITE')).toBeInTheDocument();
+      expect(screen.queryByText(/ALMOST/)).not.toBeInTheDocument();
+      // and answers with the plural-articled form
+      expect(screen.getByText('die Häuser')).toBeInTheDocument();
     });
   });
 
-  // The fixture's A1 nouns are n:haus (das Haus / Häuser), n:wasser and
-  // n:brot. The deck is rank-ordered, so n:haus (rank 60) comes first.
-  const openDeck = async (user) => {
-    render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-    await user.click(screen.getByRole('button', { name: /A1 Plurals/i }));
-    return screen.findByText('das Haus');
-  };
+  describe('Perfekt decks drill the perfect tense', () => {
+    beforeEach(mockLexiconFetch);
 
-  it('shows the articled singular and asks for the plural', async () => {
-    const user = userEvent.setup();
-    await openDeck(user);
-    // The article is shown on purpose: it is not the answer, and for die-nouns
-    // it is a real cue (90% take -n/-en).
-    expect(screen.getByRole('textbox', { name: 'Type the plural' })).toBeInTheDocument();
-  });
+    // The fixture's only verb is v:treffen — haben / getroffen / er trifft.
+    const openDeck = async (user) => {
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /A1 Verbs/i }));
+      return screen.findByText('treffen');
+    };
 
-  it('never prints the answer on the card', async () => {
-    // Regression: CardFace renders a "PL: Häuser" line, which sat directly above
-    // the input asking for it. Every unit test passed; the browser caught it.
-    const user = userEvent.setup();
-    await openDeck(user);
-    expect(screen.queryByText(/^PL:/)).not.toBeInTheDocument();
-    expect(screen.queryByText('Häuser')).not.toBeInTheDocument();
-  });
+    it('shows the infinitive and asks for the perfect', async () => {
+      const user = userEvent.setup();
+      await openDeck(user);
+      expect(screen.getByRole('textbox', { name: 'Type the perfect' })).toBeInTheDocument();
+    });
 
-  it('accepts the plural and does not mark the word learned', async () => {
-    const markLearned = vi.fn();
-    const user = userEvent.setup();
-    render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
-    await user.click(screen.getByRole('button', { name: /A1 Plurals/i }));
-    await screen.findByText('das Haus');
-    await user.type(screen.getByRole('textbox', { name: 'Type the plural' }), 'Häuser');
-    await user.click(screen.getByRole('button', { name: /CHECK/ }));
-    expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
-    // Knowing a plural is not knowing the word.
-    expect(markLearned).not.toHaveBeenCalled();
-  });
+    it('never prints either verb line on the card', async () => {
+      // The Perfekt: line is the answer verbatim, and the er: line hands over a
+      // weak verb's stem. Both are concealed.
+      const user = userEvent.setup();
+      await openDeck(user);
+      expect(screen.queryByText(/trifft/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/getroffen/)).not.toBeInTheDocument();
+    });
 
-  it('accepts the keyboard spelling of an umlaut', async () => {
-    // validation.target folds ä→ae, the substitution German itself defines
-    // for keyboards that cannot type it. This drill is its first consumer.
-    const user = userEvent.setup();
-    await openDeck(user);
-    await user.type(screen.getByRole('textbox', { name: 'Type the plural' }), 'Haeuser');
-    await user.click(screen.getByRole('button', { name: /CHECK/ }));
-    expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
-  });
+    it('accepts the full perfect and does not mark the word learned', async () => {
+      const markLearned = vi.fn();
+      const user = userEvent.setup();
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
+      await user.click(screen.getByRole('button', { name: /A1 Verbs/i }));
+      await screen.findByText('treffen');
+      await user.type(screen.getByRole('textbox', { name: 'Type the perfect' }), 'hat getroffen');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
+      expect(markLearned).not.toHaveBeenCalled();
+    });
 
-  it('grades a near-miss plural WRONG, never almost', async () => {
-    // "Hauser" is one edit from "Häuser" and fuzzyMatch would call it almost,
-    // teaching that a wrong plural is nearly right. The umlaut IS the plural.
-    const user = userEvent.setup();
-    await openDeck(user);
-    await user.type(screen.getByRole('textbox', { name: 'Type the plural' }), 'Hauser');
-    await user.click(screen.getByRole('button', { name: /CHECK/ }));
-    expect(screen.getByText('\u2717 NOT QUITE')).toBeInTheDocument();
-    expect(screen.queryByText(/ALMOST/)).not.toBeInTheDocument();
-    // and answers with the plural-articled form
-    expect(screen.getByText('die Häuser')).toBeInTheDocument();
+    it('rejects the bare participle — the auxiliary is part of the answer', async () => {
+      // Accepting "getroffen" would quietly teach that the auxiliary is
+      // optional, which is the error that produces "ich bin getroffen".
+      const user = userEvent.setup();
+      await openDeck(user);
+      await user.type(screen.getByRole('textbox', { name: 'Type the perfect' }), 'getroffen');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2717 NOT QUITE')).toBeInTheDocument();
+      expect(screen.getByText('hat getroffen')).toBeInTheDocument();
+    });
   });
 });

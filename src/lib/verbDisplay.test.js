@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatVerb } from './verbDisplay';
+import { formatVerb, perfectLine } from './verbDisplay';
 import { grammar as de } from '../packs/de/grammar';
 
 const present = (over = {}) => ({
@@ -93,5 +93,35 @@ describe('formatVerb', () => {
       { label: 'il', value: 'va' },
       { label: 'Participe passé', value: 'allé' },
     ]);
+  });
+});
+
+describe('perfectLine', () => {
+  it('builds the full perfect from the pack auxiliary', () => {
+    expect(perfectLine({ aux: 'haben', partizip2: 'getroffen', present: present() }, de)).toEqual({
+      label: 'Perfekt',
+      value: 'hat getroffen',
+    });
+  });
+
+  it('uses the sein auxiliary when the verb takes it', () => {
+    expect(perfectLine({ aux: 'sein', partizip2: 'gefolgt', present: present() }, de)).toEqual({
+      label: 'Perfekt',
+      value: 'ist gefolgt',
+    });
+  });
+
+  it('falls back to the bare participle for an auxiliary the pack does not declare', () => {
+    // The drill must expect the same string the card shows, or it marks a
+    // correct answer wrong.
+    expect(perfectLine({ aux: 'werden', partizip2: 'geworden', present: present() }, de)).toEqual({
+      label: 'Part. II',
+      value: 'geworden',
+    });
+  });
+
+  it('is null when there is no participle', () => {
+    expect(perfectLine({ aux: 'haben', partizip2: null, present: present() }, de)).toBeNull();
+    expect(perfectLine(null, de)).toBeNull();
   });
 });

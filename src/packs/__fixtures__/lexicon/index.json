@@ -24,6 +24,14 @@
     "chunk": 0
   },
   {
+    "id": "v:treffen",
+    "rank": 900,
+    "cefr": "A1",
+    "pos": "verb",
+    "tags": [],
+    "chunk": 0
+  },
+  {
     "id": "n:bahnhof",
     "rank": 1200,
     "cefr": "A2",

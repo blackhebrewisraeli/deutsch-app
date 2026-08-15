@@ -10,9 +10,19 @@
     "cefr": "A1",
     "freqRank": 142,
     "tags": ["food"],
-    "examples": [{ "de": "Ich esse Brot.", "en": "I eat bread.", "source": "tatoeba" }],
+    "examples": [
+      {
+        "de": "Ich esse Brot.",
+        "en": "I eat bread.",
+        "source": "tatoeba"
+      }
+    ],
     "verb": null,
-    "source": { "dict": "wiktionary", "license": "CC-BY-SA-4.0", "sentences": "tatoeba" }
+    "source": {
+      "dict": "wiktionary",
+      "license": "CC-BY-SA-4.0",
+      "sentences": "tatoeba"
+    }
   },
   "n:wasser": {
     "id": "n:wasser",
@@ -25,9 +35,19 @@
     "cefr": "A1",
     "freqRank": 88,
     "tags": ["food"],
-    "examples": [{ "de": "Ich trinke Wasser.", "en": "I drink water.", "source": "tatoeba" }],
+    "examples": [
+      {
+        "de": "Ich trinke Wasser.",
+        "en": "I drink water.",
+        "source": "tatoeba"
+      }
+    ],
     "verb": null,
-    "source": { "dict": "wiktionary", "license": "CC-BY-SA-4.0", "sentences": "tatoeba" }
+    "source": {
+      "dict": "wiktionary",
+      "license": "CC-BY-SA-4.0",
+      "sentences": "tatoeba"
+    }
   },
   "n:haus": {
     "id": "n:haus",
@@ -40,8 +60,47 @@
     "cefr": "A1",
     "freqRank": 60,
     "tags": ["home"],
-    "examples": [{ "de": "Das Haus ist groß.", "en": "The house is big.", "source": "tatoeba" }],
+    "examples": [
+      {
+        "de": "Das Haus ist groß.",
+        "en": "The house is big.",
+        "source": "tatoeba"
+      }
+    ],
     "verb": null,
-    "source": { "dict": "wiktionary", "license": "CC-BY-SA-4.0", "sentences": "tatoeba" }
+    "source": {
+      "dict": "wiktionary",
+      "license": "CC-BY-SA-4.0",
+      "sentences": "tatoeba"
+    }
+  },
+  "v:treffen": {
+    "id": "v:treffen",
+    "de": "treffen",
+    "en": ["to meet"],
+    "pos": "verb",
+    "article": null,
+    "ipa": null,
+    "plural": null,
+    "cefr": "A1",
+    "freqRank": 900,
+    "tags": [],
+    "examples": [],
+    "verb": {
+      "aux": "haben",
+      "partizip2": "getroffen",
+      "present": {
+        "ich": "treffe",
+        "du": "triffst",
+        "er": "trifft",
+        "wir": "treffen",
+        "ihr": "trefft",
+        "sie": "treffen"
+      }
+    },
+    "source": {
+      "dict": "authored",
+      "license": "MIT"
+    }
   }
 }
