@@ -258,3 +258,30 @@ describe('selectRows pos modifier', () => {
     expect(selectRows(stale, { by: 'cefr', level: 'A1', pos: 'noun' })).toEqual([]);
   });
 });
+
+describe('auto.has drops cards missing a field', () => {
+  it('keeps only cards carrying the named field', async () => {
+    // The fixture's food entries both have a plural, so the first assertion is
+    // not vacuous; a field nothing carries must empty the deck rather than
+    // serve unanswerable cards.
+    const withPlural = await resolveAutoDeck(
+      { auto: { by: 'tag', tag: 'food', has: 'plural' } },
+      grammar,
+      'de'
+    );
+    expect(withPlural.length).toBeGreaterThan(0);
+    expect(withPlural.every((c) => c.plural)).toBe(true);
+
+    const withNothing = await resolveAutoDeck(
+      { auto: { by: 'tag', tag: 'food', has: 'nosuchfield' } },
+      grammar,
+      'de'
+    );
+    expect(withNothing).toEqual([]);
+  });
+
+  it('is optional — omitting it changes nothing', async () => {
+    const all = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } }, grammar, 'de');
+    expect(all.map((c) => c.id)).toEqual(['n:wasser', 'n:brot']);
+  });
+});
