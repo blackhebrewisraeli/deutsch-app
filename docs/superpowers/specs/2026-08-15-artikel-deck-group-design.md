@@ -90,7 +90,7 @@ own `POS_PREFIX`; the two would then have to agree forever with nothing checking
 that they do. That is the same "two values that must agree" trap Phases 1.4/1.5
 kept hitting.
 
-**Cost:** `index.json` 308.3 KB → 351.1 KB (**+42.8 KB, +14%**). It is fetched
+**Cost:** `index.json` 308.3 KB → 360.9 KB (**+52.6 KB, +17%**). It is fetched
 once per session under `StaleWhileRevalidate` and is already precached.
 
 **Cache safety:** adding a field does not renumber anything. The chunk/index

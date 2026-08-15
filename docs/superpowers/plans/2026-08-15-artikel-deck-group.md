@@ -26,7 +26,7 @@
 |---|---|
 | `scripts/import-lexicon/chunk.js` | index rows gain `pos` |
 | `scripts/import-lexicon/chunk.test.js` | **the one authorized existing-test change** |
-| `public/lexicon/de/index.json` | regenerated, +42.8 KB |
+| `public/lexicon/de/index.json` | regenerated, +52.6 KB |
 | `src/packs/lexiconSample.test.js` | extended with the row↔entry `pos` proof |
 | `src/packs/lexiconStore.js` | `matches()` gains the `pos` clause |
 | `src/packs/lexiconStore.test.js` | new cases for the modifier |
