@@ -38,4 +38,14 @@ describe('shipped auto decks resolve against the real lexicon', () => {
     const ids = AUTO_DECKS.map((d) => d.id);
     expect(new Set(ids).size).toBe(ids.length);
   });
+
+  it('every deck NAME is unique too', () => {
+    // Ids being unique is not enough: the picker renders names, so two decks
+    // labelled "A1 Nouns" are ambiguous to a learner choosing between them —
+    // and to getByRole. The Plural decks shipped as "A1 Nouns" first and
+    // collided with the Artikel group; they are "A1 Plurals" for this reason.
+    const names = AUTO_DECKS.map((d) => d.name);
+    const duplicates = names.filter((n, i) => names.indexOf(n) !== i);
+    expect(duplicates).toEqual([]);
+  });
 });

@@ -1,5 +1,5 @@
 // Auto decks: views over the imported lexicon, resolved lazily by lexiconStore.
-export const DECK_GROUPS = ['Curated', 'Frequency', 'CEFR', 'Topics', 'Artikel'];
+export const DECK_GROUPS = ['Curated', 'Frequency', 'CEFR', 'Topics', 'Artikel', 'Plural'];
 
 export const AUTO_DECKS = [
   // Frequency — `top` takes the first N of the lexicon sorted by rank, so the
@@ -112,5 +112,35 @@ export const AUTO_DECKS = [
     icon: '🟣',
     group: 'Artikel',
     auto: { by: 'cefr', level: 'B1', pos: 'noun' },
+  },
+
+  // Plural — the same nouns again, typed rather than chosen. `has: 'plural'`
+  // drops the 8% (mass nouns, proper nouns, import gaps) that carry none; a card
+  // with no answer is unanswerable, not merely dull. 580 / 815 / 1,240 cards.
+  //
+  // Named "A1 Plurals", not "A1 Nouns": the Artikel group already uses that and
+  // the CEFR group uses a bare "A1", so every deck label in the picker stays
+  // distinct. Two identically-labelled buttons are ambiguous for a learner
+  // before they are ambiguous for a test.
+  {
+    id: 'plural-a1',
+    name: 'A1 Plurals',
+    icon: '🟢',
+    group: 'Plural',
+    auto: { by: 'cefr', level: 'A1', pos: 'noun', has: 'plural' },
+  },
+  {
+    id: 'plural-a2',
+    name: 'A2 Plurals',
+    icon: '🔵',
+    group: 'Plural',
+    auto: { by: 'cefr', level: 'A2', pos: 'noun', has: 'plural' },
+  },
+  {
+    id: 'plural-b1',
+    name: 'B1 Plurals',
+    icon: '🟣',
+    group: 'Plural',
+    auto: { by: 'cefr', level: 'B1', pos: 'noun', has: 'plural' },
   },
 ];
