@@ -1,5 +1,13 @@
 // Auto decks: views over the imported lexicon, resolved lazily by lexiconStore.
-export const DECK_GROUPS = ['Curated', 'Frequency', 'CEFR', 'Topics', 'Artikel', 'Plural'];
+export const DECK_GROUPS = [
+  'Curated',
+  'Frequency',
+  'CEFR',
+  'Topics',
+  'Artikel',
+  'Plural',
+  'Perfekt',
+];
 
 export const AUTO_DECKS = [
   // Frequency — `top` takes the first N of the lexicon sorted by rank, so the
@@ -142,5 +150,34 @@ export const AUTO_DECKS = [
     icon: '🟣',
     group: 'Plural',
     auto: { by: 'cefr', level: 'B1', pos: 'noun', has: 'plural' },
+  },
+
+  // Perfekt — type the full perfect for a verb. `has: 'verb'` is the answerable
+  // set (lexiconSample.test.js pins that a verb block always carries a
+  // participle). 47 / 128 / 297 cards.
+  //
+  // A1 clears autoDecks.population.test.js's MIN_CARDS = 40 by SEVEN. An import
+  // that drops a handful of A1 verbs turns that test red; the failure is real,
+  // not flaky — the deck would genuinely be too thin to drill.
+  {
+    id: 'perfekt-a1',
+    name: 'A1 Verbs',
+    icon: '🟢',
+    group: 'Perfekt',
+    auto: { by: 'cefr', level: 'A1', pos: 'verb', has: 'verb' },
+  },
+  {
+    id: 'perfekt-a2',
+    name: 'A2 Verbs',
+    icon: '🔵',
+    group: 'Perfekt',
+    auto: { by: 'cefr', level: 'A2', pos: 'verb', has: 'verb' },
+  },
+  {
+    id: 'perfekt-b1',
+    name: 'B1 Verbs',
+    icon: '🟣',
+    group: 'Perfekt',
+    auto: { by: 'cefr', level: 'B1', pos: 'verb', has: 'verb' },
   },
 ];
