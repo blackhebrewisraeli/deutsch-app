@@ -63,6 +63,11 @@ export async function loadChunks(packId, chunkIds) {
 // NOTE: this rule vocabulary (top/freq/cefr/tag) is duplicated in src/packs/resolve.js,
 // which resolves decks synchronously over an in-memory lexicon. Keep the two in sync.
 function matches(row, auto) {
+  // A modifier, not a `by` kind: it composes with every selector, so
+  // "A1 nouns" and "the 100 most frequent verbs" both fall out for free.
+  // Fails closed on a row with no pos — a cached pre-pos index yields an
+  // empty deck that self-heals, rather than the wrong part of speech.
+  if (auto.pos && row.pos !== auto.pos) return false;
   if (auto.by === 'freq')
     return row.rank != null && row.rank >= auto.range[0] && row.rank <= auto.range[1];
   if (auto.by === 'cefr') return row.cefr === auto.level;

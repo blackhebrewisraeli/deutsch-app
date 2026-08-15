@@ -4,27 +4,30 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { buildArtifacts, writeArtifacts } from './chunk.js';
 
-const mk = (id, rank, cefr, tags = []) => ({
-  id, de: id, en: ['x'], pos: 'noun', article: 'das', ipa: null, plural: null,
+const mk = (id, rank, cefr, tags = [], pos = 'noun') => ({
+  id, de: id, en: ['x'], pos, article: 'das', ipa: null, plural: null,
   cefr, freqRank: rank, tags, examples: [{ de: 'a', en: 'b', source: 'tatoeba' }],
   verb: null, source: { dict: 'wiktionary', license: 'CC-BY-SA-4.0' },
 });
 
 describe('buildArtifacts', () => {
   it('splits entries into chunks and builds the index + manifest', () => {
-    const entries = [mk('n:a', 1, 'A1', ['food']), mk('n:b', 2, 'A1'), mk('n:c', 3, 'A1')];
+    // The third entry is a verb so the index's pos is proved to come from the
+    // entry rather than being a constant — nothing else covers that, since the
+    // selectRows tests build their index by hand.
+    const entries = [mk('n:a', 1, 'A1', ['food']), mk('n:b', 2, 'A1'), mk('v:c', 3, 'A1', [], 'verb')];
     const { manifest, index, chunks } = buildArtifacts(entries, { chunkSize: 2, sources: { tatoeba: 'x' } });
     expect(manifest.total).toBe(3);
     expect(manifest.chunkSize).toBe(2);
     expect(manifest.chunkCount).toBe(2);
     expect(index).toEqual([
-      { id: 'n:a', rank: 1, cefr: 'A1', tags: ['food'], chunk: 0 },
-      { id: 'n:b', rank: 2, cefr: 'A1', tags: [], chunk: 0 },
-      { id: 'n:c', rank: 3, cefr: 'A1', tags: [], chunk: 1 },
+      { id: 'n:a', rank: 1, cefr: 'A1', pos: 'noun', tags: ['food'], chunk: 0 },
+      { id: 'n:b', rank: 2, cefr: 'A1', pos: 'noun', tags: [], chunk: 0 },
+      { id: 'v:c', rank: 3, cefr: 'A1', pos: 'verb', tags: [], chunk: 1 },
     ]);
     expect(chunks.map((c) => c.name)).toEqual(['chunk-00.json', 'chunk-01.json']);
     expect(Object.keys(chunks[0].data)).toEqual(['n:a', 'n:b']);
-    expect(chunks[1].data['n:c'].id).toBe('n:c');
+    expect(chunks[1].data['v:c'].id).toBe('v:c');
   });
 
   it('emits zero chunks for an empty entry set (manifest and chunks agree)', () => {

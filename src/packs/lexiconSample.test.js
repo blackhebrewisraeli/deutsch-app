@@ -34,6 +34,9 @@ describe('shipped lexicon artifacts', () => {
       expect(entry.id).toBe(row.id);
       expect(entry.freqRank).toBe(row.rank);
       expect(entry.cefr).toBe(row.cefr);
+      // The index carries pos so selectRows can filter by part of speech
+      // without fetching chunks; it has to keep agreeing with the entry.
+      expect(entry.pos).toBe(row.pos);
       expect(validateLexiconEntry(entry, { grammar, cefrLevels: dePack.meta.cefrLevels })).toBe(
         true
       );

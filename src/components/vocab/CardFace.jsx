@@ -15,9 +15,13 @@ import { activePack } from '../../packs';
  * The card face — always the target language. Everything below the headword is
  * optional and driven by what the lexicon entry happens to carry.
  *
- * @param {{ card: object, learned: boolean, mobile: boolean }} props
+ * `display` overrides the headword. The gender drill passes the bare lemma,
+ * because `card.de` is the composed form "das Jahr" and would print the answer
+ * above the buttons asking for it.
+ *
+ * @param {{ card: object, learned: boolean, mobile: boolean, display?: string }} props
  */
-export default function CardFace({ card, learned, mobile }) {
+export default function CardFace({ card, learned, mobile, display }) {
   return (
     <div
       style={{
@@ -69,7 +73,7 @@ export default function CardFace({ card, learned, mobile }) {
           maxWidth: '100%',
         }}
       >
-        {card.de}
+        {display ?? card.de}
       </div>
       {card.ipa && (
         <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.6 }}>

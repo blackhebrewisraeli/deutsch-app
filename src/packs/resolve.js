@@ -13,6 +13,9 @@ export function resolveCard(entry, grammar) {
   return {
     id: entry.id,
     de: display,
+    // The lemma before the article is composed in. `de` is a display string;
+    // anything that needs the word itself (the gender drill) needs this.
+    lemma: entry.de,
     en: entry.en[0],
     glosses: entry.en,
     ipa: entry.ipa,

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { loadIndex, loadChunks, resolveAutoDeck, __resetCache } from './lexiconStore';
+import { loadIndex, loadChunks, resolveAutoDeck, selectRows, __resetCache } from './lexiconStore';
 import { grammar } from './de/grammar';
 import index from './__fixtures__/lexicon/index.json';
 import chunk0 from './__fixtures__/lexicon/chunk-00.json';
@@ -226,5 +226,35 @@ describe('pack isolation', () => {
     const before = globalThis.fetch.mock.calls.length;
     await loadIndex('de'); // still memoized — no new request
     expect(globalThis.fetch.mock.calls).toHaveLength(before);
+  });
+});
+
+describe('selectRows pos modifier', () => {
+  const index = [
+    { id: 'n:a', rank: 1, cefr: 'A1', pos: 'noun', tags: [], chunk: 0 },
+    { id: 'v:b', rank: 2, cefr: 'A1', pos: 'verb', tags: [], chunk: 0 },
+    { id: 'n:c', rank: 3, cefr: 'A2', pos: 'noun', tags: [], chunk: 0 },
+  ];
+
+  it('composes with cefr rather than replacing it', () => {
+    const rows = selectRows(index, { by: 'cefr', level: 'A1', pos: 'noun' });
+    expect(rows.map((r) => r.id)).toEqual(['n:a']);
+  });
+
+  it('composes with top', () => {
+    const rows = selectRows(index, { by: 'top', count: 10, pos: 'noun' });
+    expect(rows.map((r) => r.id)).toEqual(['n:a', 'n:c']);
+  });
+
+  it('is optional — omitting it changes nothing', () => {
+    expect(selectRows(index, { by: 'cefr', level: 'A1' }).map((r) => r.id)).toEqual(['n:a', 'v:b']);
+  });
+
+  it('fails closed on a row with no pos', () => {
+    // A returning user can hold a cached index from before pos existed. Better
+    // an empty Artikel deck for one load, self-healing on revalidation, than
+    // verbs served into a gender drill.
+    const stale = [{ id: 'n:a', rank: 1, cefr: 'A1', tags: [], chunk: 0 }];
+    expect(selectRows(stale, { by: 'cefr', level: 'A1', pos: 'noun' })).toEqual([]);
   });
 });

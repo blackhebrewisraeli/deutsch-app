@@ -14,7 +14,19 @@ export function buildArtifacts(entries, { chunkSize = 500, sources = {} } = {}) 
   const index = entries.map((entry, i) => {
     const chunk = Math.floor(i / chunkSize);
     chunks[chunk].data[entry.id] = entry;
-    return { id: entry.id, rank: entry.freqRank, cefr: entry.cefr, tags: entry.tags, chunk };
+    // pos is in the index (not just the chunk) so selectRows can filter by part
+    // of speech without fetching chunks — the whole point of the index. The `n:`
+    // id prefix encodes the same thing, but POS_PREFIX belongs to ids.js and
+    // duplicating that convention in the runtime store is two values that must
+    // agree with nothing checking that they do.
+    return {
+      id: entry.id,
+      rank: entry.freqRank,
+      cefr: entry.cefr,
+      pos: entry.pos,
+      tags: entry.tags,
+      chunk,
+    };
   });
   const manifest = {
     version: 1,
