@@ -166,11 +166,14 @@ population test goes red — which is the test doing its job, but it will look
 like an unrelated failure. Worth a comment in the deck definition.
 
 **Example sentences may contain the perfect.** `card.examples[0].de` is Tatoeba
-text; a sentence for "treffen" could contain "getroffen". Concealing examples
-would strip a genuinely useful cue from every card to prevent an occasional
-leak, so this is **accepted, not fixed** — and recorded here so the next reader
-knows it was a decision. Worth revisiting with a measurement if it turns out to
-be common.
+text; a sentence for "erhalten" is "Haben Sie den Brief erhalten?" — the answer,
+in the example. **Measured**: the first example contains the participle for
+**3/47 A1 (6%), 9/128 A2 (7%), 14/297 B1 (5%)**.
+
+**Accepted, not fixed.** Concealing examples would strip a genuinely useful cue
+from 94% of cards to prevent a leak on 6%. Recorded with the number so the next
+reader inherits a measurement rather than a guess — the first card the browser
+served happened to be one of the three A1 cases, which is how it got measured.
 
 **Deck quality is inherited.** A1's 47 cards are whatever the importer labelled
 A1; `stunden` and `beamten` are in the lexicon. The drill cannot be better than

@@ -7,6 +7,7 @@ const { decks: PRESET_DECKS } = activePack.content;
 import { Hero } from './UI';
 import { shuffle } from '../lib/utils';
 import { fuzzyMatch, exactMatch } from '../lib/matching';
+import { perfectLine } from '../lib/verbDisplay';
 import { ANSWER } from '../lib/textRules';
 import { deckPrompts } from '../lib/prompts';
 import { recordEvent, recordItem } from '../lib/stats';
@@ -207,6 +208,22 @@ export default function VocabTab({
     recordItem('vocab', deckId, card.id, card.plural, verdict);
   };
 
+  const submitPerfekt = () => {
+    if (!typedAnswer.trim() || !card || clickLockRef.current) return;
+    // The same string the card would print — see perfectLine. Exact after the
+    // pack's target rules, not fuzzy: a perfect differing by one letter is a
+    // different word, and the auxiliary is part of the answer.
+    const expected = perfectLine(card.verb, activePack.grammar)?.value ?? '';
+    const verdict =
+      expected && exactMatch(expected, typedAnswer, activePack.validation.target)
+        ? 'correct'
+        : 'wrong';
+    setAnswered(true);
+    setResult(verdict);
+    recordEvent('vocab', level, verdict);
+    recordItem('vocab', deckId, card.id, expected, verdict);
+  };
+
   const generateDeck = async () => {
     if (!customTopic.trim()) return;
     setGenerating(true);
@@ -238,9 +255,12 @@ export default function VocabTab({
   // so adding a deck to the group is enough — no second list to keep in sync.
   const isArtikel = AUTO_DECKS.some((d) => d.id === deckId && d.group === 'Artikel');
   const isPlural = AUTO_DECKS.some((d) => d.id === deckId && d.group === 'Plural');
-  const showChoices = !isArtikel && !isPlural && isBeginner && activeDeck.length >= 4;
-  const showTyped =
-    !isArtikel && !isPlural && (level === 'b1' || (isBeginner && activeDeck.length < 4));
+  const isPerfekt = AUTO_DECKS.some((d) => d.id === deckId && d.group === 'Perfekt');
+  // Three drills now replace the meaning exercises rather than sitting beside
+  // them; one name beats repeating the list at both gates.
+  const isDrill = isArtikel || isPlural || isPerfekt;
+  const showChoices = !isDrill && isBeginner && activeDeck.length >= 4;
+  const showTyped = !isDrill && (level === 'b1' || (isBeginner && activeDeck.length < 4));
 
   return (
     <div>
@@ -337,7 +357,7 @@ export default function VocabTab({
                 display={isArtikel ? card.lemma : undefined}
                 // The plural drill asks for the form the "PL:" line would
                 // otherwise print directly under the question.
-                conceal={isPlural ? ['plural'] : undefined}
+                conceal={isPlural ? ['plural'] : isPerfekt ? ['verb'] : undefined}
                 learned={!!learnedWords[card.id]}
                 mobile={mobile}
               />
@@ -360,6 +380,18 @@ export default function VocabTab({
                 />
               )}
 
+              {isPerfekt && !answered && (
+                <TypedAnswer
+                  value={typedAnswer}
+                  onChange={setTypedAnswer}
+                  onSubmit={submitPerfekt}
+                  label="Type the perfect"
+                  // Derived from the pack rather than a literal, so the engine
+                  // holds no German: "hat / ist …".
+                  placeholder={`${Object.values(activePack.grammar.auxiliaries).join(' / ')} …`}
+                />
+              )}
+
               {showChoices && !answered && <ChoiceGrid choices={choices} onChoose={chooseOption} />}
 
               {showTyped && !answered && (
@@ -377,7 +409,9 @@ export default function VocabTab({
                       ? card.de
                       : isPlural
                         ? [activePack.grammar.pluralArticle, card.plural].filter(Boolean).join(' ')
-                        : card.en
+                        : isPerfekt
+                          ? (perfectLine(card.verb, activePack.grammar)?.value ?? card.de)
+                          : card.en
                   }
                   onVerdict={handleSrsVerdict}
                 />
