@@ -173,3 +173,23 @@ describe('resolveDeck auto.by=top and array tags', () => {
     expect(cards.map((c) => c.id)).toEqual(['n:b', 'n:c']);
   });
 });
+
+describe('resolveCard lemma', () => {
+  it('keeps the bare lemma alongside the composed display form', () => {
+    // `de` is the display form, so a gender drill rendering it would print
+    // "das Jahr" and give away its own answer.
+    const card = resolveCard(
+      { id: 'n:jahr', de: 'Jahr', en: ['year'], pos: 'noun', article: 'das' },
+      { articlePosition: 'before' }
+    );
+    expect(card.de).toBe('das Jahr');
+    expect(card.lemma).toBe('Jahr');
+    expect(card.article).toBe('das');
+  });
+
+  it('lemma equals de when there is no article', () => {
+    const card = resolveCard({ id: 'v:gehen', de: 'gehen', en: ['to go'], pos: 'verb' }, {});
+    expect(card.de).toBe('gehen');
+    expect(card.lemma).toBe('gehen');
+  });
+});
