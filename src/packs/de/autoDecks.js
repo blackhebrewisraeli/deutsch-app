@@ -1,5 +1,5 @@
 // Auto decks: views over the imported lexicon, resolved lazily by lexiconStore.
-export const DECK_GROUPS = ['Curated', 'Frequency', 'CEFR', 'Topics'];
+export const DECK_GROUPS = ['Curated', 'Frequency', 'CEFR', 'Topics', 'Artikel'];
 
 export const AUTO_DECKS = [
   // Frequency — `top` takes the first N of the lexicon sorted by rank, so the
@@ -86,5 +86,31 @@ export const AUTO_DECKS = [
     icon: '🩺',
     group: 'Topics',
     auto: { by: 'tag', tag: 'medicine' },
+  },
+
+  // Artikel — the same nouns as the CEFR decks, drilled for gender instead of
+  // meaning. Scoped by level because an all-nouns deck would touch all 9 chunks
+  // (~2.4 MB) on one tap; these touch 2, 4 and 5. Every noun falls inside
+  // A1/A2/B1, so the three of them reach all 2,863 without a catch-all.
+  {
+    id: 'artikel-a1',
+    name: 'A1 Nouns',
+    icon: '🟢',
+    group: 'Artikel',
+    auto: { by: 'cefr', level: 'A1', pos: 'noun' },
+  },
+  {
+    id: 'artikel-a2',
+    name: 'A2 Nouns',
+    icon: '🔵',
+    group: 'Artikel',
+    auto: { by: 'cefr', level: 'A2', pos: 'noun' },
+  },
+  {
+    id: 'artikel-b1',
+    name: 'B1 Nouns',
+    icon: '🟣',
+    group: 'Artikel',
+    auto: { by: 'cefr', level: 'B1', pos: 'noun' },
   },
 ];
