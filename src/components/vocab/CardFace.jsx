@@ -19,9 +19,16 @@ import { activePack } from '../../packs';
  * because `card.de` is the composed form "das Jahr" and would print the answer
  * above the buttons asking for it.
  *
- * @param {{ card: object, learned: boolean, mobile: boolean, display?: string }} props
+ * `conceal` names fields the face must not render, for the same reason one step
+ * further down: the plural drill asks for a form this card would otherwise print
+ * on its "PL:" line. Any drill that asks for something the card knows has to
+ * hide it, so this is a list rather than a second boolean.
+ *
+ * @param {{ card: object, learned: boolean, mobile: boolean, display?: string,
+ *           conceal?: string[] }} props
  */
-export default function CardFace({ card, learned, mobile, display }) {
+export default function CardFace({ card, learned, mobile, display, conceal = [] }) {
+  const hidden = (field) => conceal.includes(field);
   return (
     <div
       style={{
@@ -75,12 +82,12 @@ export default function CardFace({ card, learned, mobile, display }) {
       >
         {display ?? card.de}
       </div>
-      {card.ipa && (
+      {card.ipa && !hidden('ipa') && (
         <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.6 }}>
           {card.ipa}
         </div>
       )}
-      {card.plural && (
+      {card.plural && !hidden('plural') && (
         <div
           style={{
             fontFamily: FONTS.mono,

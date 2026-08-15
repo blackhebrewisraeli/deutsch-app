@@ -68,6 +68,8 @@ function matches(row, auto) {
   // Fails closed on a row with no pos — a cached pre-pos index yields an
   // empty deck that self-heals, rather than the wrong part of speech.
   if (auto.pos && row.pos !== auto.pos) return false;
+  // NOTE: `auto.has` is NOT handled here — see resolveAutoDeck. It names a field
+  // on the resolved card, which the index does not carry.
   if (auto.by === 'freq')
     return row.rank != null && row.rank >= auto.range[0] && row.rank <= auto.range[1];
   if (auto.by === 'cefr') return row.cefr === auto.level;
@@ -93,7 +95,8 @@ export function selectRows(index, auto) {
 }
 
 export async function resolveAutoDeck(deckDef, grammar, packId) {
-  const rows = selectRows(await loadIndex(packId), deckDef.auto);
+  const auto = deckDef.auto;
+  const rows = selectRows(await loadIndex(packId), auto);
   const entries = await loadChunks(
     packId,
     rows.map((r) => r.chunk)
@@ -116,5 +119,12 @@ export async function resolveAutoDeck(deckDef, grammar, packId) {
           .join(', ')
     );
   }
-  return rows.filter((r) => entries[r.id]).map((r) => resolveCard(entries[r.id], grammar));
+  const cards = rows.filter((r) => entries[r.id]).map((r) => resolveCard(entries[r.id], grammar));
+  // `auto.has` is applied HERE and not in selectRows, deliberately. selectRows
+  // filters the index, and the index carries only id/rank/cefr/pos/tags/chunk —
+  // it cannot know whether an entry has a plural. `pos` earned an index field in
+  // #105 because selection cannot proceed without it; this cannot be known until
+  // the chunks are already loaded, so an index field would buy nothing and cost
+  // ~60 KB. The split is inherent. Do not "tidy" this into matches().
+  return auto.has ? cards.filter((c) => c[auto.has]) : cards;
 }

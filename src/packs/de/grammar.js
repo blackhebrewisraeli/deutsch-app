@@ -10,6 +10,11 @@ export const grammar = {
   articleRequiredForNouns: true,
   // Where the article sits relative to the lemma: "der Hund", not "Hund der".
   articlePosition: 'before',
+  // German's plural definite article, invariant across all three genders. The
+  // plural drill echoes "die Jahre" rather than a bare "Jahre" because the full
+  // form is what sticks. A language with no plural article leaves this
+  // undefined and gets the bare form.
+  pluralArticle: 'die',
 
   // ── Verbs ──────────────────────────────────────────────────
   // aux key → the third-person-singular form used to build the perfect:

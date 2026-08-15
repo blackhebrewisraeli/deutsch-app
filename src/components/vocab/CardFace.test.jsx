@@ -63,4 +63,18 @@ describe('CardFace', () => {
     expect(screen.getByText('das Brot')).toHaveStyle({ fontSize: FONT_SIZE['6xl'] });
     expect(container.firstChild).toHaveStyle({ padding: `${SPACE[12]}px` });
   });
+
+  it('conceals fields a drill is asking for', () => {
+    // The plural drill would otherwise print "PL: Brote" directly under the
+    // question asking for it — the same defect as showing "das Jahr" above a
+    // der/die/das row.
+    const card = { ...noun, plural: 'Brote', ipa: '/bʁoːt/' };
+    const { rerender } = render(<CardFace card={card} learned={false} mobile={false} />);
+    expect(screen.getByText('PL: Brote')).toBeInTheDocument();
+
+    rerender(<CardFace card={card} learned={false} mobile={false} conceal={['plural']} />);
+    expect(screen.queryByText('PL: Brote')).not.toBeInTheDocument();
+    // and conceals nothing it was not asked to
+    expect(screen.getByText('/bʁoːt/')).toBeInTheDocument();
+  });
 });

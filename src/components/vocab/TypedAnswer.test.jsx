@@ -34,3 +34,24 @@ describe('TypedAnswer', () => {
     expect(onSubmit).toHaveBeenCalledTimes(2);
   });
 });
+
+describe('TypedAnswer question text', () => {
+  it('defaults to asking for the English meaning', () => {
+    render(<TypedAnswer value="" onChange={() => {}} onSubmit={() => {}} />);
+    expect(screen.getByRole('textbox', { name: 'Type the English meaning' })).toBeInTheDocument();
+  });
+
+  it('can ask something else without a second component', () => {
+    render(
+      <TypedAnswer
+        value=""
+        onChange={() => {}}
+        onSubmit={() => {}}
+        label="Type the plural"
+        placeholder="die …"
+      />
+    );
+    const input = screen.getByRole('textbox', { name: 'Type the plural' });
+    expect(input).toHaveAttribute('placeholder', 'die …');
+  });
+});

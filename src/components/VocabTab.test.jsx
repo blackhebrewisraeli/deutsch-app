@@ -449,3 +449,81 @@ describe('VocabTab', () => {
     });
   });
 });
+
+describe('Plural decks drill plurals', () => {
+  beforeEach(() => {
+    __resetCache();
+    const fixtures = {
+      '/lexicon/de/index.json': indexJson,
+      '/lexicon/de/chunk-00.json': chunk0,
+      '/lexicon/de/chunk-01.json': chunk1,
+    };
+    globalThis.fetch = vi.fn((url) => {
+      const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
+      return key
+        ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
+        : Promise.resolve({ ok: false, status: 404 });
+    });
+  });
+
+  // The fixture's A1 nouns are n:haus (das Haus / Häuser), n:wasser and
+  // n:brot. The deck is rank-ordered, so n:haus (rank 60) comes first.
+  const openDeck = async (user) => {
+    render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+    await user.click(screen.getByRole('button', { name: /A1 Plurals/i }));
+    return screen.findByText('das Haus');
+  };
+
+  it('shows the articled singular and asks for the plural', async () => {
+    const user = userEvent.setup();
+    await openDeck(user);
+    // The article is shown on purpose: it is not the answer, and for die-nouns
+    // it is a real cue (90% take -n/-en).
+    expect(screen.getByRole('textbox', { name: 'Type the plural' })).toBeInTheDocument();
+  });
+
+  it('never prints the answer on the card', async () => {
+    // Regression: CardFace renders a "PL: Häuser" line, which sat directly above
+    // the input asking for it. Every unit test passed; the browser caught it.
+    const user = userEvent.setup();
+    await openDeck(user);
+    expect(screen.queryByText(/^PL:/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Häuser')).not.toBeInTheDocument();
+  });
+
+  it('accepts the plural and does not mark the word learned', async () => {
+    const markLearned = vi.fn();
+    const user = userEvent.setup();
+    render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
+    await user.click(screen.getByRole('button', { name: /A1 Plurals/i }));
+    await screen.findByText('das Haus');
+    await user.type(screen.getByRole('textbox', { name: 'Type the plural' }), 'Häuser');
+    await user.click(screen.getByRole('button', { name: /CHECK/ }));
+    expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
+    // Knowing a plural is not knowing the word.
+    expect(markLearned).not.toHaveBeenCalled();
+  });
+
+  it('accepts the keyboard spelling of an umlaut', async () => {
+    // validation.target folds ä→ae, the substitution German itself defines
+    // for keyboards that cannot type it. This drill is its first consumer.
+    const user = userEvent.setup();
+    await openDeck(user);
+    await user.type(screen.getByRole('textbox', { name: 'Type the plural' }), 'Haeuser');
+    await user.click(screen.getByRole('button', { name: /CHECK/ }));
+    expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
+  });
+
+  it('grades a near-miss plural WRONG, never almost', async () => {
+    // "Hauser" is one edit from "Häuser" and fuzzyMatch would call it almost,
+    // teaching that a wrong plural is nearly right. The umlaut IS the plural.
+    const user = userEvent.setup();
+    await openDeck(user);
+    await user.type(screen.getByRole('textbox', { name: 'Type the plural' }), 'Hauser');
+    await user.click(screen.getByRole('button', { name: /CHECK/ }));
+    expect(screen.getByText('\u2717 NOT QUITE')).toBeInTheDocument();
+    expect(screen.queryByText(/ALMOST/)).not.toBeInTheDocument();
+    // and answers with the plural-articled form
+    expect(screen.getByText('die Häuser')).toBeInTheDocument();
+  });
+});

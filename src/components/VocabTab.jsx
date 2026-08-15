@@ -6,7 +6,7 @@ import { activePack } from '../packs';
 const { decks: PRESET_DECKS } = activePack.content;
 import { Hero } from './UI';
 import { shuffle } from '../lib/utils';
-import { fuzzyMatch } from '../lib/matching';
+import { fuzzyMatch, exactMatch } from '../lib/matching';
 import { ANSWER } from '../lib/textRules';
 import { deckPrompts } from '../lib/prompts';
 import { recordEvent, recordItem } from '../lib/stats';
@@ -188,6 +188,25 @@ export default function VocabTab({
     recordItem('vocab', deckId, card.id, card.article, verdict);
   };
 
+  const submitPlural = () => {
+    if (!typedAnswer.trim() || !card || clickLockRef.current) return;
+    // Exact after normalising with the pack's TARGET rules — not fuzzyMatch.
+    // Those rules fold the substitutions German defines for keyboards without
+    // umlauts (Staedte === Städte) while keeping Stadte wrong, so what survives
+    // normalisation is a genuinely different word. "Jahren" is one edit from
+    // "Jahre" and grading it 'almost' would teach that a wrong plural is nearly
+    // right.
+    const verdict = exactMatch(card.plural, typedAnswer, activePack.validation.target)
+      ? 'correct'
+      : 'wrong';
+    setAnswered(true);
+    setResult(verdict);
+    // No markLearned, as with the gender drill: knowing a plural is not knowing
+    // the word, and learnedWords cannot tell the two apart.
+    recordEvent('vocab', level, verdict);
+    recordItem('vocab', deckId, card.id, card.plural, verdict);
+  };
+
   const generateDeck = async () => {
     if (!customTopic.trim()) return;
     setGenerating(true);
@@ -218,8 +237,10 @@ export default function VocabTab({
   // Artikel decks drill gender rather than meaning. Keyed off the deck's group
   // so adding a deck to the group is enough — no second list to keep in sync.
   const isArtikel = AUTO_DECKS.some((d) => d.id === deckId && d.group === 'Artikel');
-  const showChoices = !isArtikel && isBeginner && activeDeck.length >= 4;
-  const showTyped = !isArtikel && (level === 'b1' || (isBeginner && activeDeck.length < 4));
+  const isPlural = AUTO_DECKS.some((d) => d.id === deckId && d.group === 'Plural');
+  const showChoices = !isArtikel && !isPlural && isBeginner && activeDeck.length >= 4;
+  const showTyped =
+    !isArtikel && !isPlural && (level === 'b1' || (isBeginner && activeDeck.length < 4));
 
   return (
     <div>
@@ -314,12 +335,29 @@ export default function VocabTab({
               <CardFace
                 card={card}
                 display={isArtikel ? card.lemma : undefined}
+                // The plural drill asks for the form the "PL:" line would
+                // otherwise print directly under the question.
+                conceal={isPlural ? ['plural'] : undefined}
                 learned={!!learnedWords[card.id]}
                 mobile={mobile}
               />
 
               {isArtikel && !answered && (
                 <ArticleChoice articles={activePack.grammar.articles} onChoose={chooseArticle} />
+              )}
+
+              {isPlural && !answered && (
+                <TypedAnswer
+                  value={typedAnswer}
+                  onChange={setTypedAnswer}
+                  onSubmit={submitPlural}
+                  label="Type the plural"
+                  placeholder={
+                    activePack.grammar.pluralArticle
+                      ? `${activePack.grammar.pluralArticle} …`
+                      : 'Type the plural…'
+                  }
+                />
               )}
 
               {showChoices && !answered && <ChoiceGrid choices={choices} onChoose={chooseOption} />}
@@ -334,7 +372,13 @@ export default function VocabTab({
                   // owes back is the full form "das Jahr" — not the English
                   // gloss, which was never the question.
                   result={result}
-                  answer={isArtikel ? card.de : card.en}
+                  answer={
+                    isArtikel
+                      ? card.de
+                      : isPlural
+                        ? [activePack.grammar.pluralArticle, card.plural].filter(Boolean).join(' ')
+                        : card.en
+                  }
                   onVerdict={handleSrsVerdict}
                 />
               )}

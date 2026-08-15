@@ -1,23 +1,33 @@
 import { COLORS, FONTS, FONT_SIZE, SPACE, BUTTON, RADIUS } from '../../lib/theme';
 
 /**
- * Free-text recall: type the meaning, then CHECK. Used at B1, and at A1/A2 when
- * the deck is too small to offer four distinct choices.
+ * Free-text recall: type an answer, then CHECK. Used at B1, at A1/A2 when the
+ * deck is too small to offer four distinct choices, and by the plural drill.
  *
- * @param {{ value: string, onChange: (v: string) => void, onSubmit: () => void }} props
+ * `label` and `placeholder` default to the English-meaning wording, so the
+ * original call sites read exactly as they did before this became reusable.
+ *
+ * @param {{ value: string, onChange: (v: string) => void, onSubmit: () => void,
+ *           label?: string, placeholder?: string }} props
  */
-export default function TypedAnswer({ value, onChange, onSubmit }) {
+export default function TypedAnswer({
+  value,
+  onChange,
+  onSubmit,
+  label = 'Type the English meaning',
+  placeholder = 'Type the English meaning…',
+}) {
   return (
     <div>
       <input
-        aria-label="Type the English meaning"
+        aria-label={label}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === 'Enter') onSubmit();
         }}
-        placeholder="Type the English meaning…"
+        placeholder={placeholder}
         style={{
           width: '100%',
           boxSizing: 'border-box',
