@@ -77,4 +77,22 @@ describe('CardFace', () => {
     // and conceals nothing it was not asked to
     expect(screen.getByText('/bʁoːt/')).toBeInTheDocument();
   });
+
+  it('conceals the whole verb block, not just the perfect line', () => {
+    // The er-line leaks too: for a weak verb "er macht" hands over the stem of
+    // "gemacht" outright, and for a strong one it hints at the vowel. Both come
+    // from one formatVerb call, so there is no case for hiding only one.
+    const verb = {
+      ...noun,
+      de: 'treffen',
+      verb: { aux: 'haben', partizip2: 'getroffen', present: { er: 'trifft' } },
+    };
+    const { rerender } = render(<CardFace card={verb} learned={false} mobile={false} />);
+    expect(screen.getByText(/trifft/)).toBeInTheDocument();
+    expect(screen.getByText(/getroffen/)).toBeInTheDocument();
+
+    rerender(<CardFace card={verb} learned={false} mobile={false} conceal={['verb']} />);
+    expect(screen.queryByText(/trifft/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/getroffen/)).not.toBeInTheDocument();
+  });
 });

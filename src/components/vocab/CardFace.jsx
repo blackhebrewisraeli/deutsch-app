@@ -100,20 +100,21 @@ export default function CardFace({ card, learned, mobile, display, conceal = [] 
           PL: {card.plural}
         </div>
       )}
-      {formatVerb(card.verb, activePack.grammar).map((line) => (
-        <div
-          key={line.label}
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            letterSpacing: LETTER_SPACING.caps,
-            color: COLORS.mute,
-            marginTop: SPACE[2],
-          }}
-        >
-          {line.label}: {line.value}
-        </div>
-      ))}
+      {!hidden('verb') &&
+        formatVerb(card.verb, activePack.grammar).map((line) => (
+          <div
+            key={line.label}
+            style={{
+              fontFamily: FONTS.mono,
+              fontSize: FONT_SIZE.tag,
+              letterSpacing: LETTER_SPACING.caps,
+              color: COLORS.mute,
+              marginTop: SPACE[2],
+            }}
+          >
+            {line.label}: {line.value}
+          </div>
+        ))}
       {card.examples?.length > 0 && (
         <div
           style={{
