@@ -18,7 +18,9 @@ import ChoiceGrid from './vocab/ChoiceGrid';
 import TypedAnswer from './vocab/TypedAnswer';
 import VerdictPanel from './vocab/VerdictPanel';
 import DeckCompleteBanner from './vocab/DeckCompleteBanner';
+import ArticleChoice from './vocab/ArticleChoice';
 import useAutoDeck from './vocab/useAutoDeck';
+import { AUTO_DECKS } from '../packs/de/autoDecks';
 
 export default function VocabTab({
   level,
@@ -172,6 +174,20 @@ export default function VocabTab({
     recordItem('vocab', deckId, card.id, card.en, verdict);
   };
 
+  const chooseArticle = (article) => {
+    if (clickLockRef.current) return;
+    const correct = article === card.article;
+    const verdict = correct ? 'correct' : 'wrong';
+    setAnswered(true);
+    setResult(verdict);
+    // Deliberately no markLearned: learnedWords is keyed by card.id with no
+    // notion of which skill was shown, so a correct gender guess would tell the
+    // vocab decks the learner knows a word whose meaning was never asked. The
+    // SRS keeps the two apart by deck id, which is where this progress lives.
+    recordEvent('vocab', level, verdict);
+    recordItem('vocab', deckId, card.id, card.article, verdict);
+  };
+
   const generateDeck = async () => {
     if (!customTopic.trim()) return;
     setGenerating(true);
@@ -199,8 +215,11 @@ export default function VocabTab({
   // show the input for any level outside a1/a2/b1 — not reachable through the
   // pack's cefrLevels today, but a behaviour change either way.
   const isBeginner = level === 'a1' || level === 'a2';
-  const showChoices = isBeginner && activeDeck.length >= 4;
-  const showTyped = level === 'b1' || (isBeginner && activeDeck.length < 4);
+  // Artikel decks drill gender rather than meaning. Keyed off the deck's group
+  // so adding a deck to the group is enough — no second list to keep in sync.
+  const isArtikel = AUTO_DECKS.some((d) => d.id === deckId && d.group === 'Artikel');
+  const showChoices = !isArtikel && isBeginner && activeDeck.length >= 4;
+  const showTyped = !isArtikel && (level === 'b1' || (isBeginner && activeDeck.length < 4));
 
   return (
     <div>
@@ -292,7 +311,16 @@ export default function VocabTab({
                 />
               )}
 
-              <CardFace card={card} learned={!!learnedWords[card.id]} mobile={mobile} />
+              <CardFace
+                card={card}
+                display={isArtikel ? card.lemma : undefined}
+                learned={!!learnedWords[card.id]}
+                mobile={mobile}
+              />
+
+              {isArtikel && !answered && (
+                <ArticleChoice articles={activePack.grammar.articles} onChoose={chooseArticle} />
+              )}
 
               {showChoices && !answered && <ChoiceGrid choices={choices} onChoose={chooseOption} />}
 
@@ -301,7 +329,14 @@ export default function VocabTab({
               )}
 
               {answered && (
-                <VerdictPanel result={result} answer={card.en} onVerdict={handleSrsVerdict} />
+                <VerdictPanel
+                  // The gender drill asked for the article, so the answer it
+                  // owes back is the full form "das Jahr" — not the English
+                  // gloss, which was never the question.
+                  result={result}
+                  answer={isArtikel ? card.de : card.en}
+                  onVerdict={handleSrsVerdict}
+                />
               )}
             </>
           )}

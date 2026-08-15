@@ -393,4 +393,59 @@ describe('VocabTab', () => {
       expect(desktop.cardPadding).toBe('48px');
     });
   });
+
+  describe('Artikel decks drill gender', () => {
+    beforeEach(() => {
+      __resetCache();
+      const fixtures = {
+        '/lexicon/de/index.json': indexJson,
+        '/lexicon/de/chunk-00.json': chunk0,
+        '/lexicon/de/chunk-01.json': chunk1,
+      };
+      globalThis.fetch = vi.fn((url) => {
+        const key = Object.keys(fixtures).find((k) => String(url).endsWith(k));
+        return key
+          ? Promise.resolve({ ok: true, json: () => Promise.resolve(fixtures[key]) })
+          : Promise.resolve({ ok: false, status: 404 });
+      });
+    });
+
+    it('shows the bare lemma, never the article that is being asked for', async () => {
+      const user = userEvent.setup();
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /A1 Nouns/i }));
+      // "das Haus" is the display form everywhere else; here it must be bare.
+      expect(await screen.findByText('Haus')).toBeInTheDocument();
+      expect(screen.queryByText('das Haus')).not.toBeInTheDocument();
+      for (const a of ['der', 'die', 'das']) {
+        expect(screen.getByRole('button', { name: a })).toBeInTheDocument();
+      }
+    });
+
+    it('a wrong guess answers with the full form, not the English gloss', async () => {
+      // Regression: the verdict panel was handed card.en, so guessing wrong on
+      // "Haus" replied "house" — the meaning, which was never the question.
+      const user = userEvent.setup();
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /A1 Nouns/i }));
+      await screen.findByText('Haus');
+      await user.click(screen.getByRole('button', { name: 'der' })); // Haus is das
+      expect(screen.getByText('\u2717 NOT QUITE')).toBeInTheDocument();
+      expect(screen.getByText('das Haus')).toBeInTheDocument();
+      expect(screen.queryByText('house')).not.toBeInTheDocument();
+    });
+
+    it('does not mark the word learned for a correct gender answer', async () => {
+      // Knowing a noun's gender is not knowing the word, and learnedWords is
+      // keyed by card id with no notion of which skill was shown.
+      const markLearned = vi.fn();
+      const user = userEvent.setup();
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
+      await user.click(screen.getByRole('button', { name: /A1 Nouns/i }));
+      await screen.findByText('Haus');
+      await user.click(screen.getByRole('button', { name: 'das' }));
+      expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
+      expect(markLearned).not.toHaveBeenCalled();
+    });
+  });
 });
