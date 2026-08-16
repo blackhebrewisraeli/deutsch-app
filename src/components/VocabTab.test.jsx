@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import VocabTab from './VocabTab';
 import { activePack } from '../packs';
 import { callClaude } from '../lib/claude';
+import { speak } from '../lib/speech';
 import { srsKey } from '../lib/srs';
 import indexJson from '../packs/__fixtures__/lexicon/index.json';
 import chunk0 from '../packs/__fixtures__/lexicon/chunk-00.json';
@@ -14,6 +15,10 @@ import { __resetCache } from '../packs/lexiconStore';
 vi.mock('../lib/claude', () => ({
   callClaude: vi.fn(),
 }));
+
+// jsdom has no speechSynthesis; speak() guards for that and is a no-op there.
+// Mocking it makes the listening drill's audio observable instead of silent.
+vi.mock('../lib/speech', () => ({ speak: vi.fn() }));
 
 const DECKS = activePack.content.decks;
 const STORAGE_KEY = 'deutsch-app-state-v1';
@@ -651,6 +656,68 @@ describe('VocabTab', () => {
       await user.click(screen.getByRole('button', { name: /CHECK/ }));
       expect(screen.getByText('\u2717 NOT QUITE')).toBeInTheDocument();
       expect(screen.getByText('water · waters, body of water')).toBeInTheDocument();
+    });
+  });
+
+  describe('Hören decks play the word and hide it', () => {
+    beforeEach(mockLexiconFetch);
+
+    // Core-ranked A1 nouns; n:haus (rank 60) is first — "das Haus".
+    const openDeck = async (user) => {
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /A1 Hören/i }));
+      return screen.findByRole('textbox', { name: 'Type what you hear' });
+    };
+
+    it('shows nothing that could give the word away', async () => {
+      // The answer IS the headword, so this is the one drill where every text
+      // the card knows is a leak. The whole checklist, as one assertion each.
+      const user = userEvent.setup();
+      await openDeck(user);
+      expect(screen.queryByText('das Haus')).not.toBeInTheDocument(); // headword
+      expect(screen.queryByText(/Haus/)).not.toBeInTheDocument(); // any form of it
+      expect(screen.queryByText(/^PL:/)).not.toBeInTheDocument(); // plural
+      expect(screen.queryByText(/hau̯s|haʊ/i)).not.toBeInTheDocument(); // IPA
+      expect(screen.queryByText(/Ich wohne/)).not.toBeInTheDocument(); // example
+    });
+
+    it('speaks the word on arrival', async () => {
+      const user = userEvent.setup();
+      await openDeck(user);
+      expect(speak).toHaveBeenCalledWith('das Haus');
+    });
+
+    it('replays on demand', async () => {
+      const user = userEvent.setup();
+      await openDeck(user);
+      speak.mockClear();
+      await user.click(screen.getByRole('button', { name: 'Play the word again' }));
+      expect(speak).toHaveBeenCalledWith('das Haus');
+    });
+
+    it('accepts what was heard and does not mark the word learned', async () => {
+      const markLearned = vi.fn();
+      const user = userEvent.setup();
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
+      await user.click(screen.getByRole('button', { name: /A1 Hören/i }));
+      const input = await screen.findByRole('textbox', { name: 'Type what you hear' });
+      await user.type(input, 'das Haus');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
+      expect(markLearned).not.toHaveBeenCalled();
+    });
+
+    it('accepts a different capitalisation of what was heard', async () => {
+      // NOT the umlaut case: no fixture noun carries one (Haus, Wasser, Brot),
+      // so that path is covered where a fixture word does have it — the plural
+      // suite types "Haeuser" for "Häuser". Naming this for what it checks.
+      const user = userEvent.setup();
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /A1 Hören/i }));
+      const input = await screen.findByRole('textbox', { name: 'Type what you hear' });
+      await user.type(input, 'das haus');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
     });
   });
 });

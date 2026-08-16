@@ -95,4 +95,15 @@ describe('CardFace', () => {
     expect(screen.queryByText(/trifft/)).not.toBeInTheDocument();
     expect(screen.queryByText(/getroffen/)).not.toBeInTheDocument();
   });
+
+  it('conceals the example sentence when a drill asks for the word itself', () => {
+    // The listening drill's answer IS the headword, and a Tatoeba example
+    // almost always contains it.
+    const card = { ...noun, examples: [{ de: 'Ich esse Brot.' }] };
+    const { rerender } = render(<CardFace card={card} learned={false} mobile={false} />);
+    expect(screen.getByText('Ich esse Brot.')).toBeInTheDocument();
+
+    rerender(<CardFace card={card} learned={false} mobile={false} conceal={['examples']} />);
+    expect(screen.queryByText('Ich esse Brot.')).not.toBeInTheDocument();
+  });
 });

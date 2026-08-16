@@ -8,6 +8,7 @@ export const DECK_GROUPS = [
   'Plural',
   'Perfekt',
   'Präsens',
+  'Hören',
 ];
 
 export const AUTO_DECKS = [
@@ -197,5 +198,19 @@ export const AUTO_DECKS = [
     icon: ['🟢', '🔵', '🟣'][i],
     group: 'Präsens',
     auto: { by: 'cefr', level, pos: 'verb', has: 'verb.present.du' },
+  })),
+
+  // Hören — hear it, type it. Nouns only: they carry the capital letter, which
+  // is itself a spelling rule worth drilling, and it keeps the decks comparable
+  // to Artikel and Plural. 607 / 876 / 1,380 cards.
+  //
+  // 51% of entries contain a grapheme a listener cannot infer from sound — a
+  // double consonant, ei/ai, an umlaut, ie/ih — which is the content.
+  ...['A1', 'A2', 'B1'].map((level, i) => ({
+    id: `hoeren-${level.toLowerCase()}`,
+    name: `${level} Hören`,
+    icon: ['🟢', '🔵', '🟣'][i],
+    group: 'Hören',
+    auto: { by: 'cefr', level, pos: 'noun' },
   })),
 ];

@@ -83,6 +83,22 @@ describe('Perfekt row', () => {
   });
 });
 
+describe('Hören row', () => {
+  const card = { de: 'das Wasser', ipa: '/ˈvasɐ/', plural: 'Wässer', en: 'water' };
+
+  it('plays the headword and expects it back', () => {
+    expect(DRILLS['Hören'].speak(card)).toBe('das Wasser');
+    expect(DRILLS['Hören'].expected(card)).toBe('das Wasser');
+  });
+
+  it('conceals every field that could give the word away', () => {
+    // The answer is the headword itself, so this is the one drill that hides
+    // everything the card knows.
+    expect(DRILLS['Hören'].conceal).toEqual(['ipa', 'plural', 'verb', 'examples']);
+    expect(DRILLS['Hören'].display(card)).not.toContain('Wasser');
+  });
+});
+
 describe('every row', () => {
   it('has a homogeneous shape — columns are functions, not sometimes strings', () => {
     // A table with ragged columns is the thing this file replaced.
@@ -97,6 +113,7 @@ describe('every row', () => {
         expect(typeof d.options, name).toBe('function');
       }
       if (d.conceal) expect(Array.isArray(d.conceal), name).toBe(true);
+      if (d.speak) expect(typeof d.speak, name).toBe('function');
     }
   });
 });

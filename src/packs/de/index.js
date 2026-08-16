@@ -24,6 +24,12 @@ export const dePack = {
     name: 'German',
     nativeName: 'Deutsch',
     locale: 'de-DE',
+    // The Web Speech API exposes no quality or novelty flag, so the only stable
+    // handle is the voice NAME. Without this, speak() takes whatever `.find`
+    // hits first, which on macOS is a novelty voice ("Eddy") while the standard
+    // German voice ("Anna") sits last in the list. Best first; an absent name is
+    // skipped.
+    voicePreference: ['Anna', 'Markus', 'Petra', 'Yannick', 'Helena'],
     direction: 'ltr',
     flag: '🇩🇪',
     themeId: 'de',
