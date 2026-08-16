@@ -96,13 +96,18 @@ export function selectRows(index, auto) {
 
 /**
  * Truthiness of a possibly-nested field: 'plural' or 'verb.present.du'.
+ *
+ * Exported so autoDecks.population.test.js can apply the SAME rule production
+ * does. It previously reimplemented `has` as a flat property lookup, which
+ * silently reported zero cards for every dotted-path deck — a test duplicating
+ * the logic it is meant to guard.
  * A missing intermediate bails rather than throwing — nouns have no verb block,
  * and a deck asking for one should simply exclude them.
  *
  * `!= null` rather than a bare truthiness test: `has` means "this card carries
  * the data", and a field could legitimately be 0 or ''.
  */
-function hasPath(obj, path) {
+export function hasPath(obj, path) {
   return path.split('.').reduce((v, key) => (v == null ? undefined : v[key]), obj) != null;
 }
 

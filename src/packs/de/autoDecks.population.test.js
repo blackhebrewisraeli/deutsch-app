@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { AUTO_DECKS } from './autoDecks';
-import { selectRows } from '../lexiconStore';
+import { selectRows, hasPath } from '../lexiconStore';
 
 // Guards the SHIPPED decks against the REAL lexicon index: every auto deck a user
 // can click must resolve to real cards. Seven Topic decks once shipped resolving
@@ -23,7 +23,11 @@ const entries = readdirSync(DIR)
 
 const answerableCount = (deck) => {
   const rows = selectRows(index, deck.auto);
-  return deck.auto.has ? rows.filter((r) => entries[r.id]?.[deck.auto.has]).length : rows.length;
+  // hasPath comes from production: this test reimplemented it as a flat
+  // lookup and so read every dotted-path deck as empty.
+  return deck.auto.has
+    ? rows.filter((r) => hasPath(entries[r.id], deck.auto.has)).length
+    : rows.length;
 };
 
 describe('shipped auto decks resolve against the real lexicon', () => {

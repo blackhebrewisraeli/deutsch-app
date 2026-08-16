@@ -49,6 +49,18 @@ export const DRILLS = {
     expected: (card, grammar) => perfectLine(card.verb, grammar)?.value ?? '',
     answer: (card, grammar) => perfectLine(card.verb, grammar)?.value ?? card.de,
   },
+
+  Präsens: {
+    kind: 'typed',
+    // The `er:` line shares the stem change with `du` for every irregular verb
+    // (er trifft → du triffst), so it hands over exactly the cards that are not
+    // mechanical.
+    conceal: ['verb'],
+    label: () => 'Type the du-form',
+    placeholder: () => 'du …',
+    expected: (card) => card.verb?.present?.du ?? '',
+    answer: (card) => (card.verb?.present?.du ? `du ${card.verb.present.du}` : card.de),
+  },
 };
 
 /** The drill for a deck id, or null when the deck is ordinary vocabulary. */
