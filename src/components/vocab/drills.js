@@ -12,6 +12,8 @@ import { perfectLine } from '../../lib/verbDisplay';
  * - `conceal`     fields CardFace must not render, because the drill asks for them.
  * - `expected`    the correct answer, graded against it.
  * - `answer`      what the verdict panel echoes back — usually richer than `expected`.
+ * - `speak`       audio drills only: the text to play. Its presence is what
+ *                 makes VocabTab play on card arrival and show a replay button.
  * - `options`     choice drills only: the buttons to offer.
  * - `label`,
  *   `placeholder` typed drills only. Both take grammar so no row holds a
@@ -60,6 +62,20 @@ export const DRILLS = {
     placeholder: () => 'du …',
     expected: (card) => card.verb?.present?.du ?? '',
     answer: (card) => (card.verb?.present?.du ? `du ${card.verb.present.du}` : card.de),
+  },
+
+  Hören: {
+    kind: 'typed',
+    // The answer IS the headword, so everything the card knows gives it away:
+    // IPA is a phonetic transcription, the plural and verb lines carry the stem,
+    // and the example almost always contains the word. Only the audio remains.
+    display: () => '🔊',
+    conceal: ['ipa', 'plural', 'verb', 'examples'],
+    speak: (card) => card.de,
+    label: () => 'Type what you hear',
+    placeholder: () => '…',
+    expected: (card) => card.de,
+    answer: (card) => card.de,
   },
 };
 

@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE } from '../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, BUTTON } from '../lib/theme';
 import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
 const { decks: PRESET_DECKS } = activePack.content;
+import { Volume2 } from 'lucide-react';
 import { Hero } from './UI';
 import { shuffle } from '../lib/utils';
 import { exactMatch, bestGlossMatch } from '../lib/matching';
@@ -20,6 +21,7 @@ import VerdictPanel from './vocab/VerdictPanel';
 import DeckCompleteBanner from './vocab/DeckCompleteBanner';
 import ArticleChoice from './vocab/ArticleChoice';
 import { drillFor } from './vocab/drills';
+import { speak } from '../lib/speech';
 import useAutoDeck from './vocab/useAutoDeck';
 import { AUTO_DECKS } from '../packs/de/autoDecks';
 
@@ -231,6 +233,16 @@ export default function VocabTab({
   // drill — see vocab/drills.js. A drill deck replaces the meaning exercises.
   const drill = drillFor(deckId, AUTO_DECKS);
   const isDrill = drill !== null;
+
+  // The audio IS the question for a listening drill, so it plays on arrival
+  // rather than waiting for a click — a learner who must press play before every
+  // card is being taxed, not tested. speak() is a no-op where speechSynthesis is
+  // missing, which is also what makes this safe in jsdom.
+  useEffect(() => {
+    if (drill?.speak && card) speak(drill.speak(card));
+    // card.id is the identity that matters; re-speaking on unrelated re-renders
+    // would interrupt the learner mid-word.
+  }, [drill, card?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   const showChoices = !isDrill && isBeginner && activeDeck.length >= 4;
   const showTyped = !isDrill && (level === 'b1' || (isBeginner && activeDeck.length < 4));
 
@@ -337,6 +349,17 @@ export default function VocabTab({
                   articles={drill.options(activePack.grammar)}
                   onChoose={answerDrill}
                 />
+              )}
+
+              {drill?.speak && !answered && (
+                <button
+                  type="button"
+                  onClick={() => speak(drill.speak(card))}
+                  aria-label="Play the word again"
+                  style={{ ...BUTTON.tile, width: '100%', marginBottom: SPACE[3] }}
+                >
+                  <Volume2 size={18} aria-hidden="true" /> PLAY AGAIN
+                </button>
               )}
 
               {drill?.kind === 'typed' && !answered && (
