@@ -285,3 +285,43 @@ describe('auto.has drops cards missing a field', () => {
     expect(all.map((c) => c.id)).toEqual(['n:wasser', 'n:brot']);
   });
 });
+
+describe('auto.has dotted paths', () => {
+  it('walks into a nested field', async () => {
+    // v:treffen is the fixture's only verb; it carries present.du = 'triffst'.
+    const cards = await resolveAutoDeck(
+      { auto: { by: 'cefr', level: 'A1', pos: 'verb', has: 'verb.present.du' } },
+      grammar,
+      'de'
+    );
+    expect(cards.map((c) => c.id)).toEqual(['v:treffen']);
+  });
+
+  it('excludes a card whose nested field is missing', async () => {
+    const cards = await resolveAutoDeck(
+      { auto: { by: 'cefr', level: 'A1', pos: 'verb', has: 'verb.present.nosuchperson' } },
+      grammar,
+      'de'
+    );
+    expect(cards).toEqual([]);
+  });
+
+  it('does not throw when an intermediate segment is missing', async () => {
+    // Nouns have no verb block at all — the walk must bail, not crash.
+    const cards = await resolveAutoDeck(
+      { auto: { by: 'tag', tag: 'food', has: 'verb.present.du' } },
+      grammar,
+      'de'
+    );
+    expect(cards).toEqual([]);
+  });
+
+  it('a path with no dots behaves exactly as before', async () => {
+    const cards = await resolveAutoDeck(
+      { auto: { by: 'tag', tag: 'food', has: 'plural' } },
+      grammar,
+      'de'
+    );
+    expect(cards.map((c) => c.id)).toEqual(['n:wasser', 'n:brot']);
+  });
+});
