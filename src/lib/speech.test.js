@@ -70,4 +70,54 @@ describe('speak', () => {
     speak('Langsam', 'de-DE', 0.5);
     expect(lastUtterance.rate).toBe(0.5);
   });
+
+  describe('voice selection with several voices available', () => {
+    // The real macOS list: novelty voices first, the standard one last. `.find`
+    // takes array order and lands on "Eddy"; the pack asks for "Anna".
+    const MANY = [
+      { lang: 'en-US', name: 'Samantha' },
+      { lang: 'de-DE', name: 'Eddy' },
+      { lang: 'de-DE', name: 'Flo' },
+      { lang: 'de-DE', name: 'Grandma' },
+      { lang: 'de-DE', name: 'Anna' },
+    ];
+
+    it('prefers a voice the pack names over whatever comes first', async () => {
+      getVoices.mockReturnValue(MANY);
+      const { speak } = await import('./speech');
+      speak('Wasser');
+      expect(lastUtterance.voice.name).toBe('Anna');
+    });
+
+    it('walks the preference list in order', async () => {
+      getVoices.mockReturnValue([
+        { lang: 'de-DE', name: 'Eddy' },
+        { lang: 'de-DE', name: 'Markus' },
+      ]);
+      const { speak } = await import('./speech');
+      speak('Wasser');
+      // 'Anna' is absent, so the next preference wins — not Eddy.
+      expect(lastUtterance.voice.name).toBe('Markus');
+    });
+
+    it('falls back to a default-flagged voice when no preference matches', async () => {
+      getVoices.mockReturnValue([
+        { lang: 'de-DE', name: 'Eddy' },
+        { lang: 'de-DE', name: 'Rocko', default: true },
+      ]);
+      const { speak } = await import('./speech');
+      speak('Wasser');
+      expect(lastUtterance.voice.name).toBe('Rocko');
+    });
+
+    it("falls back to the first match — today's behaviour — as the last resort", async () => {
+      getVoices.mockReturnValue([
+        { lang: 'de-DE', name: 'Eddy' },
+        { lang: 'de-DE', name: 'Flo' },
+      ]);
+      const { speak } = await import('./speech');
+      speak('Wasser');
+      expect(lastUtterance.voice.name).toBe('Eddy');
+    });
+  });
 });
