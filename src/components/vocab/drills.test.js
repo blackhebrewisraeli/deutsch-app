@@ -99,6 +99,38 @@ describe('Hören row', () => {
   });
 });
 
+describe('Präteritum row', () => {
+  // A STRONG verb: a stem+'te' implementation would pass on a weak one.
+  const card = {
+    de: 'gehen',
+    en: 'to go',
+    verb: {
+      aux: 'sein',
+      partizip2: 'gegangen',
+      preterite: 'ging',
+      present: { ich: 'gehe', du: 'gehst', er: 'geht', wir: null, ihr: null, sie: null },
+    },
+  };
+
+  it('grades against the preterite, and echoes it with the display person', () => {
+    expect(DRILLS['Präteritum'].expected(card, de)).toBe('ging');
+    expect(DRILLS['Präteritum'].answer(card, de)).toBe('er ging');
+  });
+
+  it('conceals the whole verb block, not just the preterite line', () => {
+    // The present "er:" line hands over the stem for every weak verb, and the
+    // participle does the same for many strong ones (gegangen → ging). #105 and
+    // #106 both shipped a drill that printed its own answer.
+    expect(DRILLS['Präteritum'].conceal).toEqual(['verb']);
+  });
+
+  it('falls back to the headword when the verb block cannot form a line', () => {
+    const noPret = { de: 'dürfen', verb: { aux: 'haben', partizip2: 'gedurft', present: {} } };
+    expect(DRILLS['Präteritum'].expected(noPret, de)).toBe('');
+    expect(DRILLS['Präteritum'].answer(noPret, de)).toBe('dürfen');
+  });
+});
+
 describe('every row', () => {
   it('has a homogeneous shape — columns are functions, not sometimes strings', () => {
     // A table with ragged columns is the thing this file replaced.

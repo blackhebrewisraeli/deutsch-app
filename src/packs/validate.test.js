@@ -58,7 +58,11 @@ const validPack = {
     auxiliaries: { haber: 'ha' },
     personKeys: ['yo', 'tu', 'el'],
     displayPerson: 'el',
-    labels: { perfect: 'Pretérito perfecto', participle: 'Participio' },
+    labels: {
+      perfect: 'Pretérito perfecto',
+      participle: 'Participio',
+      preterite: 'Pretérito indefinido',
+    },
   },
   prompts: {
     persona: 'Ana',

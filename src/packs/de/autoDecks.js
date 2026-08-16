@@ -8,6 +8,7 @@ export const DECK_GROUPS = [
   'Plural',
   'Perfekt',
   'Präsens',
+  'Präteritum',
   'Hören',
 ];
 
@@ -198,6 +199,24 @@ export const AUTO_DECKS = [
     icon: ['🟢', '🔵', '🟣'][i],
     group: 'Präsens',
     auto: { by: 'cefr', level, pos: 'verb', has: 'verb.present.du' },
+  })),
+
+  // Präteritum — type the preterite. The written past tense, and the spoken past
+  // for sein/haben/modals, so it is core rather than niche.
+  //
+  // Chosen over a Steigerung (adjective comparison) deck by measurement: 94% of
+  // shipped adjectives take a mechanical base+"-er", against a large irregular
+  // share here — sehen→sah, geben→gab, sein→war are not derivable from the stem.
+  //
+  // `has: 'verb.preterite'` rather than `has: 'verb'`: unlike partizip2, the
+  // preterite is NOT guaranteed on every verb block, so selecting on the block
+  // alone would put unanswerable cards in the deck.
+  ...['A1', 'A2', 'B1'].map((level, i) => ({
+    id: `praeteritum-${level.toLowerCase()}`,
+    name: `${level} Präteritum`,
+    icon: ['🟢', '🔵', '🟣'][i],
+    group: 'Präteritum',
+    auto: { by: 'cefr', level, pos: 'verb', has: 'verb.preterite' },
   })),
 
   // Hören — hear it, type it. Nouns only: they carry the capital letter, which

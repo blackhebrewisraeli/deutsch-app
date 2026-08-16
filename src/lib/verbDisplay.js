@@ -28,8 +28,23 @@ export function perfectLine(verb, grammar) {
 }
 
 /**
+ * The preterite line for a verb, or null when the data cannot form one.
+ *
+ * Exported for the same reason as perfectLine: the Präteritum drill grades
+ * against exactly what the card would show, and two implementations would drift.
+ *
  * @param {object|null} verb
- * @param {{ auxiliaries: Record<string,string>, displayPerson: string, labels: { perfect: string, participle: string } }} grammar
+ * @param {{ labels: { preterite: string } }} grammar
+ * @returns {{ label: string, value: string }|null}
+ */
+export function preteriteLine(verb, grammar) {
+  if (!verb || typeof verb !== 'object' || !verb.preterite) return null;
+  return { label: grammar.labels.preterite, value: verb.preterite };
+}
+
+/**
+ * @param {object|null} verb
+ * @param {{ auxiliaries: Record<string,string>, displayPerson: string, labels: { perfect: string, participle: string, preterite: string } }} grammar
  * @returns {{ label: string, value: string }[]}
  */
 export function formatVerb(verb, grammar) {
@@ -40,6 +55,11 @@ export function formatVerb(verb, grammar) {
   if (verb.present?.[person]) {
     lines.push({ label: person, value: verb.present[person] });
   }
+
+  // Chronological, and it puts the two past tenses next to each other so the
+  // card reads as one contrast: geht → ging → ist gegangen.
+  const preterite = preteriteLine(verb, grammar);
+  if (preterite) lines.push(preterite);
 
   const perfect = perfectLine(verb, grammar);
   if (perfect) lines.push(perfect);

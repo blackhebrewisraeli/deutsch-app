@@ -120,13 +120,18 @@ describe('parseRecord — verb conjugation', () => {
     expect(parseRecord(VERB_FULL).verb).toEqual({
       aux: 'sein',
       partizip2: 'gegangen',
+      preterite: 'ging',
       present: { ich: 'gehe', du: 'gehst', er: 'geht', wir: 'gehen', ihr: 'geht', sie: 'gehen' },
     });
+  });
+  it('takes the third-person singular preterite, not the second person', () => {
+    expect(parseRecord(VERB_FULL).verb.preterite).toBe('ging');
   });
   it('extracts a partial block with null for missing fields', () => {
     expect(parseRecord(VERB_PARTIAL).verb).toEqual({
       aux: null,
       partizip2: 'gemacht',
+      preterite: null,
       present: { ich: 'mache', du: null, er: null, wir: null, ihr: null, sie: null },
     });
   });

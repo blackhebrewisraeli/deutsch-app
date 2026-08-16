@@ -114,7 +114,7 @@ export function validateLanguagePack(pack) {
   }
 
   if (!g.labels || typeof g.labels !== 'object') fail('grammar.labels must be an object');
-  for (const k of ['perfect', 'participle']) {
+  for (const k of ['perfect', 'participle', 'preterite']) {
     if (!nonEmpty(g.labels[k])) fail(`grammar.labels.${k} must be a non-empty string`);
   }
 
@@ -238,6 +238,9 @@ export function validateLexiconEntry(entry, { grammar, cefrLevels }) {
     }
     if (v.partizip2 !== null && typeof v.partizip2 !== 'string') {
       fail('verb.partizip2 must be null or a string');
+    }
+    if (v.preterite !== undefined && v.preterite !== null && typeof v.preterite !== 'string') {
+      fail('verb.preterite must be null or a string');
     }
     if (!v.present || typeof v.present !== 'object') fail('verb.present must be an object');
     for (const p of grammar.personKeys) {

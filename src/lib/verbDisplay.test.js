@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { formatVerb, perfectLine } from './verbDisplay';
+import { formatVerb, perfectLine, preteriteLine } from './verbDisplay';
 import { grammar as de } from '../packs/de/grammar';
 
 const present = (over = {}) => ({
@@ -20,8 +20,25 @@ const fr = {
   auxiliaries: { avoir: 'a', être: 'est' },
   personKeys: ['je', 'tu', 'il', 'nous', 'vous', 'ils'],
   displayPerson: 'il',
-  labels: { perfect: 'Passé composé', participle: 'Participe passé' },
+  labels: { perfect: 'Passé composé', participle: 'Participe passé', preterite: 'Imparfait' },
 };
+
+describe('preteriteLine', () => {
+  it('returns null without a verb block or without the form', () => {
+    expect(preteriteLine(null, de)).toBe(null);
+    expect(preteriteLine({ partizip2: 'gegangen', present: present() }, de)).toBe(null);
+  });
+  it('labels the form from the pack, never a German literal', () => {
+    expect(preteriteLine({ preterite: 'ging', present: present() }, de)).toEqual({
+      label: 'Präteritum',
+      value: 'ging',
+    });
+    expect(preteriteLine({ preterite: 'allait', present: present() }, fr)).toEqual({
+      label: 'Imparfait',
+      value: 'allait',
+    });
+  });
+});
 
 describe('formatVerb', () => {
   it('returns [] for null / non-object', () => {
@@ -31,6 +48,18 @@ describe('formatVerb', () => {
   });
   it('returns [] for an all-null block', () => {
     expect(formatVerb({ aux: null, partizip2: null, present: present() }, de)).toEqual([]);
+  });
+  it('orders the lines present → Präteritum → Perfekt', () => {
+    expect(
+      formatVerb(
+        { aux: 'sein', partizip2: 'gegangen', preterite: 'ging', present: present({ er: 'geht' }) },
+        de
+      )
+    ).toEqual([
+      { label: 'er', value: 'geht' },
+      { label: 'Präteritum', value: 'ging' },
+      { label: 'Perfekt', value: 'ist gegangen' },
+    ]);
   });
   it('renders er-form + Perfekt with sein → ist', () => {
     expect(
