@@ -62,6 +62,7 @@ const validPack = {
       perfect: 'Pretérito perfecto',
       participle: 'Participio',
       preterite: 'Pretérito indefinido',
+      antonym: 'Antónimo',
     },
   },
   prompts: {

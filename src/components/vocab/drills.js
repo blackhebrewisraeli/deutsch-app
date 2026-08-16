@@ -79,6 +79,22 @@ export const DRILLS = {
     },
   },
 
+  Gegenteil: {
+    kind: 'typed',
+    // `examples` as well as the answer itself: antonym pairs co-occur in
+    // contrastive sentences by their nature ("Ich bin lieber arm als reich"),
+    // measured at 6 of 359. That is semantic, so a new example source would
+    // reintroduce it.
+    conceal: ['antonyms', 'examples'],
+    label: () => 'Type the opposite',
+    placeholder: () => '…',
+    expected: (card) => card.antonyms?.[0] ?? '',
+    // 123 of 359 cards list several. Grading only expected() would mark a
+    // correct answer wrong — see #109.
+    accepts: (card) => card.antonyms ?? [],
+    answer: (card) => (card.antonyms?.length ? card.antonyms.join(', ') : card.de),
+  },
+
   Hören: {
     kind: 'typed',
     // The answer IS the headword, so everything the card knows gives it away:

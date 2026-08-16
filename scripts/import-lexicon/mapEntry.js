@@ -10,6 +10,7 @@ export function mapEntry(word) {
     cefr: word.cefr ?? null,
     freqRank: word.freqRank ?? null,
     tags: word.topics ?? [],
+    antonyms: word.antonyms ?? [],
     examples: word.examples ?? [],
     verb: word.verb ?? null,
     source: { dict: 'wiktionary', license: 'CC-BY-SA-4.0', sentences: 'tatoeba' },

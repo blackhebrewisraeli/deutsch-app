@@ -24,6 +24,7 @@ export function resolveCard(entry, grammar) {
     pos: entry.pos,
     cefr: entry.cefr,
     tags: entry.tags,
+    antonyms: entry.antonyms ?? [],
     freqRank: entry.freqRank,
     examples: entry.examples,
     verb: entry.verb,

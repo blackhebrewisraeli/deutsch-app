@@ -22,7 +22,8 @@
       "dict": "wiktionary",
       "license": "CC-BY-SA-4.0",
       "sentences": "tatoeba"
-    }
+    },
+    "antonyms": ["Hunger"]
   },
   "n:wasser": {
     "id": "n:wasser",
@@ -47,7 +48,8 @@
       "dict": "wiktionary",
       "license": "CC-BY-SA-4.0",
       "sentences": "tatoeba"
-    }
+    },
+    "antonyms": []
   },
   "n:haus": {
     "id": "n:haus",

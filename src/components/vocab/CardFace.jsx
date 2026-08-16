@@ -115,6 +115,19 @@ export default function CardFace({ card, learned, mobile, display, conceal = [] 
             {line.label}: {line.value}
           </div>
         ))}
+      {card.antonyms?.length > 0 && !hidden('antonyms') && (
+        <div
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: FONT_SIZE.tag,
+            letterSpacing: LETTER_SPACING.caps,
+            color: COLORS.mute,
+            marginTop: SPACE[2],
+          }}
+        >
+          {activePack.grammar.labels.antonym}: {card.antonyms.join(', ')}
+        </div>
+      )}
       {card.examples?.length > 0 && !hidden('examples') && (
         <div
           style={{

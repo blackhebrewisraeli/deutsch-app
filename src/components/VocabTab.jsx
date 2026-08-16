@@ -192,8 +192,14 @@ export default function VocabTab({
   const answerDrill = (given) => {
     if (!card || clickLockRef.current) return;
     const expected = drill.expected(card, activePack.grammar) ?? '';
-    const verdict =
-      expected && exactMatch(expected, given, activePack.validation.target) ? 'correct' : 'wrong';
+    // A drill may have several right answers — "gut" is the opposite of both
+    // "schlecht" and "böse". `accepts` is optional; without it the single
+    // expected value is the whole accepted set, which is what the other drills
+    // want (a plural or a participle has exactly one form).
+    const accepted = drill.accepts ? drill.accepts(card, activePack.grammar) : [expected];
+    const verdict = accepted.some((a) => a && exactMatch(a, given, activePack.validation.target))
+      ? 'correct'
+      : 'wrong';
     setAnswered(true);
     setResult(verdict);
     recordEvent('vocab', level, verdict);

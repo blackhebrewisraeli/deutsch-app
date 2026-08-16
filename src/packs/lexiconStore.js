@@ -108,7 +108,13 @@ export function selectRows(index, auto) {
  * the data", and a field could legitimately be 0 or ''.
  */
 export function hasPath(obj, path) {
-  return path.split('.').reduce((v, key) => (v == null ? undefined : v[key]), obj) != null;
+  const value = path.split('.').reduce((v, key) => (v == null ? undefined : v[key]), obj);
+  // An EMPTY array does not carry the data. `antonyms` ships as [] on every
+  // entry that has none, and `!= null` alone would put the whole lexicon into
+  // the Gegenteil decks with nothing to answer. Non-array values keep the
+  // original rule, so a legitimate 0 or '' still counts as present.
+  if (Array.isArray(value)) return value.length > 0;
+  return value != null;
 }
 
 export async function resolveAutoDeck(deckDef, grammar, packId) {

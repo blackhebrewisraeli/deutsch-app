@@ -14,6 +14,7 @@ const entry = (over) => ({
   cefr: null,
   freqRank: 100,
   tags: [],
+  antonyms: [],
   examples: [],
   verb: null,
   source: { dict: 'wiktionary', license: 'CC-BY-SA-4.0', sentences: 'tatoeba' },
@@ -146,6 +147,18 @@ describe('mergeHomographs', () => {
     expect(entries).toHaveLength(1);
     expect(entries[0].id).toBe('n:tag:day-a-24-hour-period');
     expect(entries[0].en[0]).toBe('day · tag');
+  });
+
+  it('unions antonyms across senses rather than taking only the primary', () => {
+    // Same reason the verb table is rescued from a secondary sense: the merged
+    // card is the only one that ships, so anything a losing sense carried is
+    // gone for good. A secondary-only antonym would otherwise vanish.
+    const merged = mergeHomographs([
+      entry({ id: 'n:tor', de: 'Tor', pos: 'noun', freqRank: 10, antonyms: [] }),
+      entry({ id: 'n:tor:fool', de: 'Tor', pos: 'noun', freqRank: 20, antonyms: ['Weiser'] }),
+    ]).entries;
+    expect(merged).toHaveLength(1);
+    expect(merged[0].antonyms).toEqual(['Weiser']);
   });
 
   it('collapses identical senses to a single answer', () => {

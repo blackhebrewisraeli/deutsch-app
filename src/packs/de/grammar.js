@@ -25,5 +25,10 @@ export const grammar = {
   // what formatVerb has always done: { label: 'er', value: present.er }.
   displayPerson: 'er',
 
-  labels: { perfect: 'Perfekt', participle: 'Part. II', preterite: 'Präteritum' },
+  labels: {
+    perfect: 'Perfekt',
+    participle: 'Part. II',
+    preterite: 'Präteritum',
+    antonym: 'Gegenteil',
+  },
 };

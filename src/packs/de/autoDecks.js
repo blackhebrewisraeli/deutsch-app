@@ -9,6 +9,7 @@ export const DECK_GROUPS = [
   'Perfekt',
   'Präsens',
   'Präteritum',
+  'Gegenteil',
   'Hören',
 ];
 
@@ -218,6 +219,23 @@ export const AUTO_DECKS = [
     group: 'Präteritum',
     auto: { by: 'cefr', level, pos: 'verb', has: 'verb.preterite' },
   })),
+
+  // Gegenteil — type the opposite. Non-mechanical by construction: "dunkel" is
+  // not derivable from "hell", which is what a Steigerung deck failed (94% of
+  // adjectives take a mechanical base+"-er").
+  //
+  // ONE deck, not three. After pruning to pairs worth drilling (see
+  // scripts/import-lexicon/antonyms.js) the A1 band holds 26 — below
+  // MIN_CARDS = 40 — so a CEFR split would ship a deck too thin to drill. The
+  // full-range `freq` rule takes everything and selectRows sorts by rank, so
+  // the deck runs most-useful-first instead.
+  {
+    id: 'gegenteil',
+    name: 'Gegenteile',
+    icon: '↔️',
+    group: 'Gegenteil',
+    auto: { by: 'freq', range: [1, 999999], has: 'antonyms' },
+  },
 
   // Hören — hear it, type it. Nouns only: they carry the capital letter, which
   // is itself a spelling rule worth drilling, and it keeps the decks comparable

@@ -11,6 +11,7 @@ import { disambiguateIds } from './ids.js';
 import { mapEntry } from './mapEntry.js';
 import { applyFilter } from './filter.js';
 import { mergeHomographs } from './mergeHomographs.js';
+import { pruneAntonyms } from './antonyms.js';
 import { buildArtifacts, writeArtifacts } from './chunk.js';
 import { buildReport } from './report.js';
 
@@ -74,7 +75,10 @@ export async function run({ n = 5000, cacheDir, outDir } = {}) {
   // CEFR is banded by position within the FINAL set, so it must run here —
   // after filtering and merging, when the shipped lexicon is known
   // (see assignCefrBands).
-  const banded = assignCefrBands(merged);
+  // After the merge, when the shipped set is known: an antonym only survives if
+  // it is itself a headword the learner can meet.
+  const pruned = pruneAntonyms(merged);
+  const banded = assignCefrBands(pruned);
 
   const artifacts = buildArtifacts(banded, { chunkSize: 500, sources: SOURCES });
   writeArtifacts(outDir, artifacts);

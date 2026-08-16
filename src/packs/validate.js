@@ -114,7 +114,7 @@ export function validateLanguagePack(pack) {
   }
 
   if (!g.labels || typeof g.labels !== 'object') fail('grammar.labels must be an object');
-  for (const k of ['perfect', 'participle', 'preterite']) {
+  for (const k of ['perfect', 'participle', 'preterite', 'antonym']) {
     if (!nonEmpty(g.labels[k])) fail(`grammar.labels.${k} must be a non-empty string`);
   }
 
@@ -213,6 +213,12 @@ export function validateLexiconEntry(entry, { grammar, cefrLevels }) {
     fail('freqRank must be null or a positive number');
   }
 
+  if (
+    entry.antonyms !== undefined &&
+    (!Array.isArray(entry.antonyms) || !entry.antonyms.every((a) => typeof a === 'string'))
+  ) {
+    fail('antonyms must be an array of strings');
+  }
   if (!Array.isArray(entry.tags) || !entry.tags.every((t) => typeof t === 'string')) {
     fail('tags must be an array of strings');
   }
