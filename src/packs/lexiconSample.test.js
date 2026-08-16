@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync } from 'node:fs';
 import { validateLexiconEntry } from './validate';
+import { bestGlossMatch } from '../lib/matching';
 import { grammar } from './de/grammar';
 import { dePack } from './de/index';
 
@@ -46,6 +47,23 @@ describe('shipped lexicon artifacts', () => {
         true
       );
     }
+  });
+
+  it("every entry's primary gloss still grades correct under the wider matcher", () => {
+    // The bug being fixed is that only glosses[0] was accepted. Widening the
+    // candidate set must not lose it: verified here against every shipped entry
+    // rather than argued.
+    const failures = [];
+    for (const chunk of chunks) {
+      for (const entry of Object.values(chunk)) {
+        const primary = [].concat(entry.en ?? [])[0];
+        if (!primary) continue;
+        if (bestGlossMatch(entry.en, primary).distance !== 0) {
+          failures.push(`${entry.id}: ${JSON.stringify(primary)}`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
   });
 
   it('entries are packed into chunks in index order by chunkSize', () => {
