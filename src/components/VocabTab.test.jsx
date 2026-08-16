@@ -600,4 +600,57 @@ describe('VocabTab', () => {
       expect(screen.getByText('du triffst')).toBeInTheDocument();
     });
   });
+
+  describe('meaning drill accepts every gloss', () => {
+    beforeEach(mockLexiconFetch);
+
+    // Core 100 is rank-ordered: n:haus (60) then n:wasser (88). n:wasser ships
+    // en: ['water', 'waters, body of water'] — only the first was ever accepted,
+    // so "waters", a correct meaning the app itself supplies, graded wrong.
+    const openWasser = async (user) => {
+      render(<VocabTab level="b1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /Core 100/i }));
+      await screen.findByText('das Haus');
+      const input = screen.getByRole('textbox', { name: 'Type the English meaning' });
+      await user.type(input, 'house');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      await user.click(screen.getByRole('button', { name: 'GOOD' }));
+      // The SRS buttons hold a 200ms click lock to swallow the phantom click
+      // that would otherwise land on whatever mounts at the same coordinates.
+      // submitTyped honours that lock, so a test that answers the NEXT card
+      // immediately has its submit silently dropped.
+      await new Promise((r) => setTimeout(r, 250));
+      return screen.findByText('das Wasser');
+    };
+
+    it('accepts a meaning taken from a non-primary gloss', async () => {
+      const user = userEvent.setup();
+      await openWasser(user);
+      await user.type(screen.getByRole('textbox', { name: 'Type the English meaning' }), 'waters');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
+    });
+
+    it('still accepts the primary gloss', async () => {
+      const user = userEvent.setup();
+      await openWasser(user);
+      await user.type(screen.getByRole('textbox', { name: 'Type the English meaning' }), 'water');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
+    });
+
+    it('teaches the other meanings in the verdict, never on the card face', async () => {
+      const user = userEvent.setup();
+      await openWasser(user);
+      // Before answering, the card must not show the glosses.
+      expect(screen.queryByText(/waters, body of water/)).not.toBeInTheDocument();
+      await user.type(
+        screen.getByRole('textbox', { name: 'Type the English meaning' }),
+        'zzzzzzzzzz'
+      );
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2717 NOT QUITE')).toBeInTheDocument();
+      expect(screen.getByText('water · waters, body of water')).toBeInTheDocument();
+    });
+  });
 });
