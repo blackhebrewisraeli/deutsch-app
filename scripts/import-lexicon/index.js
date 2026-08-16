@@ -6,7 +6,7 @@ import { ensureRaw, SOURCES } from './download.js';
 import { ensurePrepared } from './prep.js';
 import { parseRecord } from './parseWiktextract.js';
 import { buildExampleIndex, attachExamples, pickExamples } from './joinTatoeba.js';
-import { assignRanks, topByRank, assignCefrBands } from './rankLeipzig.js';
+import { buildRankMap, assignRanks, topByRank, assignCefrBands } from './rankLeipzig.js';
 import { disambiguateIds } from './ids.js';
 import { mapEntry } from './mapEntry.js';
 import { applyFilter } from './filter.js';
@@ -44,14 +44,7 @@ async function readTatoebaPairs(sentencesTsv, _linksCsv) {
 }
 
 async function readRankMap(freqTsv) {
-  const map = new Map();
-  const rl = createInterface({ input: createReadStream(freqTsv), crlfDelay: Infinity });
-  let rank = 0;
-  for await (const line of rl) {
-    const word = line.split('\t')[1] || line.split('\t')[0];
-    if (word) map.set(word.toLowerCase(), ++rank);
-  }
-  return map;
+  return buildRankMap(createInterface({ input: createReadStream(freqTsv), crlfDelay: Infinity }));
 }
 
 export async function run({ n = 5000, cacheDir, outDir } = {}) {

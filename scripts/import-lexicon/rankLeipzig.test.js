@@ -1,7 +1,33 @@
 import { describe, it, expect } from 'vitest';
-import { assignRanks, topByRank, assignCefrBands } from './rankLeipzig.js';
+import { assignRanks, topByRank, assignCefrBands, buildRankMap } from './rankLeipzig.js';
 
 const rankMap = new Map([['brot', 142], ['gehen', 12]]);
+
+describe('buildRankMap', () => {
+  // Leipzig's list is case-sensitive and carries OCR/typo noise: the real
+  // "Zeit" (count 1109) sits at line 152, a junk "zeit" (count 1) at line
+  // 174097. Both lowercase to the same key. A later duplicate must never
+  // overwrite the earlier, better rank — that clobbering dropped 327 common
+  // nouns (Zeit, Mann, Frau, Arbeit, Kind, Sonntag) out of the shipped lexicon.
+  it('keeps the first occurrence when a later line repeats it in another case', async () => {
+    const map = await buildRankMap([
+      '238\tZeit\t1109',
+      '702\tMann\t702',
+      '9\tzeit\t1',
+    ]);
+    expect(map.get('zeit')).toBe(1);
+  });
+
+  it('ranks by position in the file, counting every line with a word', async () => {
+    const map = await buildRankMap(['1\tder\t9', '2\tund\t8', '3\tHund\t7']);
+    expect([map.get('der'), map.get('und'), map.get('hund')]).toEqual([1, 2, 3]);
+  });
+
+  it('does not let a skipped duplicate shift the ranks that follow it', async () => {
+    const map = await buildRankMap(['1\tZeit\t9', '2\tzeit\t1', '3\tHund\t7']);
+    expect(map.get('hund')).toBe(3);
+  });
+});
 
 describe('assignRanks', () => {
   it('assigns freqRank from the map, null when absent, and no cefr', () => {
