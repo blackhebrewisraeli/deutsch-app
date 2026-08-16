@@ -551,4 +551,53 @@ describe('VocabTab', () => {
       expect(screen.getByText('hat getroffen')).toBeInTheDocument();
     });
   });
+
+  describe('Präsens decks drill the du-form', () => {
+    beforeEach(mockLexiconFetch);
+
+    // The fixture's only verb is v:treffen — present.du = 'triffst'.
+    const openDeck = async (user) => {
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /A1 du-Form/i }));
+      return screen.findByText('treffen');
+    };
+
+    it('shows the infinitive and asks for the du-form', async () => {
+      const user = userEvent.setup();
+      await openDeck(user);
+      expect(screen.getByRole('textbox', { name: 'Type the du-form' })).toBeInTheDocument();
+    });
+
+    it('never prints either verb line on the card', async () => {
+      // "er: trifft" shares the stem change with "du triffst", so it would hand
+      // over exactly the cards that are not mechanical.
+      const user = userEvent.setup();
+      await openDeck(user);
+      expect(screen.queryByText(/trifft\b/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Perfekt:/)).not.toBeInTheDocument();
+    });
+
+    it('accepts the du-form and does not mark the word learned', async () => {
+      const markLearned = vi.fn();
+      const user = userEvent.setup();
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
+      await user.click(screen.getByRole('button', { name: /A1 du-Form/i }));
+      await screen.findByText('treffen');
+      await user.type(screen.getByRole('textbox', { name: 'Type the du-form' }), 'triffst');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
+      expect(markLearned).not.toHaveBeenCalled();
+    });
+
+    it('rejects the regular-but-wrong form and answers with the pronoun', async () => {
+      // "treffst" is what the -st rule alone produces; the stem change is the
+      // whole point of the card.
+      const user = userEvent.setup();
+      await openDeck(user);
+      await user.type(screen.getByRole('textbox', { name: 'Type the du-form' }), 'treffst');
+      await user.click(screen.getByRole('button', { name: /CHECK/ }));
+      expect(screen.getByText('\u2717 NOT QUITE')).toBeInTheDocument();
+      expect(screen.getByText('du triffst')).toBeInTheDocument();
+    });
+  });
 });

@@ -94,6 +94,23 @@ export function selectRows(index, auto) {
   return rows;
 }
 
+/**
+ * Truthiness of a possibly-nested field: 'plural' or 'verb.present.du'.
+ *
+ * Exported so autoDecks.population.test.js can apply the SAME rule production
+ * does. It previously reimplemented `has` as a flat property lookup, which
+ * silently reported zero cards for every dotted-path deck — a test duplicating
+ * the logic it is meant to guard.
+ * A missing intermediate bails rather than throwing — nouns have no verb block,
+ * and a deck asking for one should simply exclude them.
+ *
+ * `!= null` rather than a bare truthiness test: `has` means "this card carries
+ * the data", and a field could legitimately be 0 or ''.
+ */
+export function hasPath(obj, path) {
+  return path.split('.').reduce((v, key) => (v == null ? undefined : v[key]), obj) != null;
+}
+
 export async function resolveAutoDeck(deckDef, grammar, packId) {
   const auto = deckDef.auto;
   const rows = selectRows(await loadIndex(packId), auto);
@@ -126,5 +143,5 @@ export async function resolveAutoDeck(deckDef, grammar, packId) {
   // #105 because selection cannot proceed without it; this cannot be known until
   // the chunks are already loaded, so an index field would buy nothing and cost
   // ~60 KB. The split is inherent. Do not "tidy" this into matches().
-  return auto.has ? cards.filter((c) => c[auto.has]) : cards;
+  return auto.has ? cards.filter((c) => hasPath(c, auto.has)) : cards;
 }

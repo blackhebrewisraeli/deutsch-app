@@ -7,6 +7,7 @@ export const DECK_GROUPS = [
   'Artikel',
   'Plural',
   'Perfekt',
+  'Präsens',
 ];
 
 export const AUTO_DECKS = [
@@ -180,4 +181,21 @@ export const AUTO_DECKS = [
     group: 'Perfekt',
     auto: { by: 'cefr', level: 'B1', pos: 'verb', has: 'verb' },
   },
+
+  // Präsens — type the du-form. `du` is the least derivable person (49% against
+  // 73% for ich and 80% for wir/sie, which are the bare infinitive four times in
+  // five), so it is the one worth asking for. 45 / 127 / 296 cards.
+  //
+  // Generated rather than written out three times: #107 was merged past a
+  // failing duplication gate, and three near-identical objects are a large share
+  // of a small PR. These are one deck at three levels and now say so.
+  //
+  // A1's 45 clears MIN_CARDS = 40 by FIVE, the thinnest deck in the app.
+  ...['A1', 'A2', 'B1'].map((level, i) => ({
+    id: `praesens-${level.toLowerCase()}`,
+    name: `${level} du-Form`,
+    icon: ['🟢', '🔵', '🟣'][i],
+    group: 'Präsens',
+    auto: { by: 'cefr', level, pos: 'verb', has: 'verb.present.du' },
+  })),
 ];
