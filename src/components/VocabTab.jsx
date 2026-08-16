@@ -7,7 +7,6 @@ const { decks: PRESET_DECKS } = activePack.content;
 import { Hero } from './UI';
 import { shuffle } from '../lib/utils';
 import { fuzzyMatch, exactMatch } from '../lib/matching';
-import { perfectLine } from '../lib/verbDisplay';
 import { ANSWER } from '../lib/textRules';
 import { deckPrompts } from '../lib/prompts';
 import { recordEvent, recordItem } from '../lib/stats';
@@ -20,6 +19,7 @@ import TypedAnswer from './vocab/TypedAnswer';
 import VerdictPanel from './vocab/VerdictPanel';
 import DeckCompleteBanner from './vocab/DeckCompleteBanner';
 import ArticleChoice from './vocab/ArticleChoice';
+import { drillFor } from './vocab/drills';
 import useAutoDeck from './vocab/useAutoDeck';
 import { AUTO_DECKS } from '../packs/de/autoDecks';
 
@@ -175,49 +175,16 @@ export default function VocabTab({
     recordItem('vocab', deckId, card.id, card.en, verdict);
   };
 
-  const chooseArticle = (article) => {
-    if (clickLockRef.current) return;
-    const correct = article === card.article;
-    const verdict = correct ? 'correct' : 'wrong';
-    setAnswered(true);
-    setResult(verdict);
-    // Deliberately no markLearned: learnedWords is keyed by card.id with no
-    // notion of which skill was shown, so a correct gender guess would tell the
-    // vocab decks the learner knows a word whose meaning was never asked. The
-    // SRS keeps the two apart by deck id, which is where this progress lives.
-    recordEvent('vocab', level, verdict);
-    recordItem('vocab', deckId, card.id, card.article, verdict);
-  };
-
-  const submitPlural = () => {
-    if (!typedAnswer.trim() || !card || clickLockRef.current) return;
-    // Exact after normalising with the pack's TARGET rules — not fuzzyMatch.
-    // Those rules fold the substitutions German defines for keyboards without
-    // umlauts (Staedte === Städte) while keeping Stadte wrong, so what survives
-    // normalisation is a genuinely different word. "Jahren" is one edit from
-    // "Jahre" and grading it 'almost' would teach that a wrong plural is nearly
-    // right.
-    const verdict = exactMatch(card.plural, typedAnswer, activePack.validation.target)
-      ? 'correct'
-      : 'wrong';
-    setAnswered(true);
-    setResult(verdict);
-    // No markLearned, as with the gender drill: knowing a plural is not knowing
-    // the word, and learnedWords cannot tell the two apart.
-    recordEvent('vocab', level, verdict);
-    recordItem('vocab', deckId, card.id, card.plural, verdict);
-  };
-
-  const submitPerfekt = () => {
-    if (!typedAnswer.trim() || !card || clickLockRef.current) return;
-    // The same string the card would print — see perfectLine. Exact after the
-    // pack's target rules, not fuzzy: a perfect differing by one letter is a
-    // different word, and the auxiliary is part of the answer.
-    const expected = perfectLine(card.verb, activePack.grammar)?.value ?? '';
+  // Every drill grades the same way: exact match against the pack's target text
+  // rules. Deliberately not fuzzyMatch — a gender, plural or participle that
+  // differs by one letter is a different word, not a near miss.
+  //
+  // No markLearned for any drill; see the note in vocab/drills.js.
+  const answerDrill = (given) => {
+    if (!card || clickLockRef.current) return;
+    const expected = drill.expected(card, activePack.grammar) ?? '';
     const verdict =
-      expected && exactMatch(expected, typedAnswer, activePack.validation.target)
-        ? 'correct'
-        : 'wrong';
+      expected && exactMatch(expected, given, activePack.validation.target) ? 'correct' : 'wrong';
     setAnswered(true);
     setResult(verdict);
     recordEvent('vocab', level, verdict);
@@ -253,12 +220,10 @@ export default function VocabTab({
   const isBeginner = level === 'a1' || level === 'a2';
   // Artikel decks drill gender rather than meaning. Keyed off the deck's group
   // so adding a deck to the group is enough — no second list to keep in sync.
-  const isArtikel = AUTO_DECKS.some((d) => d.id === deckId && d.group === 'Artikel');
-  const isPlural = AUTO_DECKS.some((d) => d.id === deckId && d.group === 'Plural');
-  const isPerfekt = AUTO_DECKS.some((d) => d.id === deckId && d.group === 'Perfekt');
-  // Three drills now replace the meaning exercises rather than sitting beside
-  // them; one name beats repeating the list at both gates.
-  const isDrill = isArtikel || isPlural || isPerfekt;
+  // One table lookup replaces a flag, a conceal branch and an answer branch per
+  // drill — see vocab/drills.js. A drill deck replaces the meaning exercises.
+  const drill = drillFor(deckId, AUTO_DECKS);
+  const isDrill = drill !== null;
   const showChoices = !isDrill && isBeginner && activeDeck.length >= 4;
   const showTyped = !isDrill && (level === 'b1' || (isBeginner && activeDeck.length < 4));
 
@@ -354,41 +319,26 @@ export default function VocabTab({
 
               <CardFace
                 card={card}
-                display={isArtikel ? card.lemma : undefined}
-                // The plural drill asks for the form the "PL:" line would
-                // otherwise print directly under the question.
-                conceal={isPlural ? ['plural'] : isPerfekt ? ['verb'] : undefined}
+                display={drill?.display?.(card)}
+                conceal={drill?.conceal}
                 learned={!!learnedWords[card.id]}
                 mobile={mobile}
               />
 
-              {isArtikel && !answered && (
-                <ArticleChoice articles={activePack.grammar.articles} onChoose={chooseArticle} />
-              )}
-
-              {isPlural && !answered && (
-                <TypedAnswer
-                  value={typedAnswer}
-                  onChange={setTypedAnswer}
-                  onSubmit={submitPlural}
-                  label="Type the plural"
-                  placeholder={
-                    activePack.grammar.pluralArticle
-                      ? `${activePack.grammar.pluralArticle} …`
-                      : 'Type the plural…'
-                  }
+              {drill?.kind === 'choice' && !answered && (
+                <ArticleChoice
+                  articles={drill.options(activePack.grammar)}
+                  onChoose={answerDrill}
                 />
               )}
 
-              {isPerfekt && !answered && (
+              {drill?.kind === 'typed' && !answered && (
                 <TypedAnswer
                   value={typedAnswer}
                   onChange={setTypedAnswer}
-                  onSubmit={submitPerfekt}
-                  label="Type the perfect"
-                  // Derived from the pack rather than a literal, so the engine
-                  // holds no German: "hat / ist …".
-                  placeholder={`${Object.values(activePack.grammar.auxiliaries).join(' / ')} …`}
+                  onSubmit={() => typedAnswer.trim() && answerDrill(typedAnswer)}
+                  label={drill.label(activePack.grammar)}
+                  placeholder={drill.placeholder(activePack.grammar)}
                 />
               )}
 
@@ -404,15 +354,7 @@ export default function VocabTab({
                   // owes back is the full form "das Jahr" — not the English
                   // gloss, which was never the question.
                   result={result}
-                  answer={
-                    isArtikel
-                      ? card.de
-                      : isPlural
-                        ? [activePack.grammar.pluralArticle, card.plural].filter(Boolean).join(' ')
-                        : isPerfekt
-                          ? (perfectLine(card.verb, activePack.grammar)?.value ?? card.de)
-                          : card.en
-                  }
+                  answer={drill ? drill.answer(card, activePack.grammar) : card.en}
                   onVerdict={handleSrsVerdict}
                 />
               )}
