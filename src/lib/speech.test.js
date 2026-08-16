@@ -100,7 +100,23 @@ describe('speak', () => {
       expect(lastUtterance.voice.name).toBe('Markus');
     });
 
+    it('skips novelty voices when the preferred name is localised away', async () => {
+      // macOS renames the standard voice per OS language — "Anna" becomes "אנה"
+      // on a Hebrew system — while the comedy voices keep English proper names.
+      // An allowlist cannot match; avoiding the known novelty names can.
+      getVoices.mockReturnValue([
+        { lang: 'de-DE', name: 'Eddy (גרמנית (גרמניה))' },
+        { lang: 'de-DE', name: 'Rocko (גרמנית (גרמניה))' },
+        { lang: 'de-DE', name: 'אנה' },
+      ]);
+      const { speak } = await import('./speech');
+      speak('Wasser');
+      expect(lastUtterance.voice.name).toBe('אנה');
+    });
+
     it('falls back to a default-flagged voice when no preference matches', async () => {
+      // Both are novelty voices, so the denylist cannot help and the
+      // default flag decides.
       getVoices.mockReturnValue([
         { lang: 'de-DE', name: 'Eddy' },
         { lang: 'de-DE', name: 'Rocko', default: true },
