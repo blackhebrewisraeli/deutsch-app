@@ -115,7 +115,7 @@ export default function CardFace({ card, learned, mobile, display, conceal = [] 
             {line.label}: {line.value}
           </div>
         ))}
-      {card.examples?.length > 0 && (
+      {card.examples?.length > 0 && !hidden('examples') && (
         <div
           style={{
             marginTop: SPACE[3],
