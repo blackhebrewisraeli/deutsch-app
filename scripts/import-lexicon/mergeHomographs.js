@@ -99,6 +99,11 @@ function mergeGroup(senses) {
 
   const tags = [...new Set(senses.flatMap((s) => s.tags ?? []))];
 
+  // Unioned for the same reason the verb table is rescued below: the merged
+  // card is the only one that ships, so an opposite carried by a losing sense
+  // would be gone for good.
+  const antonyms = [...new Set(senses.flatMap((s) => s.antonyms ?? []))];
+
   const examples = [];
   const seenExample = new Set();
   for (const sense of senses) {
@@ -117,6 +122,7 @@ function mergeGroup(senses) {
     // `sieben` should not silently drop the table.
     verb: primary.verb ?? senses.find((s) => s.verb)?.verb ?? null,
     tags,
+    antonyms,
     examples,
   };
 }

@@ -113,6 +113,19 @@ export function parseRecord(raw) {
   if (glosses.length === 0) return null;
   const rawGlosses = [...byCleaned.values()].slice(0, 3);
 
+  // Antonyms hang off the senses. Multi-word entries ("nicht gut") are dropped:
+  // the drill asks for one typed word, and a phrase is not gradeable against
+  // exactMatch. Deduped because senses repeat the common opposite.
+  const antonyms = [
+    ...new Set(
+      senses
+        .flatMap((s) => s.antonyms || [])
+        .map((a) => (a && (a.word || a)) || '')
+        .map((w) => (typeof w === 'string' ? w.trim() : ''))
+        .filter((w) => w && !/[\s,;]/.test(w))
+    ),
+  ];
+
   const topics = [...new Set(senses.flatMap((s) => s.topics || []).filter(Boolean))];
   const rawExamples = senses
     .flatMap((s) => s.examples || [])
@@ -127,6 +140,7 @@ export function parseRecord(raw) {
     ipa: firstIpa(raw.sounds),
     glosses,
     rawGlosses,
+    antonyms,
     topics,
     rawExamples,
     verb: pos === 'verb' ? verbFromForms(raw.forms) : null,

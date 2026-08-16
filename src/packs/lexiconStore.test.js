@@ -280,6 +280,19 @@ describe('auto.has drops cards missing a field', () => {
     expect(withNothing).toEqual([]);
   });
 
+  it('treats an EMPTY array as not carrying the field', async () => {
+    // hasPath tests `!= null`, and [] is not null. The fixture gives n:brot a
+    // real antonym and n:wasser an empty array, so a deck selecting on
+    // 'antonyms' must return one card, not both — otherwise every card in the
+    // lexicon lands in the Gegenteil decks with nothing to answer.
+    const cards = await resolveAutoDeck(
+      { auto: { by: 'tag', tag: 'food', has: 'antonyms' } },
+      grammar,
+      'de'
+    );
+    expect(cards.map((c) => c.id)).toEqual(['n:brot']);
+  });
+
   it('is optional — omitting it changes nothing', async () => {
     const all = await resolveAutoDeck({ auto: { by: 'tag', tag: 'food' } }, grammar, 'de');
     expect(all.map((c) => c.id)).toEqual(['n:wasser', 'n:brot']);

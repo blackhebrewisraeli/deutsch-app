@@ -9,6 +9,7 @@ export const DECK_GROUPS = [
   'Perfekt',
   'Präsens',
   'Präteritum',
+  'Gegenteil',
   'Hören',
 ];
 
@@ -217,6 +218,20 @@ export const AUTO_DECKS = [
     icon: ['🟢', '🔵', '🟣'][i],
     group: 'Präteritum',
     auto: { by: 'cefr', level, pos: 'verb', has: 'verb.preterite' },
+  })),
+
+  // Gegenteil — type the opposite. Non-mechanical by construction: "dunkel" is
+  // not derivable from "hell", which is what a Steigerung deck failed (94% of
+  // adjectives take a mechanical base+"-er"). 81 / 110 / 168 cards.
+  //
+  // `has: 'antonyms'` selects the answerable set. 123 of the 359 cards list
+  // MORE than one opposite, which is why the row carries `accepts`.
+  ...['A1', 'A2', 'B1'].map((level, i) => ({
+    id: `gegenteil-${level.toLowerCase()}`,
+    name: `${level} Gegenteile`,
+    icon: ['🟢', '🔵', '🟣'][i],
+    group: 'Gegenteil',
+    auto: { by: 'cefr', level, has: 'antonyms' },
   })),
 
   // Hören — hear it, type it. Nouns only: they carry the capital letter, which

@@ -136,3 +136,22 @@ export const MIXED_ALT_OF = {
     { glosses: ['alternative form of trotz'], tags: ['alt-of', 'alternative'] },
   ],
 };
+
+// Antonyms live on the senses in the kaikki export. This fixture carries THREE
+// on one sense plus one on another, and a multi-word entry that must be dropped
+// — a single-antonym fixture would let a take-the-first implementation pass.
+export const ADJ_WITH_ANTONYMS = {
+  word: 'gut',
+  pos: 'adj',
+  lang_code: 'de',
+  forms: [],
+  sounds: [{ ipa: '[ɡuːt]' }],
+  senses: [
+    {
+      glosses: ['good'],
+      antonyms: [{ word: 'schlecht' }, { word: 'böse' }, { word: 'nicht gut' }],
+      examples: [{ text: 'Das ist gut.', english: 'That is good.' }],
+    },
+    { glosses: ['well'], antonyms: [{ word: 'schlecht' }] },
+  ],
+};

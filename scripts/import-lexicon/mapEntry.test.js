@@ -36,6 +36,7 @@ describe('mapEntry', () => {
       cefr: 'A1',
       freqRank: 142,
       tags: ['food'],
+      antonyms: [],
       examples: [{ de: 'Ich esse Brot.', en: 'I eat bread.', source: 'tatoeba' }],
       verb: null,
       source: { dict: 'wiktionary', license: 'CC-BY-SA-4.0', sentences: 'tatoeba' },

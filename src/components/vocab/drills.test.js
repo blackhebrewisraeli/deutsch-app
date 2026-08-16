@@ -131,6 +131,33 @@ describe('Präteritum row', () => {
   });
 });
 
+describe('Gegenteil row', () => {
+  // 123 of 359 antonym cards carry more than one opposite. Grading only the
+  // first is #109 again, where "die Uhr" accepted "clock" but not "watch".
+  const card = { de: 'gut', en: 'good', antonyms: ['schlecht', 'böse'] };
+
+  it('accepts every listed antonym, not only the first', () => {
+    expect(DRILLS.Gegenteil.accepts(card, de)).toEqual(['schlecht', 'böse']);
+  });
+
+  it('grades and echoes the first as the canonical answer', () => {
+    expect(DRILLS.Gegenteil.expected(card, de)).toBe('schlecht');
+    expect(DRILLS.Gegenteil.answer(card, de)).toBe('schlecht, böse');
+  });
+
+  it('conceals the examples as well as the antonyms', () => {
+    // Antonym pairs co-occur in contrastive sentences by their nature — 6 of
+    // 359 examples contain the answer ("Ich bin lieber arm als reich"), so this
+    // is semantic and will recur with any example source.
+    expect(DRILLS.Gegenteil.conceal).toEqual(['antonyms', 'examples']);
+  });
+
+  it('falls back to the headword when a card carries none', () => {
+    expect(DRILLS.Gegenteil.expected({ de: 'Brot', antonyms: [] }, de)).toBe('');
+    expect(DRILLS.Gegenteil.answer({ de: 'Brot', antonyms: [] }, de)).toBe('Brot');
+  });
+});
+
 describe('every row', () => {
   it('has a homogeneous shape — columns are functions, not sometimes strings', () => {
     // A table with ragged columns is the thing this file replaced.

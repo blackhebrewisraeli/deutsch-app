@@ -12,6 +12,7 @@ import {
   FORM_OF_SAGTE,
   ALT_OF_RAUM,
   MIXED_ALT_OF,
+  ADJ_WITH_ANTONYMS,
 } from './__fixtures__/wiktextract-sample.js';
 
 describe('parseRecord', () => {
@@ -24,6 +25,7 @@ describe('parseRecord', () => {
       ipa: '[bʁoːt]',
       glosses: ['bread'],
       rawGlosses: ['bread'],
+      antonyms: [],
       topics: ['food'],
       rawExamples: [{ de: 'Ich esse Brot.', en: 'I eat bread.' }],
       verb: null,
@@ -112,6 +114,22 @@ describe('parseRecord', () => {
     expect(out.glosses).toEqual(['year']);
     expect(out.rawGlosses).toHaveLength(1);
     expect(out.rawGlosses[0]).toBe('year (solar year)');
+  });
+});
+
+describe('parseRecord — antonyms', () => {
+  it('collects antonyms across senses, deduped and order-preserving', () => {
+    // Three on one sense, one repeated on another. Taking only the first would
+    // repeat #109, where a card accepted "clock" but not "watch".
+    expect(parseRecord(ADJ_WITH_ANTONYMS).antonyms).toEqual(['schlecht', 'böse']);
+  });
+
+  it('drops multi-word antonyms, which cannot be typed as a single answer', () => {
+    expect(parseRecord(ADJ_WITH_ANTONYMS).antonyms).not.toContain('nicht gut');
+  });
+
+  it('is an empty array when the record lists none', () => {
+    expect(parseRecord(NOUN_BROT).antonyms).toEqual([]);
   });
 });
 
