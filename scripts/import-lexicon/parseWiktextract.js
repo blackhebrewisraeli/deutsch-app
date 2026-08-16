@@ -46,6 +46,7 @@ const PERSON_SLOT = {
 function verbFromForms(forms) {
   const present = { ich: null, du: null, er: null, wir: null, ihr: null, sie: null };
   let partizip2 = null;
+  let preterite = null;
   let aux = null;
   let found = false;
 
@@ -67,13 +68,20 @@ function verbFromForms(forms) {
       partizip2 = f.form;
       found = true;
     }
+    // German's 1st and 3rd person singular preterite are identical (ich ging /
+    // er ging), so either would do — but only the third person is guaranteed
+    // present across the export, and it matches grammar.displayPerson.
+    if (preterite === null && has('preterite') && has('third-person') && has('singular')) {
+      preterite = f.form;
+      found = true;
+    }
     if (aux === null && has('auxiliary') && ['haben', 'sein'].includes(f.form)) {
       aux = f.form;
       found = true;
     }
   }
 
-  return found ? { aux, partizip2, present } : null;
+  return found ? { aux, partizip2, preterite, present } : null;
 }
 
 export function parseRecord(raw) {

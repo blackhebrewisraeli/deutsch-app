@@ -1,4 +1,4 @@
-import { perfectLine } from '../../lib/verbDisplay';
+import { perfectLine, preteriteLine } from '../../lib/verbDisplay';
 
 /**
  * One row per drill, keyed by the deck group it belongs to.
@@ -62,6 +62,21 @@ export const DRILLS = {
     placeholder: () => 'du …',
     expected: (card) => card.verb?.present?.du ?? '',
     answer: (card) => (card.verb?.present?.du ? `du ${card.verb.present.du}` : card.de),
+  },
+
+  Präteritum: {
+    kind: 'typed',
+    // The whole block, not just the Präteritum line: the "er:" present line
+    // hands over the stem for every weak verb (er arbeitet → arbeitete), and
+    // the participle does the same for many strong ones (gegangen → ging).
+    conceal: ['verb'],
+    label: () => 'Type the preterite',
+    placeholder: (grammar) => `${grammar.displayPerson} …`,
+    expected: (card, grammar) => preteriteLine(card.verb, grammar)?.value ?? '',
+    answer: (card, grammar) => {
+      const line = preteriteLine(card.verb, grammar);
+      return line ? `${grammar.displayPerson} ${line.value}` : card.de;
+    },
   },
 
   Hören: {

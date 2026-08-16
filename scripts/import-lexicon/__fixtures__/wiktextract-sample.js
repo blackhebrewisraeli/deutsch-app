@@ -74,6 +74,12 @@ export const VERB_FULL = {
     { form: 'gehen', tags: ['present', 'indicative', 'third-person', 'plural'] },
     { form: 'gegangen', tags: ['participle', 'past'] },
     { form: 'sein', tags: ['auxiliary'] },
+    // gehen is STRONG (ging, not *gehte), so a stem+'te' implementation cannot
+    // pass on this fixture. The 1st-person form is listed too and is identical,
+    // which is what makes the 3rd-person tag the one worth selecting on.
+    { form: 'ging', tags: ['preterite', 'indicative', 'first-person', 'singular'] },
+    { form: 'gingst', tags: ['preterite', 'indicative', 'second-person', 'singular'] },
+    { form: 'ging', tags: ['preterite', 'indicative', 'third-person', 'singular'] },
   ],
   sounds: [{ ipa: '[ˈɡeːən]' }],
   senses: [{ glosses: ['to go'], examples: [{ text: 'Wir gehen.', english: 'We go.' }] }],
