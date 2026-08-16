@@ -27,7 +27,7 @@
   "n:wasser": {
     "id": "n:wasser",
     "de": "Wasser",
-    "en": ["water"],
+    "en": ["water", "waters, body of water"],
     "pos": "noun",
     "article": "das",
     "ipa": "[ˈvasɐ]",

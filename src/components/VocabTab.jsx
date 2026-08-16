@@ -6,7 +6,7 @@ import { activePack } from '../packs';
 const { decks: PRESET_DECKS } = activePack.content;
 import { Hero } from './UI';
 import { shuffle } from '../lib/utils';
-import { fuzzyMatch, exactMatch } from '../lib/matching';
+import { exactMatch, bestGlossMatch } from '../lib/matching';
 import { ANSWER } from '../lib/textRules';
 import { deckPrompts } from '../lib/prompts';
 import { recordEvent, recordItem } from '../lib/stats';
@@ -22,6 +22,10 @@ import ArticleChoice from './vocab/ArticleChoice';
 import { drillFor } from './vocab/drills';
 import useAutoDeck from './vocab/useAutoDeck';
 import { AUTO_DECKS } from '../packs/de/autoDecks';
+
+// The verdict is where the other meanings can be taught — the card face must
+// not show them, since that would print the answer above the question.
+const glossList = (card) => (card.glosses?.length ? card.glosses.join(' · ') : card.en);
 
 export default function VocabTab({
   level,
@@ -155,7 +159,10 @@ export default function VocabTab({
 
   const submitTyped = () => {
     if (!typedAnswer.trim() || !card || clickLockRef.current) return;
-    const { distance: dist } = fuzzyMatch(card.en, typedAnswer, ANSWER);
+    // Every gloss, not just the first. card.en is glosses[0]; a card like
+    // "die Uhr" ships "clock, watch" and "meter; gauge" too, and typing "clock"
+    // used to be marked wrong.
+    const { distance: dist } = bestGlossMatch(card.glosses ?? card.en, typedAnswer, ANSWER);
     const res = dist === 0 ? 'correct' : dist <= 2 ? 'almost' : 'wrong';
     setAnswered(true);
     setResult(res);
@@ -354,7 +361,7 @@ export default function VocabTab({
                   // owes back is the full form "das Jahr" — not the English
                   // gloss, which was never the question.
                   result={result}
-                  answer={drill ? drill.answer(card, activePack.grammar) : card.en}
+                  answer={drill ? drill.answer(card, activePack.grammar) : glossList(card)}
                   onVerdict={handleSrsVerdict}
                 />
               )}
