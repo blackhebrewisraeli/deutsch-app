@@ -1,3 +1,24 @@
+// Builds the lemma → rank map from Leipzig's frequency list. Takes an async
+// iterable of lines so index.js can stream freq.tsv rather than buffer it.
+export async function buildRankMap(lines) {
+  const map = new Map();
+  let rank = 0;
+  for await (const line of lines) {
+    const word = line.split('\t')[1] || line.split('\t')[0];
+    if (!word) continue;
+    // Rank is position in the file, so it counts every line with a word —
+    // including the duplicates skipped below, which keeps every other word's
+    // rank exactly where it was.
+    rank++;
+    // First occurrence wins. Leipzig's list is case-sensitive and carries
+    // OCR/typo noise: a junk "zeit" (count 1) 174k lines below the real "Zeit"
+    // (count 1109) used to overwrite it, and topByRank then dropped the word.
+    const key = word.toLowerCase();
+    if (!map.has(key)) map.set(key, rank);
+  }
+  return map;
+}
+
 export function assignRanks(parsedList, rankMap) {
   return parsedList.map((p) => {
     const freqRank = rankMap.get(p.lemma.toLowerCase()) ?? null;
