@@ -109,10 +109,17 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Pinned, not `latest`. Resolving `latest` makes setup-cli call the
+      # unauthenticated GitHub releases API on every run, which fails the whole
+      # job with "Failed to resolve latest Supabase CLI release: rate limit
+      # exceeded" — it did exactly that on PR #117, 21s in, with the RLS suite
+      # never executing. A pinned version skips the lookup entirely, and a red
+      # RLS job then means a real policy regression rather than GitHub's quota.
+      # Bump deliberately when a migration needs a newer CLI.
       - name: Set up Supabase CLI
         uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 2.114.0
 
       - name: Start local Supabase (applies migrations)
         run: supabase start
