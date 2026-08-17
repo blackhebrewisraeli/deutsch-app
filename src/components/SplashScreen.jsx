@@ -46,7 +46,7 @@ export default function SplashScreen({ onComplete }) {
       <div
         style={{
           flex: 1,
-          background: COLORS.ink,
+          background: COLORS.paper,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -57,7 +57,7 @@ export default function SplashScreen({ onComplete }) {
           style={{
             fontSize: 72,
             fontWeight: FONT_WEIGHT.black,
-            color: COLORS.paper,
+            color: COLORS.ink,
             letterSpacing: LETTER_SPACING.tight,
             lineHeight: 1,
           }}

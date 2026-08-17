@@ -13,8 +13,8 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
     <div
       style={{
         minHeight: '100vh',
-        background: COLORS.ink,
-        color: COLORS.paper,
+        background: COLORS.paper,
+        color: COLORS.ink,
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -41,8 +41,8 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
         Learn German with an AI tutor
       </p>
       {/* Inline styles can't express :focus-visible; a scoped rule gives the
-          bare guest button a visible focus ring on the dark background. */}
-      <style>{`.welcome-guest:focus-visible { outline: 2px solid ${COLORS.paper}; outline-offset: 2px; border-radius: 4px; }`}</style>
+          bare guest button a visible focus ring against the ground colour. */}
+      <style>{`.welcome-guest:focus-visible { outline: 2px solid ${COLORS.ink}; outline-offset: 2px; border-radius: 4px; }`}</style>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 260 }}>
         {authOn && (
           <>
@@ -59,7 +59,7 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
           style={{
             background: 'none',
             border: 'none',
-            color: COLORS.paper,
+            color: COLORS.ink,
             fontFamily: FONTS.mono,
             fontSize: FONT_SIZE.tag,
             textDecoration: 'underline',

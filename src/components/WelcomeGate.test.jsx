@@ -74,4 +74,16 @@ describe('WelcomeGate', () => {
       expect(screen.getByRole('button', { name: /continue with google/i })).toBeDisabled();
     });
   });
+
+  // The bug this guards: background painted with COLORS.ink (var(--c-fg)) makes
+  // the gate the exact inverse of the app — a light-mode machine gets a dark
+  // gate. Asserted negatively, because "background is some token" passes
+  // against the broken version too.
+  it('takes its background from the ground token, not the foreground one', () => {
+    const { container } = render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} />);
+    const screenEl = container.firstChild;
+    expect(screenEl.style.background).toBe('var(--c-ground)');
+    expect(screenEl.style.background).not.toBe('var(--c-fg)');
+    expect(screenEl.style.color).toBe('var(--c-fg)');
+  });
 });
