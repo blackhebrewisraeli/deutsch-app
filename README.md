@@ -13,11 +13,11 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-805_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-1,417_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
-  <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-38_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
+  <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-23_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
   &nbsp;
-  <img alt="Lexicon" src="https://img.shields.io/badge/Lexicon-4,201_words-D62828?style=flat-square"/>
+  <img alt="Lexicon" src="https://img.shields.io/badge/Lexicon-4,288_words-D62828?style=flat-square"/>
   &nbsp;
   <img alt="License" src="https://img.shields.io/badge/License-MIT-7a6e5c?style=flat-square"/>
 </p>
@@ -46,7 +46,7 @@
   <img src="docs/images/vocab-desktop.png" alt="The Vocab tab: a flashcard showing the German word 'in' with IPA and an example sentence, above four multiple-choice answers" width="820"/>
 </a>
 
-<sub><i>Active recall over a 4,201-word lexicon — every card carries IPA, an example sentence, gender and plural.</i></sub>
+<sub><i>Active recall over a 4,288-word lexicon — every card carries IPA, an example sentence, gender and plural.</i></sub>
 
 <br/>
 
@@ -54,36 +54,56 @@
 
 ---
 
+## Contents
+
+> **Most sections below are collapsed.** Click any ▸ heading to expand it —
+> the page is meant to be skimmed first and read in whatever order you like.
+
 <table>
 <tr><td width="33%" valign="top">
 
-**Start here**
+#### 🚀 Get going
 
-- [What is this?](#what-is-this)
-- [At a glance](#at-a-glance)
-- [⚡ Quick Start](#-quick-start)
-- [📊 Learning Levels](#-learning-levels)
-
-</td><td width="33%" valign="top">
-
-**The app**
-
-- [✦ Features](#-features) — all five tabs
-- [🇩🇪 Grammar coverage](#-german-grammar--vocabulary-coverage)
-- [📖 Importing vocabulary](#-importing-vocabulary)
-- [🌐 Browser support](#-browser-support)
+| | |
+|---|---|
+| 🎯 | [What is this?](#what-is-this) |
+| 📋 | [At a glance](#at-a-glance) |
+| ⚡ | [**Quick Start**](#-quick-start) |
+| 📊 | [Learning levels](#-learning-levels) |
 
 </td><td width="33%" valign="top">
 
-**Under the hood**
+#### 📚 Using the app
 
-- [⚙️ How it works](#-how-it-works)
-- [🛠️ Tech stack](#-tech-stack)
-- [🌍 Architecture](#-multi-language-architecture)
-- [🚀 Deploy](#-deploy-to-production) · [📁 Structure](#-project-structure)
+| | |
+|---|---|
+| ✦ | [**Features**](#-features) — 5 tabs |
+| 🇩🇪 | [Grammar & vocabulary](#-german-grammar--vocabulary-coverage) |
+| 📖 | [Importing vocabulary](#-importing-vocabulary) |
+| 🌐 | [Browser support](#-browser-support) |
+
+</td><td width="33%" valign="top">
+
+#### 🔧 Under the hood
+
+| | |
+|---|---|
+| ⚙️ | [How it works](#-how-it-works) |
+| 🛠️ | [Tech stack](#-tech-stack) |
+| 🌍 | [Architecture](#-multi-language-architecture) |
+| 🚀 | [Deploy](#-deploy-to-production) |
+| 📁 | [Project structure](#-project-structure) |
 
 </td></tr>
 </table>
+
+<div align="center">
+
+**New here?** → [What is this?](#what-is-this) &nbsp;·&nbsp;
+**Want to run it?** → [Quick Start](#-quick-start) &nbsp;·&nbsp;
+**Just browsing?** → [Features](#-features)
+
+</div>
 
 ---
 
@@ -91,7 +111,7 @@
 
 **Deutsch · Sprachschule** is an exercise-driven German learning app that runs in the browser and installs as a PWA. It does not wait for you to know what to do — it gives you a task, you respond, and it tells you whether you got it right.
 
-The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four exercise modules — guided conversation, alphabet recognition, vocabulary active recall, and translation — plus a **Stats tab** that records every interaction and resurfaces what you got wrong. Vocab draws on a **4,201-word German lexicon** — each entry with gender, plural, IPA, example sentences, and verb conjugation — scheduled by a **Leitner spaced-repetition** algorithm, so cards return at the right time, not on every visit.
+The app covers **three CEFR proficiency levels** (A1 · A2 · B1) across four exercise modules — guided conversation, alphabet recognition, vocabulary active recall, and translation — plus a **Stats tab** that records every interaction and resurfaces what you got wrong. Vocab draws on a **4,288-word German lexicon** — each entry with gender, plural, IPA, example sentences, and verb conjugation — scheduled by a **Leitner spaced-repetition** algorithm, so cards return at the right time, not on every visit.
 
 All AI features call **Claude Haiku 4.5** through a versioned server-side API (`/api/v1/ai/*` — validated, rate-limited, [contract-documented](./docs/api/ai.md)) — your API key never touches the browser.
 
@@ -106,12 +126,14 @@ All AI features call **Claude Haiku 4.5** through a versioned server-side API (`
 | **Live**             | [deutsch-app-dusky.vercel.app](https://deutsch-app-dusky.vercel.app) — installable PWA, works offline after first load |
 | **Exercise modules** | 5 — Chat · Alphabet · Vocab · Translate · Stats                                                                        |
 | **Levels**           | A1 · A2 · B1, each with its own exercise mode                                                                          |
-| **Vocabulary**       | 4,201 words · 13 generated decks + 4 hand-written starter decks                                                        |
+| **Vocabulary**       | 4,288 words · 26 generated decks + 4 hand-written starter decks                                                        |
+| **Grammar drills**   | 7 deck groups — der/die/das, plurals, Perfekt, Präsens, Präteritum, opposites, listening                               |
 | **Scheduling**       | Leitner spaced repetition, 5 boxes (1d → 30d)                                                                          |
+| **Sign-in**          | Optional — email code or **Continue with Google**; anonymous progress merges in on first sign-in                       |
 | **Social**           | Weekly XP leagues, ~25-person cohorts, promotion / relegation                                                          |
 | **AI**               | Claude Haiku 4.5 behind `/api/v1/ai/*` — key stays server-side                                                         |
 | **Data**             | Local-first (`localStorage`), optional Supabase sync under row-level security                                          |
-| **Quality gates**    | 805 tests · 38 adversarial RLS tests · lint + format + full suite on every commit                                      |
+| **Quality gates**    | 1,417 tests · 23 adversarial RLS tests · lint + format + full suite on every commit                                      |
 
 ---
 
@@ -257,7 +279,7 @@ ROUND 4 · SCORE 3/3 · WHICH LETTER DID YOU HEAR?
 ---
 
 <details>
-<summary><b>03 · Vocab</b> — Active recall over a 4,201-word lexicon, scheduled by SRS</summary>
+<summary><b>03 · Vocab</b> — Active recall over a 4,288-word lexicon, scheduled by SRS</summary>
 <br/>
 
 Cards never just flip to reveal the answer — you have to produce it first.
@@ -305,7 +327,7 @@ Answers within **Levenshtein distance ≤ 2** (one or two typos) are marked **AL
 | Travel       | der Bahnhof, der Pass, links, geradeaus        |
 | Numbers      | eins through zehn                              |
 
-**The lexicon — 4,201 words.** Beyond the starter decks the app ships a full German
+**The lexicon — 4,288 words.** Beyond the starter decks the app ships a full German
 lexicon, imported from open datasets and lazy-loaded in chunks (cached for offline
 use after first visit). Every entry carries far more than a translation:
 
@@ -315,16 +337,32 @@ use after first visit). Every entry carries far more than a translation:
 | Plural                | `Häuser`                                                |
 | IPA                   | `[haʊ̯s]`                                                |
 | Example sentence      | _Auf dem Hügel steht ein Haus._                         |
-| Verb conjugation      | present tense, Partizip II, `haben`/`sein` (verbs only) |
+| Verb conjugation      | present tense, Präteritum, Partizip II, `haben`/`sein`  |
+| Opposites             | `Ende ↔ Anfang` (124 curated pairs)                     |
 | Frequency rank + CEFR | rank 456 · A1                                           |
 
-Those entries are sliced into **13 decks** you can jump between:
+Those entries are sliced into **26 decks** you can jump between:
 
 | Group         | Decks                                                                                 |
 | ------------- | ------------------------------------------------------------------------------------- |
 | **Frequency** | Core 100, Top 500 — the most common words first                                       |
-| **CEFR**      | A1 (896) · A2 (1,344) · B1 (2,240) — banded by position in the lexicon                |
+| **CEFR**      | A1 (858) · A2 (1,286) · B1 (2,144) — banded by position in the lexicon                |
 | **Topics**    | Lifestyle, Science, Hobbies & Games, Sports, Politics, Business & Law, Tech, Medicine |
+
+**Grammar drills — seven deck groups that ask you to _produce_ a form, not recognise it.**
+Each reuses the same lexicon, hides whatever would give the answer away, and is
+scheduled by the same SRS. None of them mark a word "learned" — knowing a noun's
+gender is not knowing the noun.
+
+| Drill          | Asks for                     | Why it is worth drilling                                          |
+| -------------- | ---------------------------- | ------------------------------------------------------------------ |
+| **Artikel**    | der / die / das              | gender is not derivable — 2,863 nouns                             |
+| **Plural**     | the plural form              | German has no single plural rule                                   |
+| **Perfekt**    | `hat gemacht` / `ist gegangen` | auxiliary choice plus the participle                              |
+| **Präsens**    | the `du` form                | the least predictable person (irregular stem changes)              |
+| **Präteritum** | `sah`, `ging`, `war`         | the written past — strong verbs are pure memorisation             |
+| **Gegenteil**  | the opposite                 | `dunkel` cannot be derived from `hell` — 124 curated pairs        |
+| **Hören**      | type what you hear           | 51% of entries contain a grapheme you cannot infer from sound      |
 
 Word data comes from Wiktionary (via Wiktextract), example sentences from Tatoeba,
 and frequency ranking from the Leipzig Corpora Collection — see
@@ -499,6 +537,10 @@ Leagues run on the Supabase lane under the same row-level security as sync: you 
 ## 🇩🇪 German Grammar & Vocabulary Coverage
 
 <details>
+<summary>▸ <b>Grammar topics and vocabulary domains, level by level</b></summary>
+
+
+<details>
 <summary><b>Grammar drilled at each level</b> — A1 word order · A2 cases &amp; adjective endings · B1 Konjunktiv, Perfekt, relative clauses</summary>
 <br/>
 
@@ -551,16 +593,22 @@ AI-generated decks expand to any domain on demand.
 
 </details>
 
+</details>
+
 ---
 
 ## 📈 Project Status
+
+<details>
+<summary>▸ <b>What is done, what is in flight, what is deferred</b></summary>
+
 
 Everything described above is live at [deutsch-app-dusky.vercel.app](https://deutsch-app-dusky.vercel.app).
 
 | Area                          | State                                                                                                                |
 | ----------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | **Five exercise modules**     | ✅ shipped                                                                                                           |
-| **4,201-word lexicon**        | ✅ shipped — one-command, byte-reproducible import                                                                   |
+| **4,288-word lexicon**        | ✅ shipped — one-command, byte-reproducible import                                                                   |
 | **Spaced repetition + stats** | ✅ shipped                                                                                                           |
 | **Accounts, sync, leagues**   | ✅ live in production, all optional                                                                                  |
 | **Error monitoring**          | ✅ Sentry, errors-only, EU region                                                                                    |
@@ -579,15 +627,21 @@ A pre-demo readiness pass ([`docs/DEMO_READINESS.md`](./docs/DEMO_READINESS.md))
 | **Mobile layout**           | Five separate overflows at 375px, four of them a bare `1fr` grid track refusing to shrink below its content. Every `gridTemplateColumns` now uses `minmax(0, …)`.            |
 | **Flashcard answers**       | Raw Wiktionary glosses ("ARCHAIC FORM OF STANDEN, FIRST/THIRD-PERSON PLURAL PRETERITE OF STEHEN") are cleaned at import; `alt-of` records no longer ship as their own cards. |
 | **Entry-id stability**      | Entry ids key saved progress, so the import derives them from the _raw_ gloss — cleaning display text never silently resets a learner's SRS state.                           |
-| **Homograph cards**         | The same German word could appear on several cards with different correct answers — `in` as preposition _and_ adjective, so two multiple-choice options were both defensible. Merged at import into one card per rendered form (4,480 → 4,201 entries), keyed on the German the learner actually sees so gender pairs like `der Tor` / `das Tor` stay apart. |
+| **Homograph cards**         | The same German word could appear on several cards with different correct answers — `in` as preposition _and_ adjective, so two multiple-choice options were both defensible. Merged at import into one card per rendered form (4,480 → 4,288 entries), keyed on the German the learner actually sees so gender pairs like `der Tor` / `das Tor` stay apart. |
 | **Cache freshness**         | Lexicon JSON was served `CacheFirst` from unhashed URLs, so a re-import reached new visitors only — returning ones kept the old lexicon for up to 30 days. Now `StaleWhileRevalidate`: still instant, still offline, but current on the next load.                                                                                                          |
 | **Uptime monitoring**       | The readiness check had confirmed features were live by watching the UI _render_, never by issuing a request — so a paused backend sat behind a working-looking demo. A 6-hourly workflow now exercises real round trips.                                                                                                                                   |
+
+</details>
 
 </details>
 
 ---
 
 ## 🛠️ Tech Stack
+
+<details>
+<summary>▸ <b>Every dependency and why it is there</b></summary>
+
 
 | Layer              | Technology                                                  | Purpose                                                                                                                                                                                                                                                                                                                                                                      |
 | ------------------ | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -606,7 +660,7 @@ A pre-demo readiness pass ([`docs/DEMO_READINESS.md`](./docs/DEMO_READINESS.md))
 | Error monitoring   | **Sentry** (errors-only)                                    | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay                                                                                                                                                                                                                                                                                         |
 | Linting            | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars                                                                                                                                                                                                                                                                                                                            |
 | Formatting         | **Prettier 3**                                              | Consistent code style, enforced on every commit                                                                                                                                                                                                                                                                                                                              |
-| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **805 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **38-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
+| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **1,417 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **23-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
 | CI                 | **GitHub Actions**                                          | `ci.yml` runs lint + test + build on every push to `main` and every PR, plus the RLS suite against a local Supabase                                                                                                                                                                                                                                                           |
 | Uptime             | **GitHub Actions** (`uptime.yml`)                           | Every 6h, exercises real round trips — demo root, lexicon manifest, GoTrue `/health` and `/settings`, PostgREST — and fails loudly if any hop is down. Read-only; never sends mail                                                                                                                                                                                            |
 | Pre-commit         | **Husky + lint-staged**                                     | Runs ESLint + Prettier + the full test suite before every `git commit`                                                                                                                                                                                                                                                                                                       |
@@ -617,9 +671,15 @@ A pre-demo readiness pass ([`docs/DEMO_READINESS.md`](./docs/DEMO_READINESS.md))
 
 **No CSS framework. Accounts are optional — anonymous-first by design.** The browser's only external call is to the app's own API. Server-side, the backend has two lanes: the **AI service** (`/api/v1/ai/*` → Anthropic) and the **Supabase data lane** (live) carrying durable rate limiting plus the schema + row-level security behind the localStorage↔Supabase **sync engine** (live in production) — see the [backend architecture spec](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md) and the [B1 design](./docs/superpowers/specs/2026-06-12-backend-b1-data-lane-design.md).
 
+</details>
+
 ---
 
 ## ⚙️ How It Works
+
+<details>
+<summary>▸ <b>System shape, the API proxy, and how a Claude call is built</b></summary>
+
 
 ### The shape of the system
 
@@ -738,9 +798,15 @@ User: Return: [{ en, de, template, blanks: [{ word, distractors }], note }]
 
 All JSON responses strip markdown fences (` ```json ... ``` `) before `JSON.parse()` as a defensive measure.
 
+</details>
+
 ---
 
 ## 🌍 Multi-Language Architecture
+
+<details>
+<summary>▸ <b>How the engine stays language-blind</b></summary>
+
 
 Deutsch is being evolved from a single-language app into a **language-agnostic learning platform**: the engine — spaced repetition, exercises, answer-matching, progress, gamification — knows nothing about any specific language, and each language is a **content pack** that plugs into one interface. German is the reference "finished product" that proves the engine end-to-end.
 
@@ -763,6 +829,8 @@ The active pack is a module singleton (`activePack`); the engine matches answers
 **Backend arc (parallel track):** the **user interface** (this PWA) and the **developer interface** (versioned REST surface + database contract) are being separated into a two-lane backend. Lane 1 — the AI service (`/api/v1/ai/*`: validation, per-IP quotas, error envelope) — is **live**. Lane 2 — Supabase — is **live**: durable rate limiting runs on it in production, and the sync schema (five user-owned tables under adversarially-tested row-level security, with explicit revoked-by-default Data API grants — `anon` can touch nothing) is deployed. The **localStorage↔Supabase sync engine + magic-link auth are live in production**, as are **weekly XP leagues** built on the same lane. Pack delivery (B4) follows the second language pack.
 
 **Design notes** ([`docs/superpowers/`](./docs/superpowers/)): [multi-language direction](./docs/superpowers/specs/2026-06-09-multi-language-platform-design.md) · [LanguagePack Phase 0 design](./docs/superpowers/specs/2026-06-09-languagepack-contract-design.md) · [Phase 0 plan](./docs/superpowers/plans/2026-06-09-languagepack-phase0.md) · [German coupling audit](./docs/AUDIT_GERMAN_COUPLING.md) · [backend architecture](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md) · [B0 plan](./docs/superpowers/plans/2026-06-11-backend-b0-ai-service.md) · [B1 design](./docs/superpowers/specs/2026-06-12-backend-b1-data-lane-design.md) · [B1 plan](./docs/superpowers/plans/2026-06-12-backend-b1-data-lane.md) · [API contract](./docs/api/README.md) · [data contract](./docs/api/data.md)
+
+</details>
 
 ---
 
@@ -809,6 +877,10 @@ npm run clean        # Dev toolkit — wipe stale build/dev caches
 
 ## 📖 Importing Vocabulary
 
+<details>
+<summary>▸ <b>Rebuilding the lexicon from Wiktionary, Tatoeba and Leipzig</b></summary>
+
+
 The vocabulary lexicon (`public/lexicon/`) is built from three open datasets.
 Run the import **locally**, then commit the regenerated `public/lexicon/` — the artifacts are versioned so the app ships a fixed, reviewable snapshot.
 
@@ -851,9 +923,15 @@ the Leipzig Corpora Collection (CC BY).
 
 > 💡 **Cost:** A 30-minute session (chat + a few translations + a generated deck) typically costs **$0.01–0.03** with Claude Haiku 4.5.
 
+</details>
+
 ---
 
 ## 🌐 Browser Support
+
+<details>
+<summary>▸ <b>Tested browsers, PWA install, and known gaps</b></summary>
+
 
 | Feature                         | Chrome / Edge / Arc | Firefox |         Safari          |
 | ------------------------------- | :-----------------: | :-----: | :---------------------: |
@@ -870,9 +948,15 @@ the Leipzig Corpora Collection (CC BY).
 - **Android** → Google German TTS (install from Play Store if missing)
 - **Linux** → may need `espeak-ng` or `speech-dispatcher` installed
 
+</details>
+
 ---
 
 ## 🚀 Deploy to Production
+
+<details>
+<summary>▸ <b>Vercel setup, environment variables, and the deploy flow</b></summary>
+
 
 **Vercel (recommended — zero config):**
 
@@ -894,9 +978,15 @@ The `vercel.json` at the root configures the Vite framework preset and registers
 - `dist/manifest.webmanifest` — PWA manifest
 - `api/` — Node.js serverless functions (versioned AI endpoints + legacy alias)
 
+</details>
+
 ---
 
 ## 📁 Project Structure
+
+<details>
+<summary>▸ <b>The full directory tree, annotated</b></summary>
+
 
 <details>
 <summary><b>Annotated directory tree</b> — where the API, the import pipeline, the packs and the components live</summary>
@@ -1026,6 +1116,8 @@ deutsch-app/
 ├── vite.config.js             ← Vite config + PWA plugin + dev proxy
 └── package.json
 ```
+
+</details>
 
 </details>
 
