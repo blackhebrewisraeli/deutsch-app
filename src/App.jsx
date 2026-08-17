@@ -46,6 +46,7 @@ import {
   signOut,
   getAccessToken,
   isAuthConfigured,
+  mayHaveSession,
   signInWithGoogle,
   humanAuthError,
 } from './lib/auth';
@@ -294,13 +295,25 @@ export default function App() {
       },
     ])
   );
-  const [showGate, setShowGate] = useState(() => !localStorage.getItem('deutsch-onboarded'));
+  // Dismissal is component state, not storage: the gate is a property of "is
+  // there a session", so it comes back on the next load for anyone without one.
+  const [gateDismissed, setGateDismissed] = useState(false);
+  // Seeded from `deutsch-level`, not from isAuthConfigured(): env-independent
+  // (spec F7), and it states the real precondition — someone who has never
+  // picked a level needs the picker however they arrived.
+  const [showSplash, setShowSplash] = useState(() => !localStorage.getItem('deutsch-level'));
   const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
 
-  const handleGuest = () => setShowGate(false);
+  const handleGuest = () => {
+    setGateDismissed(true);
+    setShowSplash(true);
+  };
   const handleAuthDone = () => {
     setAuthModal(null);
-    setShowGate(false);
+    setGateDismissed(true);
+    setShowSplash(true);
+    // Nothing reads this key any more; kept because AGENTS.md forbids removing
+    // or migrating a storage key.
     localStorage.setItem('deutsch-onboarded', '1');
   };
   // Opens the shared AuthSheet in-place — no WelcomeGate round-trip.
@@ -404,7 +417,6 @@ export default function App() {
   }, [user?.id]);
 
   // Onboarding + level
-  const [showSplash, setShowSplash] = useState(() => !localStorage.getItem('deutsch-onboarded'));
   const [level, setLevel] = useState(() => {
     const stored = localStorage.getItem('deutsch-level');
     if (stored === 'beginner' || stored === 'a1') return 'a1';
@@ -513,7 +525,16 @@ export default function App() {
     toasts.length === 0 &&
     !streakBurst;
 
-  if (showGate && !user) {
+  // `loading` is the first render for everyone, and useAuth settles in an
+  // effect — i.e. after paint. Without the mayHaveSession() clause a guest sees
+  // one frame of the app before the gate; with it, a device holding no token
+  // gets the gate on the first paint and a device that might have a session
+  // renders the app and never blinks.
+  const sessionUnresolved = authStatus === 'loading' && !mayHaveSession();
+  const showGate =
+    !gateDismissed && isAuthConfigured() && (authStatus === 'anonymous' || sessionUnresolved);
+
+  if (showGate) {
     return (
       <>
         <WelcomeGate
