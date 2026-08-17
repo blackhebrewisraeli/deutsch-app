@@ -7,12 +7,13 @@ import {
   RADIUS,
   SHADOW,
 } from '../lib/theme';
-import { stampSettings } from '../lib/settingsStamp';
+import { writeLevel } from '../lib/levelPref';
 
 export default function SplashScreen({ onComplete }) {
   const handleSelect = (level) => {
-    localStorage.setItem('deutsch-level', level);
-    stampSettings();
+    writeLevel(level);
+    // Nothing reads this key after the gate change; kept because AGENTS.md
+    // forbids removing or migrating a storage key.
     localStorage.setItem('deutsch-onboarded', '1');
     onComplete(level);
   };
@@ -46,7 +47,7 @@ export default function SplashScreen({ onComplete }) {
       <div
         style={{
           flex: 1,
-          background: COLORS.ink,
+          background: COLORS.paper,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -57,7 +58,7 @@ export default function SplashScreen({ onComplete }) {
           style={{
             fontSize: 72,
             fontWeight: FONT_WEIGHT.black,
-            color: COLORS.paper,
+            color: COLORS.ink,
             letterSpacing: LETTER_SPACING.tight,
             lineHeight: 1,
           }}

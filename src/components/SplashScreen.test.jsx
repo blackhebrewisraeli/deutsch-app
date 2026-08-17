@@ -27,4 +27,17 @@ describe('SplashScreen', () => {
     expect(onComplete).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledWith(level);
   });
+
+  it('paints the wordmark stripe with the ground token, not the foreground one', () => {
+    const { container } = render(<SplashScreen onComplete={() => {}} />);
+    const stripe = container.firstChild.firstChild;
+    expect(stripe.style.background).toBe('var(--c-ground)');
+    expect(stripe.style.background).not.toBe('var(--c-fg)');
+  });
+
+  it('renders the wordmark in the foreground token', () => {
+    render(<SplashScreen onComplete={() => {}} />);
+    const wordmark = screen.getByText('Sprachschule').previousSibling;
+    expect(wordmark.style.color).toBe('var(--c-fg)');
+  });
 });

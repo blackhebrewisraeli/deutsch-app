@@ -16,7 +16,9 @@ import {
   getReviewItems,
   recordItem,
 } from './stats';
-import { loadState } from './storage';
+import { loadState, saveState } from './storage';
+import { setLevelBoostEnabled } from './xpEntitlement';
+import { LEVEL_MULTIPLIERS } from './gameConfig';
 
 const STORAGE_KEY = 'deutsch-app-state-v1';
 
@@ -580,5 +582,65 @@ describe('recordItem', () => {
       throw new Error('quota');
     });
     expect(() => recordItem('vocab', 'food', 'X', 'x', 'wrong')).not.toThrow();
+  });
+});
+
+// ─── recordEvent — XP by level ─────────────────────────────────
+
+describe('recordEvent — XP by level', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setLevelBoostEnabled(false);
+  });
+
+  afterEach(() => setLevelBoostEnabled(false));
+
+  /** Seed `days` consecutive qualifying days ending yesterday. */
+  function seedStreak(days) {
+    const daily = {};
+    const [y, m, d] = todayKey().split('-').map(Number);
+    for (let i = days; i >= 1; i -= 1) {
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      dt.setUTCDate(dt.getUTCDate() - i);
+      const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(dt.getUTCDate()).padStart(2, '0');
+      daily[`${dt.getUTCFullYear()}-${mm}-${dd}`] = {
+        byLevel: { a1: { correct: 6, almost: 0, wrong: 0 } },
+      };
+    }
+    saveState({ daily, gamification: { goal: 50 } });
+  }
+
+  it('pays flat XP to an unentitled learner even at b1', () => {
+    expect(recordEvent('vocab', 'b1', 'correct')).toEqual({ xp: 10, mult: 1 });
+  });
+
+  it('pays the level multiplier to an entitled learner', () => {
+    setLevelBoostEnabled(true);
+    // base 10 × 1.5 = 15
+    expect(recordEvent('vocab', 'b1', 'correct')).toEqual({ xp: 15, mult: 1.5 });
+  });
+
+  it('pays a1 the same either way, entitled or not', () => {
+    setLevelBoostEnabled(true);
+    expect(recordEvent('vocab', 'a1', 'correct')).toEqual({ xp: 10, mult: 1 });
+  });
+
+  it('composes with the streak multiplier rather than adding to it', () => {
+    // A 7-day streak is ×1.5; b1 is ×1.5. Multiplicative → 2.25 (xp 23).
+    // Additive (1.5 + 1.5 − 1 = 2.0) would give xp 20, so this fixture can
+    // actually tell the two apart. A 3-day streak and a2 could not: 1.2 × 1.25
+    // and 1.2 + 1.25 − 1 both round to the same XP.
+    seedStreak(7);
+    setLevelBoostEnabled(true);
+    const { xp, mult } = recordEvent('vocab', 'b1', 'correct');
+    expect(mult).toBeCloseTo(2.25);
+    expect(xp).toBe(23);
+  });
+
+  it('defines a multiplier for every level the engine accepts', () => {
+    // Guards the real future bug: someone adds a level to stats.LEVELS and
+    // forgets LEVEL_MULTIPLIERS, silently making it earn the ?? 1 fallback.
+    expect(Object.keys(LEVEL_MULTIPLIERS).sort()).toEqual([...LEVELS].sort());
   });
 });

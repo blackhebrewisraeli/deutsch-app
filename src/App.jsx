@@ -3,6 +3,7 @@ import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'luci
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
+import { readLevel, writeLevel } from './lib/levelPref';
 import { getReviewItems, todayKey, TABS } from './lib/stats';
 import { trialStatus } from './lib/trial';
 import { getDueCount } from './lib/srs';
@@ -46,10 +47,12 @@ import {
   signOut,
   getAccessToken,
   isAuthConfigured,
+  mayHaveSession,
   signInWithGoogle,
   humanAuthError,
 } from './lib/auth';
 import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
+import { setLevelBoostEnabled } from './lib/xpEntitlement';
 import { useSyncStatus } from './lib/useSyncStatus';
 import { useLeagueRewards } from './lib/useLeagueRewards';
 import Confetti from './components/ui/Confetti';
@@ -294,13 +297,25 @@ export default function App() {
       },
     ])
   );
-  const [showGate, setShowGate] = useState(() => !localStorage.getItem('deutsch-onboarded'));
+  // Dismissal is component state, not storage: the gate is a property of "is
+  // there a session", so it comes back on the next load for anyone without one.
+  const [gateDismissed, setGateDismissed] = useState(false);
+  // Seeded from `deutsch-level`, not from isAuthConfigured(): env-independent
+  // (spec F7), and it states the real precondition — someone who has never
+  // picked a level needs the picker however they arrived.
+  const [showSplash, setShowSplash] = useState(() => !localStorage.getItem('deutsch-level'));
   const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
 
-  const handleGuest = () => setShowGate(false);
+  const handleGuest = () => {
+    setGateDismissed(true);
+    setShowSplash(true);
+  };
   const handleAuthDone = () => {
     setAuthModal(null);
-    setShowGate(false);
+    setGateDismissed(true);
+    setShowSplash(true);
+    // Nothing reads this key any more; kept because AGENTS.md forbids removing
+    // or migrating a storage key.
     localStorage.setItem('deutsch-onboarded', '1');
   };
   // Opens the shared AuthSheet in-place — no WelcomeGate round-trip.
@@ -381,6 +396,7 @@ export default function App() {
       });
       if (!res.ok) throw new Error();
       localStorage.clear();
+      setGateDismissed(false);
       await signOut();
     } catch {
       showToast('Could not delete account — try again.');
@@ -403,15 +419,14 @@ export default function App() {
     return () => window.removeEventListener('deutsch:progress', onProgress);
   }, [user?.id]);
 
+  // The per-level XP multiplier is an account benefit. Driven off authStatus
+  // rather than `user` so a sign-out turns it off in the same render.
+  useEffect(() => {
+    setLevelBoostEnabled(authStatus === 'authenticated');
+  }, [authStatus]);
+
   // Onboarding + level
-  const [showSplash, setShowSplash] = useState(() => !localStorage.getItem('deutsch-onboarded'));
-  const [level, setLevel] = useState(() => {
-    const stored = localStorage.getItem('deutsch-level');
-    if (stored === 'beginner' || stored === 'a1') return 'a1';
-    if (stored === 'a2') return 'a2';
-    if (stored === 'intermediate' || stored === 'b1') return 'b1';
-    return 'a1';
-  });
+  const [level, setLevel] = useState(readLevel);
 
   const handleSplashComplete = (chosenLevel) => {
     setLevel(chosenLevel);
@@ -448,12 +463,7 @@ export default function App() {
   const handleReview = (item) => {
     if (item.tab === 'translate' && item.context && item.context !== level) {
       setLevel(item.context);
-      try {
-        localStorage.setItem('deutsch-level', item.context);
-        stampSettings();
-      } catch {
-        // ignore — best-effort persistence
-      }
+      writeLevel(item.context);
     }
     setReviewTarget(item);
     setTab(item.tab);
@@ -513,7 +523,16 @@ export default function App() {
     toasts.length === 0 &&
     !streakBurst;
 
-  if (showGate && !user) {
+  // `loading` is the first render for everyone, and useAuth settles in an
+  // effect — i.e. after paint. Without the mayHaveSession() clause a guest sees
+  // one frame of the app before the gate; with it, a device holding no token
+  // gets the gate on the first paint and a device that might have a session
+  // renders the app and never blinks.
+  const sessionUnresolved = authStatus === 'loading' && !mayHaveSession();
+  const showGate =
+    !gateDismissed && isAuthConfigured() && (authStatus === 'anonymous' || sessionUnresolved);
+
+  if (showGate) {
     return (
       <>
         <WelcomeGate
@@ -527,7 +546,13 @@ export default function App() {
     );
   }
 
-  if (showSplash) return <SplashScreen onComplete={handleSplashComplete} />;
+  if (showSplash)
+    return (
+      <>
+        <SplashScreen onComplete={handleSplashComplete} />
+        {authOverlay}
+      </>
+    );
 
   return (
     <div
@@ -637,7 +662,10 @@ export default function App() {
           <AccountChip
             user={user}
             onSignIn={requestSignIn}
-            onSignOut={() => signOut()}
+            onSignOut={() => {
+              setGateDismissed(false);
+              signOut();
+            }}
             pending={syncStatus.pending}
           />
         </div>
@@ -819,10 +847,16 @@ export default function App() {
             onReview={handleReview}
             user={user}
             onSignIn={requestSignIn}
-            onSignOut={() => signOut()}
+            onSignOut={() => {
+              setGateDismissed(false);
+              signOut();
+            }}
             onExport={handleExport}
             onDelete={handleDelete}
             lastSyncedAt={syncStatus.lastSyncedAt}
+            level={level}
+            onLevelChange={setLevel}
+            levelBoost={authStatus === 'authenticated'}
           />
         )}
       </main>

@@ -1,10 +1,37 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, act } from '@testing-library/react';
+import { render, screen, within, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import { todayKey } from './lib/stats';
+import { isLevelBoostEnabled, setLevelBoostEnabled } from './lib/xpEntitlement';
 
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
+
+const authMock = vi.hoisted(() => ({
+  configured: true,
+  status: 'anonymous',
+  mayHaveSession: false,
+}));
+
+// Spread the real module: App imports six names from it and StatsTab,
+// WelcomeGate and GoogleButton import more. A bare factory breaks them.
+// Mocked rather than inherited because isAuthConfigured() reads
+// import.meta.env.VITE_SUPABASE_*, which Vitest loads from .env — true on a
+// developer's machine, false in CI. See spec F7.
+const authSignOutMock = vi.hoisted(() => vi.fn());
+
+vi.mock('./lib/auth', async (importOriginal) => ({
+  ...(await importOriginal()),
+  isAuthConfigured: () => authMock.configured,
+  isGoogleAuthConfigured: () => false,
+  mayHaveSession: () => authMock.mayHaveSession,
+  signOut: authSignOutMock,
+  useAuth: () => ({
+    session: null,
+    user: authMock.status === 'authenticated' ? { id: 'u1', email: 'a@b.co' } : null,
+    status: authMock.status,
+  }),
+}));
 
 const TAB_NAMES = ['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
 
@@ -14,6 +41,24 @@ const setViewportWidth = (width) => {
     configurable: true,
     value: width,
   });
+};
+
+// Task 2 made the entry gate a function of account session rather than a
+// device flag, and made the post-gate splash unconditional (continuing past
+// the gate, guest or authenticated, always lands on the level picker once).
+// Tests below this point that only care about the app shell — not the gate
+// or splash themselves — render then walk through both screens once, exactly
+// as a real guest would. `fireEvent` (not `userEvent`) because one call site
+// runs under fake timers and a synchronous click avoids the delay-based
+// interactions `userEvent` schedules internally. A no-op when the gate or
+// splash never appeared (e.g. an authenticated or auth-unconfigured mock).
+const renderPastEntry = (ui) => {
+  const result = render(ui);
+  const guestBtn = screen.queryByRole('button', { name: 'Try it first — free →' });
+  if (guestBtn) fireEvent.click(guestBtn);
+  const levelBtn = screen.queryByRole('button', { name: /Beginner \(A1\)/ });
+  if (levelBtn) fireEvent.click(levelBtn);
+  return result;
 };
 
 /** Seed ~14 qualifying days so streak + freeze chip both render. */
@@ -40,12 +85,12 @@ describe('App navigation a11y', () => {
     // jsdom has no scrollIntoView (ChatTab auto-scrolls on mount)
     Element.prototype.scrollIntoView = vi.fn();
     // Skip the onboarding splash so the main shell renders
-    localStorage.setItem('deutsch-onboarded', '1');
+    localStorage.setItem('deutsch-level', 'a1');
   });
 
   it('desktop nav exposes an accessible name for every tab', () => {
     setViewportWidth(1280);
-    render(<App />);
+    renderPastEntry(<App />);
     const nav = within(screen.getByRole('navigation'));
     for (const name of TAB_NAMES) {
       expect(nav.getByRole('button', { name })).toBeInTheDocument();
@@ -54,7 +99,7 @@ describe('App navigation a11y', () => {
 
   it('mobile icon-only nav buttons keep their accessible names', () => {
     setViewportWidth(375);
-    render(<App />);
+    renderPastEntry(<App />);
     const nav = within(screen.getByRole('navigation'));
     for (const name of TAB_NAMES) {
       const button = nav.getByRole('button', { name });
@@ -66,7 +111,7 @@ describe('App navigation a11y', () => {
 
   it('marks only the active tab with aria-current', () => {
     setViewportWidth(1280);
-    render(<App />);
+    renderPastEntry(<App />);
     const nav = within(screen.getByRole('navigation'));
     expect(nav.getByRole('button', { name: 'Chat' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('button', { name: 'Stats' })).not.toHaveAttribute('aria-current');
@@ -87,19 +132,19 @@ describe('header at mobile width', () => {
 
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
-    localStorage.setItem('deutsch-onboarded', '1');
+    localStorage.setItem('deutsch-level', 'a1');
   });
 
   it('drops the goal ring from the header on mobile', () => {
     setViewportWidth(375);
-    render(<App />);
+    renderPastEntry(<App />);
     const header = within(screen.getByRole('banner'));
     expect(header.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
   });
 
   it('keeps the goal ring in the header on desktop', () => {
     setViewportWidth(1280);
-    render(<App />);
+    renderPastEntry(<App />);
     const header = within(screen.getByRole('banner'));
     expect(header.getByTitle(/Daily goal/)).toBeInTheDocument();
   });
@@ -109,7 +154,7 @@ describe('header at mobile width', () => {
     async (tabName) => {
       setViewportWidth(375);
       const user = userEvent.setup();
-      render(<App />);
+      renderPastEntry(<App />);
       await user.click(
         within(screen.getByRole('navigation')).getByRole('button', { name: tabName })
       );
@@ -126,7 +171,7 @@ describe('header at mobile width', () => {
     // 480 is inside mobile (< bp.mobile) but past bp.tiny, so the wordmark
     // is present and still viewport-scaled.
     setViewportWidth(480);
-    render(<App />);
+    renderPastEntry(<App />);
     const header = screen.getByRole('banner');
     expect(header.style.padding).toBe('12px 10px');
     const wordmark = within(header)
@@ -140,13 +185,13 @@ describe('header at mobile width', () => {
   // — the signal GoalStrip does not replicate — while freeing ~70px.
   it('omits the STREAK caption on mobile', () => {
     setViewportWidth(375);
-    render(<App />);
+    renderPastEntry(<App />);
     expect(within(screen.getByRole('banner')).queryByText('STREAK')).not.toBeInTheDocument();
   });
 
   it('keeps the STREAK caption on desktop', () => {
     setViewportWidth(1280);
-    render(<App />);
+    renderPastEntry(<App />);
     expect(within(screen.getByRole('banner')).getByText('STREAK')).toBeInTheDocument();
   });
 
@@ -157,7 +202,7 @@ describe('header at mobile width', () => {
   // so the wordmark, the one decorative item, is dropped instead.
   it('drops the wordmark below 360px', () => {
     setViewportWidth(320);
-    render(<App />);
+    renderPastEntry(<App />);
     expect(within(screen.getByRole('banner')).queryByText(/Deutsch/)).not.toBeInTheDocument();
   });
 
@@ -166,18 +211,18 @@ describe('header at mobile width', () => {
   // bp.tiny (414), where the header measurably fits again.
   it('hides the wordmark across the phone range and restores it at bp.tiny', () => {
     setViewportWidth(390);
-    const { unmount } = render(<App />);
+    const { unmount } = renderPastEntry(<App />);
     expect(within(screen.getByRole('banner')).queryByText(/Deutsch/)).toBeNull();
     unmount();
 
     setViewportWidth(414);
-    render(<App />);
+    renderPastEntry(<App />);
     expect(within(screen.getByRole('banner')).getByText(/Deutsch/)).toBeInTheDocument();
   });
 
   it('keeps the full-size wordmark and chrome on desktop', () => {
     setViewportWidth(1280);
-    render(<App />);
+    renderPastEntry(<App />);
     const header = screen.getByRole('banner');
     expect(header.style.padding).toBe('20px 32px');
     const wordmark = within(header)
@@ -190,14 +235,14 @@ describe('header at mobile width', () => {
   // the two practice tabs it was built for.
   it('leaves the strip off the chat tab on desktop, where the ring covers it', () => {
     setViewportWidth(1280);
-    render(<App />);
+    renderPastEntry(<App />);
     expect(goalStrip()).not.toBeInTheDocument();
     expect(within(screen.getByRole('banner')).getByTitle(/Daily goal/)).toBeInTheDocument();
   });
 
   it('exposes Appearance from the header ThemeChip on every viewport', () => {
     setViewportWidth(390);
-    render(<App />);
+    renderPastEntry(<App />);
     expect(
       within(screen.getByRole('banner')).getByRole('button', { name: /^appearance$/i })
     ).toBeInTheDocument();
@@ -208,7 +253,7 @@ describe('header at mobile width', () => {
     (width) => {
       setViewportWidth(width);
       seedPopulatedAccount();
-      render(<App />);
+      renderPastEntry(<App />);
       const header = screen.getByRole('banner');
       expect(within(header).getByTitle(/streak freeze/i)).toBeInTheDocument();
       expect(within(header).getByRole('button', { name: /^appearance$/i })).toBeInTheDocument();
@@ -221,7 +266,7 @@ describe('header at mobile width', () => {
   it('no longer offers Appearance inside Stats (header is the single control)', async () => {
     setViewportWidth(1280);
     const user = userEvent.setup();
-    render(<App />);
+    renderPastEntry(<App />);
     await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
     expect(screen.queryByText(/^Appearance$/i)).not.toBeInTheDocument();
   });
@@ -232,7 +277,7 @@ describe('header at mobile width', () => {
 describe('in-app AuthSheet', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
-    localStorage.setItem('deutsch-onboarded', '1');
+    localStorage.setItem('deutsch-level', 'a1');
     vi.resetModules();
   });
 
@@ -256,7 +301,7 @@ describe('in-app AuthSheet', () => {
     const { default: AppWithAuth } = await import('./App.jsx');
     setViewportWidth(1280);
     const user = userEvent.setup();
-    render(<AppWithAuth />);
+    renderPastEntry(<AppWithAuth />);
 
     await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
     await user.click(screen.getByRole('button', { name: /sign in to sync/i }));
@@ -304,7 +349,7 @@ describe('guest trial wall', () => {
     // the file — clear it so a seeded account from an earlier block cannot
     // decide whether the trial is exhausted here.
     localStorage.clear();
-    localStorage.setItem('deutsch-onboarded', '1');
+    localStorage.setItem('deutsch-level', 'a1');
     vi.resetModules();
   });
 
@@ -339,7 +384,7 @@ describe('guest trial wall', () => {
     }));
     const { default: AppWithAuth } = await import('./App.jsx');
     setViewportWidth(1280);
-    render(<AppWithAuth />);
+    renderPastEntry(<AppWithAuth />);
   }
 
   const wall = () => screen.queryByRole('dialog', { name: 'Save your progress' });
@@ -495,5 +540,136 @@ describe('guest trial wall', () => {
     await user.click(button);
     await user.click(button);
     expect(signInWithGoogle).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('entry gate', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    authMock.configured = true;
+    authMock.status = 'anonymous';
+    authMock.mayHaveSession = false;
+    setViewportWidth(1280);
+    setLevelBoostEnabled(false);
+    authSignOutMock.mockClear();
+  });
+
+  const gate = () => screen.queryByRole('button', { name: 'Try it first — free →' });
+  const levelPicker = () => screen.queryByRole('button', { name: /Beginner \(A1\)/ });
+
+  it('shows the gate to a guest who has already onboarded once', () => {
+    // The whole point of the change: a device flag must not hide the gate.
+    localStorage.setItem('deutsch-onboarded', '1');
+    localStorage.setItem('deutsch-level', 'a1');
+    render(<App />);
+    expect(gate()).toBeInTheDocument();
+  });
+
+  it('shows the level picker after the guest continues', async () => {
+    localStorage.setItem('deutsch-level', 'a1');
+    render(<App />);
+    await userEvent.click(gate());
+    expect(levelPicker()).toBeInTheDocument();
+  });
+
+  it('lets a signed-in user straight through to the app', () => {
+    authMock.status = 'authenticated';
+    authMock.mayHaveSession = true;
+    localStorage.setItem('deutsch-level', 'a1');
+    render(<App />);
+    expect(gate()).toBeNull();
+    expect(levelPicker()).toBeNull();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+  });
+
+  it('does not flash the gate while a session is still resolving', () => {
+    // A device holding an auth token is probably signed in. Rendering the gate
+    // during 'loading' would blink it in their face on every single load.
+    authMock.status = 'loading';
+    authMock.mayHaveSession = true;
+    localStorage.setItem('deutsch-level', 'a1');
+    render(<App />);
+    expect(gate()).toBeNull();
+  });
+
+  it('shows the gate during loading when the device holds no token', () => {
+    authMock.status = 'loading';
+    authMock.mayHaveSession = false;
+    localStorage.setItem('deutsch-level', 'a1');
+    render(<App />);
+    expect(gate()).toBeInTheDocument();
+  });
+
+  it('skips the gate entirely when no auth backend is configured', () => {
+    // A gate whose only affordance is "continue" is the dead-affordance bug
+    // PR #79 already fixed once.
+    authMock.configured = false;
+    localStorage.setItem('deutsch-level', 'a1');
+    render(<App />);
+    expect(gate()).toBeNull();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+  });
+
+  it('shows the level picker to anyone who has never chosen a level', () => {
+    authMock.configured = false;
+    // The storage shim is one module-level instance shared by every test in
+    // the file (see 'guest trial wall' above) — earlier tests in this very
+    // describe set 'deutsch-level', so it must be cleared to exercise "never
+    // chosen a level".
+    localStorage.removeItem('deutsch-level');
+    render(<App />);
+    expect(levelPicker()).toBeInTheDocument();
+  });
+
+  it('enables the level XP boost for a signed-in user', () => {
+    authMock.status = 'authenticated';
+    authMock.mayHaveSession = true;
+    localStorage.setItem('deutsch-level', 'a1');
+    render(<App />);
+    expect(isLevelBoostEnabled()).toBe(true);
+  });
+
+  it('leaves the boost off for a guest', async () => {
+    localStorage.setItem('deutsch-level', 'a1');
+    render(<App />);
+    await userEvent.click(gate());
+    expect(isLevelBoostEnabled()).toBe(false);
+  });
+
+  // Pins the `gateDismissed` latch reset in App.jsx's onSignOut handlers.
+  // The latch is component state set by handleGuest/handleAuthDone — those
+  // are the only ways it becomes true — so this test drives the real path:
+  // dismiss the gate (as a signed-in user's callback would), then click the
+  // actual "Sign out" control AccountSection renders, then flip the mocked
+  // auth status the way a real sign-out event would. An earlier version of
+  // this test only flipped authMock.status without ever setting the latch
+  // or clicking a real control, so it passed identically whether or not the
+  // reset existed — it could not fail against the unfixed code.
+  it('re-gates and drops the boost when a signed-in user signs out via the real control', async () => {
+    localStorage.setItem('deutsch-level', 'a1');
+    const user = userEvent.setup();
+    const { rerender } = render(<App />);
+
+    // Latch gateDismissed the way a real signed-in session does, then land
+    // on the level picker and pick a level to reach the app shell.
+    await user.click(gate());
+    await user.click(levelPicker());
+
+    authMock.status = 'authenticated';
+    authMock.mayHaveSession = true;
+    rerender(<App />);
+    expect(gate()).toBeNull();
+    expect(isLevelBoostEnabled()).toBe(true);
+
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(authSignOutMock).toHaveBeenCalled();
+
+    authMock.status = 'anonymous';
+    authMock.mayHaveSession = false;
+    rerender(<App />);
+
+    expect(gate()).toBeInTheDocument();
+    expect(isLevelBoostEnabled()).toBe(false);
   });
 });

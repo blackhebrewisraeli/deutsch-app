@@ -20,12 +20,15 @@ import ReviewFeed from './stats/ReviewFeed';
 import VocabSrsWidget from './stats/VocabSrsWidget';
 import LevelCard from './gamification/LevelCard';
 import GoalPicker from './gamification/GoalPicker';
+import LevelPicker from './gamification/LevelPicker';
 import BadgeGrid from './gamification/BadgeGrid';
 import AccountSection from './stats/AccountSection';
 import LeaderboardSection from './stats/LeaderboardSection';
 import ProfileCard from './stats/ProfileCard';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
 import { isAuthConfigured } from '../lib/auth.js';
+import { writeLevel, LEVEL_NAMES } from '../lib/levelPref';
+import { LEVEL_MULTIPLIERS } from '../lib/gameConfig';
 
 // Section 05 — practice dashboard. Reads the forward-only event log from
 // storage and composes six widgets (A–F). All aggregation lives in lib/stats
@@ -39,6 +42,9 @@ export default function StatsTab({
   onExport,
   onDelete,
   lastSyncedAt = null,
+  level = 'a1',
+  onLevelChange = () => {},
+  levelBoost = false,
 }) {
   // Pull state from storage every render so today's counters reflect events
   // from the other tabs without app-wide state plumbing.
@@ -208,6 +214,30 @@ export default function StatsTab({
                 >
                   {(state.gamification?.soundOn ?? false) ? '🔊 SOUND: ON' : '🔇 SOUND: OFF'}
                 </button>
+              </div>
+              <div style={{ marginTop: SPACE[5] }}>
+                <SectionLabel num="·" text="Practice level" />
+                <LevelPicker
+                  level={level}
+                  onPick={(next) => {
+                    writeLevel(next);
+                    onLevelChange(next);
+                  }}
+                />
+                <div
+                  style={{
+                    marginTop: SPACE[3],
+                    fontFamily: FONTS.mono,
+                    fontSize: FONT_SIZE.tag,
+                    letterSpacing: LETTER_SPACING.caps,
+                    color: COLORS.mute,
+                  }}
+                >
+                  {LEVEL_NAMES[level] ?? ''}
+                  {levelBoost && (LEVEL_MULTIPLIERS[level] ?? 1) > 1
+                    ? ` · ×${LEVEL_MULTIPLIERS[level]} XP per answer`
+                    : ''}
+                </div>
               </div>
               <div style={{ marginTop: SPACE[5] }}>
                 <SectionLabel num="·" text="Badges" />

@@ -42,6 +42,19 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
     return () => clearTimeout(t);
   }, [kind, phase, status, onSignedIn]);
 
+  useEffect(() => {
+    // The success copy has no button (action: null), so nothing else ever
+    // clears this phase. Without a self-dismiss the overlay sits forever
+    // over whatever is underneath — on the splash branch that's the level
+    // picker, which a brand-new signup could then never reach. This effect
+    // is separate from the one above so that the transition INTO 'success'
+    // (which changes `phase`, re-running that effect) can't clean up a
+    // timer this effect just set.
+    if (phase !== 'success') return undefined;
+    const dismiss = setTimeout(() => setPhase(null), 1200);
+    return () => clearTimeout(dismiss);
+  }, [phase]);
+
   if (!isAuthConfigured() || !phase) return null;
 
   let copy;

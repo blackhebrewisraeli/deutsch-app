@@ -74,6 +74,38 @@ describe('AuthCallbackLanding', () => {
     expect(onSignedIn).toHaveBeenCalled();
   });
 
+  // Regression: the success phase used to have no self-clearing mechanism —
+  // only the (absent, action: null) button's onClick ever called
+  // setPhase(null). On the splash branch, handleAuthDone doesn't change which
+  // top-level branch renders, so the overlay never unmounted and permanently
+  // blocked the level picker underneath. It must dismiss itself.
+  it('auto-dismisses the success overlay after a short delay', () => {
+    vi.useFakeTimers();
+    try {
+      authCallbackKind.mockReturnValue('pending');
+      const onSignedIn = vi.fn();
+      const { rerender } = render(
+        <AuthCallbackLanding status="loading" onSignedIn={onSignedIn} onRequestNew={() => {}} />
+      );
+      rerender(
+        <AuthCallbackLanding
+          status="authenticated"
+          onSignedIn={onSignedIn}
+          onRequestNew={() => {}}
+        />
+      );
+      expect(screen.getByText('Signed in')).toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(1199));
+      expect(screen.getByText('Signed in')).toBeInTheDocument();
+
+      act(() => vi.advanceTimersByTime(1));
+      expect(screen.queryByText('Signed in')).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   // Relabelled from "Email me a sign-in code": the sheet it opens now offers
   // Google as well, so naming one method would name the wrong one.
   it('offers a Sign in again CTA that calls onRequestNew', async () => {
