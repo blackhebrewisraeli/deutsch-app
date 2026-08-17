@@ -83,6 +83,20 @@ distinguishes "definitely a guest" from "loading, probably signed in."
 **F6 — four tests use `deutsch-onboarded` as a skip-onboarding fixture.**
 `App.test.jsx:43,90,235,307`. They will have to change; see §7.
 
+**F7 — `isAuthConfigured()` is true in local tests and false in CI.** It reads
+`import.meta.env.VITE_SUPABASE_URL / _ANON_KEY` (`auth.js:8-13`), and Vitest
+runs through the Vite config, which loads `.env`. The developer's `.env` has
+both set; CI's `verify` job declares only `HUSKY: 0` (`ci.yml:12-13`), and the
+contrast-audit job omits Supabase env deliberately (`ci.yml:43`).
+
+Probed, not assumed: a throwaway test printing `isAuthConfigured()` returned
+`true` locally.
+
+**Consequence:** any test whose outcome depends on `isAuthConfigured()` passes
+on one machine and fails on the other. Every test touching the gate must
+`vi.mock` the auth module so the branch under test is chosen explicitly. This
+also rules out `isAuthConfigured()` as the seed for `showSplash` — see §4.1.
+
 ## 3 · Decisions taken
 
 Recorded here because each was chosen against a stated alternative.
@@ -117,12 +131,9 @@ Each clause is load-bearing:
 - **`!gateDismissedThisLoad`** — component state, not storage. A guest who
   clicks "Try it first" reaches the app for this page load and sees the gate
   again next visit, which is the whole point of the change.
-- **`isAuthConfigured()`** — with no Supabase env (local dev, CI) the gate would
-  render with nothing but a "continue" link. That is the dead-affordance bug PR
-  #79 already fixed once. Skip the gate entirely there. Because nothing then
-  completes a gate flow to raise `showSplash`, the initialiser below seeds it
-  true instead, so an unconfigured environment gets the level picker on every
-  load — which is what "every new session" means where no session exists.
+- **`isAuthConfigured()`** — with no Supabase env (CI, a fresh clone without a
+  `.env`) the gate would render with nothing but a "continue" link. That is the
+  dead-affordance bug PR #79 already fixed once. Skip the gate entirely there.
 - **`authStatus === 'anonymous'`** — the settled guest case.
 - **the `loading && !mayHaveSession()` clause** — `useAuth` starts at
   `'loading'` for everyone and settles on the first effect, which runs after
@@ -130,8 +141,9 @@ Each clause is load-bearing:
   With it, a device holding no auth token gets the gate on the first paint,
   while a device that might have a session renders the app and never blinks.
 
-`showSplash` moves to `useState(() => !isAuthConfigured())` and is set true when
-the gate flow completes — three entry points, all existing:
+`showSplash` moves to `useState(() => !localStorage.getItem('deutsch-level'))`
+and is additionally set true when the gate flow completes — three entry points,
+all existing:
 
 | trigger | handler |
 |---|---|
@@ -140,6 +152,14 @@ the gate flow completes — three entry points, all existing:
 | OAuth return | `AuthCallbackLanding onSignedIn` → `handleAuthDone` (`App.jsx:332`) |
 
 A returning signed-in user therefore sees neither screen, which is D1 and D2.
+
+The initialiser keys on `deutsch-level`, not on `isAuthConfigured()`, for two
+reasons. It is env-independent, so F7 cannot make the splash appear locally and
+vanish in CI. And it states the real precondition: someone who has never chosen
+a level needs the picker regardless of how they arrived — including an account
+created on another device whose level never synced (`deutsch-level` is
+device-local). Where no auth backend exists, this also preserves today's
+behaviour exactly: picker on first run, straight to the app after.
 
 `deutsch-onboarded` keeps being written by `SplashScreen`. AGENTS.md forbids
 renaming or migrating storage keys, and an unread write costs nothing.
@@ -174,9 +194,12 @@ Rendered in `StatsTab` beside Daily goal, under a `SectionLabel`. Picking writes
 the same three steps `SplashScreen.handleSelect` already performs, so the write
 path should be extracted to one helper rather than duplicated.
 
-Once PR C lands, `detail` gains the multiplier (`'A1 · ×1'`) for account
-holders, so the gamification incentive is visible at the point of choice. That
-is a PR C change to a PR B component, not a second component.
+Once PR C lands, a caption under the picker names the active level's multiplier
+for account holders (`×1.5 XP per answer`), so the incentive is visible at the
+point of choice. It is a caption rather than a third line inside the picker
+because `SegmentedPicker` renders `detail` in the display face at
+`FONT_SIZE.xl` across three columns, and `A1 · ×1.25` in that slot overflows at
+320px — the width AGENTS.md requires verifying.
 
 ## 6 · PR C — XP by level
 
@@ -220,9 +243,14 @@ history would change past days' goal-qualification and therefore the streak.
 
 ## 7 · Testing
 
-**PR A.** The four fixtures in F6 stop working, because the condition they
-target no longer exists. They become an auth-status fixture instead — the tests
-themselves assert rendered DOM, so only the setup changes. New cases:
+**PR A.** The four fixtures in F6 stop working, because the key they set is no
+longer read. Each becomes `localStorage.setItem('deutsch-level', 'a1')` — the
+tests themselves assert rendered DOM, so only the setup line changes.
+
+Every new gate test must `vi.mock('./lib/auth.js')` and state both
+`isAuthConfigured()` and the `useAuth()` status it wants. Per F7, a test that
+leaves either to the ambient environment exercises the opposite branch in CI
+from the one it exercises locally. New cases:
 
 - guest (no token, auth configured) → gate renders
 - gate dismissed → splash renders → app renders
