@@ -7,12 +7,13 @@ import {
   RADIUS,
   SHADOW,
 } from '../lib/theme';
-import { stampSettings } from '../lib/settingsStamp';
+import { writeLevel } from '../lib/levelPref';
 
 export default function SplashScreen({ onComplete }) {
   const handleSelect = (level) => {
-    localStorage.setItem('deutsch-level', level);
-    stampSettings();
+    writeLevel(level);
+    // Nothing reads this key after the gate change; kept because AGENTS.md
+    // forbids removing or migrating a storage key.
     localStorage.setItem('deutsch-onboarded', '1');
     onComplete(level);
   };

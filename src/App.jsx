@@ -3,6 +3,7 @@ import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'luci
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
+import { readLevel, writeLevel } from './lib/levelPref';
 import { getReviewItems, todayKey, TABS } from './lib/stats';
 import { trialStatus } from './lib/trial';
 import { getDueCount } from './lib/srs';
@@ -417,13 +418,7 @@ export default function App() {
   }, [user?.id]);
 
   // Onboarding + level
-  const [level, setLevel] = useState(() => {
-    const stored = localStorage.getItem('deutsch-level');
-    if (stored === 'beginner' || stored === 'a1') return 'a1';
-    if (stored === 'a2') return 'a2';
-    if (stored === 'intermediate' || stored === 'b1') return 'b1';
-    return 'a1';
-  });
+  const [level, setLevel] = useState(readLevel);
 
   const handleSplashComplete = (chosenLevel) => {
     setLevel(chosenLevel);
@@ -460,12 +455,7 @@ export default function App() {
   const handleReview = (item) => {
     if (item.tab === 'translate' && item.context && item.context !== level) {
       setLevel(item.context);
-      try {
-        localStorage.setItem('deutsch-level', item.context);
-        stampSettings();
-      } catch {
-        // ignore — best-effort persistence
-      }
+      writeLevel(item.context);
     }
     setReviewTarget(item);
     setTab(item.tab);
