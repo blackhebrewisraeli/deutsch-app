@@ -631,4 +631,20 @@ describe('entry gate', () => {
     await userEvent.click(gate());
     expect(isLevelBoostEnabled()).toBe(false);
   });
+
+  it('re-gates and drops the boost when a signed-in user signs out', () => {
+    authMock.status = 'authenticated';
+    authMock.mayHaveSession = true;
+    localStorage.setItem('deutsch-level', 'a1');
+    const { rerender } = render(<App />);
+    expect(gate()).toBeNull();
+    expect(isLevelBoostEnabled()).toBe(true);
+
+    authMock.status = 'anonymous';
+    authMock.mayHaveSession = false;
+    rerender(<App />);
+
+    expect(gate()).toBeInTheDocument();
+    expect(isLevelBoostEnabled()).toBe(false);
+  });
 });

@@ -545,7 +545,13 @@ export default function App() {
     );
   }
 
-  if (showSplash) return <SplashScreen onComplete={handleSplashComplete} />;
+  if (showSplash)
+    return (
+      <>
+        <SplashScreen onComplete={handleSplashComplete} />
+        {authOverlay}
+      </>
+    );
 
   return (
     <div
@@ -655,7 +661,10 @@ export default function App() {
           <AccountChip
             user={user}
             onSignIn={requestSignIn}
-            onSignOut={() => signOut()}
+            onSignOut={() => {
+              setGateDismissed(false);
+              signOut();
+            }}
             pending={syncStatus.pending}
           />
         </div>
@@ -837,12 +846,16 @@ export default function App() {
             onReview={handleReview}
             user={user}
             onSignIn={requestSignIn}
-            onSignOut={() => signOut()}
+            onSignOut={() => {
+              setGateDismissed(false);
+              signOut();
+            }}
             onExport={handleExport}
             onDelete={handleDelete}
             lastSyncedAt={syncStatus.lastSyncedAt}
             level={level}
             onLevelChange={setLevel}
+            levelBoost={authStatus === 'authenticated'}
           />
         )}
       </main>

@@ -27,8 +27,7 @@ import LeaderboardSection from './stats/LeaderboardSection';
 import ProfileCard from './stats/ProfileCard';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
 import { isAuthConfigured } from '../lib/auth.js';
-import { writeLevel } from '../lib/levelPref';
-import { isLevelBoostEnabled } from '../lib/xpEntitlement';
+import { writeLevel, LEVEL_NAMES } from '../lib/levelPref';
 import { LEVEL_MULTIPLIERS } from '../lib/gameConfig';
 
 // Section 05 — practice dashboard. Reads the forward-only event log from
@@ -45,6 +44,7 @@ export default function StatsTab({
   lastSyncedAt = null,
   level = 'a1',
   onLevelChange = () => {},
+  levelBoost = false,
 }) {
   // Pull state from storage every render so today's counters reflect events
   // from the other tabs without app-wide state plumbing.
@@ -224,19 +224,20 @@ export default function StatsTab({
                     onLevelChange(next);
                   }}
                 />
-                {isLevelBoostEnabled() && (
-                  <div
-                    style={{
-                      marginTop: SPACE[3],
-                      fontFamily: FONTS.mono,
-                      fontSize: FONT_SIZE.tag,
-                      letterSpacing: LETTER_SPACING.caps,
-                      color: COLORS.mute,
-                    }}
-                  >
-                    ×{LEVEL_MULTIPLIERS[level] ?? 1} XP per answer
-                  </div>
-                )}
+                <div
+                  style={{
+                    marginTop: SPACE[3],
+                    fontFamily: FONTS.mono,
+                    fontSize: FONT_SIZE.tag,
+                    letterSpacing: LETTER_SPACING.caps,
+                    color: COLORS.mute,
+                  }}
+                >
+                  {LEVEL_NAMES[level] ?? ''}
+                  {levelBoost && (LEVEL_MULTIPLIERS[level] ?? 1) > 1
+                    ? ` · ×${LEVEL_MULTIPLIERS[level]} XP per answer`
+                    : ''}
+                </div>
               </div>
               <div style={{ marginTop: SPACE[5] }}>
                 <SectionLabel num="·" text="Badges" />

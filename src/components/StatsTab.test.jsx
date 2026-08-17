@@ -1,8 +1,7 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import StatsTab from './StatsTab';
-import { setLevelBoostEnabled } from '../lib/xpEntitlement';
 
 // --- Module mocks ---
 
@@ -57,10 +56,6 @@ vi.mock('../lib/leagues.js', () => ({
   TIER_NAMES: ['Bronze'],
 }));
 
-beforeEach(() => {
-  setLevelBoostEnabled(false);
-});
-
 describe('StatsTab — Leagues flag OFF', () => {
   it('hides Leagues nav button when LEAGUES_ENABLED is false', async () => {
     vi.resetModules();
@@ -97,25 +92,35 @@ describe('StatsTab — Practice level', () => {
   it('offers a level picker and reports the chosen level', async () => {
     const onLevelChange = vi.fn();
     render(<StatsTab level="a1" onLevelChange={onLevelChange} />);
-    await userEvent.click(screen.getByRole('button', { name: /INTERMEDIATE/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'B1' }));
     expect(onLevelChange).toHaveBeenCalledWith('b1');
   });
 
   it('persists the chosen level', async () => {
     render(<StatsTab level="a1" onLevelChange={() => {}} />);
-    await userEvent.click(screen.getByRole('button', { name: /ELEMENTARY/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'A2' }));
     expect(localStorage.getItem('deutsch-level')).toBe('a2');
   });
 
-  it('names the level XP bonus for an account holder', () => {
-    setLevelBoostEnabled(true);
-    render(<StatsTab level="b1" onLevelChange={() => {}} />);
+  it('names the level for a guest, with no bonus promised', () => {
+    render(<StatsTab level="a1" onLevelChange={() => {}} />);
+    expect(screen.getByText('Beginner')).toBeInTheDocument();
+    expect(screen.queryByText(/XP per answer/)).toBeNull();
+  });
+
+  it('names the level XP bonus for an account holder above A1', () => {
+    render(<StatsTab level="b1" onLevelChange={() => {}} levelBoost />);
     expect(screen.getByText(/×1\.5 XP per answer/)).toBeInTheDocument();
   });
 
   it('promises no bonus to a guest', () => {
-    setLevelBoostEnabled(false);
     render(<StatsTab level="b1" onLevelChange={() => {}} />);
+    expect(screen.queryByText(/XP per answer/)).toBeNull();
+  });
+
+  it('names the level but promises no bonus for an A1 account holder', () => {
+    render(<StatsTab level="a1" onLevelChange={() => {}} levelBoost />);
+    expect(screen.getByText('Beginner')).toBeInTheDocument();
     expect(screen.queryByText(/XP per answer/)).toBeNull();
   });
 });

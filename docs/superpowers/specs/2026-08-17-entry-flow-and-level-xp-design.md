@@ -156,10 +156,14 @@ A returning signed-in user therefore sees neither screen, which is D1 and D2.
 The initialiser keys on `deutsch-level`, not on `isAuthConfigured()`, for two
 reasons. It is env-independent, so F7 cannot make the splash appear locally and
 vanish in CI. And it states the real precondition: someone who has never chosen
-a level needs the picker regardless of how they arrived — including an account
-created on another device whose level never synced (`deutsch-level` is
-device-local). Where no auth backend exists, this also preserves today's
-behaviour exactly: picker on first run, straight to the app after.
+a level needs the picker regardless of how they arrived — including a genuinely
+fresh device with no local key and no session yet to pull one from. (An
+account signed in on this device does have its level: sync.js's settings
+payload reads and writes `deutsch-level` alongside the state blob, so the
+level already syncs across a signed-in user's devices — it is only *local*
+presence, not account membership, that the initialiser is seeding off.) Where
+no auth backend exists, this also preserves today's behaviour exactly: picker
+on first run, straight to the app after.
 
 `deutsch-onboarded` keeps being written by `SplashScreen`. AGENTS.md forbids
 renaming or migrating storage keys, and an unread write costs nothing.
@@ -284,7 +288,9 @@ indistinguishable.
 
 - Rebalancing leagues for the D3 skew. Measure first, after real data exists.
 - Per-level daily goals.
-- Making the level picker part of the account rather than the device
-  (`deutsch-level` is device-local; that is Phase 4 storage work).
+- Moving the level into the synced `deutsch-app-state-v1` state blob itself,
+  as opposed to the settings payload it currently rides alongside
+  (`deutsch-level` already syncs via `sync.js`, just outside that blob; moving
+  it inside is Phase 4 storage work).
 - Any change to `resolveThemeMode`'s default — the OS remains the source of
   truth for light versus dark.
