@@ -86,4 +86,14 @@ describe('WelcomeGate', () => {
     expect(screenEl.style.background).not.toBe('var(--c-fg)');
     expect(screenEl.style.color).toBe('var(--c-fg)');
   });
+
+  // jsdom computes no layout, so this asserts the declaration rather than the
+  // rendered box. It still fails if someone drops the rule — which is the
+  // regression that matters: on a phone this link measured 29px tall, under the
+  // 44px iOS minimum, while every button beside it cleared 48px.
+  it('gives the guest link a thumb-sized hit area', () => {
+    render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} />);
+    const guest = screen.getByRole('button', { name: 'Try it first — free →' });
+    expect(Number.parseInt(guest.style.minHeight, 10)).toBeGreaterThanOrEqual(44);
+  });
 });
