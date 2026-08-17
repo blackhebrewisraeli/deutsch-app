@@ -30,3 +30,8 @@ export const MULTIPLIER_TIERS = [
   { minStreak: 14, mult: 1.75 },
   { minStreak: 30, mult: 2.0 },
 ];
+
+// XP multiplier by practice level — a harder level pays more for the same
+// answer. Account holders only (see lib/xpEntitlement.js); composes
+// multiplicatively with MULTIPLIER_TIERS above.
+export const LEVEL_MULTIPLIERS = { a1: 1, a2: 1.25, b1: 1.5 };

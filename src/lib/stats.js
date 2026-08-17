@@ -17,7 +17,8 @@
 
 import { loadState, saveState } from './storage';
 import { currentStreak, multiplier } from './streak';
-import { DEFAULT_GOAL, XP_PER_VERDICT } from './gameConfig';
+import { DEFAULT_GOAL, XP_PER_VERDICT, LEVEL_MULTIPLIERS } from './gameConfig';
+import { isLevelBoostEnabled } from './xpEntitlement';
 
 export const TABS = ['chat', 'alphabet', 'vocab', 'translate'];
 export const LEVELS = ['a1', 'a2', 'b1'];
@@ -239,7 +240,11 @@ export function recordEvent(tab, level, verdict) {
     const goal = state.gamification?.goal ?? DEFAULT_GOAL;
     const frozenDays = state.gamification?.frozenDays ?? {};
     const streakLen = currentStreak(state.daily ?? {}, goal, today, frozenDays);
-    const mult = multiplier(streakLen);
+    const streakMult = multiplier(streakLen);
+    // Unknown level → ×1, never NaN: `level` reaches here straight from a
+    // component prop.
+    const levelMult = isLevelBoostEnabled() ? (LEVEL_MULTIPLIERS[level] ?? 1) : 1;
+    const mult = streakMult * levelMult;
     const base = XP_PER_VERDICT[verdict] ?? 0;
     const bonus = Math.round(base * (mult - 1));
     const daily = applyEvent(state.daily ?? {}, today, tab, level, verdict, bonus);
