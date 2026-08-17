@@ -3,6 +3,7 @@ import { render, screen, within, act, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import { todayKey } from './lib/stats';
+import { isLevelBoostEnabled, setLevelBoostEnabled } from './lib/xpEntitlement';
 
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 
@@ -546,6 +547,7 @@ describe('entry gate', () => {
     authMock.status = 'anonymous';
     authMock.mayHaveSession = false;
     setViewportWidth(1280);
+    setLevelBoostEnabled(false);
   });
 
   const gate = () => screen.queryByRole('button', { name: 'Try it first — free →' });
@@ -613,5 +615,20 @@ describe('entry gate', () => {
     localStorage.removeItem('deutsch-level');
     render(<App />);
     expect(levelPicker()).toBeInTheDocument();
+  });
+
+  it('enables the level XP boost for a signed-in user', () => {
+    authMock.status = 'authenticated';
+    authMock.mayHaveSession = true;
+    localStorage.setItem('deutsch-level', 'a1');
+    render(<App />);
+    expect(isLevelBoostEnabled()).toBe(true);
+  });
+
+  it('leaves the boost off for a guest', async () => {
+    localStorage.setItem('deutsch-level', 'a1');
+    render(<App />);
+    await userEvent.click(gate());
+    expect(isLevelBoostEnabled()).toBe(false);
   });
 });

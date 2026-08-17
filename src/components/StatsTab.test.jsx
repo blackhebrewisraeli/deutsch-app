@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import StatsTab from './StatsTab';
+import { setLevelBoostEnabled } from '../lib/xpEntitlement';
 
 // --- Module mocks ---
 
@@ -56,6 +57,10 @@ vi.mock('../lib/leagues.js', () => ({
   TIER_NAMES: ['Bronze'],
 }));
 
+beforeEach(() => {
+  setLevelBoostEnabled(false);
+});
+
 describe('StatsTab — Leagues flag OFF', () => {
   it('hides Leagues nav button when LEAGUES_ENABLED is false', async () => {
     vi.resetModules();
@@ -100,5 +105,17 @@ describe('StatsTab — Practice level', () => {
     render(<StatsTab level="a1" onLevelChange={() => {}} />);
     await userEvent.click(screen.getByRole('button', { name: /ELEMENTARY/ }));
     expect(localStorage.getItem('deutsch-level')).toBe('a2');
+  });
+
+  it('names the level XP bonus for an account holder', () => {
+    setLevelBoostEnabled(true);
+    render(<StatsTab level="b1" onLevelChange={() => {}} />);
+    expect(screen.getByText(/×1\.5 XP per answer/)).toBeInTheDocument();
+  });
+
+  it('promises no bonus to a guest', () => {
+    setLevelBoostEnabled(false);
+    render(<StatsTab level="b1" onLevelChange={() => {}} />);
+    expect(screen.queryByText(/XP per answer/)).toBeNull();
   });
 });

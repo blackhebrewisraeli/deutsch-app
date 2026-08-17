@@ -52,6 +52,7 @@ import {
   humanAuthError,
 } from './lib/auth';
 import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
+import { setLevelBoostEnabled } from './lib/xpEntitlement';
 import { useSyncStatus } from './lib/useSyncStatus';
 import { useLeagueRewards } from './lib/useLeagueRewards';
 import Confetti from './components/ui/Confetti';
@@ -416,6 +417,12 @@ export default function App() {
     window.addEventListener('deutsch:progress', onProgress);
     return () => window.removeEventListener('deutsch:progress', onProgress);
   }, [user?.id]);
+
+  // The per-level XP multiplier is an account benefit. Driven off authStatus
+  // rather than `user` so a sign-out turns it off in the same render.
+  useEffect(() => {
+    setLevelBoostEnabled(authStatus === 'authenticated');
+  }, [authStatus]);
 
   // Onboarding + level
   const [level, setLevel] = useState(readLevel);

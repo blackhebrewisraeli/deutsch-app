@@ -28,6 +28,8 @@ import ProfileCard from './stats/ProfileCard';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
 import { isAuthConfigured } from '../lib/auth.js';
 import { writeLevel } from '../lib/levelPref';
+import { isLevelBoostEnabled } from '../lib/xpEntitlement';
+import { LEVEL_MULTIPLIERS } from '../lib/gameConfig';
 
 // Section 05 — practice dashboard. Reads the forward-only event log from
 // storage and composes six widgets (A–F). All aggregation lives in lib/stats
@@ -222,6 +224,19 @@ export default function StatsTab({
                     onLevelChange(next);
                   }}
                 />
+                {isLevelBoostEnabled() && (
+                  <div
+                    style={{
+                      marginTop: SPACE[3],
+                      fontFamily: FONTS.mono,
+                      fontSize: FONT_SIZE.tag,
+                      letterSpacing: LETTER_SPACING.caps,
+                      color: COLORS.mute,
+                    }}
+                  >
+                    ×{LEVEL_MULTIPLIERS[level] ?? 1} XP per answer
+                  </div>
+                )}
               </div>
               <div style={{ marginTop: SPACE[5] }}>
                 <SectionLabel num="·" text="Badges" />
