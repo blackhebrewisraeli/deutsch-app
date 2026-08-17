@@ -18,11 +18,14 @@ const authMock = vi.hoisted(() => ({
 // Mocked rather than inherited because isAuthConfigured() reads
 // import.meta.env.VITE_SUPABASE_*, which Vitest loads from .env — true on a
 // developer's machine, false in CI. See spec F7.
+const authSignOutMock = vi.hoisted(() => vi.fn());
+
 vi.mock('./lib/auth', async (importOriginal) => ({
   ...(await importOriginal()),
   isAuthConfigured: () => authMock.configured,
   isGoogleAuthConfigured: () => false,
   mayHaveSession: () => authMock.mayHaveSession,
+  signOut: authSignOutMock,
   useAuth: () => ({
     session: null,
     user: authMock.status === 'authenticated' ? { id: 'u1', email: 'a@b.co' } : null,
@@ -548,6 +551,7 @@ describe('entry gate', () => {
     authMock.mayHaveSession = false;
     setViewportWidth(1280);
     setLevelBoostEnabled(false);
+    authSignOutMock.mockClear();
   });
 
   const gate = () => screen.queryByRole('button', { name: 'Try it first — free →' });
@@ -632,13 +636,34 @@ describe('entry gate', () => {
     expect(isLevelBoostEnabled()).toBe(false);
   });
 
-  it('re-gates and drops the boost when a signed-in user signs out', () => {
+  // Pins the `gateDismissed` latch reset in App.jsx's onSignOut handlers.
+  // The latch is component state set by handleGuest/handleAuthDone — those
+  // are the only ways it becomes true — so this test drives the real path:
+  // dismiss the gate (as a signed-in user's callback would), then click the
+  // actual "Sign out" control AccountSection renders, then flip the mocked
+  // auth status the way a real sign-out event would. An earlier version of
+  // this test only flipped authMock.status without ever setting the latch
+  // or clicking a real control, so it passed identically whether or not the
+  // reset existed — it could not fail against the unfixed code.
+  it('re-gates and drops the boost when a signed-in user signs out via the real control', async () => {
+    localStorage.setItem('deutsch-level', 'a1');
+    const user = userEvent.setup();
+    const { rerender } = render(<App />);
+
+    // Latch gateDismissed the way a real signed-in session does, then land
+    // on the level picker and pick a level to reach the app shell.
+    await user.click(gate());
+    await user.click(levelPicker());
+
     authMock.status = 'authenticated';
     authMock.mayHaveSession = true;
-    localStorage.setItem('deutsch-level', 'a1');
-    const { rerender } = render(<App />);
+    rerender(<App />);
     expect(gate()).toBeNull();
     expect(isLevelBoostEnabled()).toBe(true);
+
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
+    await user.click(screen.getByRole('button', { name: 'Sign out' }));
+    expect(authSignOutMock).toHaveBeenCalled();
 
     authMock.status = 'anonymous';
     authMock.mayHaveSession = false;

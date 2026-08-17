@@ -396,6 +396,7 @@ export default function App() {
       });
       if (!res.ok) throw new Error();
       localStorage.clear();
+      setGateDismissed(false);
       await signOut();
     } catch {
       showToast('Could not delete account — try again.');
