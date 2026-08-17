@@ -12,6 +12,17 @@ export function injectGlobalStyles() {
     * { box-sizing: border-box; }
     body { margin: 0; }
     button { font-family: inherit; cursor: pointer; }
+    /* Full-height entry screens (welcome gate, level splash). 100vh on iOS
+       Safari means the viewport WITHOUT the URL bar, so a 100vh element is
+       taller than what you can actually see and its bottom sits behind the
+       browser chrome — verified on a real iPhone, where the splash's gold
+       stripe was cut off. 100dvh is the visible height and tracks the bar as
+       it hides and shows. The 100vh line stays first as the fallback for
+       engines without dvh; both declarations are needed, which is why this is
+       a class and not an inline style. */
+    .entry-screen { min-height: 100vh; min-height: 100dvh; }
+    /* Keep the last stripe's content clear of the home indicator. */
+    .entry-screen-foot { padding-bottom: env(safe-area-inset-bottom, 0px); }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--c-surface-alt); }
     ::-webkit-scrollbar-thumb { background: var(--c-fg); border: 2px solid var(--c-surface-alt); }

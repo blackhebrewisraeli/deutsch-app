@@ -40,4 +40,16 @@ describe('SplashScreen', () => {
     const wordmark = screen.getByText('Sprachschule').previousSibling;
     expect(wordmark.style.color).toBe('var(--c-fg)');
   });
+
+  it('opts into dynamic-viewport sizing', () => {
+    const { container } = render(<SplashScreen onComplete={() => {}} />);
+    expect(container.firstChild).toHaveClass('entry-screen');
+  });
+
+  // The gold stripe is the one that was actually clipped on a real iPhone —
+  // it is last, so it is the one the URL bar and home indicator eat first.
+  it('pads the last stripe clear of the home indicator', () => {
+    const { container } = render(<SplashScreen onComplete={() => {}} />);
+    expect(container.firstChild.lastChild).toHaveClass('entry-screen-foot');
+  });
 });
