@@ -3,7 +3,14 @@ import { serviceClient } from '../../_lib/supabase.js';
 import { settleLeague, currentPeriodStart } from '../../_lib/leagueLogic.js';
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') return sendError(res, 'method_not_allowed', 'Method not allowed');
+  // Vercel Cron triggers a GET, so GET is the method that actually runs this in
+  // production; POST stays for manual/curl runs. The guard deliberately sits
+  // ABOVE nothing security-relevant — the CRON_SECRET check below is the only
+  // thing protecting this endpoint, and it applies to both methods. Rejecting
+  // GET here is what silently broke every scheduled settle since launch.
+  if (req.method !== 'GET' && req.method !== 'POST') {
+    return sendError(res, 'method_not_allowed', 'Method not allowed');
+  }
 
   const secret = process.env.CRON_SECRET;
   const header = req.headers?.authorization ?? '';
