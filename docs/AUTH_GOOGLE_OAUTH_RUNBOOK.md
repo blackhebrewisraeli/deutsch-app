@@ -4,13 +4,22 @@
 Supabase or Vercel. None of them can be done from the repo, and nothing in the
 codebase can verify them — the code ships dark until they are complete.
 
+Status: **done, and live in production since 2026-08-17.** Kept as the
+reference for re-running this elsewhere, and for the traps each step hides.
+
 Companion to Phase D of
 `docs/superpowers/specs/2026-08-02-auth-overhaul-design.md`.
 
 ## State today
 
-The button, `signInWithGoogle()`, and the callback copy are all merged and
-inert. `isGoogleAuthConfigured()` is `isAuthConfigured() && VITE_GOOGLE_AUTH_ENABLED === 'true'`,
+**LIVE in production since 2026-08-17.** Steps 1–7 are complete, the consent
+screen is **published**, and the §8 checks below have passed — including the
+auto-link check, which is no longer an assumption (see that section).
+
+Keep reading anyway if you are re-running this for another environment or
+another project; the traps are all still true.
+
+`isGoogleAuthConfigured()` is `isAuthConfigured() && VITE_GOOGLE_AUTH_ENABLED === 'true'`,
 and `GoogleButton` renders `null` when that is false — so with the flag off
 there is no Google affordance anywhere and no way to start a flow.
 
@@ -18,6 +27,17 @@ Turning it on takes **two** things, and neither works without the other:
 
 1. The provider config in steps 1–6 below.
 2. `VITE_GOOGLE_AUTH_ENABLED=true` **plus a redeploy** (step 7).
+
+> **The Google Cloud console has moved.** These steps were written against the
+> old layout; Google now presents the same settings under **Google Auth
+> Platform**:
+>
+> | this runbook says | today's console |
+> |---|---|
+> | OAuth consent screen | **Branding** + **Audience** |
+> | Credentials → OAuth client IDs | **Clients** |
+> | Test users | **Audience** |
+> | Scopes | **Data Access** |
 
 ## 1 · Google Cloud — OAuth consent screen
 
@@ -35,6 +55,23 @@ Turning it on takes **two** things, and neither works without the other:
 Both are only required to leave "Testing" mode and remove the unverified-app
 interstitial. While in Testing, only accounts listed under **Test users** can
 complete sign-in — add your own address there before verifying in step 8.
+
+> **Do not upload a logo unless you mean it.** Google's publish dialog lists
+> three verification triggers: more than 10 domains, **a logo**, or sensitive /
+> restricted scopes. With none of them, publishing is instant and needs no
+> review. Adding branding art later is what would drag this app into Google's
+> verification queue.
+
+### Publishing (needed before anyone but your test users can sign in)
+
+**Audience → Publish app → Confirm.** The dialog warns the app becomes
+available to any Google Account — that is the point. With only
+`openid`/`email`/`profile` this takes effect immediately, the 100-user cap
+stops applying, and the unverified-app interstitial goes away.
+
+**Your own account proves nothing here**, because it is on the test-user list
+and works either way. Verify with a different Google account in an incognito
+window.
 
 ## 2 · Google Cloud — create the OAuth client
 
@@ -76,6 +113,24 @@ the next step.
 3. Paste the **Client ID** and **Client secret** from step 4.
 4. Save.
 
+Leave **Skip nonce checks** and **Allow users without an email** off. The
+second one matters: the auto-link below keys on the email address, so a
+provider response without one would defeat it.
+
+> **Paste the real values, and check their shape.** A Client ID ends in
+> `.apps.googleusercontent.com`; a secret starts with `GOCSPX-`. Anything else
+> — a project name, a password — leaves the provider effectively unconfigured
+> and produces this at `/auth/v1/authorize`:
+>
+> ```json
+> {"code":400,"error_code":"validation_failed",
+>  "msg":"Unsupported provider: provider is not enabled"}
+> ```
+>
+> That error fires **before Supabase contacts Google**, so it masks any
+> redirect-URI problem underneath. Fix the credentials first, then re-test;
+> a `redirect_uri_mismatch` may be waiting behind it.
+
 ## 6 · Supabase — URL configuration
 
 Same allow-list Phase C documented (`docs/AUTH_EMAIL_TEMPLATE_RUNBOOK.md`).
@@ -89,6 +144,13 @@ rather than two.
 - `https://deutsch-app-dusky.vercel.app`
 - `http://localhost:5173`
 - `http://127.0.0.1:5173`
+
+> **The browser comes back to the Site URL, not to where it started.** Testing
+> the flow on a Vercel *preview* deployment still lands you on production once
+> Supabase completes the exchange. The sign-in genuinely succeeded — the
+> session is real and the account is correct — but the tab you end up in is not
+> the one you left. Expect it, and read the result on production rather than
+> assuming the preview build is broken.
 
 ## 7 · Vercel — the flag, then a redeploy
 
@@ -104,6 +166,20 @@ rather than two.
 
 To try it locally first: put `VITE_GOOGLE_AUTH_ENABLED=true` in `.env.local`
 (git-ignored) and restart `npm run dev`.
+
+> **Check the deploy from the origin, not from your browser.** This app is a
+> PWA, so its service worker will keep serving the previous bundle and make a
+> correct deploy look like it failed — that happened in both directions on
+> 2026-08-17. Confirm against the served bundle instead:
+>
+> ```bash
+> curl -s "https://deutsch-app-dusky.vercel.app/?cb=$(date +%s)" | grep -o '/assets/index-[^"]*\.js'
+> ```
+>
+> The hash must change after a redeploy; then fetch that file and grep it for
+> `Continue with Google`. In a browser, unregister the service worker and clear
+> caches first. Users are not stuck — they pick up the new bundle on the next
+> service-worker update cycle.
 
 ## 8 · Verify (do not skip)
 
@@ -122,21 +198,45 @@ Run these against the deployed app, in a fresh browser profile.
 - [ ] **Flag off is clean.** With the flag off (or before the redeploy) there
       is no Google button and no stray "or" divider on any surface.
 
-### The auto-link check — the one worth doing carefully
+### The auto-link check — VERIFIED 2026-08-17
 
-- [ ] Sign in with an **email code** first. Note the progress on the account.
-- [ ] Sign out.
-- [ ] Sign in with **Google, using the same email address**.
-- [ ] Confirm you land in **one** account — same user id, same progress — and
+- [x] Sign in with an **email code** first. Note the progress on the account.
+- [x] Sign out.
+- [x] Sign in with **Google, using the same email address**.
+- [x] Confirm you land in **one** account — same user id, same progress — and
       not a second empty one.
 
-**This is unverified from the repo.** The spec's §4 claim that Supabase links a
-Google identity to an existing email user with a matching address depends on
-the hosted project's identity-linking settings, which nothing in this
-codebase can read. Treat it as an assumption until this check passes.
+**Result: Supabase attaches the Google identity to the existing user.** The
+spec's §4 claim holds on this project. Measured against `auth.users` /
+`auth.identities` on the hosted database rather than judged from the UI:
 
-If it produces **two** accounts, the flag should go back to `false` while it
-is sorted out: Supabase's account-linking behaviour is configured under
+| user | created | identities |
+|---|---|---|
+| existing, signed up by email | 2026-06-19 | **2** — `email`, `google` |
+| brand-new, arrived via Google | 2026-08-17 | 1 — `google` |
+
+Same `user.id` before and after, so everything keyed to it — SRS state,
+progress, league membership — survives. The app greets it with "Welcome back"
+rather than running onboarding, which is a usable smoke signal: **onboarding
+appearing for a returning address would mean the link failed.**
+
+Re-run it with SQL if you ever need to be sure:
+
+```sql
+select u.id, u.created_at, count(i.id) as identity_count,
+       string_agg(i.provider, ', ' order by i.provider) as providers
+from auth.users u
+left join auth.identities i on i.user_id = u.id
+group by u.id, u.created_at order by u.created_at;
+```
+
+One caveat worth keeping: this was verified on **this** project with its
+current identity-linking settings. It is a property of the hosted
+configuration, not of the code, so re-check it if the project is ever
+recreated or migrated.
+
+If it ever produces **two** accounts, the flag should go back to `false` while
+it is sorted out: Supabase's account-linking behaviour is configured under
 **Authentication → Providers** / identity linking, and merging two real
 accounts after the fact is far more painful than preventing the split.
 
