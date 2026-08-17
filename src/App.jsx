@@ -834,6 +834,8 @@ export default function App() {
             onExport={handleExport}
             onDelete={handleDelete}
             lastSyncedAt={syncStatus.lastSyncedAt}
+            level={level}
+            onLevelChange={setLevel}
           />
         )}
       </main>

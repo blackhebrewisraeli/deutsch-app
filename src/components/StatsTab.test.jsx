@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import StatsTab from './StatsTab';
 
 // --- Module mocks ---
@@ -84,5 +85,20 @@ describe('StatsTab — Leagues view', () => {
     fireEvent.click(screen.getByRole('button', { name: /leagues/i }));
     fireEvent.click(screen.getByText('stub-leaderboard'));
     expect(screen.getByText('stub-card-x')).toBeTruthy();
+  });
+});
+
+describe('StatsTab — Practice level', () => {
+  it('offers a level picker and reports the chosen level', async () => {
+    const onLevelChange = vi.fn();
+    render(<StatsTab level="a1" onLevelChange={onLevelChange} />);
+    await userEvent.click(screen.getByRole('button', { name: /INTERMEDIATE/ }));
+    expect(onLevelChange).toHaveBeenCalledWith('b1');
+  });
+
+  it('persists the chosen level', async () => {
+    render(<StatsTab level="a1" onLevelChange={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: /ELEMENTARY/ }));
+    expect(localStorage.getItem('deutsch-level')).toBe('a2');
   });
 });
