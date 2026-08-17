@@ -14,8 +14,8 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
   const authOn = isAuthConfigured();
   return (
     <div
+      className="entry-screen"
       style={{
-        minHeight: '100vh',
         background: COLORS.paper,
         color: COLORS.ink,
         display: 'flex',

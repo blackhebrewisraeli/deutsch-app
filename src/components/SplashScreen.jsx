@@ -36,8 +36,8 @@ export default function SplashScreen({ onComplete }) {
 
   return (
     <div
+      className="entry-screen"
       style={{
-        minHeight: '100vh',
         display: 'flex',
         flexDirection: 'column',
         fontFamily: FONTS.display,
@@ -121,6 +121,7 @@ export default function SplashScreen({ onComplete }) {
 
       {/* Gold stripe */}
       <div
+        className="entry-screen-foot"
         style={{
           flex: 1,
           background: COLORS.gold,

@@ -96,4 +96,12 @@ describe('WelcomeGate', () => {
     const guest = screen.getByRole('button', { name: 'Try it first — free →' });
     expect(Number.parseInt(guest.style.minHeight, 10)).toBeGreaterThanOrEqual(44);
   });
+
+  // The dvh sizing lives in the global stylesheet, because the 100vh fallback
+  // and the 100dvh override are two declarations of one property and an inline
+  // style object cannot hold both. This pins the hook that opts in.
+  it('opts into dynamic-viewport sizing', () => {
+    const { container } = render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} />);
+    expect(container.firstChild).toHaveClass('entry-screen');
+  });
 });
