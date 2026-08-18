@@ -1,6 +1,9 @@
 // Structural colour token values per mode × tone.
 // Day-light = brighter of the pair; Night-light = darker of the pair.
-// light.day / dark.day match T1 defaults so existing users see no change.
+//
+// Light mode is warm ivory. It was saturated parchment (#FDF3C0) through T1/T2;
+// the ivory re-skin kept `fg` and the semantic success/error inks untouched, so
+// every audited text pairing carried over and only the planes moved.
 //
 // Keys are the CSS custom-property suffixes: `--c-<key>`.
 
@@ -34,6 +37,38 @@ const ALPHA_DERIVATIONS = [
 // palette, so it is defined once rather than repeated four times.
 const HEAT_RAMP = { 'heat-1': '#FFCE0040', 'heat-2': '#FFCE0090' };
 
+// German-flag accent tiers — black / red / gold as a three-step brand spectrum
+// for headers, badges, task and streak chrome. Distinct from FLAG_STRIPES: those
+// are the splash's literal flag and never vary, while these are theme tokens the
+// app chrome uses, so red and gold take a deeper value in light and a brighter
+// one in dark.
+//
+// Each tier is a FILL and ships with the ink that sits on it (`-on`). Reading a
+// tier as a foreground is what the accent model already forbids — `accent-gold`
+// on a light ground is 3.0:1 and fails body AA, so it must not become text.
+//
+// `accent-black` holds the same charcoal in both modes rather than inverting to
+// white in dark: a token named "black" that renders white is exactly the bug
+// that made the splash's black stripe flip in PR #116. On dark grounds it needs
+// `border-strong` to separate, which is why the pair is not near-identical.
+const ACCENT_TIERS_LIGHT = {
+  'accent-black': '#1A1816',
+  'accent-black-on': '#FBF8F1',
+  'accent-red': '#C92A2A',
+  'accent-red-on': '#FFFFFF',
+  'accent-gold': '#D97706',
+  'accent-gold-on': '#1A1816',
+};
+
+const ACCENT_TIERS_DARK = {
+  'accent-black': '#1A1816',
+  'accent-black-on': '#FBF8F1',
+  'accent-red': '#EF4444',
+  'accent-red-on': '#0F0F11',
+  'accent-gold': '#FBBF24',
+  'accent-gold-on': '#0F0F11',
+};
+
 // Entry-splash flag stripes. These are brand colours, not theme colours: a
 // light-mode machine still gets black / red / gold. Pairing them with
 // COLORS.ink / COLORS.paper made the "black" stripe invert with the theme
@@ -65,46 +100,49 @@ function withDerived(base) {
 }
 
 const LIGHT_DAY = withDerived({
-  ground: '#FDF3C0',
+  ...ACCENT_TIERS_LIGHT,
+  ground: '#FBF8F1',
   surface: '#FFFFFF',
-  'surface-alt': '#FFF8DC',
-  border: '#16110b',
-  'border-strong': '#16110b',
+  'surface-alt': '#F0ECE1',
+  // Light mode used a near-black hairline (#16110b) on parchment. Ivory is a
+  // quieter canvas, so separation moves to a three-step neutral ramp; `fg` stays
+  // the same ink, so no text pairing changes.
+  border: '#E2DDD2',
+  'border-subtle': '#ECE7DC',
+  'border-strong': '#CFC7B5',
   fg: '#16110b',
-  // Was #7a6e5c at 4.45:1 on parchment — body labels (SectionLabel, mute UI) failed AA.
   'fg-muted': '#5C5142',
   'fg-subtle': '#2a2218',
-  // Darkened so parchment-on-success (BUTTON.go) and success-as-fg both clear AA.
   success: '#2F7D3A',
   'success-fill': '#E7F3E9',
-  // Was #D62828 at 4.47:1 on parchment / parchment-on-error — kickers + danger fills.
   error: '#C41E1E',
   'error-fill': '#FCE8E8',
   warning: '#F5C518',
   'success-deep': '#246330',
   'error-deep': '#a82020',
-  lip: '#D9CD9F',
+  lip: '#E5DFD0',
   press: '#000000',
   'mute-deep': '#6b6354',
-  track: '#e7dcae',
+  track: '#EAE4D6',
 });
 
-/** Dimmer warm parchment — Night-light alternate for Light mode.
+/** Dimmer ivory — Night-light alternate for Light mode.
  *  Surface stays near-white so body/error/success text clear AA; ground is
  *  the visibly darker plane. The pack's light accent.fg is chosen to clear
  *  body AA against this dimmer ground too — see packs/de/theme.js. */
 const LIGHT_NIGHT = withDerived({
-  ground: '#E8D9A0',
-  surface: '#FFFBF2',
-  'surface-alt': '#F3E9C4',
-  border: '#16110b',
-  'border-strong': '#16110b',
+  ...ACCENT_TIERS_LIGHT,
+  ground: '#EDE8DC',
+  surface: '#FBF8F1',
+  'surface-alt': '#E4DED0',
+  border: '#D5CEBE',
+  'border-subtle': '#DFD9CA',
+  'border-strong': '#C2BAA6',
   fg: '#16110b',
-  // Night parchment is darker — mute must clear #E8D9A0 as well as cream surfaces.
   'fg-muted': '#5C5142',
   'fg-subtle': '#2a2218',
-  // Darker than light.day — cream surface-1 (#F3E9C4) ate the previous
-  // #3FA34D / #D62828 pair (2.63 / 4.12). These clear AA on every elevation step.
+  // Dimmer ivory keeps eating mid greens/reds the way dimmer parchment did,
+  // so the deeper pair from the parchment palette carries over unchanged.
   success: '#1F5C28',
   'success-fill': '#DCEDE0',
   error: '#A82020',
@@ -112,19 +150,27 @@ const LIGHT_NIGHT = withDerived({
   warning: '#F5C518',
   'success-deep': '#164420',
   'error-deep': '#8B1818',
-  lip: '#C9BA8A',
+  lip: '#D8D1C0',
   press: '#000000',
   'mute-deep': '#5C5548',
-  track: '#D4C48A',
+  track: '#DDD6C6',
 });
 
 /** Current Nocturne — Day-light (default) for Dark mode. */
 const DARK_DAY = withDerived({
-  ground: '#0D0D0F',
-  surface: '#16161C',
-  'surface-alt': '#1B1B22',
-  border: '#26262E',
-  'border-strong': '#3A3A46',
+  ...ACCENT_TIERS_DARK,
+  ground: '#0F0F11',
+  surface: '#1A1A1E',
+  // The elevated card plane the palette aims at is #24242A, but that is
+  // `surface-3` (COLORS.surfaceElevated), which deriveSurfaceRamp lifts from
+  // here — setting it directly on `surface-alt` left `fg-subtle` at 4.52:1 and
+  // liftSurface, which refuses any lift that breaks ink AA, returned the input
+  // unchanged: surface-3 silently collapsed onto surface-2. At #1E1E24 the lift
+  // clears AA and lands on #242429.
+  'surface-alt': '#1E1E24',
+  border: '#2E2E36',
+  'border-subtle': '#232329',
+  'border-strong': '#3A3A44',
   fg: '#EDEBE8',
   'fg-muted': '#9A9AA4',
   'fg-subtle': '#8A8A96',
@@ -143,10 +189,12 @@ const DARK_DAY = withDerived({
 
 /** Deeper Nocturne — Night-light alternate for Dark mode. */
 const DARK_NIGHT = withDerived({
+  ...ACCENT_TIERS_DARK,
   ground: '#08080A',
   surface: '#121218',
-  'surface-alt': '#16161C',
-  border: '#1E1E26',
+  'surface-alt': '#1B1B22',
+  border: '#22222A',
+  'border-subtle': '#17171D',
   'border-strong': '#2E2E38',
   fg: '#EDEBE8',
   'fg-muted': '#9A9AA4',

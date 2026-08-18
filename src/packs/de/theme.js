@@ -40,6 +40,20 @@ export const progress = ['ground', 'accentAlt', 'accent'];
 //
 // src/lib/fontCoverage.test.js fails if a subset that is carrying real content
 // gets dropped from either list.
+/**
+ * Body sans, vendored and ready but not yet adopted.
+ *
+ * Body copy currently renders in Fraunces — AGENTS.md fixes the typography as
+ * Fraunces for display and JetBrains Mono for uppercase labels, and switching
+ * body copy to a sans is a brand decision, not a refactor. The family is
+ * vendored so that decision costs one line here (`body: BODY_SANS`) instead of
+ * a fetch, a licence check and a manifest regeneration.
+ *
+ * Weights stop at 700: body copy uses regular through bold, and asking for the
+ * full 200..800 range widens each subset file for two weights nothing renders.
+ */
+export const BODY_SANS = "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif";
+
 export const font = {
   display: "'Fraunces', Georgia, serif",
   body: "'Fraunces', Georgia, serif",
@@ -51,6 +65,9 @@ export const font = {
       axes: 'wght@400..700',
       subsets: ['latin', 'latin-ext', 'greek', 'vietnamese'],
     },
+    // Prose subsets only — the sans never renders IPA, so it needs neither the
+    // greek nor the vietnamese subset the mono face carries.
+    { name: 'Plus Jakarta Sans', axes: 'wght@400..700', subsets: ['latin', 'latin-ext'] },
   ],
 };
 

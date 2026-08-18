@@ -140,6 +140,18 @@ function pairsFor(mode, tone) {
     });
   }
 
+  // German-flag accent tiers. Each is a fill carrying its own paired ink, so the
+  // assertion is ink-on-tier, never tier-on-ground: `accent-gold` is 3.0:1 on
+  // light ivory and would fail the moment someone used it as a text colour.
+  for (const tier of ['black', 'red', 'gold']) {
+    pairs.push({
+      fg: c[`accent-${tier}-on`],
+      bg: c[`accent-${tier}`],
+      min: AA_NORMAL,
+      name: `${label} accent-${tier}-on on accent-${tier}`,
+    });
+  }
+
   // Accent fills (solid + deep lip) carry onFill ink, not mode-flipping fg
   pairs.push({
     fg: packAccentOn,
@@ -218,6 +230,33 @@ describe('legacy DEFAULT_ACCENTS stay within the fill rule', () => {
     for (const mode of ['light', 'dark']) {
       const d = DEFAULT_ACCENTS[mode];
       expect(contrastRatio(d.accentOn, d.accent)).toBeGreaterThanOrEqual(AA_NORMAL);
+    }
+  });
+});
+
+describe('accent tiers are fills, not foregrounds', () => {
+  // The rule is easy to violate by accident and invisible once shipped, so it
+  // is asserted rather than only documented: if a future palette ever made a
+  // tier readable as text on its own ground, that would mean the tier had
+  // drifted into a foreground role and the fill/ink pairing no longer holds.
+  it('gold tier fails body AA on its own ground in light mode', () => {
+    const c = MODE_COLORS.light.day;
+    expect(contrastRatio(c['accent-gold'], c.ground)).toBeLessThan(AA_NORMAL);
+  });
+
+  it('every tier ships a paired ink in every palette', () => {
+    for (const mode of ['light', 'dark']) {
+      for (const tone of ['day', 'night']) {
+        const c = MODE_COLORS[mode][tone];
+        for (const tier of ['black', 'red', 'gold']) {
+          expect(c[`accent-${tier}`], `${mode}.${tone} accent-${tier}`).toMatch(
+            /^#[0-9A-Fa-f]{6}$/
+          );
+          expect(c[`accent-${tier}-on`], `${mode}.${tone} accent-${tier}-on`).toMatch(
+            /^#[0-9A-Fa-f]{6}$/
+          );
+        }
+      }
     }
   });
 });

@@ -4,6 +4,7 @@ import {
   THEME_TONE_KEY,
   readThemePreference,
   getThemePreferenceForUI,
+  hasStoredTheme,
   readThemeTone,
   getThemeToneForUI,
   resolveThemeTone,
@@ -91,6 +92,31 @@ describe('theme preference persistence', () => {
     });
     expect(readThemePreference()).toBeNull();
     expect(getThemePreferenceForUI()).toBe('system');
+    spy.mockRestore();
+  });
+
+  it('hasStoredTheme separates an explicit System choice from never choosing', () => {
+    // getThemePreferenceForUI flattens both to 'system', so this is the only
+    // way to tell a user who opted into System from one who never touched it.
+    expect(hasStoredTheme()).toBe(false);
+    expect(getThemePreferenceForUI()).toBe('system');
+
+    setThemePreference('system');
+    expect(hasStoredTheme()).toBe(true);
+    expect(getThemePreferenceForUI()).toBe('system');
+
+    setThemePreference('dark');
+    expect(hasStoredTheme()).toBe(true);
+  });
+
+  it('hasStoredTheme reports false for corrupt and blocked reads', () => {
+    localStorage.setItem(THEME_MODE_KEY, 'neon');
+    expect(hasStoredTheme()).toBe(false);
+
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError');
+    });
+    expect(hasStoredTheme()).toBe(false);
     spy.mockRestore();
   });
 
