@@ -28,7 +28,7 @@ export default function ProfileCard({ userId, onClose }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: 'rgba(0,0,0,0.5)',
+        background: COLORS.scrim,
         zIndex: Z.modal,
       }}
     >

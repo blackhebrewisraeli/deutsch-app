@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, RADIUS } from '../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, RADIUS, SHADOW } from '../lib/theme';
 import { loadState, saveState } from '../lib/storage';
 import { stampSettings } from '../lib/settingsStamp';
 import {
@@ -93,7 +93,7 @@ export default function StatsTab({
               ...NAV_BUTTON_BASE,
               background: activeView === 'stats' ? COLORS.ink : COLORS.card,
               color: activeView === 'stats' ? COLORS.paper : COLORS.ink,
-              boxShadow: `0 4px 0 ${COLORS.lip}`,
+              boxShadow: SHADOW.press(COLORS.lip),
             }}
           >
             STATS
@@ -106,7 +106,7 @@ export default function StatsTab({
               ...NAV_BUTTON_BASE,
               background: activeView === 'leagues' ? COLORS.ink : COLORS.card,
               color: activeView === 'leagues' ? COLORS.paper : COLORS.ink,
-              boxShadow: `0 4px 0 ${COLORS.lip}`,
+              boxShadow: SHADOW.press(COLORS.lip),
             }}
           >
             LEAGUES
@@ -202,7 +202,7 @@ export default function StatsTab({
                     marginTop: SPACE[3],
                     border: 'none',
                     borderRadius: RADIUS.md,
-                    boxShadow: `0 4px 0 ${COLORS.lip}`,
+                    boxShadow: SHADOW.press(COLORS.lip),
                     background: COLORS.card,
                     color: COLORS.ink,
                     padding: `${SPACE[2]}px ${SPACE[4]}px`,

@@ -6,6 +6,7 @@ import {
   LETTER_SPACING,
   SPACE,
   RADIUS,
+  SHADOW,
 } from '../../lib/theme';
 
 // A row of equal-width pill buttons where exactly one is active — the Daily-goal
@@ -39,7 +40,7 @@ export default function SegmentedPicker({ options, activeKey, onPick, ariaLabel 
             style={{
               border: 'none',
               borderRadius: RADIUS.md,
-              boxShadow: `0 4px 0 ${active ? COLORS.greenDeep : COLORS.lip}`,
+              boxShadow: SHADOW.press(active ? COLORS.greenDeep : COLORS.lip),
               background: active ? COLORS.green : COLORS.card,
               color: active ? COLORS.paper : COLORS.ink,
               padding: SPACE[4],

@@ -1,6 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
 import { ArrowRight, SkipForward } from 'lucide-react';
-import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, RADIUS, BUTTON } from '../../lib/theme';
+import {
+  COLORS,
+  FONTS,
+  FONT_SIZE,
+  LETTER_SPACING,
+  SPACE,
+  RADIUS,
+  SHADOW,
+  BUTTON,
+} from '../../lib/theme';
 import { callClaude } from '../../lib/claude';
 import { activePack } from '../../packs';
 import { graderSystemPrompt } from '../../lib/prompts';
@@ -103,7 +112,7 @@ export default function TypingExercise({ exercise, level, onCorrect, onSkip }) {
               padding: SPACE[4],
               border: 'none',
               borderRadius: RADIUS.md,
-              boxShadow: 'inset 0 2px 5px rgba(22,17,11,0.06)',
+              boxShadow: SHADOW.inset,
               background: COLORS.card,
               fontFamily: FONTS.display,
               fontSize: FONT_SIZE.xl,

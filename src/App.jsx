@@ -705,7 +705,7 @@ export default function App() {
                 color: active ? COLORS.paper : COLORS.ink,
                 border: 'none',
                 borderRadius: RADIUS.md,
-                boxShadow: active ? SHADOW.press('#000000') : 'none',
+                boxShadow: active ? SHADOW.press(COLORS.press) : 'none',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: mobile ? 'center' : 'flex-start',

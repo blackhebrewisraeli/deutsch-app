@@ -1,4 +1,4 @@
-import { COLORS, FONTS, FONT_SIZE, SPACE, BUTTON, RADIUS } from '../../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, SPACE, BUTTON, RADIUS, SHADOW } from '../../lib/theme';
 
 /**
  * Free-text recall: type an answer, then CHECK. Used at B1, at A1/A2 when the
@@ -34,7 +34,7 @@ export default function TypedAnswer({
           padding: SPACE[4],
           border: 'none',
           borderRadius: RADIUS.md,
-          boxShadow: 'inset 0 2px 5px rgba(22,17,11,0.06)',
+          boxShadow: SHADOW.inset,
           fontFamily: FONTS.display,
           fontSize: FONT_SIZE.xl,
           background: COLORS.card,

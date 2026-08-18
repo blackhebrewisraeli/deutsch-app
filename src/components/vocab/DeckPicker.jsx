@@ -161,7 +161,7 @@ export default function DeckPicker({
             background: COLORS.card,
             border: 'none',
             borderRadius: RADIUS.md,
-            boxShadow: 'inset 0 2px 5px rgba(22,17,11,0.06)',
+            boxShadow: SHADOW.inset,
             fontFamily: FONTS.body,
             fontSize: FONT_SIZE.md,
             marginBottom: 12,
