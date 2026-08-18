@@ -25,13 +25,13 @@
     -->
     <style>
       :root {
-        --shell-bg: #fdf3c0;
+        --shell-bg: #fbf8f1;
         --shell-fg: #16110b;
         --shell-dot: #c41e1e;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --shell-bg: #0d0d0f;
+          --shell-bg: #0f0f11;
           --shell-fg: #edebe8;
           --shell-dot: #ff6b6b;
         }
@@ -76,9 +76,9 @@
             mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
           }
           var g = {
-            'light-day': ['#fdf3c0', '#16110b', '#c41e1e'],
-            'light-night': ['#e8d9a0', '#16110b', '#a82020'],
-            'dark-day': ['#0d0d0f', '#edebe8', '#ff6b6b'],
+            'light-day': ['#fbf8f1', '#16110b', '#c41e1e'],
+            'light-night': ['#ede8dc', '#16110b', '#a82020'],
+            'dark-day': ['#0f0f11', '#edebe8', '#ff6b6b'],
             'dark-night': ['#08080a', '#edebe8', '#ff6b6b'],
           }[mode + '-' + (tone === 'night' ? 'night' : 'day')];
           if (g) {

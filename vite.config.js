@@ -42,7 +42,7 @@ export default defineConfig({
         short_name: 'Deutsch.',
         description: 'Learn German with AI-powered guided exercises',
         theme_color: '#16110b',
-        background_color: '#FDF3C0',
+        background_color: '#FBF8F1',
         display: 'standalone',
         orientation: 'portrait-primary',
         scope: '/',

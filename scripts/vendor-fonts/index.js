@@ -32,6 +32,7 @@ const UA =
 const LICENSES = {
   Fraunces: 'https://raw.githubusercontent.com/undercasetype/Fraunces/master/OFL.txt',
   'JetBrains Mono': 'https://raw.githubusercontent.com/JetBrains/JetBrainsMono/master/OFL.txt',
+  'Plus Jakarta Sans': 'https://raw.githubusercontent.com/tokotype/PlusJakartaSans/master/OFL.txt',
 };
 
 async function fetchText(url) {

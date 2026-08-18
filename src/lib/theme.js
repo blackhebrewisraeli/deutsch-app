@@ -21,7 +21,18 @@ export const COLORS = {
   surface2: 'var(--c-surface-2)',
   surface3: 'var(--c-surface-3)',
   border: 'var(--c-border)',
+  borderSubtle: 'var(--c-border-subtle)',
   borderStrong: 'var(--c-border-strong)',
+
+  // German-flag accent tiers. FILLS only — each pairs with its own `On` ink.
+  // Never use these as a text colour: accentGold on a light ground is 3.0:1.
+  // See ACCENT_TIERS_* in themeTokens.js.
+  accentBlack: 'var(--c-accent-black)',
+  accentBlackOn: 'var(--c-accent-black-on)',
+  accentRed: 'var(--c-accent-red)',
+  accentRedOn: 'var(--c-accent-red-on)',
+  accentGold: 'var(--c-accent-gold)',
+  accentGoldOn: 'var(--c-accent-gold-on)',
 
   // Mode-independent German-flag stripes (entry splash). Same hex in every
   // palette — see FLAG_STRIPES in themeTokens.js.

@@ -34,6 +34,17 @@ export function getThemePreferenceForUI() {
 }
 
 /**
+ * Whether an explicit preference is stored, as opposed to falling through to
+ * the OS. Distinguishes "chose System" from "never chose", which
+ * `getThemePreferenceForUI` flattens — both report `'system'` there.
+ * A corrupt or blocked read counts as unset.
+ * @returns {boolean}
+ */
+export function hasStoredTheme() {
+  return readThemePreference() !== null;
+}
+
+/**
  * Read the stored tone. Returns null when unset or corrupt.
  * @returns {'day' | 'night' | null}
  */
