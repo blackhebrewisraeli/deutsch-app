@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 /**
  * The commit a bundle was built from, stamped into Sentry as the `release`.
@@ -33,6 +34,17 @@ function resolveRelease() {
 
 const SENTRY_RELEASE = resolveRelease();
 
+/**
+ * Source-map upload is on only when a write-scoped token is present, which in
+ * practice means Vercel Preview and Production. Local builds, CI and any fork
+ * build simply skip it — no failure, no noise.
+ *
+ * SENTRY_AUTH_TOKEN is deliberately NOT `VITE_`-prefixed: Vite only exposes
+ * VITE_* to client code, so the prefix would inline a write-scoped credential
+ * into a public bundle. It is a build-time secret and must stay one.
+ */
+const SENTRY_UPLOAD = Boolean(process.env.SENTRY_AUTH_TOKEN);
+
 // https://vitejs.dev/config/
 // API calls go to /api/v1/ai/* — Vercel functions in production, served
 // locally by `npm run dev:full` (vercel dev). No dev proxy, no key in Vite.
@@ -44,6 +56,14 @@ export default defineConfig({
   define: {
     'import.meta.env.VITE_SENTRY_RELEASE': JSON.stringify(SENTRY_RELEASE),
   },
+  build: {
+    // Only emit .map files on builds that will upload and then delete them.
+    // Emitting them unconditionally would publish readable source next to the
+    // bundle on every deploy — the maps are the whole point of the upload, and
+    // serving them publicly would give away for free what the upload exists to
+    // keep private.
+    sourcemap: SENTRY_UPLOAD,
+  },
   plugins: [
     react(),
     VitePWA({
@@ -51,6 +71,13 @@ export default defineConfig({
       // Service worker caches all app assets for offline use
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // vite-plugin-pwa follows build.sourcemap, so enabling maps for the
+        // Sentry upload also emitted sw.js.map and workbox-*.js.map — and those
+        // are written AFTER the Sentry plugin's cleanup runs, so its delete glob
+        // never saw them and they shipped with a live sourceMappingURL. They
+        // describe generated workbox output, not app code, and nothing debugs
+        // them from a map, so they are simply not produced.
+        sourcemap: false,
         // Don't cache API calls — those need to be live
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//],
@@ -105,5 +132,56 @@ export default defineConfig({
         ],
       },
     }),
+    // Last in the array: it consumes the finished build output.
+    ...(SENTRY_UPLOAD
+      ? [
+          sentryVitePlugin({
+            org: process.env.SENTRY_ORG || 'blackhebrewisraeli',
+            project: process.env.SENTRY_PROJECT || 'javascript-react',
+            authToken: process.env.SENTRY_AUTH_TOKEN,
+            // This org is in the EU region. The plugin defaults to
+            // https://sentry.io, which is a DIFFERENT tenant — uploads would
+            // authenticate against the wrong host and the maps would never
+            // reach this project.
+            url: process.env.SENTRY_URL || 'https://de.sentry.io',
+            release: {
+              // Must equal the release observability.js reports, or Sentry has
+              // maps filed under one version and events under another, and
+              // resolves nothing. Same constant, so they cannot drift.
+              name: SENTRY_RELEASE,
+              // observability.js sets `release` on Sentry.init explicitly, so
+              // injecting a second source of truth would only create a way for
+              // the two to disagree.
+              inject: false,
+            },
+            sourcemaps: {
+              // Delete after upload so the maps are never deployed.
+              filesToDeleteAfterUpload: ['./dist/**/*.map'],
+            },
+            // The app scrubs PII from its own events; sending build telemetry
+            // to Sentry by default would sit oddly beside that.
+            telemetry: false,
+            // A failed upload does NOT fail the build, verified with a bad
+            // token: the plugin logs and Vite still reports success. That is
+            // the right trade — a Sentry outage should not block a deploy — but
+            // it means a revoked token silently costs every later stack trace,
+            // and the plugin's own error is easy to miss in a Vercel log. So it
+            // gets a banner that is not.
+            errorHandler: (err) => {
+              console.error(
+                '\n' +
+                  '='.repeat(72) +
+                  '\nSENTRY SOURCE-MAP UPLOAD FAILED — the build continues, but this\n' +
+                  'release will have NO readable stack traces in Sentry.\n' +
+                  'Usually a revoked or wrong-scoped SENTRY_AUTH_TOKEN, or the wrong\n' +
+                  'region (this org is EU: https://de.sentry.io).\n' +
+                  `Cause: ${err && err.message ? err.message : err}\n` +
+                  '='.repeat(72) +
+                  '\n'
+              );
+            },
+          }),
+        ]
+      : []),
   ],
 });
