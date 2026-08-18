@@ -27,10 +27,12 @@ they are listed as blocked rather than "available".
 
 ## Ready to execute
 
-- **`hasStoredLevel()` should mean "has a _valid_ level"** —
-  `docs/superpowers/plans/2026-08-18-level-pref-validation.md`. A device holding
-  a corrupt level value skips the picker and silently lands on A1. Premise
-  re-verified on `main` 2026-08-18.
+Nothing queued.
+
+Recently shipped: **`hasStoredLevel()` now means "has a _valid_ level"** (#121,
+#123) — a device holding a corrupt level value used to skip the picker and
+silently land on A1. Design kept at
+`docs/superpowers/plans/2026-08-18-level-pref-validation.md`.
 
 ---
 
