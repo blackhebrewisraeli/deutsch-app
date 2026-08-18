@@ -21,7 +21,6 @@ export const COLORS = {
   surface2: 'var(--c-surface-2)',
   surface3: 'var(--c-surface-3)',
   border: 'var(--c-border)',
-  borderSubtle: 'var(--c-border-subtle)',
   borderStrong: 'var(--c-border-strong)',
 
   // German-flag accent tiers. FILLS only — each pairs with its own `On` ink,

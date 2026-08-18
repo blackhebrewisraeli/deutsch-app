@@ -27,7 +27,44 @@ they are listed as blocked rather than "available".
 
 ## Ready to execute
 
-Nothing queued.
+### The charcoal masthead — `accentBlack`'s one consumer
+
+`COLORS.accentBlack` is in the palette with **no consumer**, deliberately and
+with a named destination: a charcoal masthead band behind the wordmark, carrying
+the splash's black stripe into the app frame. Prototyped in a browser on
+2026-08-18 in both modes and it reads well — an editorial band in light, a subtle
+warm `#1A1816` above the obsidian page in dark.
+
+It is queued rather than done because it is **not a token swap**. The header's
+children are all inked for the page ground, so a background change alone erases
+the wordmark, the tagline, `SIGN IN` and the level-badge ring. Doing it properly
+needs:
+
+- the header background and bottom border
+- the wordmark, and its red dot (`COLORS.red` on charcoal is ~2.2:1)
+- `LevelBadge`, `StatBlock`, `GoalRing`, `ThemeChip`, `AccountChip`
+- **a token that does not exist yet** — a muted ink for the charcoal plane.
+  `COLORS.mute` is a dark brown and has nothing to offer here. This is the piece
+  to design first; the prototype faked it with opacity, which is why the streak
+  label read badly in it.
+
+If this is abandoned, retire `accentBlack` with it rather than leaving a third
+unused accent next to `COLORS.accentAlt`.
+
+## Retired rather than left unused
+
+Two tokens shipped in #131 and were deleted before gaining a consumer, which is
+recorded here so nobody re-adds them reasoning from first principles:
+
+- **`accentGold`** — `COLORS.gold` (the pack accent) already carries reward,
+  streak, XP and level-up. A second gold had no rule to distinguish it.
+- **`borderSubtle`** — in-card dividers use `COLORS.inkA10`/`inkA12`, ink at
+  10-12% alpha, which composites correctly on every surface including the
+  derived elevation steps. An opaque token cannot, so adopting it would have
+  been a regression.
+
+`COLORS.accentAlt` has sat unused since the theme arc began. One unused accent
+in a palette is a rounding error; four is how a palette stops being trustworthy.
 
 ## Decided but not adopted — the body sans
 

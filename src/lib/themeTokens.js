@@ -108,10 +108,15 @@ const LIGHT_DAY = withDerived({
   surface: '#FFFFFF',
   'surface-alt': '#F0ECE1',
   // Light mode used a near-black hairline (#16110b) on parchment. Ivory is a
-  // quieter canvas, so separation moves to a three-step neutral ramp; `fg` stays
+  // quieter canvas, so separation moves to a two-step neutral pair; `fg` stays
   // the same ink, so no text pairing changes.
+  //
+  // A third `border-subtle` step shipped in #131 and was retired without a
+  // consumer: in-card dividers use `COLORS.inkA10`/`inkA12`, ink at 10-12%
+  // alpha, which composites correctly on every surface including the derived
+  // elevation steps. An opaque token cannot, so adopting it would have been a
+  // regression dressed as a cleanup.
   border: '#E2DDD2',
-  'border-subtle': '#ECE7DC',
   'border-strong': '#CFC7B5',
   fg: '#16110b',
   'fg-muted': '#5C5142',
@@ -139,7 +144,6 @@ const LIGHT_NIGHT = withDerived({
   surface: '#FBF8F1',
   'surface-alt': '#E4DED0',
   border: '#D5CEBE',
-  'border-subtle': '#DFD9CA',
   'border-strong': '#C2BAA6',
   fg: '#16110b',
   'fg-muted': '#5C5142',
@@ -172,7 +176,6 @@ const DARK_DAY = withDerived({
   // clears AA and lands on #242429.
   'surface-alt': '#1E1E24',
   border: '#2E2E36',
-  'border-subtle': '#232329',
   'border-strong': '#3A3A44',
   fg: '#EDEBE8',
   'fg-muted': '#9A9AA4',
@@ -197,7 +200,6 @@ const DARK_NIGHT = withDerived({
   surface: '#121218',
   'surface-alt': '#1B1B22',
   border: '#22222A',
-  'border-subtle': '#17171D',
   'border-strong': '#2E2E38',
   fg: '#EDEBE8',
   'fg-muted': '#9A9AA4',
