@@ -6,9 +6,18 @@ in git, so it follows the project to every machine and environment.
 
 ## Project
 
-German-learning PWA being refactored into a language-agnostic engine +
-swappable content packs (German = reference pack). React 18 + Vite 5, inline
-styles only, Vitest + RTL, ESLint 10 flat config + Prettier.
+German-learning PWA on a language-agnostic engine + swappable content packs
+(German = the only pack). React 18 + Vite 5, inline styles only, Vitest + RTL,
+ESLint 10 flat config + Prettier.
+
+**Product decision (2026-08-15) — German stays the only pack.** The multi-pack
+engine work (Phases 1.2–1.5, 3a) is kept and still valuable: it is why the
+engine is clean. But shipping a second language is *not* the goal. Phases 3b/3c
+(content) and Phase 4 (picker + storage namespacing) are shelved, and the ~25
+German chrome/gamification strings in `src/lib/gamification.js` stay hardcoded —
+the German flavour **is** the brand. Effort goes into the German app itself.
+Recorded here because the fuller write-up lives in `CURSOR_TASKS.md`, which is
+git-excluded and therefore absent from CI and fresh checkouts.
 
 **Linked environments:**
 - **GitHub:** https://github.com/blackhebrewisraeli/deutsch-app (origin, `main` is protected truth)
@@ -60,10 +69,20 @@ styles only, Vitest + RTL, ESLint 10 flat config + Prettier.
   populated account — a fresh one hides elements that only exist with real
   progress (freeze chip, high level, long rank names).
 - **Language-blind engine rule:** code in `src/lib/*` and `src/components/*`
-  must not hardcode German specifics — no `card.de` keys in engine logic, no
-  `if (language === 'de')`. German-specific behavior belongs in the pack
-  (`src/packs/de/`), accessed via `activePack`. (`src/data/content.js` is
-  legacy-allowed until Phase 1.5.)
+  must not hardcode German specifics — no `if (language === 'de')`, no German
+  values, strings, or grammar baked into engine logic. German-specific behavior
+  belongs in the pack (`src/packs/de/`), accessed via `activePack`.
+- **The `de` field name is a recorded exception to that rule.** Pack cards ship
+  as `{ de, en, ipa, … }`, and the translate exercises, chat message rendering,
+  and the vocab drill/card layer read `card.de` directly. This is a *field name*
+  in the pack's own data contract, not a German branch: nothing reads it to
+  decide German behaviour, and `src/lib/*` does not read it at all (`srsKey`
+  keys on `card.id`, `speech.js` reads `activePack`). Renaming it to `term`
+  — proposed as `docs/AUDIT_GERMAN_COUPLING.md` #2 — only pays off with a second
+  pack, and there will not be one (see the product decision under **Project**).
+  **So: don't "fix" `card.de`, and don't file it as a violation.**
+  If a second pack is ever greenlit, the rename is part of that work, designed by
+  Claude Code — it touches pack data, the components above, and their tests.
 - **Storage:** localStorage keys (`deutsch-app-state-v1` etc.) are NOT
   namespaced per language yet — do not rename or migrate any storage key.
   That is Phase 4, designed by Claude Code.
