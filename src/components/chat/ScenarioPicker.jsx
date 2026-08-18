@@ -18,6 +18,7 @@ export default function ScenarioPicker({ scenario, setScenario, mobile }) {
           gap: 0,
           borderRadius: RADIUS.lg,
           boxShadow: SHADOW.card,
+          border: `1px solid ${COLORS.border}`,
           overflow: 'hidden',
           overflowX: mobile ? 'auto' : 'visible',
         }}

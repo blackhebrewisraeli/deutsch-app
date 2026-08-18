@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { contrastRatio, relativeLuminance } from './contrast';
-import { MODE_COLORS, DEFAULT_ACCENTS } from './themeTokens';
+import { MODE_COLORS, DEFAULT_ACCENTS, FLAG_STRIPES } from './themeTokens';
 import { deriveThemeRamps } from './ramp';
 import { accent, accentAlt } from '../packs/de/theme';
 
@@ -219,5 +219,15 @@ describe('legacy DEFAULT_ACCENTS stay within the fill rule', () => {
       const d = DEFAULT_ACCENTS[mode];
       expect(contrastRatio(d.accentOn, d.accent)).toBeGreaterThanOrEqual(AA_NORMAL);
     }
+  });
+});
+
+describe('flag stripe pairings (mode-independent)', () => {
+  it.each([
+    ['gold on charcoal', FLAG_STRIPES['flag-on-black'], FLAG_STRIPES['flag-black']],
+    ['white on flag red', FLAG_STRIPES['flag-on-red'], FLAG_STRIPES['flag-red']],
+    ['charcoal on gold', FLAG_STRIPES['flag-on-gold'], FLAG_STRIPES['flag-gold']],
+  ])('%s ≥ 4.5:1', (_name, fg, bg) => {
+    expect(contrastRatio(fg, bg)).toBeGreaterThanOrEqual(AA_NORMAL);
   });
 });

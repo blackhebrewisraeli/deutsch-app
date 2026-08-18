@@ -184,6 +184,7 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
               marginTop: 24,
               padding: 18,
               background: COLORS.paperDeep,
+              border: `1px solid ${COLORS.border}`,
               borderRadius: RADIUS.lg,
               boxShadow: SHADOW.card,
             }}
@@ -215,7 +216,8 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
             borderRadius: RADIUS.lg,
             boxShadow: SHADOW.card,
             overflow: 'hidden',
-            background: COLORS.paper,
+            background: COLORS.surface,
+            border: `1px solid ${COLORS.border}`,
           }}
         >
           <MessageList messages={messages} thinking={thinking} endRef={messagesEndRef} />

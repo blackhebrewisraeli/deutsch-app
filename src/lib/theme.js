@@ -15,9 +15,22 @@ export const COLORS = {
   paper: 'var(--c-ground)',
   paperDeep: 'var(--c-surface-alt)', // alias of surface-1 in light, surface-2 in dark
   card: 'var(--c-surface)', // alias of surface-2 in light, surface-1 in dark
+  surface: 'var(--c-surface)', // same var as card — the name the token model uses
+  surfaceElevated: 'var(--c-surface-3)',
   surface1: 'var(--c-surface-1)',
   surface2: 'var(--c-surface-2)',
   surface3: 'var(--c-surface-3)',
+  border: 'var(--c-border)',
+  borderStrong: 'var(--c-border-strong)',
+
+  // Mode-independent German-flag stripes (entry splash). Same hex in every
+  // palette — see FLAG_STRIPES in themeTokens.js.
+  flagBlack: 'var(--c-flag-black)',
+  flagRed: 'var(--c-flag-red)',
+  flagGold: 'var(--c-flag-gold)',
+  flagOnBlack: 'var(--c-flag-on-black)',
+  flagOnRed: 'var(--c-flag-on-red)',
+  flagOnGold: 'var(--c-flag-on-gold)',
 
   // Text
   ink: 'var(--c-fg)',
@@ -134,6 +147,9 @@ export const BORDER = {
   subtle: `1px solid ${COLORS.ink}`,
   dashed: `1px dashed ${COLORS.ink}`,
   ghost: `1px solid ${COLORS.paperA50}`,
+  // Hairline from the structural border token — visible on dark surfaces
+  // where SHADOW.card's light-mode rgba is nearly invisible.
+  panel: `1px solid ${COLORS.border}`,
 };
 
 // ── Radius ───────────────────────────────────────────────────
@@ -243,7 +259,8 @@ export const btnSecondary = BUTTON.secondary;
 
 export const CARD = {
   base: {
-    background: COLORS.card,
+    background: COLORS.surface,
+    border: BORDER.panel,
     borderRadius: RADIUS.xl,
     boxShadow: SHADOW.card,
     color: COLORS.ink,
@@ -251,6 +268,7 @@ export const CARD = {
   dark: { background: COLORS.ink, borderRadius: RADIUS.lg, color: COLORS.paper },
   soft: {
     background: COLORS.paperDeep,
+    border: BORDER.panel,
     borderRadius: RADIUS.lg,
     boxShadow: SHADOW.card,
     color: COLORS.ink,

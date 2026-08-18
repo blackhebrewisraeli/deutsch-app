@@ -84,6 +84,24 @@ describe('theme preference persistence', () => {
     expect(() => setThemePreference('sepia')).not.toThrow();
     expect(readThemePreference()).toBe('light');
   });
+
+  it('treats blocked storage reads as unset rather than throwing', () => {
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError');
+    });
+    expect(readThemePreference()).toBeNull();
+    expect(getThemePreferenceForUI()).toBe('system');
+    spy.mockRestore();
+  });
+
+  it('still applies a preference when storage refuses the write', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    expect(() => setThemePreference('light')).not.toThrow();
+    expect(document.documentElement.dataset.theme).toBe('light');
+    spy.mockRestore();
+  });
 });
 
 describe('theme tone persistence', () => {
@@ -139,6 +157,25 @@ describe('theme tone persistence', () => {
     setThemeTone('night');
     expect(() => setThemeTone('sepia')).not.toThrow();
     expect(readThemeTone()).toBe('night');
+  });
+
+  it('treats blocked storage tone reads as day rather than throwing', () => {
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError');
+    });
+    expect(readThemeTone()).toBeNull();
+    expect(getThemeToneForUI()).toBe('day');
+    spy.mockRestore();
+  });
+
+  it('still applies a tone when storage refuses the write', () => {
+    setThemePreference('dark');
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    expect(() => setThemeTone('night')).not.toThrow();
+    expect(document.documentElement.dataset.tone).toBe('night');
+    spy.mockRestore();
   });
 });
 
