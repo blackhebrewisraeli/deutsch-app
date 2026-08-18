@@ -68,8 +68,20 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      # Stub Supabase config, not real credentials. `isAuthConfigured()` only
+      # checks that both values are truthy, so a fake host is enough to make the
+      # build render the account chrome — the AccountChip, the Stats account
+      # section, the league table and the profile card — which the audit then
+      # reaches with a seeded session and stubbed responses. Without this the
+      # signed-in half of the audit has nothing to look at, which is how those
+      # surfaces went unaudited for as long as they did. Nothing here is secret
+      # and nothing reaches the network: the audit intercepts every call.
       - name: Build
         run: npm run build
+        env:
+          VITE_SUPABASE_URL: https://stub.supabase.co
+          VITE_SUPABASE_ANON_KEY: stub-anon-key-not-a-secret
+          VITE_LEAGUES_ENABLED: 'true'
 
       # Serve, wait, and audit in one step so the backgrounded server is
       # guaranteed to outlive the shell that started it. The production build is
@@ -90,6 +102,10 @@ jobs:
             sleep 1
           done
           npm run audit:contrast
+        env:
+          # Must match the build above: the script derives the supabase-js
+          # session storage key (`sb-<ref>-auth-token`) from this host.
+          VITE_SUPABASE_URL: https://stub.supabase.co
 
   rls-policy-tests:
     name: RLS Policy Tests
