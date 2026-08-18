@@ -20,6 +20,20 @@ const BASE = process.env.AUDIT_BASE ?? 'http://localhost:5290';
 const MODES = ['light', 'dark'];
 const TONES = ['day', 'night'];
 const TABS = ['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
+// The signed-in pass sweeps mode x tone at one viewport. Contrast is a function
+// of the palette, not the width; width only moves things around, and the guest
+// walk already covers all three widths for the shared chrome.
+const SIGNED_IN_VIEWPORT = { width: 390, height: 800 };
+
+// supabase-js stores its session under `sb-<project-ref>-auth-token`, where the
+// ref is the first label of the API host. Derived rather than hardcoded so this
+// works both in CI (which builds against a stub host) and on a developer box
+// whose .env points at the real project.
+const SUPABASE_REF = (process.env.VITE_SUPABASE_URL ?? 'https://stub.supabase.co')
+  .replace(/^https?:\/\//, '')
+  .split('.')[0];
+const SESSION_KEY = `sb-${SUPABASE_REF}-auth-token`;
+
 const VIEWPORTS = [
   { width: 1280, height: 800 },
   { width: 390, height: 800 },
@@ -250,6 +264,199 @@ async function dismissEntryScreens(page) {
   }
 }
 
+/**
+ * Seed a signed-in session.
+ *
+ * `useAuth` sets status from `client.auth.getSession()`, and supabase-js
+ * resolves that from storage without a network round-trip so long as the
+ * session has not expired. So a well-formed stub session is enough to render
+ * the account chrome — no credentials, and nothing real to leak into CI.
+ * (An earlier note in this repo claimed a forged token "buys nothing because
+ * the client rejects it". That is wrong, and this pass depends on it being
+ * wrong: only `getUser()` round-trips.)
+ */
+function seedSignedInSession(key) {
+  localStorage.setItem(
+    key,
+    JSON.stringify({
+      access_token: 'audit.stub.token',
+      token_type: 'bearer',
+      expires_in: 3600,
+      // Comfortably ahead of the run so supabase-js never tries to refresh.
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      refresh_token: 'audit-stub-refresh',
+      user: {
+        id: '00000000-0000-4000-8000-000000000001',
+        aud: 'authenticated',
+        role: 'authenticated',
+        email: 'auditor@example.test',
+        app_metadata: {},
+        user_metadata: {},
+        created_at: '2026-01-01T00:00:00.000Z',
+      },
+    })
+  );
+}
+
+/**
+ * Answer the league + profile calls with fixtures.
+ *
+ * Without these the leaderboard renders "Couldn't load your league." — one
+ * short error line, which is precisely the state that hides every colour the
+ * populated widget uses (tier heading, rank rows, promote/demote zones).
+ * A fixture that cannot show the real surface cannot audit it.
+ */
+async function stubAccountNetwork(page) {
+  const json = (body) => ({
+    status: 200,
+    contentType: 'application/json',
+    body: JSON.stringify(body),
+  });
+
+  // Monday of the current week, so the countdown renders a real remainder.
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
+
+  await page.route('**/api/v1/league/join', (r) =>
+    r.fulfill(json({ league_id: 'audit-league', tier: 2, period_start: monday.toISOString() }))
+  );
+  await page.route('**/api/v1/league/refresh', (r) => r.fulfill(json({ ok: true })));
+  await page.route('**/api/v1/league/profile*', (r) =>
+    r.fulfill(
+      json({
+        handle: 'Auditor',
+        tier: 2,
+        total_xp: 4200,
+        longest_streak: 31,
+        avatar_emoji: '🦊',
+      })
+    )
+  );
+
+  // Enough rows to populate the promotion zone, the demotion zone and the
+  // untouched middle — the three row styles the widget colours differently.
+  await page.route('**/rest/v1/league_members*', (r) =>
+    r.fulfill(
+      json(
+        Array.from({ length: 12 }, (_, i) => ({
+          user_id: i === 3 ? '00000000-0000-4000-8000-000000000001' : `peer-${i}`,
+          handle: i === 3 ? 'Auditor' : `Lernende ${i + 1}`,
+          weekly_xp: 900 - i * 70,
+          rank: i + 1,
+        }))
+      )
+    )
+  );
+
+  // Any other Supabase traffic (token refresh, telemetry) fails closed rather
+  // than reaching the network from CI.
+  await page.route('**/auth/v1/**', (r) => r.fulfill(json({})));
+}
+
+/**
+ * Contrast-audit the chrome only a signed-in account ever renders: the header
+ * AccountChip, the Stats account section, the league table, and the profile
+ * card. The guest walk cannot reach any of it — before this pass those
+ * surfaces had never been measured in any mode.
+ */
+async function auditSignedIn(page, mode, tone) {
+  await page.evaluate(
+    ({ m, t, key }) => {
+      localStorage.setItem('deutsch-theme-mode', m);
+      localStorage.setItem('deutsch-theme-tone', t);
+      localStorage.setItem('deutsch-level', 'a1');
+      return key;
+    },
+    { m: mode, t: tone, key: SESSION_KEY }
+  );
+  await page.evaluate(seedPopulatedAccount);
+  await page.evaluate(seedSignedInSession, SESSION_KEY);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  // Longer than the guest walk: the Supabase client is code-split, and the
+  // league table only paints after join -> refresh -> standings resolve.
+  await page.waitForTimeout(1200);
+
+  const signedIn = await page.evaluate(() => Boolean(document.querySelector('header')));
+  if (!signedIn) {
+    throw new Error(
+      `audit-contrast: signed-in pass never reached the app shell (${mode}.${tone}). ` +
+        'The session seed no longer satisfies useAuth — check SESSION_KEY and expires_at.'
+    );
+  }
+
+  const out = [];
+
+  // Stats' default view — this is where AccountSection renders for a signed-in
+  // user (email, export, handle field). The header AccountChip rides along.
+  await openTab(page, 'Stats');
+  await page.waitForTimeout(700);
+  out.push(...(await page.evaluate(collectFindings, 'Stats/signed-in')));
+
+  // The league table sits behind a view toggle, not behind the tab. Opening
+  // Stats alone leaves it unrendered — which is exactly how it stayed
+  // unaudited while the job reported clean.
+  const onLeagues = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')].find(
+      (x) => (x.getAttribute('aria-label') || '') === 'leagues'
+    );
+    if (!b) return false;
+    b.click();
+    return true;
+  });
+  if (!onLeagues) {
+    throw new Error(
+      `audit-contrast: no LEAGUES toggle on Stats (${mode}.${tone}) — either the ` +
+        'build lacks VITE_LEAGUES_ENABLED=true or the toggle moved.'
+    );
+  }
+  // join -> refresh -> standings are three sequential round trips, and a fixed
+  // sleep here is exactly how this pass first measured an EMPTY table and still
+  // reported clean. Wait for the rows themselves; `rowsRendered` then gates the
+  // profile-card step so a fixture that stops rendering is reported, not counted
+  // as coverage.
+  let rowsRendered = true;
+  try {
+    await page.waitForFunction(
+      () =>
+        [...document.querySelectorAll('li')].some((el) => /Lernende/.test(el.textContent || '')),
+      { timeout: 8000 }
+    );
+  } catch {
+    rowsRendered = false;
+  }
+  out.push(...(await page.evaluate(collectFindings, 'Leagues/signed-in')));
+
+  // The profile card is a modal off a league row. Report when it does not open,
+  // so a broken fixture cannot pass as clean coverage.
+  // Rows are clickable <li>, not <button> — searching for a button here is what
+  // made the first version of this pass report 0/4 while looking clean.
+  // BUG: those <li onClick> rows are not keyboard reachable (no role, no
+  // tabindex, no key handler), so the league table cannot be opened without a
+  // mouse. Out of scope here; flagged per AGENTS.md rather than fixed silently.
+  const opened =
+    rowsRendered &&
+    (await page.evaluate(() => {
+      // Match the handle alone. A row's textContent concatenates its spans with
+      // no separator — "1. Lernende 1900 XP" — so an anchored `Lernende 1\b`
+      // never matches, which is what made this report 0/4 while the table was
+      // rendering all 11 rows perfectly well.
+      const row = [...document.querySelectorAll('li')].find((el) =>
+        /Lernende/.test(el.textContent || '')
+      );
+      if (!row) return false;
+      row.click();
+      return true;
+    }));
+  if (opened) {
+    await page.waitForTimeout(600);
+    out.push(...(await page.evaluate(collectFindings, 'ProfileCard')));
+  }
+
+  return { findings: out, profileCardOpened: opened };
+}
+
 async function applyTheme(page, mode, tone) {
   await page.evaluate(
     ({ mode: m, tone: t }) => {
@@ -285,6 +492,7 @@ async function main() {
   const findings = [];
   const layout = [];
   let combinations = 0;
+  let signedInCombinations = 0;
 
   for (const mode of MODES) {
     for (const tone of TONES) {
@@ -318,6 +526,29 @@ async function main() {
     }
   }
 
+  // ── Signed-in pass ────────────────────────────────────────────────────────
+  // A separate context: the guest walk's storage and the stub routes must not
+  // bleed into each other, and the guest surfaces (WelcomeGate, TrialWall) are
+  // only reachable without a session.
+  const signedInContext = await browser.newContext();
+  const signedInPage = await signedInContext.newPage();
+  await signedInPage.setViewportSize(SIGNED_IN_VIEWPORT);
+  await stubAccountNetwork(signedInPage);
+  await signedInPage.goto(BASE, { waitUntil: 'domcontentloaded' });
+
+  let profileCardsAudited = 0;
+  for (const mode of MODES) {
+    for (const tone of TONES) {
+      signedInCombinations += 1;
+      const res = await auditSignedIn(signedInPage, mode, tone);
+      if (res.profileCardOpened) profileCardsAudited += 1;
+      for (const f of res.findings) {
+        findings.push({ ...f, mode, tone, viewport: SIGNED_IN_VIEWPORT.width });
+      }
+    }
+  }
+  await signedInContext.close();
+
   await browser.close();
 
   // Dedupe by stable key so one bug is not reported 60 times.
@@ -330,9 +561,22 @@ async function main() {
     unique.push(f);
   }
 
-  console.log(`Audited ${combinations} combinations (2×2×5×3).`);
+  console.log(`Audited ${combinations} guest combinations (2×2×5×3).`);
+  console.log(
+    `Audited ${signedInCombinations} signed-in combinations (2×2) — ` +
+      `AccountChip, account section, league table; ${profileCardsAudited} with the profile card.`
+  );
   console.log(`Raw findings: ${findings.length}; unique: ${unique.length}`);
   console.log(`Header sheet layout findings: ${layout.length}`);
+
+  // A silent zero here would mean the league fixture stopped rendering, which
+  // looks identical to "no findings" in the totals above.
+  if (profileCardsAudited < signedInCombinations) {
+    console.log(
+      `⚠ profile card opened in only ${profileCardsAudited}/${signedInCombinations} signed-in ` +
+        'combinations — the league table fixture may have stopped rendering.'
+    );
+  }
 
   for (const l of layout) {
     console.log(`[${l.mode}.${l.tone} @${l.viewport}] ${l.reason} ${JSON.stringify(l)}`);

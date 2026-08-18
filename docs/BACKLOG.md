@@ -59,9 +59,15 @@ Two traps worth keeping, both from #96:
 
 ## Known gaps, recorded rather than fixed
 
-- **The contrast audit does not cover signed-in-only chrome** — AccountChip,
-  freeze chip, leagues, ProfileCard. #125 fixed _which screen_ it audits (it was
-  measuring the entry screen); it did not widen coverage. Needs a decision on
-  whether to seed a real session.
+- ~~**The contrast audit does not cover signed-in-only chrome.**~~ Closed: the
+  audit now runs a signed-in pass (2 modes x 2 tones) over the AccountChip, the
+  Stats account section, the league table and the profile card, using a seeded
+  session and stubbed league responses. The freeze chip named in the original
+  entry was never actually a gap — the existing seed yields two freezes, so the
+  guest walk already rendered it.
+- **League table rows are not keyboard reachable.** They are `<li onClick>` with
+  no role, tabindex or key handler, so the profile card cannot be opened without
+  a mouse. Found while writing the signed-in audit pass; flagged in
+  `scripts/dev/audit-contrast.mjs` with a `// BUG:` rather than fixed there.
 - **`card.de` is read directly by seven components.** Recorded as an accepted
   exception in `AGENTS.md`, not a defect. Do not "fix" it.
