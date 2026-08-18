@@ -9,7 +9,19 @@ export default function GoalRing({ pct, met, size = 48 }) {
   return (
     <div
       title={met ? 'Daily goal reached!' : `Daily goal · ${Math.round(clamped * 100)}%`}
-      style={{ position: 'relative', width: size, height: size, flexShrink: 0 }}
+      style={{
+        position: 'relative',
+        width: size,
+        height: size,
+        flexShrink: 0,
+        // Its own plane. The ring colours (success, track, error) are audited
+        // against `surface`, not against the masthead's charcoal, where the
+        // filled arc falls to 2.2:1 in light.night. Sitting the control on its
+        // own disc keeps every existing pairing valid instead of needing a
+        // mode-independent copy of each ring colour.
+        background: COLORS.surface,
+        borderRadius: '50%',
+      }}
     >
       <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
         <circle

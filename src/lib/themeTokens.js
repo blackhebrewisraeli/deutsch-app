@@ -61,6 +61,11 @@ const HEAT_RAMP = { 'heat-1': '#FFCE0040', 'heat-2': '#FFCE0090' };
 const ACCENT_TIERS_LIGHT = {
   'accent-black': '#1A1816',
   'accent-black-on': '#FBF8F1',
+  // Quiet ink for the charcoal plane. `fg-muted` is a dark brown in light mode
+  // and unreadable here, so the masthead tagline had nothing to use. Opaque
+  // rather than `accent-black-on` at alpha, so contrast.test.js can assert it —
+  // an alpha token is excluded from that sweep and would go unchecked.
+  'accent-black-on-muted': '#9A948C',
   'accent-red': '#C92A2A',
   'accent-red-on': '#FFFFFF',
 };
@@ -68,6 +73,11 @@ const ACCENT_TIERS_LIGHT = {
 const ACCENT_TIERS_DARK = {
   'accent-black': '#1A1816',
   'accent-black-on': '#FBF8F1',
+  // Quiet ink for the charcoal plane. `fg-muted` is a dark brown in light mode
+  // and unreadable here, so the masthead tagline had nothing to use. Opaque
+  // rather than `accent-black-on` at alpha, so contrast.test.js can assert it —
+  // an alpha token is excluded from that sweep and would go unchecked.
+  'accent-black-on-muted': '#9A948C',
   'accent-red': '#EF4444',
   'accent-red-on': '#0F0F11',
 };

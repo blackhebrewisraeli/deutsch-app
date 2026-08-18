@@ -22,7 +22,9 @@ export default function AccountChip({ user, onSignIn, onSignOut, pending = false
         style={{
           background: 'none',
           border: 'none',
-          color: COLORS.ink,
+          // Inherits the masthead ink. Not COLORS.ink: that is near-black in
+          // light mode and this button sits on the charcoal bar.
+          color: 'inherit',
           fontFamily: FONTS.mono,
           fontSize: FONT_SIZE.tag,
           textTransform: 'uppercase',
@@ -48,8 +50,11 @@ export default function AccountChip({ user, onSignIn, onSignOut, pending = false
             width: 8,
             height: 8,
             borderRadius: '50%',
-            background: COLORS.red,
-            border: `2px solid ${COLORS.paper}`,
+            background: COLORS.accentRed,
+            // Ringed in the bar's own colour so the dot reads as separate from
+            // the avatar beneath it. `paper` would be the page ground, which
+            // is no longer what is behind this.
+            border: `2px solid ${COLORS.accentBlack}`,
             zIndex: 1,
           }}
         />
@@ -63,8 +68,11 @@ export default function AccountChip({ user, onSignIn, onSignOut, pending = false
           width: 32,
           height: 32,
           borderRadius: '50%',
-          background: COLORS.ink,
-          color: COLORS.paper,
+          // Inverted onto its own surface, like the ring discs and StatBlock:
+          // an `ink` fill is near-black in light mode and would disappear into
+          // the charcoal bar. `ink` on `surface` is an audited pairing.
+          background: COLORS.surface,
+          color: COLORS.ink,
           border: 'none',
           fontFamily: FONTS.mono,
           fontWeight: 700,

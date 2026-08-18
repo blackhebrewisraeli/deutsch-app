@@ -152,6 +152,15 @@ function pairsFor(mode, tone) {
     });
   }
 
+  // The masthead's quiet ink is body text (the tagline), so it is held to body
+  // AA on its own plane rather than the 3:1 a decorative tone would get.
+  pairs.push({
+    fg: c['accent-black-on-muted'],
+    bg: c['accent-black'],
+    min: AA_NORMAL,
+    name: `${label} accent-black-on-muted on accent-black`,
+  });
+
   // Accent fills (solid + deep lip) carry onFill ink, not mode-flipping fg
   pairs.push({
     fg: packAccentOn,

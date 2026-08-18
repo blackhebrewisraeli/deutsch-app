@@ -27,29 +27,31 @@ they are listed as blocked rather than "available".
 
 ## Ready to execute
 
-### The charcoal masthead — `accentBlack`'s one consumer
+Nothing queued.
 
-`COLORS.accentBlack` is in the palette with **no consumer**, deliberately and
-with a named destination: a charcoal masthead band behind the wordmark, carrying
-the splash's black stripe into the app frame. Prototyped in a browser on
-2026-08-18 in both modes and it reads well — an editorial band in light, a subtle
-warm `#1A1816` above the obsidian page in dark.
+## Recently shipped
 
-It is queued rather than done because it is **not a token swap**. The header's
-children are all inked for the page ground, so a background change alone erases
-the wordmark, the tagline, `SIGN IN` and the level-badge ring. Doing it properly
-needs:
+### The charcoal masthead — `accentBlack`'s consumer
 
-- the header background and bottom border
-- the wordmark, and its red dot (`COLORS.red` on charcoal is ~2.2:1)
-- `LevelBadge`, `StatBlock`, `GoalRing`, `ThemeChip`, `AccountChip`
-- **a token that does not exist yet** — a muted ink for the charcoal plane.
-  `COLORS.mute` is a dark brown and has nothing to offer here. This is the piece
-  to design first; the prototype faked it with opacity, which is why the streak
-  label read badly in it.
+The masthead landed: the header is `COLORS.accentBlack` in both modes, carrying
+the splash's black stripe into the app frame, with the wordmark on
+`accentBlackOn` and its dot on `COLORS.flagRed` — the same token the splash
+paints it with.
 
-If this is abandoned, retire `accentBlack` with it rather than leaving a third
-unused accent next to `COLORS.accentAlt`.
+The design rule that made it cheap is worth keeping, because the obvious
+approach does not work: **on the masthead, only brand text sits on the charcoal;
+anything informational carries its own surface.** Painting the bar and re-inking
+each control would have needed a mode-independent copy of every ring colour —
+the XP arc falls to 2.21:1 on charcoal in light.night, the goal ring's red to
+2.44:1. Giving `LevelBadge` and `GoalRing` a `surface` disc instead keeps every
+already-audited pairing valid and adds no colour tokens. `StatBlock` and
+`ThemeChip` needed no change at all: they already carried their own surfaces,
+which is what suggested the rule.
+
+One token was added — `accentBlackOnMuted` — because the tagline had nothing to
+use: `fg-muted` is a dark brown in light mode. It is opaque rather than
+`accentBlackOn` at alpha so `contrast.test.js` can assert it; alpha tokens are
+excluded from that sweep and would go unchecked.
 
 ## Retired rather than left unused
 
