@@ -1,13 +1,21 @@
 # Plan — `hasStoredLevel()` should mean "has a *valid* level"
 
-**Status:** ready to execute. Queued 2026-08-18 by Claude Code, after #120.
-**Branch:** `cursor/valid-stored-level` off up-to-date `main`.
+**Status:** ✅ **SHIPPED** — implemented in #121 and #123, on `main` as of
+2026-08-18. Kept as the record of the design; do not execute it again.
 **Tier:** A — one behaviour change in one small module, plus tests.
 
 > Promoted here from `CURSOR_TASKS.md`, which is git-excluded and therefore
-> invisible to CI, Cursor Cloud, and any fresh checkout. The premise was
-> re-verified on `main` before promotion: `hasStoredLevel()` is still
-> `Boolean(localStorage.getItem(LEVEL_KEY))`, so the bug it describes is live.
+> invisible to CI, Cursor Cloud, and any fresh checkout.
+>
+> A note on the timing, because it is the kind of thing that makes a plan
+> dangerous later: when this was promoted (#127, main `01696fc`) the premise was
+> re-verified and `hasStoredLevel()` genuinely was still
+> `Boolean(localStorage.getItem(LEVEL_KEY))`. #121 and #123 landed in the
+> interim and arrived in `main` in the same pull, so the plan was stale within
+> the hour. The shipped code matches this design exactly — `resolveStored`,
+> `Object.hasOwn` over `in`, and the legacy `beginner`/`intermediate` branch
+> intact.
+
 The design decision is already made and written out below. Do not redesign it.
 
 ## The problem
