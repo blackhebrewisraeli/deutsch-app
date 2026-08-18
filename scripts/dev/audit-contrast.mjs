@@ -39,6 +39,14 @@ function seedPopulatedAccount() {
     const d = String(dt.getDate()).padStart(2, '0');
     daily[`${y}-${m}-${d}`] = qual;
   }
+  // BUG: seeding the device flag no longer gets past the entry screen when auth
+  // is configured. Since the entry-flow change (#116) the app gates on an account
+  // session, not `deutsch-onboarded`, so a build carrying VITE_SUPABASE_* renders
+  // the entry screen instead of the app shell — no header, no Appearance chip, and
+  // all 12 header-sheet layout findings fire, exiting 1 for a non-contrast reason.
+  // Verified locally: auth env set → 12 findings / exit 1; auth env blank → 0 / exit 0.
+  // The job is green in CI only because the runner has no Supabase env. Fix is to
+  // seed a fake account session (or stub `isAuthConfigured`) alongside this flag.
   localStorage.setItem('deutsch-onboarded', '1');
   localStorage.setItem('deutsch-welcome-dismissed', '1');
   localStorage.setItem('deutsch-level', 'a1');

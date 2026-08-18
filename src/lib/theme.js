@@ -57,6 +57,7 @@ export const COLORS = {
   heat2: 'var(--c-heat-2)',
   track: 'var(--c-track)',
   press: 'var(--c-press)',
+  scrim: 'var(--c-scrim)',
   muteDeep: 'var(--c-mute-deep)',
   goldLip: 'var(--c-gold-lip)',
   goldLipSoft: 'var(--c-gold-lip-soft)',
@@ -150,6 +151,10 @@ export const SHADOW = {
   card: '0 6px 16px rgba(22,17,11,0.08)',
   cardChunk: '0 8px 0 rgba(22,17,11,0.10)',
   bar: '0 6px 18px rgba(22,17,11,0.08)',
+  // Recessed wells — text inputs and the deck-picker search field. Four
+  // components had this literal inline; it lives here so "inputs look sunken"
+  // is one decision rather than four copies drifting apart.
+  inset: 'inset 0 2px 5px rgba(22,17,11,0.06)',
 };
 
 // ── Motion ───────────────────────────────────────────────────

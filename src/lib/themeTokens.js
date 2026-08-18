@@ -24,6 +24,10 @@ const ALPHA_DERIVATIONS = [
   ['ground-a80', 'ground', '80'],
   ['error-a80', 'error', '80'],
   ['error-a00', 'error', '00'],
+  // Modal backdrop. Derived from `press` (black in every palette) rather than
+  // `fg`, because an fg-based scrim inverts in dark mode — `fg` is #EDEBE8 there,
+  // so the "dimming" layer would brighten the backdrop instead.
+  ['scrim', 'press', '80'],
 ];
 
 // The stats heatmap ramp is one gold at two opacities, identical in every
