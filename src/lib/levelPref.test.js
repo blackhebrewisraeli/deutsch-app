@@ -43,4 +43,13 @@ describe('levelPref', () => {
     expect(localStorage.getItem('deutsch-level')).toBe('a1');
     expect(stampSettings).toHaveBeenCalledTimes(1);
   });
+
+  it('still stamps settings when storage refuses the write', () => {
+    const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    expect(() => writeLevel('b1')).not.toThrow();
+    expect(stampSettings).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
 });

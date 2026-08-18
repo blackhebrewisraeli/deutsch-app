@@ -672,4 +672,21 @@ describe('entry gate', () => {
     expect(gate()).toBeInTheDocument();
     expect(isLevelBoostEnabled()).toBe(false);
   });
+
+  it('keeps a level picked in settings after leaving and returning to the tab', async () => {
+    authMock.status = 'authenticated';
+    authMock.mayHaveSession = true;
+    localStorage.setItem('deutsch-level', 'b1');
+    render(<App />);
+    const nav = within(screen.getByRole('navigation'));
+
+    await userEvent.click(nav.getByRole('button', { name: 'Stats' }));
+    await userEvent.click(screen.getByRole('button', { name: 'A1' }));
+    await userEvent.click(nav.getByRole('button', { name: 'Vocab' }));
+    await userEvent.click(nav.getByRole('button', { name: 'Stats' }));
+
+    // If App had dropped onLevelChange, StatsTab would re-mount from the stale
+    // `level` prop and B1 would be pressed again.
+    expect(screen.getByRole('button', { name: 'A1' })).toHaveAttribute('aria-pressed', 'true');
+  });
 });
