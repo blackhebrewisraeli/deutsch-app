@@ -16,7 +16,7 @@ export default function ChatInput({
   return (
     <div
       style={{
-        borderTop: `1px solid ${COLORS.inkA12}`,
+        borderTop: `1px solid ${COLORS.border}`,
         padding: 16,
         display: 'flex',
         gap: 12,
@@ -52,8 +52,9 @@ export default function ChatInput({
         placeholder={listening ? 'Sprich auf Deutsch...' : 'Schreib auf Deutsch...'}
         style={{
           flex: 1,
-          background: COLORS.card,
-          border: 'none',
+          minWidth: 0,
+          background: COLORS.surface,
+          border: `1px solid ${COLORS.border}`,
           borderRadius: RADIUS.md,
           boxShadow: SHADOW.inset,
           padding: '0 18px',

@@ -34,7 +34,8 @@ export default function CardFace({ card, learned, mobile, display, conceal = [] 
       style={{
         borderRadius: RADIUS.xl,
         boxShadow: SHADOW.cardChunk,
-        background: COLORS.card,
+        background: COLORS.surface,
+        border: `1px solid ${COLORS.border}`,
         minHeight: 200,
         // 48px of padding on each side costs a quarter of a 375px
         // phone screen — step it down so the word gets the room.

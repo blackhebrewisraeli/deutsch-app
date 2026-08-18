@@ -71,10 +71,30 @@ describe('theme tokens', () => {
   });
 
   it('CARD and TEXT presets include expected keys', () => {
-    expect(CARD.base).toHaveProperty('background', COLORS.card);
+    expect(CARD.base).toHaveProperty('background', COLORS.surface);
+    expect(CARD.base.background).toBe(COLORS.card);
+    expect(CARD.base.border).toBe(BORDER.panel);
+    expect(CARD.soft.border).toBe(BORDER.panel);
     expect(CARD.dark.color).toBe(COLORS.paper);
     expect(TEXT.label.textTransform).toBe('uppercase');
     expect(TEXT.kicker.color).toBe(COLORS.red);
+  });
+
+  it('exposes surface, elevated-surface, and border aliases from the token model', () => {
+    expect(COLORS.surface).toBe('var(--c-surface)');
+    expect(COLORS.surfaceElevated).toBe('var(--c-surface-3)');
+    expect(COLORS.border).toBe('var(--c-border)');
+    expect(COLORS.borderStrong).toBe('var(--c-border-strong)');
+    expect(BORDER.panel).toBe(`1px solid ${COLORS.border}`);
+  });
+
+  it('exposes mode-independent flag-stripe tokens', () => {
+    expect(COLORS.flagBlack).toBe('var(--c-flag-black)');
+    expect(COLORS.flagRed).toBe('var(--c-flag-red)');
+    expect(COLORS.flagGold).toBe('var(--c-flag-gold)');
+    expect(COLORS.flagOnBlack).toBe('var(--c-flag-on-black)');
+    expect(COLORS.flagOnRed).toBe('var(--c-flag-on-red)');
+    expect(COLORS.flagOnGold).toBe('var(--c-flag-on-gold)');
   });
 
   it('RADIUS pill is fully round', () => {

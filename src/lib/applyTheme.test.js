@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { applyTheme } from './applyTheme';
-import { MODE_COLORS, DEFAULT_ACCENTS, tokenToCssVar } from './themeTokens';
+import { MODE_COLORS, DEFAULT_ACCENTS, tokenToCssVar, FLAG_STRIPES } from './themeTokens';
 
 describe('applyTheme', () => {
   beforeEach(() => {
@@ -84,5 +84,28 @@ describe('applyTheme', () => {
     // Legacy aliases still resolve
     expect(root.getPropertyValue('--c-surface')).toBe(MODE_COLORS.light.day.surface);
     expect(root.getPropertyValue('--c-surface-alt')).toBe(MODE_COLORS.light.day['surface-alt']);
+  });
+
+  it('writes the same flag stripe colours in every palette', () => {
+    const keys = Object.keys(FLAG_STRIPES);
+    applyTheme('light', undefined, 'day');
+    const light = Object.fromEntries(
+      keys.map((k) => [k, document.documentElement.style.getPropertyValue(tokenToCssVar(k))])
+    );
+    expect(light).toEqual(FLAG_STRIPES);
+
+    for (const [mode, tone] of [
+      ['light', 'night'],
+      ['dark', 'day'],
+      ['dark', 'night'],
+    ]) {
+      applyTheme(mode, undefined, tone);
+      for (const k of keys) {
+        expect(
+          document.documentElement.style.getPropertyValue(tokenToCssVar(k)),
+          `${mode}.${tone} ${k}`
+        ).toBe(FLAG_STRIPES[k]);
+      }
+    }
   });
 });

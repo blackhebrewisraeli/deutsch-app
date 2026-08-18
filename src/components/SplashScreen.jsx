@@ -43,11 +43,13 @@ export default function SplashScreen({ onComplete }) {
         fontFamily: FONTS.display,
       }}
     >
-      {/* Black stripe */}
+      {/* Black stripe — flag top. Mode-independent charcoal, not COLORS.paper,
+          which is parchment in light and made this band stop reading as a flag. */}
       <div
         style={{
           flex: 1,
-          background: COLORS.paper,
+          minHeight: 0,
+          background: COLORS.flagBlack,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -58,32 +60,35 @@ export default function SplashScreen({ onComplete }) {
           style={{
             fontSize: 72,
             fontWeight: FONT_WEIGHT.black,
-            color: COLORS.ink,
+            color: COLORS.flagOnBlack,
             letterSpacing: LETTER_SPACING.tight,
             lineHeight: 1,
           }}
         >
-          Deutsch<span style={{ color: COLORS.red }}>.</span>
+          Deutsch<span style={{ color: COLORS.flagRed }}>.</span>
         </div>
         <div
           style={{
             fontFamily: FONTS.mono,
             fontSize: FONT_SIZE.tag,
             letterSpacing: LETTER_SPACING.caps,
-            color: COLORS.mute,
+            color: COLORS.flagOnBlack,
             marginTop: 12,
             textTransform: 'uppercase',
+            opacity: 0.85,
           }}
         >
           Sprachschule
         </div>
       </div>
 
-      {/* Red stripe — level picker */}
+      {/* Red stripe — level picker. Authentic flag red, not the mode-tinted
+          error token (coral in dark). */}
       <div
         style={{
           flex: 1,
-          background: COLORS.red,
+          minHeight: 0,
+          background: COLORS.flagRed,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
@@ -97,7 +102,7 @@ export default function SplashScreen({ onComplete }) {
             fontFamily: FONTS.mono,
             fontSize: FONT_SIZE.tag,
             letterSpacing: LETTER_SPACING.caps,
-            color: COLORS.paper,
+            color: COLORS.flagOnRed,
             textTransform: 'uppercase',
           }}
         >
@@ -124,7 +129,8 @@ export default function SplashScreen({ onComplete }) {
         className="entry-screen-foot"
         style={{
           flex: 1,
-          background: COLORS.gold,
+          minHeight: 0,
+          background: COLORS.flagGold,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -135,7 +141,7 @@ export default function SplashScreen({ onComplete }) {
             fontFamily: FONTS.mono,
             fontSize: FONT_SIZE.tag,
             letterSpacing: LETTER_SPACING.caps,
-            color: COLORS.accentOn,
+            color: COLORS.flagOnGold,
             textTransform: 'uppercase',
           }}
         >

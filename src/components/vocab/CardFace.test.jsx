@@ -54,6 +54,12 @@ describe('CardFace', () => {
     expect(word).toHaveStyle({ overflowWrap: 'anywhere', maxWidth: '100%' });
   });
 
+  it('sits on the surface token with a border so it does not blend into the ground', () => {
+    const { container } = render(<CardFace card={noun} learned={false} mobile={false} />);
+    expect(container.firstChild.style.background).toBe('var(--c-surface)');
+    expect(container.firstChild.style.border).toBe('1px solid var(--c-border)');
+  });
+
   it('steps the display size and padding down on mobile', () => {
     const { container, rerender } = render(<CardFace card={noun} learned={false} mobile />);
     expect(screen.getByText('das Brot')).toHaveStyle({ fontSize: FONT_SIZE['5xl'] });

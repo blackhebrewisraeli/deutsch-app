@@ -111,7 +111,10 @@ export function setThemePreference(preference) {
   } catch {
     // still apply in-memory for this session
   }
-  return applyCurrentTheme();
+  const mode = resolveThemeMode(preference, getSystemMode());
+  const tone = resolveThemeTone(readThemeTone());
+  applyTheme(mode, activePack.theme, tone);
+  return mode;
 }
 
 /**
@@ -128,7 +131,9 @@ export function setThemeTone(tone) {
   } catch {
     // still apply in-memory for this session
   }
-  return applyCurrentTheme();
+  const mode = resolveThemeMode(readThemePreference(), getSystemMode());
+  applyTheme(mode, activePack.theme, resolveThemeTone(tone));
+  return mode;
 }
 
 /**

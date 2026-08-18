@@ -576,7 +576,7 @@ export default function App() {
       {/* ── Header ───────────────────────────────────────────── */}
       <header
         style={{
-          borderBottom: 'none',
+          borderBottom: `1px solid ${COLORS.border}`,
           boxShadow: SHADOW.bar,
           padding: mobile ? '12px 10px' : '20px 32px',
           display: 'flex',
@@ -678,6 +678,7 @@ export default function App() {
           gap: mobile ? 6 : 8,
           padding: mobile ? '8px 10px' : '12px 16px',
           background: COLORS.paper,
+          borderBottom: `1px solid ${COLORS.border}`,
           position: 'sticky',
           top: mobile ? 53 : 81,
           zIndex: 49,

@@ -28,17 +28,23 @@ describe('SplashScreen', () => {
     expect(onComplete).toHaveBeenCalledWith(level);
   });
 
-  it('paints the wordmark stripe with the ground token, not the foreground one', () => {
+  it('paints the three stripes as the German flag, not the themed ground', () => {
     const { container } = render(<SplashScreen onComplete={() => {}} />);
-    const stripe = container.firstChild.firstChild;
-    expect(stripe.style.background).toBe('var(--c-ground)');
-    expect(stripe.style.background).not.toBe('var(--c-fg)');
+    const [black, red, gold] = container.firstChild.children;
+    expect(black.style.background).toBe('var(--c-flag-black)');
+    expect(black.style.background).not.toBe('var(--c-ground)');
+    expect(red.style.background).toBe('var(--c-flag-red)');
+    expect(gold.style.background).toBe('var(--c-flag-gold)');
   });
 
-  it('renders the wordmark in the foreground token', () => {
-    render(<SplashScreen onComplete={() => {}} />);
+  it('puts gold text on the black stripe and charcoal on the gold stripe', () => {
+    const { container } = render(<SplashScreen onComplete={() => {}} />);
     const wordmark = screen.getByText('Sprachschule').previousSibling;
-    expect(wordmark.style.color).toBe('var(--c-fg)');
+    expect(wordmark.style.color).toBe('var(--c-flag-on-black)');
+    const motto = screen.getByText(/Lernen/);
+    expect(motto.style.color).toBe('var(--c-flag-on-gold)');
+    const redStripe = container.firstChild.children[1];
+    expect(redStripe.firstChild.style.color).toBe('var(--c-flag-on-red)');
   });
 
   it('opts into dynamic-viewport sizing', () => {

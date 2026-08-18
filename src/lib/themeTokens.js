@@ -34,13 +34,30 @@ const ALPHA_DERIVATIONS = [
 // palette, so it is defined once rather than repeated four times.
 const HEAT_RAMP = { 'heat-1': '#FFCE0040', 'heat-2': '#FFCE0090' };
 
+// Entry-splash flag stripes. These are brand colours, not theme colours: a
+// light-mode machine still gets black / red / gold. Pairing them with
+// COLORS.ink / COLORS.paper made the "black" stripe invert with the theme
+// (PR #116); keeping the values identical in every palette is what makes
+// the three bands read as the German flag in both modes.
+//
+// Gold matches the pack accent fill (`#FFCE00`); charcoal matches dark.day
+// ground. Red is federal flag `#DD0000`, which clears AA with white.
+export const FLAG_STRIPES = {
+  'flag-black': '#0D0D0F',
+  'flag-red': '#DD0000',
+  'flag-gold': '#FFCE00',
+  'flag-on-black': '#FFCE00',
+  'flag-on-red': '#FFFFFF',
+  'flag-on-gold': '#0D0D0F',
+};
+
 /**
  * Expand a base palette with its derived alpha variants and the shared heat ramp.
  * @param {Record<string,string>} base
  * @returns {Record<string,string>}
  */
 function withDerived(base) {
-  const out = { ...base, ...HEAT_RAMP };
+  const out = { ...base, ...HEAT_RAMP, ...FLAG_STRIPES };
   for (const [key, from, alpha] of ALPHA_DERIVATIONS) {
     out[key] = `${base[from]}${alpha}`;
   }
