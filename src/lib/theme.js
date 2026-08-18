@@ -24,15 +24,16 @@ export const COLORS = {
   borderSubtle: 'var(--c-border-subtle)',
   borderStrong: 'var(--c-border-strong)',
 
-  // German-flag accent tiers. FILLS only — each pairs with its own `On` ink.
-  // Never use these as a text colour: accentGold on a light ground is 3.0:1.
-  // See ACCENT_TIERS_* in themeTokens.js.
+  // German-flag accent tiers. FILLS only — each pairs with its own `On` ink,
+  // and the ink is invisible anywhere but on its own tier.
+  //   accentBlack — identity chrome that must not invert with the theme
+  //   accentRed   — "the app is asking you for something", NOT error
+  // `COLORS.red` stays `--c-error` and now means only *wrong*.
+  // See ACCENT_TIERS_* in themeTokens.js for why there is no gold tier.
   accentBlack: 'var(--c-accent-black)',
   accentBlackOn: 'var(--c-accent-black-on)',
   accentRed: 'var(--c-accent-red)',
   accentRedOn: 'var(--c-accent-red-on)',
-  accentGold: 'var(--c-accent-gold)',
-  accentGoldOn: 'var(--c-accent-gold-on)',
 
   // Mode-independent German-flag stripes (entry splash). Same hex in every
   // palette — see FLAG_STRIPES in themeTokens.js.
