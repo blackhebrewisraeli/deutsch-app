@@ -19,6 +19,7 @@ import {
   subCounters,
   clampCounters,
 } from './sync/merge.js';
+import { LEVEL_KEY } from './levelPref.js';
 
 export const SYNC_ENABLED = import.meta.env.VITE_SYNC_ENABLED === 'true';
 
@@ -41,7 +42,7 @@ export async function pullAndMerge(userId) {
   if (!c) return;
   const s = loadState() ?? {};
   const meta = loadSyncMeta();
-  const level = localStorage.getItem('deutsch-level') ?? undefined;
+  const level = localStorage.getItem(LEVEL_KEY) ?? undefined;
 
   const srsRemote = srsFromRows((await c.from('srs_state').select()).data ?? []);
   const srsMerged = mergeSrs(s.srs ?? {}, srsRemote);
@@ -94,7 +95,7 @@ export async function pullAndMerge(userId) {
   const curSettings = {
     gamification: cur.gamification,
     learnedWords: cur.learnedWords,
-    level: localStorage.getItem('deutsch-level') ?? undefined,
+    level: localStorage.getItem(LEVEL_KEY) ?? undefined,
     settingsUpdatedAt: cur.settingsUpdatedAt,
   };
   const adoptedSettings = mergeSettings(
@@ -109,7 +110,7 @@ export async function pullAndMerge(userId) {
     learnedWords: adoptedSettings.learnedWords ?? cur.learnedWords,
     settingsUpdatedAt: adoptedSettings.settingsUpdatedAt ?? cur.settingsUpdatedAt,
   });
-  if (adoptedSettings.level) localStorage.setItem('deutsch-level', adoptedSettings.level);
+  if (adoptedSettings.level) localStorage.setItem(LEVEL_KEY, adoptedSettings.level);
   saveSyncMeta({ lastSyncedCounters: nextLastSynced, lastSyncedAt: Date.now() });
 
   if (Object.keys(srsMerged).length) {

@@ -3,7 +3,7 @@ import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'luci
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
-import { readLevel, writeLevel } from './lib/levelPref';
+import { readLevel, writeLevel, hasStoredLevel } from './lib/levelPref';
 import { getReviewItems, todayKey, TABS } from './lib/stats';
 import { trialStatus } from './lib/trial';
 import { getDueCount } from './lib/srs';
@@ -303,7 +303,7 @@ export default function App() {
   // Seeded from `deutsch-level`, not from isAuthConfigured(): env-independent
   // (spec F7), and it states the real precondition — someone who has never
   // picked a level needs the picker however they arrived.
-  const [showSplash, setShowSplash] = useState(() => !localStorage.getItem('deutsch-level'));
+  const [showSplash, setShowSplash] = useState(() => !hasStoredLevel());
   const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
 
   const handleGuest = () => {

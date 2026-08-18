@@ -32,6 +32,20 @@ export function readLevel() {
 }
 
 /**
+ * Has this device ever chosen a level? Guarded like the rest of this module —
+ * blocked storage reads as "no level chosen", which shows the picker rather
+ * than throwing during mount.
+ * @returns {boolean}
+ */
+export function hasStoredLevel() {
+  try {
+    return Boolean(localStorage.getItem(LEVEL_KEY));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Persist a level and stamp settings for last-write-wins sync.
  * Unknown values are ignored rather than persisted.
  * @param {string} level
