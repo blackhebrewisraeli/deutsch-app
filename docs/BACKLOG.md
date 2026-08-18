@@ -100,6 +100,30 @@ silently land on A1. Design kept at
 
 ## Owner actions — nobody with repo access can do these
 
+### Sentry source-map upload — needs a token only the account owner can mint
+
+The build side is done and merged; it is dormant until this exists. Without it
+Sentry shows minified stack traces, which is most of the way back to not having
+the errors at all.
+
+1. Sentry → **Settings → Auth Tokens → Create New Token**, scopes
+   **`project:releases`** and **`org:read`**.
+2. Vercel → project → **Settings → Environment Variables** → add
+   **`SENTRY_AUTH_TOKEN`** to **Production and Preview**.
+   - **Not** `VITE_SENTRY_AUTH_TOKEN`. Vite inlines every `VITE_*` var into the
+     public bundle, so the prefix would publish a write-scoped credential.
+3. Redeploy. Vite bakes build-time env at build time, so the variable alone
+   changes nothing until a new build runs.
+
+Verify it worked: the deploy's build log has no `SENTRY SOURCE-MAP UPLOAD
+FAILED` banner, and the release in Sentry lists artifacts. A failed upload does
+**not** fail the build — deliberately, so a Sentry outage cannot block a deploy
+— which is exactly why the banner exists.
+
+Note this widens the blast radius of a stored credential: unlike the read-only
+token at `~/.config/deutsch-app/sentry-token`, this one can write. It lives only
+in Vercel, never on disk in the repo.
+
 Each needs the Supabase or Google Cloud dashboard. Neither Claude Code nor Cursor
 can complete or, in most cases, verify them; status below says how each was
 checked so a stale entry is obvious.
