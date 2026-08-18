@@ -621,6 +621,13 @@ describe('entry gate', () => {
     expect(levelPicker()).toBeInTheDocument();
   });
 
+  it('asks for a level again when the stored one is corrupt', () => {
+    authMock.configured = false; // no gate, so the splash is what renders
+    localStorage.setItem('deutsch-level', 'c2');
+    render(<App />);
+    expect(screen.getByRole('button', { name: /Beginner \(A1\)/ })).toBeInTheDocument();
+  });
+
   it('enables the level XP boost for a signed-in user', () => {
     authMock.status = 'authenticated';
     authMock.mayHaveSession = true;

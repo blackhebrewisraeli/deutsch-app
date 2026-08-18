@@ -18,13 +18,24 @@ const LEGACY = { beginner: 'a1', intermediate: 'b1' };
 export const LEVEL_NAMES = { a1: 'Beginner', a2: 'Elementary', b1: 'Intermediate' };
 
 /**
+ * Map a raw stored value to a level, or null when it is not one.
+ * Legacy values resolve; anything else does not. Single source of truth for
+ * "is this a level?" so readLevel and hasStoredLevel cannot disagree.
+ * @param {string | null} stored
+ * @returns {'a1' | 'a2' | 'b1' | null}
+ */
+function resolveStored(stored) {
+  if (LEVELS.includes(stored)) return stored;
+  if (Object.hasOwn(LEGACY, stored)) return LEGACY[stored];
+  return null;
+}
+
+/**
  * @returns {'a1' | 'a2' | 'b1'} the stored level, a1 when unset or corrupt
  */
 export function readLevel() {
   try {
-    const stored = localStorage.getItem(LEVEL_KEY);
-    if (LEVELS.includes(stored)) return stored;
-    if (Object.hasOwn(LEGACY, stored)) return LEGACY[stored];
+    return resolveStored(localStorage.getItem(LEVEL_KEY)) ?? 'a1';
   } catch {
     // private mode / blocked storage
   }
@@ -32,14 +43,14 @@ export function readLevel() {
 }
 
 /**
- * Has this device ever chosen a level? Guarded like the rest of this module —
- * blocked storage reads as "no level chosen", which shows the picker rather
- * than throwing during mount.
+ * Has this device stored a valid (or legacy-resolvable) level? Guarded like
+ * the rest of this module — blocked storage and junk values both read as "no
+ * level chosen", which shows the picker rather than silently landing on A1.
  * @returns {boolean}
  */
 export function hasStoredLevel() {
   try {
-    return Boolean(localStorage.getItem(LEVEL_KEY));
+    return resolveStored(localStorage.getItem(LEVEL_KEY)) !== null;
   } catch {
     return false;
   }
