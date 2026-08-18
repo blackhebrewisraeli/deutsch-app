@@ -41,6 +41,24 @@ describe('initObservability', () => {
     expect(config.integrations).toBeUndefined();
   });
 
+  it('stamps the build commit as the Sentry release', async () => {
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://abc@o1.ingest.sentry.io/123');
+    vi.stubEnv('VITE_SENTRY_RELEASE', 'abc123def456');
+    const { initObservability } = await import('./observability.js');
+    await initObservability();
+    expect(mockSentry.init.mock.calls[0][0].release).toBe('abc123def456');
+  });
+
+  it('sends no release rather than an empty one when the commit is unknown', async () => {
+    // A git-less checkout resolves to ''. Passing that through would group every
+    // such build under a single blank release, which is worse than none.
+    vi.stubEnv('VITE_SENTRY_DSN', 'https://abc@o1.ingest.sentry.io/123');
+    vi.stubEnv('VITE_SENTRY_RELEASE', '');
+    const { initObservability } = await import('./observability.js');
+    await initObservability();
+    expect(mockSentry.init.mock.calls[0][0].release).toBeUndefined();
+  });
+
   it('initializes at most once', async () => {
     vi.stubEnv('VITE_SENTRY_DSN', 'https://abc@o1.ingest.sentry.io/123');
     const { initObservability } = await import('./observability.js');
