@@ -37,27 +37,32 @@ const ALPHA_DERIVATIONS = [
 // palette, so it is defined once rather than repeated four times.
 const HEAT_RAMP = { 'heat-1': '#FFCE0040', 'heat-2': '#FFCE0090' };
 
-// German-flag accent tiers — black / red / gold as a three-step brand spectrum
-// for headers, badges, task and streak chrome. Distinct from FLAG_STRIPES: those
-// are the splash's literal flag and never vary, while these are theme tokens the
-// app chrome uses, so red and gold take a deeper value in light and a brighter
+// German-flag accent tiers for the app's own voice. Distinct from FLAG_STRIPES:
+// those are the splash's literal flag and never vary, while these are theme
+// tokens the chrome uses, so red takes a deeper value in light and a brighter
 // one in dark.
 //
-// Each tier is a FILL and ships with the ink that sits on it (`-on`). Reading a
-// tier as a foreground is what the accent model already forbids — `accent-gold`
-// on a light ground is 3.0:1 and fails body AA, so it must not become text.
+// **There is deliberately no gold tier.** One shipped in #131 and was retired
+// without ever gaining a consumer: `COLORS.gold` (the pack accent) already
+// carries reward, streak, XP and level-up, and a second gold had no rule to
+// tell it from the first. `COLORS.accentAlt` has sat unused since the theme arc
+// began — one unused accent in the palette is enough.
+//
+// Each tier is a FILL and ships the ink that sits on it (`-on`). The pairing is
+// the contract: `accent-black-on` is near-white and is invisible on a light
+// ground, so an ink used away from its own tier disappears. contrast.test.js
+// asserts that trap directly.
 //
 // `accent-black` holds the same charcoal in both modes rather than inverting to
 // white in dark: a token named "black" that renders white is exactly the bug
-// that made the splash's black stripe flip in PR #116. On dark grounds it needs
-// `border-strong` to separate, which is why the pair is not near-identical.
+// that made the splash's black stripe flip in PR #116. It is also the only
+// stable dark plane in the system — `COLORS.ink` used as a fill is #16110b in
+// light and #EDEBE8 in dark, so every chip built on it flips to white.
 const ACCENT_TIERS_LIGHT = {
   'accent-black': '#1A1816',
   'accent-black-on': '#FBF8F1',
   'accent-red': '#C92A2A',
   'accent-red-on': '#FFFFFF',
-  'accent-gold': '#D97706',
-  'accent-gold-on': '#1A1816',
 };
 
 const ACCENT_TIERS_DARK = {
@@ -65,8 +70,6 @@ const ACCENT_TIERS_DARK = {
   'accent-black-on': '#FBF8F1',
   'accent-red': '#EF4444',
   'accent-red-on': '#0F0F11',
-  'accent-gold': '#FBBF24',
-  'accent-gold-on': '#0F0F11',
 };
 
 // Entry-splash flag stripes. These are brand colours, not theme colours: a
@@ -105,10 +108,15 @@ const LIGHT_DAY = withDerived({
   surface: '#FFFFFF',
   'surface-alt': '#F0ECE1',
   // Light mode used a near-black hairline (#16110b) on parchment. Ivory is a
-  // quieter canvas, so separation moves to a three-step neutral ramp; `fg` stays
+  // quieter canvas, so separation moves to a two-step neutral pair; `fg` stays
   // the same ink, so no text pairing changes.
+  //
+  // A third `border-subtle` step shipped in #131 and was retired without a
+  // consumer: in-card dividers use `COLORS.inkA10`/`inkA12`, ink at 10-12%
+  // alpha, which composites correctly on every surface including the derived
+  // elevation steps. An opaque token cannot, so adopting it would have been a
+  // regression dressed as a cleanup.
   border: '#E2DDD2',
-  'border-subtle': '#ECE7DC',
   'border-strong': '#CFC7B5',
   fg: '#16110b',
   'fg-muted': '#5C5142',
@@ -136,7 +144,6 @@ const LIGHT_NIGHT = withDerived({
   surface: '#FBF8F1',
   'surface-alt': '#E4DED0',
   border: '#D5CEBE',
-  'border-subtle': '#DFD9CA',
   'border-strong': '#C2BAA6',
   fg: '#16110b',
   'fg-muted': '#5C5142',
@@ -169,7 +176,6 @@ const DARK_DAY = withDerived({
   // clears AA and lands on #242429.
   'surface-alt': '#1E1E24',
   border: '#2E2E36',
-  'border-subtle': '#232329',
   'border-strong': '#3A3A44',
   fg: '#EDEBE8',
   'fg-muted': '#9A9AA4',
@@ -194,7 +200,6 @@ const DARK_NIGHT = withDerived({
   surface: '#121218',
   'surface-alt': '#1B1B22',
   border: '#22222A',
-  'border-subtle': '#17171D',
   'border-strong': '#2E2E38',
   fg: '#EDEBE8',
   'fg-muted': '#9A9AA4',

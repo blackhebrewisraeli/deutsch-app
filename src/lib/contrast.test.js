@@ -143,7 +143,7 @@ function pairsFor(mode, tone) {
   // German-flag accent tiers. Each is a fill carrying its own paired ink, so the
   // assertion is ink-on-tier, never tier-on-ground: `accent-gold` is 3.0:1 on
   // light ivory and would fail the moment someone used it as a text colour.
-  for (const tier of ['black', 'red', 'gold']) {
+  for (const tier of ['black', 'red']) {
     pairs.push({
       fg: c[`accent-${tier}-on`],
       bg: c[`accent-${tier}`],
@@ -239,16 +239,36 @@ describe('accent tiers are fills, not foregrounds', () => {
   // is asserted rather than only documented: if a future palette ever made a
   // tier readable as text on its own ground, that would mean the tier had
   // drifted into a foreground role and the fill/ink pairing no longer holds.
-  it('gold tier fails body AA on its own ground in light mode', () => {
-    const c = MODE_COLORS.light.day;
-    expect(contrastRatio(c['accent-gold'], c.ground)).toBeLessThan(AA_NORMAL);
+  // The pairing is the contract, and the failure mode is silence: a tier's ink
+  // is chosen to sit on that tier and nowhere else, so using it against the page
+  // ground does not look wrong — it looks like nothing rendered at all.
+  // `accent-red-on` is #FFFFFF in light (on ivory) and #0F0F11 in dark (on
+  // obsidian): near-invisible in both.
+  it("each tier's ink is invisible on the page ground it does not belong to", () => {
+    for (const mode of ['light', 'dark']) {
+      for (const tone of ['day', 'night']) {
+        const c = MODE_COLORS[mode][tone];
+        expect(
+          contrastRatio(c['accent-red-on'], c.ground),
+          `${mode}.${tone} accent-red-on must not be legible off its tier`
+        ).toBeLessThan(AA_NORMAL);
+      }
+    }
+  });
+
+  it('has no gold tier — COLORS.gold already owns reward', () => {
+    for (const mode of ['light', 'dark']) {
+      for (const tone of ['day', 'night']) {
+        expect(MODE_COLORS[mode][tone]['accent-gold']).toBeUndefined();
+      }
+    }
   });
 
   it('every tier ships a paired ink in every palette', () => {
     for (const mode of ['light', 'dark']) {
       for (const tone of ['day', 'night']) {
         const c = MODE_COLORS[mode][tone];
-        for (const tier of ['black', 'red', 'gold']) {
+        for (const tier of ['black', 'red']) {
           expect(c[`accent-${tier}`], `${mode}.${tone} accent-${tier}`).toMatch(
             /^#[0-9A-Fa-f]{6}$/
           );

@@ -9,9 +9,15 @@ import {
   SHADOW,
 } from '../../lib/theme';
 
-// Section C — the learner's current task card (red), or the "all tasks done"
-// card (gold) once the scenario's task list has cycled. Rendered by the parent
-// only when there is a current task.
+// Section C — the learner's current task card, or the "all tasks done" card
+// (gold) once the scenario's task list has cycled. Rendered by the parent only
+// when there is a current task.
+//
+// The task chrome is `COLORS.accentRed`, NOT `COLORS.red`. They looked identical
+// before the flag tiers landed because `COLORS.red` is `--c-error`, so "here is
+// your assignment" and "you got that wrong" (VerdictPanel) were the same colour.
+// Red now means only *wrong*; the flag's red tier means the app is asking for
+// something. Don't collapse them back.
 export default function TaskPanel({
   currentTask,
   taskIdx,
@@ -35,8 +41,8 @@ export default function TaskPanel({
             fontFamily: FONTS.mono,
             fontSize: FONT_SIZE.ipa,
             letterSpacing: LETTER_SPACING.wider,
-            background: COLORS.red,
-            color: COLORS.paper,
+            background: COLORS.accentRed,
+            color: COLORS.accentRedOn,
             padding: `2px ${SPACE[2]}px`,
           }}
         >
@@ -105,9 +111,13 @@ export default function TaskPanel({
         <div
           style={{
             borderRadius: RADIUS.lg,
+            // The lip stays `rust` (`--c-error-deep`): it is a decorative depth
+            // shadow rather than a signal, and it is the only token that is a
+            // deeper red than the tier in both modes. A dedicated accentRedDeep
+            // would be a third token with one consumer.
             boxShadow: SHADOW.press(COLORS.rust),
-            background: COLORS.red,
-            color: COLORS.paper,
+            background: COLORS.accentRed,
+            color: COLORS.accentRedOn,
             padding: SPACE[5],
           }}
         >
@@ -140,8 +150,13 @@ export default function TaskPanel({
                 onClick={() => setHintVisible((v) => !v)}
                 style={{
                   background: 'transparent',
+                  // paperA60/paperA50 track `ground`, which runs the same
+                  // direction as accentRedOn in both modes — near-white on
+                  // light, near-black on dark — so they read as the tier ink
+                  // at alpha. (No hex here: the guard in noHardcodedHex.test.js
+                  // scans comments too, and it is right to.)
                   border: `1px solid ${COLORS.paperA60}`,
-                  color: COLORS.paper,
+                  color: COLORS.accentRedOn,
                   fontFamily: FONTS.mono,
                   fontSize: FONT_SIZE.tag,
                   letterSpacing: LETTER_SPACING.wider,

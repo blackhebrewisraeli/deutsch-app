@@ -15,6 +15,28 @@ const baseProps = {
 };
 
 describe('TaskPanel', () => {
+  // The task card and a WRONG answer used to paint from the same token
+  // (`COLORS.red` is `--c-error`), so the app said "your assignment" and "you
+  // got it wrong" in one colour. Asserted rather than trusted: the two are
+  // still visually similar reds, so collapsing them back would look fine in a
+  // screenshot and be caught by nothing else.
+  it('paints the task chrome from the flag red tier, never the error token', () => {
+    const { container } = render(<TaskPanel {...baseProps} />);
+    // Match the fill exactly: `accent-red-on` is a substring of `accent-red`,
+    // and the hint button carries the ink, so a loose match counts three.
+    const filled = [...container.querySelectorAll('*')].filter((el) =>
+      /background:\s*var\(--c-accent-red\)/.test(el.getAttribute('style') ?? '')
+    );
+    expect(filled.length, 'task marker + task card should both use accent-red').toBe(2);
+
+    for (const el of container.querySelectorAll('*')) {
+      const style = el.getAttribute('style') ?? '';
+      expect(style, `${el.tagName} must not paint task chrome from --c-error`).not.toMatch(
+        /background:\s*var\(--c-error\)/
+      );
+    }
+  });
+
   it('renders the numbered task with its text', () => {
     render(<TaskPanel {...baseProps} taskIdx={2} />);
     expect(screen.getByText('TASK 3')).toBeInTheDocument();
