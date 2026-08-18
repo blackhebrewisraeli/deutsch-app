@@ -90,6 +90,20 @@ git-excluded and therefore absent from CI and fresh checkouts.
 - **A11y baseline:** semantic elements, `aria-label` on icon-only buttons,
   visible focus states.
 
+## Where things are written down
+
+- **`AGENTS.md`** (this file) — rules and product decisions that constrain the
+  architecture. Tracked.
+- **`docs/BACKLOG.md`** — work deliberately not started and why, plus the owner
+  actions nobody with repo access can do. Tracked.
+- **`docs/superpowers/specs|plans/`** — per-mission designs and implementation
+  plans, written by Claude Code. Tracked.
+- **`CURSOR_TASKS.md`** — the scratch queue of in-flight mission briefs.
+  **Git-excluded, so it exists on one machine only.** Never let it be the sole
+  home of a decision or a queued plan: promote those to one of the tracked files
+  above. This has bitten twice — a product decision and a visual spec each lived
+  only there.
+
 ## Verification
 
 `npm test`, `npm run lint`, `npm run format:check` — all three must pass
