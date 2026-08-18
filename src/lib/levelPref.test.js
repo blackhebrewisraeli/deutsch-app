@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { LEVELS, readLevel, writeLevel } from './levelPref';
+import { LEVELS, readLevel, writeLevel, hasStoredLevel } from './levelPref';
 
 vi.mock('./settingsStamp', () => ({ stampSettings: vi.fn() }));
 import { stampSettings } from './settingsStamp';
@@ -50,6 +50,32 @@ describe('levelPref', () => {
     });
     expect(() => writeLevel('b1')).not.toThrow();
     expect(stampSettings).toHaveBeenCalledTimes(1);
+    spy.mockRestore();
+  });
+
+  it.each([
+    ['a1', true],
+    ['a2', true],
+    ['b1', true],
+    ['beginner', true],
+    ['intermediate', true],
+    ['c2', false],
+    ['', false],
+    ['constructor', false],
+  ])('hasStoredLevel(%s) is %s', (stored, expected) => {
+    localStorage.setItem('deutsch-level', stored);
+    expect(hasStoredLevel()).toBe(expected);
+  });
+
+  it('reports no stored level when nothing is stored', () => {
+    expect(hasStoredLevel()).toBe(false);
+  });
+
+  it('reports no stored level when storage is blocked', () => {
+    const spy = vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('SecurityError');
+    });
+    expect(hasStoredLevel()).toBe(false);
     spy.mockRestore();
   });
 });
