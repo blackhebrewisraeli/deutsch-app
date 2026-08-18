@@ -117,6 +117,10 @@ export async function initObservability() {
     Sentry.init({
       dsn: DSN,
       environment: import.meta.env.VITE_SENTRY_ENVIRONMENT || import.meta.env.MODE,
+      // Commit the bundle was built from, stamped by vite.config.js. Falsy
+      // becomes undefined so Sentry records no release at all, rather than
+      // grouping every releaseless build under one bogus version.
+      release: import.meta.env.VITE_SENTRY_RELEASE || undefined,
       sendDefaultPii: false,
       // Errors only: do NOT add browserTracingIntegration or replayIntegration.
       beforeSend: scrubEvent,
