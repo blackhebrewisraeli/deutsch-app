@@ -90,7 +90,7 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
       style={{
         position: 'fixed',
         inset: 0,
-        background: COLORS.inkAa,
+        background: COLORS.scrim,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

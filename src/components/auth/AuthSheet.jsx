@@ -62,7 +62,7 @@ export default function AuthSheet({
           border: 'none',
           margin: 0,
           padding: 0,
-          background: COLORS.inkAa,
+          background: COLORS.scrim,
           cursor: 'pointer',
         }}
       />

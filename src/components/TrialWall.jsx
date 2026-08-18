@@ -64,7 +64,7 @@ export default function TrialWall({
         // fold, and a centred card lands below it on a phone.
         alignItems: 'flex-start',
         justifyContent: 'center',
-        background: COLORS.inkAa,
+        background: COLORS.scrim,
         padding: SPACE[6],
         boxSizing: 'border-box',
       }}
