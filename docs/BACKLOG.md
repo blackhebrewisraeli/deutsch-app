@@ -18,16 +18,39 @@ Starting these without a written design means the implementing agent invents the
 architecture, which is the expensive thing to undo. That is the whole reason
 they are listed as blocked rather than "available".
 
-| Item                                                       | Notes                                                                                                                               |
-| ---------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| **UI sub-project 1b** — grow the UI primitive set          | The `VocabTab.jsx` split shipped as #104 (807 → 325 lines, seven modules in `src/components/vocab/`)                                |
-| **UI sub-project 2** — the Nocturne visual redesign proper | Moves light mode off parchment; layout and rhythm. T2 took the _depth_ slice early because the theme switch and bug sweep needed it |
-| **UI sub-project 3** — graphics assets                     | Logo, icon set, empty/error states, OG image. The font slice shipped as #103                                                        |
-| **Auth Phase E** — phone/SMS OTP                           | Deliberately deferred: the only auth component with a per-use cost                                                                  |
+| Item                                                       | Notes                                                                                                                                                                                              |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **UI sub-project 1b** — grow the UI primitive set          | The `VocabTab.jsx` split shipped as #104 (807 → 325 lines, seven modules in `src/components/vocab/`)                                                                                               |
+| **UI sub-project 2** — the Nocturne visual redesign proper | Layout and rhythm. Two slices are already out: T2 took _depth_ early, and the ivory re-skin took _light mode off parchment_ (see "Recently shipped"). What remains here is composition, not colour |
+| **UI sub-project 3** — graphics assets                     | Logo, icon set, empty/error states, OG image. The font slice shipped as #103                                                                                                                       |
+| **Auth Phase E** — phone/SMS OTP                           | Deliberately deferred: the only auth component with a per-use cost                                                                                                                                 |
 
 ## Ready to execute
 
 Nothing queued.
+
+## Decided but not adopted — the body sans
+
+**A sans body face is vendored and one line from shipping, deliberately unflipped.**
+
+`AGENTS.md` fixes the typography — Fraunces for display, JetBrains Mono for
+uppercase labels — and body copy currently renders in Fraunces too. Plus Jakarta
+Sans (47.8 KB, `latin` + `latin-ext`) is vendored into `public/fonts/` and
+exported as `BODY_SANS` from `src/packs/de/theme.js`. Adopting it means setting
+`body: BODY_SANS` in that file's `font` object **and amending the AGENTS.md
+typography rule in the same change**, because the rule as written forbids it.
+
+Recorded here rather than left in `CURSOR_TASKS.md` because it governs future
+work: the next agent to read the AGENTS.md rule needs to know the family is
+already paid for, and that the remaining cost is a brand decision, not an
+implementation.
+
+The tradeoff, so it does not need re-deriving: Fraunces is a display serif with
+an `opsz` axis, and it is doing double duty as body copy at 13–15px, where its
+contrast modulation is what makes long prose feel dense. A sans would loosen
+paragraph texture in chat and exercise copy. It would also make the display
+headings read as _deliberate_ rather than as the default, which is the actual
+argument for the change.
 
 Recently shipped: **`hasStoredLevel()` now means "has a _valid_ level"** (#121,
 #123) — a device holding a corrupt level value used to skip the picker and
