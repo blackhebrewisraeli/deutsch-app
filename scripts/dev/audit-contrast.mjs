@@ -39,14 +39,8 @@ function seedPopulatedAccount() {
     const d = String(dt.getDate()).padStart(2, '0');
     daily[`${y}-${m}-${d}`] = qual;
   }
-  // BUG: seeding the device flag no longer gets past the entry screen when auth
-  // is configured. Since the entry-flow change (#116) the app gates on an account
-  // session, not `deutsch-onboarded`, so a build carrying VITE_SUPABASE_* renders
-  // the entry screen instead of the app shell — no header, no Appearance chip, and
-  // all 12 header-sheet layout findings fire, exiting 1 for a non-contrast reason.
-  // Verified locally: auth env set → 12 findings / exit 1; auth env blank → 0 / exit 0.
-  // The job is green in CI only because the runner has no Supabase env. Fix is to
-  // seed a fake account session (or stub `isAuthConfigured`) alongside this flag.
+  // Nothing reads this key since #116; written only because AGENTS.md forbids
+  // removing a storage key. Getting past the entry screen is dismissEntryScreens().
   localStorage.setItem('deutsch-onboarded', '1');
   localStorage.setItem('deutsch-welcome-dismissed', '1');
   localStorage.setItem('deutsch-level', 'a1');
@@ -206,6 +200,56 @@ async function auditThemeSheet(page) {
   return out;
 }
 
+/**
+ * Walk the entry screens if they are up, then assert we reached the app shell.
+ *
+ * Whether they appear at all depends on the BUILD, not on this script: the gate
+ * renders only when `isAuthConfigured()` — i.e. only when VITE_SUPABASE_* were
+ * present at build time. CI has no Supabase env, so CI never saw the gate and
+ * the audit passed; any developer with a populated `.env` audited the entry
+ * screen instead of the app and got 12 header-sheet findings with exit 1.
+ *
+ * Both paths are therefore optional and idempotent, and this runs after EVERY
+ * reload rather than once at boot: `gateDismissed` is React state, not storage
+ * (deliberately — the gate is a property of "is there a session"), so it comes
+ * back on every load. The guest route is used rather than a faked `sb-*-auth-token`
+ * because a forged token buys nothing: the Supabase client rejects it, authStatus
+ * settles on 'anonymous', and the gate returns.
+ */
+async function dismissEntryScreens(page) {
+  // WelcomeGate — "Try it first — free →". Clicking it forces the splash on,
+  // regardless of a stored level, so the level step below is not optional
+  // once this one fires.
+  const gate = await page.$('.welcome-guest');
+  if (gate) {
+    await gate.click();
+    await page.waitForTimeout(200);
+  }
+
+  // SplashScreen — level picker. Matched on its handler's effect rather than
+  // its emoji label, which is decorative and free to change.
+  const picked = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')].find((x) =>
+      /\(A1\)/.test(x.textContent || '')
+    );
+    if (!b) return false;
+    b.click();
+    return true;
+  });
+  if (picked) await page.waitForTimeout(300);
+
+  // Fail loudly and once, rather than as 12 downstream "no Appearance chip"
+  // findings that say nothing about the real cause.
+  const onShell = await page.evaluate(() => Boolean(document.querySelector('header')));
+  if (!onShell) {
+    throw new Error(
+      'audit-contrast: never reached the app shell — still on an entry screen ' +
+        'after dismissing the gate and picking a level. The entry flow changed; ' +
+        'update dismissEntryScreens().'
+    );
+  }
+}
+
 async function applyTheme(page, mode, tone) {
   await page.evaluate(
     ({ mode: m, tone: t }) => {
@@ -216,6 +260,7 @@ async function applyTheme(page, mode, tone) {
   );
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(400);
+  await dismissEntryScreens(page);
 }
 
 async function openTab(page, tab) {
@@ -250,6 +295,7 @@ async function main() {
         await page.evaluate(seedPopulatedAccount);
         await page.reload({ waitUntil: 'domcontentloaded' });
         await page.waitForTimeout(400);
+        await dismissEntryScreens(page);
 
         for (const l of await auditThemeSheet(page)) {
           layout.push({ ...l, mode, tone, viewport: vp.width });
