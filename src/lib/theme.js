@@ -31,6 +31,7 @@ export const COLORS = {
   // See ACCENT_TIERS_* in themeTokens.js for why there is no gold tier.
   accentBlack: 'var(--c-accent-black)',
   accentBlackOn: 'var(--c-accent-black-on)',
+  accentBlackOnMuted: 'var(--c-accent-black-on-muted)',
   accentRed: 'var(--c-accent-red)',
   accentRedOn: 'var(--c-accent-red-on)',
 

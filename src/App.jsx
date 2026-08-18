@@ -582,7 +582,13 @@ export default function App() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          background: COLORS.paper,
+          // The masthead is the flag's black stripe carried into the app frame,
+          // so it holds its charcoal in both modes rather than following the
+          // page ground. `color` is set here and inherited: everything on this
+          // bar is either brand text on the charcoal, or a control carrying its
+          // own surface (StatBlock, ThemeChip, and the ring discs below).
+          background: COLORS.accentBlack,
+          color: COLORS.accentBlackOn,
           position: 'sticky',
           top: 0,
           zIndex: 50,
@@ -611,7 +617,9 @@ export default function App() {
                 lineHeight: 1,
               }}
             >
-              Deutsch<span style={{ color: COLORS.red }}>.</span>
+              {/* Same dot the splash paints, and the same token: brand red,
+                  not the error token. Large text, so 3:1 applies. */}
+              Deutsch<span style={{ color: COLORS.flagRed }}>.</span>
             </div>
             {/* Tagline waits for bp.wide alongside the goal ring and the chat's
                 third column: appearing at 640 it left the header 2px wider than
@@ -622,7 +630,7 @@ export default function App() {
                   fontFamily: FONT_MONO,
                   fontSize: 10,
                   letterSpacing: '0.2em',
-                  color: COLORS.mute,
+                  color: COLORS.accentBlackOnMuted,
                   textTransform: 'uppercase',
                 }}
               >

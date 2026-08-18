@@ -135,6 +135,21 @@ describe('header at mobile width', () => {
     localStorage.setItem('deutsch-level', 'a1');
   });
 
+  // The masthead is the flag's black stripe carried into the app frame, so it
+  // must NOT follow the page ground. This is the PR #116 bug class: pairing a
+  // brand surface with a theme token made the splash's black stripe invert to
+  // parchment in light mode. Nothing else catches it — the header still looks
+  // like a header either way, and the contrast audit passes on both.
+  it('paints the masthead from the flag black tier, not the page ground', () => {
+    setViewportWidth(1280);
+    const { container } = renderPastEntry(<App />);
+    const style = container.querySelector('header').getAttribute('style') ?? '';
+    expect(style).toMatch(/background:\s*var\(--c-accent-black\)/);
+    expect(style, 'masthead must not follow the page ground').not.toMatch(
+      /background:\s*var\(--c-ground\)/
+    );
+  });
+
   it('drops the goal ring from the header on mobile', () => {
     setViewportWidth(375);
     renderPastEntry(<App />);
