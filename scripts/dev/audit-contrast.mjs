@@ -8,15 +8,160 @@
  * renders outside the viewport (a class jsdom and scrollWidth both miss).
  *
  * Usage:
- *   npm run audit:contrast              # expects vite on :5290
- *   AUDIT_BASE=http://localhost:5173 npm run audit:contrast
+ *   npm run audit:contrast                         # builds and serves itself
+ *   AUDIT_BASE=http://localhost:5290 npm run audit:contrast   # audit a server you already run
+ *   AUDIT_SKIP_BUILD=1 npm run audit:contrast      # reuse the last audit build
+ *
+ * With no AUDIT_BASE this provisions its own target: a production build made
+ * with STUB Supabase config, served from a scratch directory. That is not a
+ * convenience — it is the difference between the audit running and not. The
+ * signed-in pass seeds a session, and a build carrying a developer's REAL
+ * VITE_SUPABASE_* rejects that seed, so the audit aborted with "the session
+ * seed no longer satisfies useAuth" on every developer machine while passing
+ * in CI. The gate was therefore CI-only for as long as that went unfixed, and
+ * clipped sheets could only be caught after pushing.
+ *
+ * Setting AUDIT_BASE means "I am providing the server" and skips all of it,
+ * which is the path CI takes — it builds and serves in the workflow so the
+ * artifact under audit is the same one the other jobs produce.
  *
  * Exit 1 when any real finding remains (emoji-only nodes are excluded).
  */
 
 import { chromium } from 'playwright';
+import { spawn } from 'node:child_process';
+import { existsSync, readdirSync, statSync } from 'node:fs';
+import { join } from 'node:path';
 
-const BASE = process.env.AUDIT_BASE ?? 'http://localhost:5290';
+// Stub Supabase config, not credentials. `isAuthConfigured()` only checks that
+// both values are truthy, so a fake host is enough to make the build render the
+// account chrome the signed-in pass needs. Nothing here is secret and nothing
+// reaches the network: the audit intercepts every call.
+const STUB_ENV = {
+  VITE_SUPABASE_URL: 'https://stub.supabase.co',
+  VITE_SUPABASE_ANON_KEY: 'stub-anon-key-not-a-secret',
+  VITE_LEAGUES_ENABLED: 'true',
+};
+
+// A scratch build dir, so running the audit never clobbers a developer's own
+// `dist/` — theirs is built from their real env and is not interchangeable
+// with this one.
+const OUT_DIR = 'dist-audit';
+// Deliberately not 5290: that is CI's port and a developer may already be
+// serving something there.
+const AUDIT_PORT = Number(process.env.AUDIT_PORT ?? 5293);
+
+const EXPLICIT_BASE = process.env.AUDIT_BASE;
+const BASE = EXPLICIT_BASE ?? `http://localhost:${AUDIT_PORT}`;
+// ─── Provisioning the target ──────────────────────────────────────────────
+//
+// Only used when the caller did not supply AUDIT_BASE.
+
+let previewServer = null;
+
+/**
+ * Kill the preview if we started one. Registered on `exit` because the audit
+ * ends via process.exit() in several places — a cleanup that only ran at the
+ * bottom of main() would leak the server on every non-zero result, which is
+ * exactly the run you repeat while fixing something.
+ */
+function stopPreview() {
+  if (previewServer && !previewServer.killed) previewServer.kill('SIGTERM');
+  previewServer = null;
+}
+process.on('exit', stopPreview);
+for (const sig of ['SIGINT', 'SIGTERM']) {
+  process.on(sig, () => {
+    stopPreview();
+    process.exit(130);
+  });
+}
+
+function run(cmd, args, env = {}) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { stdio: 'inherit', env: { ...process.env, ...env } });
+    child.on('error', reject);
+    child.on('exit', (code) =>
+      code === 0 ? resolve() : reject(new Error(`${cmd} ${args.join(' ')} exited ${code}`))
+    );
+  });
+}
+
+/** Poll rather than sleep — a fixed wait is how this becomes flaky. */
+async function waitForServer(url, seconds = 60) {
+  for (let i = 0; i < seconds; i += 1) {
+    try {
+      const res = await fetch(url);
+      if (res.ok) return i;
+    } catch {
+      // not listening yet
+    }
+    await new Promise((r) => setTimeout(r, 1000));
+  }
+  return -1;
+}
+
+/** Newest mtime anywhere under `dir`, so a build can be compared to its input. */
+function newestMtime(dir) {
+  let newest = 0;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    newest = Math.max(newest, entry.isDirectory() ? newestMtime(full) : statSync(full).mtimeMs);
+  }
+  return newest;
+}
+
+async function provisionTarget() {
+  if (process.env.AUDIT_SKIP_BUILD === '1') {
+    const built = `${OUT_DIR}/index.html`;
+    if (!existsSync(built)) {
+      throw new Error(
+        `AUDIT_SKIP_BUILD=1 but ${OUT_DIR}/ has no build to reuse. Run once without it.`
+      );
+    }
+    console.log(`Reusing the existing ${OUT_DIR}/ build (AUDIT_SKIP_BUILD=1).`);
+    // Say so when the build no longer matches its input. Auditing a stale
+    // artifact reports on code that is not on disk any more, and it looks
+    // exactly like auditing the real thing — that is how a deliberately
+    // broken control once "passed" against a dist whose build had failed.
+    // Only fires when src/ actually moved, so skipping the build while
+    // iterating on THIS script stays quiet, which is what the flag is for.
+    const srcMs = newestMtime('src');
+    const builtMs = statSync(built).mtimeMs;
+    if (srcMs > builtMs) {
+      const mins = Math.round((srcMs - builtMs) / 60000);
+      console.log(
+        `⚠ src/ is ${mins} minute(s) NEWER than ${OUT_DIR}/ — you are auditing a stale ` +
+          'build. Drop AUDIT_SKIP_BUILD to rebuild.'
+      );
+    }
+  } else {
+    console.log(`Building with stub Supabase config → ${OUT_DIR}/`);
+    // STUB_ENV is passed through the environment, which Vite resolves ahead of
+    // any .env file, so a developer's real credentials do not win here.
+    await run('npx', ['vite', 'build', '--outDir', OUT_DIR], STUB_ENV);
+  }
+
+  console.log(`Serving ${OUT_DIR}/ on :${AUDIT_PORT}`);
+  previewServer = spawn(
+    'npx',
+    ['vite', 'preview', '--outDir', OUT_DIR, '--port', String(AUDIT_PORT), '--strictPort'],
+    { stdio: 'ignore' }
+  );
+  previewServer.on('error', (err) => {
+    console.error(`preview server failed to start: ${err.message}`);
+  });
+
+  const waited = await waitForServer(BASE);
+  if (waited < 0) {
+    throw new Error(
+      `preview never answered on ${BASE}. If something else holds :${AUDIT_PORT}, ` +
+        'set AUDIT_PORT, or set AUDIT_BASE to audit a server you are running yourself.'
+    );
+  }
+  console.log(`preview up after ${waited}s`);
+}
+
 const MODES = ['light', 'dark'];
 const TONES = ['day', 'night'];
 const TABS = ['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
@@ -545,6 +690,11 @@ async function openTab(page, tab) {
 }
 
 async function main() {
+  // Build and serve our own target unless the caller supplied one. Done before
+  // the browser launches so a build failure costs nothing but the build.
+  if (EXPLICIT_BASE) console.log(`Auditing the server at ${BASE} (AUDIT_BASE set).`);
+  else await provisionTarget();
+
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();

@@ -157,30 +157,16 @@ Two traps worth keeping, both from #96:
   `scripts/dev/audit-contrast.mjs` with a `// BUG:` rather than fixed there.
 - **`card.de` is read directly by seven components.** Recorded as an accepted
   exception in `AGENTS.md`, not a defect. Do not "fix" it.
-- **`npm run audit:contrast` cannot complete locally, though CI runs it fine.**
-  Locally the signed-in pass aborts with "the session seed no longer satisfies
-  useAuth — check SESSION_KEY and expires_at" and nothing is reported. In CI the
-  same gate audits 60 guest and 8 signed-in combinations and passes, because the
-  workflow supplies `VITE_SUPABASE_URL=https://stub.supabase.co` while a
-  developer's `.env` holds real values the seed no longer satisfies. Confirmed
-  pre-existing: the local failure reproduces on a clean tree. So the gate is
-  **not** blind — but a developer cannot run it before pushing, which is the
-  thing worth fixing.
-
-  **Workaround that works today**, and how the header-sheet fix was developed
-  and verified locally — build with CI's stub config, then point the audit at
-  the preview:
-
-  ```
-  VITE_SUPABASE_URL=https://stub.supabase.co \
-  VITE_SUPABASE_ANON_KEY=stub-anon-key-not-a-secret \
-  VITE_LEAGUES_ENABLED=true npm run build
-  npx vite preview --port 5290 --strictPort &
-  npm run audit:contrast
-  ```
-
-  A proper fix makes `npm run audit:contrast` do this itself rather than
-  leaving the incantation in a backlog entry.
+- ~~**`npm run audit:contrast` cannot complete locally, though CI runs it fine.**~~
+  Closed: the script now provisions its own target. With no `AUDIT_BASE` it
+  builds with stub Supabase config into `dist-audit/`, serves it, audits, and
+  tears the server down — so `npm run audit:contrast` works on a developer box
+  with a real `.env`, which it never did before. The cause was that a build
+  carrying real `VITE_SUPABASE_*` rejects the seeded session the signed-in pass
+  needs; CI passed only because it builds with stubs. Setting `AUDIT_BASE`
+  still means "I am providing the server" and skips provisioning, which is the
+  path CI takes. `AUDIT_SKIP_BUILD=1` reuses the last build and warns when
+  `src/` is newer than it.
 
 - ~~**The header-sheet layout check only covers the Appearance sheet.**~~
   Closed: the audit now DISCOVERS header sheets (`header
