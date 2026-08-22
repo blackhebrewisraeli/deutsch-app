@@ -137,3 +137,156 @@ describe('speak', () => {
     });
   });
 });
+
+describe('capability detection', () => {
+  afterEach(() => {
+    delete window.SpeechRecognition;
+    delete window.webkitSpeechRecognition;
+    delete window.speechSynthesis;
+  });
+
+  it('reports no recognition support when neither constructor exists', async () => {
+    const { isSpeechRecognitionSupported } = await import('./speech');
+    expect(isSpeechRecognitionSupported()).toBe(false);
+  });
+
+  it('detects the standard and the webkit-prefixed recognition constructors', async () => {
+    const { isSpeechRecognitionSupported } = await import('./speech');
+    window.SpeechRecognition = function SR() {};
+    expect(isSpeechRecognitionSupported()).toBe(true);
+    delete window.SpeechRecognition;
+
+    window.webkitSpeechRecognition = function WSR() {};
+    expect(isSpeechRecognitionSupported()).toBe(true);
+  });
+
+  it('reports no synthesis support in a bare jsdom window', async () => {
+    const { isSpeechSynthesisSupported } = await import('./speech');
+    expect(isSpeechSynthesisSupported()).toBe(false);
+  });
+
+  // A stub that exists but cannot speak is not support. Treating presence alone
+  // as support is how a half-shimmed environment gets a call it cannot serve.
+  it('does not count a speechSynthesis object with no speak()', async () => {
+    const { isSpeechSynthesisSupported } = await import('./speech');
+    window.speechSynthesis = { getVoices: () => [] };
+    expect(isSpeechSynthesisSupported()).toBe(false);
+    window.speechSynthesis = { getVoices: () => [], speak: () => {} };
+    expect(isSpeechSynthesisSupported()).toBe(true);
+  });
+});
+
+describe('getGermanVoice', () => {
+  afterEach(() => {
+    delete window.speechSynthesis;
+    vi.resetModules();
+  });
+
+  it('resolves null rather than throwing when synthesis is absent', async () => {
+    const { getGermanVoice } = await import('./speech');
+    await expect(getGermanVoice()).resolves.toBeNull();
+  });
+
+  it('returns a German voice that is already loaded', async () => {
+    window.speechSynthesis = {
+      speak: vi.fn(),
+      getVoices: () => [
+        { lang: 'en-US', name: 'English' },
+        { lang: 'de-DE', name: 'Anna' },
+      ],
+    };
+    const { getGermanVoice } = await import('./speech');
+    expect((await getGermanVoice()).name).toBe('Anna');
+  });
+
+  // Chrome returns [] on the first call and announces the real list later. The
+  // synchronous read in speak() misses that window entirely.
+  it('waits for onvoiceschanged when the list starts empty', async () => {
+    let voices = [];
+    let fire;
+    window.speechSynthesis = {
+      speak: vi.fn(),
+      getVoices: () => voices,
+      addEventListener: (_type, cb) => {
+        fire = cb;
+      },
+      removeEventListener: vi.fn(),
+    };
+    const { getGermanVoice } = await import('./speech');
+    const pending = getGermanVoice();
+    voices = [{ lang: 'de-DE', name: 'Anna' }];
+    fire();
+    expect((await pending).name).toBe('Anna');
+  });
+
+  it('falls back to the legacy onvoiceschanged property', async () => {
+    let voices = [];
+    const synth = { speak: vi.fn(), getVoices: () => voices, onvoiceschanged: null };
+    window.speechSynthesis = synth;
+    const { getGermanVoice } = await import('./speech');
+    const pending = getGermanVoice();
+    voices = [{ lang: 'de-DE', name: 'Petra' }];
+    synth.onvoiceschanged();
+    expect((await pending).name).toBe('Petra');
+  });
+
+  // A device with no voices never fires the event. Without the timeout every
+  // awaiting caller would hang forever on an un-settled promise.
+  it('gives up on the timeout instead of hanging when the event never fires', async () => {
+    vi.useFakeTimers();
+    window.speechSynthesis = {
+      speak: vi.fn(),
+      getVoices: () => [],
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    };
+    const { getGermanVoice } = await import('./speech');
+    const pending = getGermanVoice(50);
+    await vi.advanceTimersByTimeAsync(50);
+    await expect(pending).resolves.toBeNull();
+    vi.useRealTimers();
+  });
+
+  it('resolves null when voices load but none are German', async () => {
+    window.speechSynthesis = {
+      speak: vi.fn(),
+      getVoices: () => [{ lang: 'en-US', name: 'English' }],
+      addEventListener: (_t, cb) => cb(),
+      removeEventListener: vi.fn(),
+    };
+    const { getGermanVoice } = await import('./speech');
+    await expect(getGermanVoice(10)).resolves.toBeNull();
+  });
+});
+
+describe('speak resilience', () => {
+  afterEach(() => {
+    delete window.speechSynthesis;
+    vi.resetModules();
+  });
+
+  it('is a no-op instead of throwing when synthesis is absent', async () => {
+    const { speak } = await import('./speech');
+    expect(() => speak('Hallo')).not.toThrow();
+  });
+
+  // Synthesis is a nicety on every screen that uses it. A driver that throws
+  // must not take the surrounding render or click handler down with it.
+  it('swallows a throwing speech driver', async () => {
+    window.speechSynthesis = {
+      cancel: vi.fn(),
+      getVoices: () => [{ lang: 'de-DE', name: 'Anna' }],
+      speak: () => {
+        throw new Error('speech-dispatcher unavailable');
+      },
+    };
+    const { speak } = await import('./speech');
+    expect(() => speak('Hallo')).not.toThrow();
+  });
+
+  it('survives getVoices returning undefined', async () => {
+    window.speechSynthesis = { cancel: vi.fn(), getVoices: () => undefined, speak: vi.fn() };
+    const { speak } = await import('./speech');
+    expect(() => speak('Hallo')).not.toThrow();
+  });
+});
