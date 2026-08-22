@@ -703,12 +703,177 @@ describe('entry gate', () => {
     const nav = within(screen.getByRole('navigation'));
 
     await userEvent.click(nav.getByRole('button', { name: 'Stats' }));
-    await userEvent.click(screen.getByRole('button', { name: 'A1' }));
+    await userEvent.click(screen.getByRole('radio', { name: /A1/ }));
     await userEvent.click(nav.getByRole('button', { name: 'Vocab' }));
     await userEvent.click(nav.getByRole('button', { name: 'Stats' }));
 
     // If App had dropped onLevelChange, StatsTab would re-mount from the stale
-    // `level` prop and B1 would be pressed again.
-    expect(screen.getByRole('button', { name: 'A1' })).toHaveAttribute('aria-pressed', 'true');
+    // `level` prop and B1 would be checked again.
+    expect(screen.getByRole('radio', { name: /A1/ })).toBeChecked();
+  });
+});
+
+// The level lives in App state and is prop-drilled into every practice tab, so
+// "the header switched it" and "the tabs re-rendered" are two separate claims.
+describe('level coordination', () => {
+  beforeEach(() => {
+    // Shimmed here rather than inherited: this block passed only because an
+    // earlier describe in the file had already assigned it to the prototype,
+    // so running it alone (`vitest -t "level coordination"`) failed on
+    // ChatTab's mount scroll. jsdom has no scrollIntoView.
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    authMock.configured = false;
+    authMock.status = 'anonymous';
+    authMock.mayHaveSession = false;
+    setViewportWidth(1280);
+  });
+
+  // One header control now carries both the XP badge and the CEFR code.
+  const chip = () =>
+    within(screen.getByRole('banner')).getByRole('button', { name: /open status/i });
+
+  it('offers the status control in the header on every viewport', () => {
+    setViewportWidth(320);
+    renderPastEntry(<App />);
+    expect(chip()).toBeInTheDocument();
+  });
+
+  // The consolidation only holds if it is genuinely ONE target: a second
+  // header button offering the same levels is the clutter it was meant to
+  // remove, and the earlier LevelChip + LevelBadge pair is exactly that.
+  it('leaves exactly one level affordance in the header', () => {
+    renderPastEntry(<App />);
+    const header = within(screen.getByRole('banner'));
+    expect(header.queryAllByRole('button', { name: /level/i })).toHaveLength(1);
+    // Closed by default: the levels live behind the trigger, not beside it.
+    // Scoped to the CEFR radios — the Chat tab underneath has a scenario
+    // radiogroup of its own, so a bare queryByRole('radio') matches that.
+    expect(screen.queryByRole('radiogroup', { name: /learning level/i })).toBeNull();
+  });
+
+  it('carries the XP level and the practice level on the same control', async () => {
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+    expect(chip()).toHaveTextContent('A1');
+    await user.click(chip());
+    const sheet = within(screen.getByRole('dialog', { name: 'Status' }));
+    expect(sheet.getByText('Progress')).toBeInTheDocument();
+    expect(sheet.getByText('Practice level')).toBeInTheDocument();
+  });
+
+  it('switches the level from the header and drives the Translate tab with it', async () => {
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Translate' })
+    );
+    expect(screen.getByText(/A1 — WORD TILES/)).toBeInTheDocument();
+
+    await user.click(chip());
+    await user.click(screen.getByRole('radio', { name: /B1/ }));
+
+    expect(screen.getByText(/B1 — FREE TYPING/)).toBeInTheDocument();
+    expect(screen.queryByText(/A1 — WORD TILES/)).toBeNull();
+    expect(chip()).toHaveTextContent('B1');
+  });
+
+  // Mid-set, the switch is destructive, so it asks first and only then
+  // restarts. Nothing here is persisted — no XP, no SRS box — so the cost is
+  // position in the current set of ten, which is worth one question.
+  it('asks before restarting a set in progress, then restarts on confirm', async () => {
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Translate' })
+    );
+    // Advance off exercise 1 so a preserved index would be visible.
+    await user.click(screen.getByRole('button', { name: /skip/i }));
+    expect(screen.getByText(/Exercise 2 \/ 10/)).toBeInTheDocument();
+
+    await user.click(chip());
+    await user.click(screen.getByRole('radio', { name: /A2/ }));
+
+    // Not switched yet: still A1, still on exercise 2.
+    expect(screen.getByText(/exercise 2 of 10/i)).toBeInTheDocument();
+    expect(screen.getByText(/A1 — WORD TILES/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /switch to A2/i }));
+    expect(screen.getByText(/A2 — FILL THE BLANKS/)).toBeInTheDocument();
+    expect(screen.getByText(/Exercise 1 \/ 10/)).toBeInTheDocument();
+  });
+
+  it('keeps the set and the level when the switch is declined', async () => {
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Translate' })
+    );
+    await user.click(screen.getByRole('button', { name: /skip/i }));
+
+    await user.click(chip());
+    await user.click(screen.getByRole('radio', { name: /B1/ }));
+    await user.click(screen.getByRole('button', { name: /keep going/i }));
+
+    expect(screen.getByText(/A1 — WORD TILES/)).toBeInTheDocument();
+    expect(screen.getByText(/Exercise 2 \/ 10/)).toBeInTheDocument();
+    // Declining must not have written the level either.
+    expect(localStorage.getItem('deutsch-level')).not.toBe('b1');
+  });
+
+  // The other half of the guardrail: with nothing in flight it must NOT ask.
+  // A confirmation that fires every time is one people learn to click through.
+  it('switches without asking when no set is in progress', async () => {
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Translate' })
+    );
+    // Still on exercise 1 — nothing to lose.
+    expect(screen.getByText(/Exercise 1 \/ 10/)).toBeInTheDocument();
+
+    await user.click(chip());
+    await user.click(screen.getByRole('radio', { name: /A2/ }));
+    expect(screen.queryByRole('button', { name: /switch to A2/i })).toBeNull();
+    expect(screen.getByText(/A2 — FILL THE BLANKS/)).toBeInTheDocument();
+  });
+
+  // TranslateTab unmounts when the learner leaves the tab, so its claim must
+  // go with it. A flag pushed up to App instead of a registry would be left
+  // behind here and would ask about a session that no longer exists.
+  it('stops asking once the practice tab is left', async () => {
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+    const nav = () => within(screen.getByRole('navigation'));
+    await user.click(nav().getByRole('button', { name: 'Translate' }));
+    await user.click(screen.getByRole('button', { name: /skip/i }));
+    await user.click(nav().getByRole('button', { name: 'Stats' }));
+
+    await user.click(chip());
+    // Scoped to the sheet: the Stats tab renders a full switcher of its own,
+    // so an unscoped /B1/ radio query matches two controls here.
+    const sheet = within(screen.getByRole('dialog', { name: 'Status' }));
+    await user.click(sheet.getByRole('radio', { name: /B1/ }));
+    expect(screen.queryByRole('button', { name: /switch to B1/i })).toBeNull();
+  });
+
+  it('follows a level written anywhere else, via the change notifier', async () => {
+    renderPastEntry(<App />);
+    expect(chip()).toHaveTextContent('A1');
+    // Stands in for sync pulling a level chosen on another device.
+    await act(async () => {
+      const { writeLevel } = await import('./lib/levelPref');
+      writeLevel('b1');
+    });
+    expect(chip()).toHaveTextContent('B1');
+  });
+
+  it('keeps the Stats switcher and the header control on the same level', async () => {
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+    await user.click(chip());
+    await user.click(screen.getByRole('radio', { name: /A2/ }));
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
+    expect(screen.getByRole('radio', { name: /A2/ })).toBeChecked();
   });
 });

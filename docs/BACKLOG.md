@@ -157,3 +157,20 @@ Two traps worth keeping, both from #96:
   `scripts/dev/audit-contrast.mjs` with a `// BUG:` rather than fixed there.
 - **`card.de` is read directly by seven components.** Recorded as an accepted
   exception in `AGENTS.md`, not a defect. Do not "fix" it.
+- **`npm run audit:contrast` cannot complete locally.** Its signed-in pass aborts
+  with "the session seed no longer satisfies useAuth — check SESSION_KEY and
+  expires_at", so no pairing gets audited — the guest pass never reports either.
+  Confirmed pre-existing: the same failure reproduces on a clean tree with the
+  branch stashed, so it is not a regression from any one change. The practical
+  cost is that new UI ships unaudited unless every pairing it uses is a reuse of
+  one already in the codebase. Deliberately left alone while working on the
+  level controls (out of that mission's scope); worth its own mission, and note
+  the prior lesson recorded in `docs/DEMO_READINESS.md`: this gate has passed by
+  accident before, so fix it against a positive control rather than trusting a
+  green run.
+- **Local `.env` holds a Sentry user token where a DSN belongs.** The dev console
+  logs `Invalid Sentry Dsn: sntryu_…` on every load. `sntryu_` is an auth-token
+  prefix, not a DSN, so local error reporting is silently off. Production is
+  unaffected (`VITE_SENTRY_DSN` is set correctly in Vercel and was verified
+  inlined). Out of scope for the level-control work; it is a one-line local env
+  fix, not a code change, which is why it is recorded here rather than patched.

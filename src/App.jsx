@@ -3,7 +3,8 @@ import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'luci
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
-import { readLevel, writeLevel, hasStoredLevel } from './lib/levelPref';
+import { readLevel, writeLevel, hasStoredLevel, LEVEL_CHANGE_EVENT } from './lib/levelPref';
+import { SessionGuardContext, useSessionGuardValue } from './lib/sessionGuard';
 import { getReviewItems, todayKey, TABS } from './lib/stats';
 import { trialStatus } from './lib/trial';
 import { getDueCount } from './lib/srs';
@@ -57,7 +58,7 @@ import { useSyncStatus } from './lib/useSyncStatus';
 import { useLeagueRewards } from './lib/useLeagueRewards';
 import Confetti from './components/ui/Confetti';
 import ToastStack from './components/ui/Toast';
-import LevelBadge from './components/gamification/LevelBadge';
+import StatusChip from './components/StatusChip';
 import GoalRing from './components/gamification/GoalRing';
 import GoalStrip from './components/gamification/GoalStrip';
 import { Analytics } from '@vercel/analytics/react';
@@ -427,11 +428,26 @@ export default function App() {
 
   // Onboarding + level
   const [level, setLevel] = useState(readLevel);
+  const sessionGuard = useSessionGuardValue();
 
   const handleSplashComplete = (chosenLevel) => {
     setLevel(chosenLevel);
     setShowSplash(false);
   };
+
+  // `level` is held here and prop-drilled into every tab, so any writer that
+  // is not this component (sync pulling a level from another device, the
+  // splash, a future caller of writeLevel) would move localStorage and leave
+  // the tabs rendering the old level. levelPref fires this on every write —
+  // it had no subscriber until now, which made the notifier a no-op.
+  useEffect(() => {
+    const onLevelChange = (e) => {
+      const next = e.detail?.level;
+      if (next) setLevel(next);
+    };
+    window.addEventListener(LEVEL_CHANGE_EVENT, onLevelChange);
+    return () => window.removeEventListener(LEVEL_CHANGE_EVENT, onLevelChange);
+  }, []);
 
   useEffect(() => {
     const s = loadState();
@@ -555,46 +571,50 @@ export default function App() {
     );
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        position: 'relative',
-        background: COLORS.paper,
-        color: COLORS.ink,
-        fontFamily: FONT_BODY,
-        backgroundImage: `radial-gradient(circle at 1px 1px, ${COLORS.inkSoftA08} 1px, transparent 0)`,
-        backgroundSize: '24px 24px',
-      }}
-    >
-      {streakBurst && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 60, pointerEvents: 'none' }}>
-          <Confetti count={40} />
-        </div>
-      )}
-      <ToastStack toasts={toasts} onDismiss={dismissToast} />
-
-      {/* ── Header ───────────────────────────────────────────── */}
-      <header
+    // Practice tabs register their in-flight state here; the header's status
+    // control reads it before restarting anything. Wraps the whole tree so
+    // the reader (header) and the writers (tabs) share one registry.
+    <SessionGuardContext.Provider value={sessionGuard}>
+      <div
         style={{
-          borderBottom: `1px solid ${COLORS.border}`,
-          boxShadow: SHADOW.bar,
-          padding: mobile ? '12px 10px' : '20px 32px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          // The masthead is the flag's black stripe carried into the app frame,
-          // so it holds its charcoal in both modes rather than following the
-          // page ground. `color` is set here and inherited: everything on this
-          // bar is either brand text on the charcoal, or a control carrying its
-          // own surface (StatBlock, ThemeChip, and the ring discs below).
-          background: COLORS.accentBlack,
-          color: COLORS.accentBlackOn,
-          position: 'sticky',
-          top: 0,
-          zIndex: 50,
+          minHeight: '100vh',
+          position: 'relative',
+          background: COLORS.paper,
+          color: COLORS.ink,
+          fontFamily: FONT_BODY,
+          backgroundImage: `radial-gradient(circle at 1px 1px, ${COLORS.inkSoftA08} 1px, transparent 0)`,
+          backgroundSize: '24px 24px',
         }}
       >
-        {/* Dropped below 360px: a real year-long streak renders level 30 + "365"
+        {streakBurst && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 60, pointerEvents: 'none' }}>
+            <Confetti count={40} />
+          </div>
+        )}
+        <ToastStack toasts={toasts} onDismiss={dismissToast} />
+
+        {/* ── Header ───────────────────────────────────────────── */}
+        <header
+          style={{
+            borderBottom: `1px solid ${COLORS.border}`,
+            boxShadow: SHADOW.bar,
+            padding: mobile ? '12px 10px' : '20px 32px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            // The masthead is the flag's black stripe carried into the app frame,
+            // so it holds its charcoal in both modes rather than following the
+            // page ground. `color` is set here and inherited: everything on this
+            // bar is either brand text on the charcoal, or a control carrying its
+            // own surface (StatBlock, ThemeChip, and the ring discs below).
+            background: COLORS.accentBlack,
+            color: COLORS.accentBlackOn,
+            position: 'sticky',
+            top: 0,
+            zIndex: 50,
+          }}
+        >
+          {/* Dropped below 360px: a real year-long streak renders level 30 + "365"
             + a freeze chip + SIGN IN, which ran 34px past a 320px viewport, and
             each of those is the only surface for its signal (the freeze count
             appears nowhere else in the app). The wordmark is the one decorative
@@ -604,295 +624,316 @@ export default function App() {
             content made the nowrap wordmark spill over the level badge instead
             of pushing width: "over: 0" by overlap, which reads as a rendering
             bug. It scales via font-size instead. */}
-        {!tiny && (
-          <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
-            <div
-              style={{
-                fontFamily: FONT_DISPLAY,
-                // Scales with the viewport between 360px and 640px.
-                fontSize: mobile ? 'min(26px, 6.5vw)' : 36,
-                whiteSpace: 'nowrap',
-                fontWeight: 900,
-                letterSpacing: '-0.04em',
-                lineHeight: 1,
-              }}
-            >
-              {/* Same dot the splash paints, and the same token: brand red,
-                  not the error token. Large text, so 3:1 applies. */}
-              Deutsch<span style={{ color: COLORS.flagRed }}>.</span>
-            </div>
-            {/* Tagline waits for bp.wide alongside the goal ring and the chat's
-                third column: appearing at 640 it left the header 2px wider than
-                the viewport, which is small but is still sideways scroll. */}
-            {width >= bp.wide && (
+          {!tiny && (
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
               <div
                 style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: 10,
-                  letterSpacing: '0.2em',
-                  color: COLORS.accentBlackOnMuted,
-                  textTransform: 'uppercase',
+                  fontFamily: FONT_DISPLAY,
+                  // Scales with the viewport between 360px and 640px.
+                  fontSize: mobile ? 'min(26px, 6.5vw)' : 36,
+                  whiteSpace: 'nowrap',
+                  fontWeight: 900,
+                  letterSpacing: '-0.04em',
+                  lineHeight: 1,
                 }}
               >
-                Sprachschule × Est. {new Date().getFullYear()}
+                {/* Same dot the splash paints, and the same token: brand red,
+                  not the error token. Large text, so 3:1 applies. */}
+                Deutsch<span style={{ color: COLORS.flagRed }}>.</span>
               </div>
-            )}
-          </div>
-        )}
-
-        <div style={{ display: 'flex', gap: mobile ? 6 : 16, alignItems: 'center', flexShrink: 0 }}>
-          <LevelBadge
-            level={game.lvl.level}
-            progress={game.lvl.progress}
-            rank={game.lvl.rankName}
-            size={mobile ? 42 : 52}
-          />
-          <StatBlock
-            label={mobile ? '' : 'STREAK'}
-            value={stats.streak}
-            icon={<Flame size={mobile ? 12 : 14} />}
-            accent
-            pulsing={streakPulsing}
-          />
-          {game.freezes > 0 && (
-            <span
-              title={`${game.freezes} streak freeze${game.freezes > 1 ? 's' : ''} held`}
-              style={{ fontSize: mobile ? 14 : 16 }}
-            >
-              ❄️{game.freezes}
-            </span>
-          )}
-          {/* Held back until bp.wide: the desktop header wants 700px but
-              `mobile` flips at 640, so the ring overflowed by 60px in between.
-              It duplicates the goal strip under the nav, so it waits for room. */}
-          {width >= bp.wide && <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />}
-          <ThemeChip />
-          <AccountChip
-            user={user}
-            onSignIn={requestSignIn}
-            onSignOut={() => {
-              setGateDismissed(false);
-              signOut();
-            }}
-            pending={syncStatus.pending}
-          />
-        </div>
-      </header>
-
-      {/* ── Nav ──────────────────────────────────────────────── */}
-      <nav
-        style={{
-          display: 'flex',
-          gap: mobile ? 6 : 8,
-          padding: mobile ? '8px 10px' : '12px 16px',
-          background: COLORS.paper,
-          borderBottom: `1px solid ${COLORS.border}`,
-          position: 'sticky',
-          top: mobile ? 53 : 81,
-          zIndex: 49,
-          boxShadow: SHADOW.bar,
-        }}
-      >
-        {tabs.map((t) => {
-          const active = tab === t.id;
-          const Icon = t.icon;
-          return (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              aria-label={t.label}
-              aria-current={active ? 'page' : undefined}
-              style={{
-                flex: 1,
-                // minWidth: 0 is the flex counterpart of the minmax(0, 1fr) rule
-                // in AGENTS.md — `flex: 1` leaves min-width at auto, so these
-                // buttons refused to shrink below their label and pushed the nav
-                // 28px past a 640px viewport, on every tab.
-                minWidth: 0,
-                padding: mobile ? '12px 6px' : '14px 18px',
-                background: active ? COLORS.ink : 'transparent',
-                color: active ? COLORS.paper : COLORS.ink,
-                border: 'none',
-                borderRadius: RADIUS.md,
-                boxShadow: active ? SHADOW.press(COLORS.press) : 'none',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: mobile ? 'center' : 'flex-start',
-                gap: 10,
-                position: 'relative',
-                transition: 'all 0.15s',
-              }}
-              onMouseEnter={(e) => {
-                if (!active) e.currentTarget.style.background = COLORS.paperDeep;
-              }}
-              onMouseLeave={(e) => {
-                if (!active) e.currentTarget.style.background = 'transparent';
-              }}
-            >
-              {mobile ? (
-                // Mobile: icon only
-                <Icon size={20} />
-              ) : (
-                <>
-                  <span
-                    style={{
-                      fontFamily: FONT_MONO,
-                      fontSize: 10,
-                      opacity: 0.6,
-                      letterSpacing: '0.1em',
-                    }}
-                  >
-                    {t.num}
-                  </span>
-                  <span
-                    style={{
-                      fontFamily: FONT_DISPLAY,
-                      fontSize: 20,
-                      fontWeight: 600,
-                      letterSpacing: '-0.02em',
-                    }}
-                  >
-                    {t.label}
-                  </span>
-                </>
-              )}
-              {t.id === 'stats' && !active && attentionCount > 0 && (
-                <span
+              {/* Tagline waits for bp.wide alongside the goal ring and the chat's
+                third column: appearing at 640 it left the header 2px wider than
+                the viewport, which is small but is still sideways scroll. */}
+              {width >= bp.wide && (
+                <div
                   style={{
-                    position: 'absolute',
-                    top: mobile ? 4 : 8,
-                    right: mobile ? 4 : 8,
-                    minWidth: 18,
-                    height: 18,
-                    padding: '0 5px',
-                    background: COLORS.red,
-                    color: COLORS.paper,
                     fontFamily: FONT_MONO,
                     fontSize: 10,
-                    fontWeight: 700,
-                    lineHeight: 1,
-                    borderRadius: 9,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    letterSpacing: '0.2em',
+                    color: COLORS.accentBlackOnMuted,
+                    textTransform: 'uppercase',
                   }}
                 >
-                  {attentionCount > 9 ? '9+' : attentionCount}
-                </span>
+                  Sprachschule × Est. {new Date().getFullYear()}
+                </div>
               )}
-            </button>
-          );
-        })}
-      </nav>
+            </div>
+          )}
 
-      {/* ── Main ─────────────────────────────────────────────── */}
-      <main
-        style={{
-          padding: mobile ? '16px 16px 32px' : '32px 32px',
-          maxWidth: 1400,
-          margin: '0 auto',
-        }}
-      >
-        {/* On mobile this is the only daily-goal indicator — the header ring is
+          <div
+            style={{ display: 'flex', gap: mobile ? 6 : 16, alignItems: 'center', flexShrink: 0 }}
+          >
+            {/* One control for both "levels": the earned XP one and the chosen
+              CEFR one. They stay distinct inside the sheet, under their own
+              headings — see StatusChip. */}
+            <StatusChip
+              level={level}
+              onLevelChange={setLevel}
+              xpLevel={game.lvl.level}
+              progress={game.lvl.progress}
+              rank={game.lvl.rankName}
+              xpIntoLevel={game.lvl.xpIntoLevel}
+              xpToNext={game.lvl.xpToNext}
+              size={mobile ? 42 : 52}
+            />
+            <StatBlock
+              label={mobile ? '' : 'STREAK'}
+              value={stats.streak}
+              icon={<Flame size={mobile ? 12 : 14} />}
+              accent
+              pulsing={streakPulsing}
+            />
+            {game.freezes > 0 && (
+              <span
+                title={`${game.freezes} streak freeze${game.freezes > 1 ? 's' : ''} held`}
+                style={{ fontSize: mobile ? 14 : 16 }}
+              >
+                ❄️{game.freezes}
+              </span>
+            )}
+            {/* Held back until bp.wide: the desktop header wants 700px but
+              `mobile` flips at 640, so the ring overflowed by 60px in between.
+              It duplicates the goal strip under the nav, so it waits for room. */}
+            {width >= bp.wide && <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />}
+            <ThemeChip />
+            <AccountChip
+              user={user}
+              onSignIn={requestSignIn}
+              onSignOut={() => {
+                setGateDismissed(false);
+                signOut();
+              }}
+              pending={syncStatus.pending}
+            />
+          </div>
+        </header>
+
+        {/* ── Nav ──────────────────────────────────────────────── */}
+        <nav
+          style={{
+            display: 'flex',
+            gap: mobile ? 6 : 8,
+            padding: mobile ? '8px 10px' : '12px 16px',
+            background: COLORS.paper,
+            borderBottom: `1px solid ${COLORS.border}`,
+            position: 'sticky',
+            top: mobile ? 53 : 81,
+            zIndex: 49,
+            boxShadow: SHADOW.bar,
+          }}
+        >
+          {tabs.map((t) => {
+            const active = tab === t.id;
+            const Icon = t.icon;
+            return (
+              <button
+                key={t.id}
+                onClick={() => setTab(t.id)}
+                aria-label={t.label}
+                aria-current={active ? 'page' : undefined}
+                style={{
+                  flex: 1,
+                  // minWidth: 0 is the flex counterpart of the minmax(0, 1fr) rule
+                  // in AGENTS.md — `flex: 1` leaves min-width at auto, so these
+                  // buttons refused to shrink below their label and pushed the nav
+                  // 28px past a 640px viewport, on every tab.
+                  minWidth: 0,
+                  padding: mobile ? '12px 6px' : '14px 18px',
+                  background: active ? COLORS.ink : 'transparent',
+                  color: active ? COLORS.paper : COLORS.ink,
+                  border: 'none',
+                  borderRadius: RADIUS.md,
+                  boxShadow: active ? SHADOW.press(COLORS.press) : 'none',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: mobile ? 'center' : 'flex-start',
+                  gap: 10,
+                  position: 'relative',
+                  transition: 'all 0.15s',
+                }}
+                onMouseEnter={(e) => {
+                  if (!active) e.currentTarget.style.background = COLORS.paperDeep;
+                }}
+                onMouseLeave={(e) => {
+                  if (!active) e.currentTarget.style.background = 'transparent';
+                }}
+              >
+                {mobile ? (
+                  // Mobile: icon only
+                  <Icon size={20} />
+                ) : (
+                  <>
+                    <span
+                      style={{
+                        fontFamily: FONT_MONO,
+                        fontSize: 10,
+                        opacity: 0.6,
+                        letterSpacing: '0.1em',
+                      }}
+                    >
+                      {t.num}
+                    </span>
+                    <span
+                      style={{
+                        fontFamily: FONT_DISPLAY,
+                        fontSize: 20,
+                        fontWeight: 600,
+                        letterSpacing: '-0.02em',
+                      }}
+                    >
+                      {t.label}
+                    </span>
+                  </>
+                )}
+                {t.id === 'stats' && !active && attentionCount > 0 && (
+                  <span
+                    style={{
+                      position: 'absolute',
+                      top: mobile ? 4 : 8,
+                      right: mobile ? 4 : 8,
+                      minWidth: 18,
+                      height: 18,
+                      padding: '0 5px',
+                      background: COLORS.red,
+                      color: COLORS.paper,
+                      fontFamily: FONT_MONO,
+                      fontSize: 10,
+                      fontWeight: 700,
+                      lineHeight: 1,
+                      borderRadius: 9,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                    }}
+                  >
+                    {attentionCount > 9 ? '9+' : attentionCount}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* ── Main ─────────────────────────────────────────────── */}
+        <main
+          style={{
+            padding: mobile ? '16px 16px 32px' : '32px 32px',
+            maxWidth: 1400,
+            margin: '0 auto',
+          }}
+        >
+          {/* On mobile this is the only daily-goal indicator — the header ring is
             dropped there for width — so it has to appear on every tab. On
             desktop the ring covers it, and the strip stays scoped to the two
             practice tabs it was built for. */}
-        {(mobile || tab === 'translate' || tab === 'vocab') && (
-          <GoalStrip
-            streak={game.streak}
-            current={game.goal.current}
-            target={game.goal.target}
-            mult={game.mult}
-          />
-        )}
-        {/* The four practice tabs share one positioned wrapper so the trial
+          {(mobile || tab === 'translate' || tab === 'vocab') && (
+            <GoalStrip
+              streak={game.streak}
+              current={game.goal.current}
+              target={game.goal.target}
+              mult={game.mult}
+            />
+          )}
+          {/* The four practice tabs share one positioned wrapper so the trial
             wall can scrim THEM and nothing else. A position: fixed modal would
             take the header and nav with it, and the wall is explicitly not
             allowed to: Stats and settings stay reachable while it is up. */}
-        {TABS.includes(tab) && (
-          <div style={{ position: 'relative' }}>
-            {tab === 'chat' && <ChatTab level={level} mobile={mobile} wide={width >= bp.wide} />}
-            {tab === 'alphabet' && (
-              <AlphabetTab
-                level={level}
-                mobile={mobile}
-                reviewTarget={reviewTarget?.tab === 'alphabet' ? reviewTarget : null}
-                onReviewConsumed={clearReviewTarget}
-              />
-            )}
-            {tab === 'vocab' && (
-              <VocabTab
-                learnedWords={learnedWords}
-                markLearned={markLearned}
-                level={level}
-                mobile={mobile}
-                reviewTarget={reviewTarget?.tab === 'vocab' ? reviewTarget : null}
-                onReviewConsumed={clearReviewTarget}
-              />
-            )}
-            {tab === 'translate' && (
-              <TranslateTab
-                level={level}
-                mobile={mobile}
-                reviewTarget={reviewTarget?.tab === 'translate' ? reviewTarget : null}
-                onReviewConsumed={clearReviewTarget}
-              />
-            )}
-            {trialWallUp && (
-              <TrialWall
-                roundsUsed={game.trial.roundsUsed}
-                mobile={mobile}
-                onCreateAccount={() => setAuthModal('create')}
-                onSignIn={requestSignIn}
-                onGoogle={handleGoogle}
-                googleBusy={googleBusy}
-              />
-            )}
-          </div>
-        )}
-        {tab === 'stats' && (
-          <StatsTab
-            mobile={mobile}
-            onReview={handleReview}
-            user={user}
-            onSignIn={requestSignIn}
-            onSignOut={() => {
-              setGateDismissed(false);
-              signOut();
+          {TABS.includes(tab) && (
+            <div style={{ position: 'relative' }}>
+              {tab === 'chat' && <ChatTab level={level} mobile={mobile} wide={width >= bp.wide} />}
+              {tab === 'alphabet' && (
+                <AlphabetTab
+                  level={level}
+                  mobile={mobile}
+                  reviewTarget={reviewTarget?.tab === 'alphabet' ? reviewTarget : null}
+                  onReviewConsumed={clearReviewTarget}
+                />
+              )}
+              {tab === 'vocab' && (
+                <VocabTab
+                  learnedWords={learnedWords}
+                  markLearned={markLearned}
+                  level={level}
+                  mobile={mobile}
+                  reviewTarget={reviewTarget?.tab === 'vocab' ? reviewTarget : null}
+                  onReviewConsumed={clearReviewTarget}
+                />
+              )}
+              {tab === 'translate' && (
+                <TranslateTab
+                  // Keyed by level so a switch REMOUNTS rather than mutating a
+                  // live session. The exercise banks are differently shaped per
+                  // level (A1 rows carry `words`, A2 `template`), so any scheme
+                  // that keeps the old state for even one commit hands the wrong
+                  // row to the wrong exercise component and throws. Remounting
+                  // is also what already happens on every tab switch — this tab
+                  // is conditionally rendered — so the level switch now matches
+                  // the lifecycle the component was always written against.
+                  // Removing this key resurrects the A1 -> A2 crash; the
+                  // "restarts the exercise set" test in App.test.jsx is the guard.
+                  key={level}
+                  level={level}
+                  mobile={mobile}
+                  reviewTarget={reviewTarget?.tab === 'translate' ? reviewTarget : null}
+                  onReviewConsumed={clearReviewTarget}
+                />
+              )}
+              {trialWallUp && (
+                <TrialWall
+                  roundsUsed={game.trial.roundsUsed}
+                  mobile={mobile}
+                  onCreateAccount={() => setAuthModal('create')}
+                  onSignIn={requestSignIn}
+                  onGoogle={handleGoogle}
+                  googleBusy={googleBusy}
+                />
+              )}
+            </div>
+          )}
+          {tab === 'stats' && (
+            <StatsTab
+              mobile={mobile}
+              onReview={handleReview}
+              user={user}
+              onSignIn={requestSignIn}
+              onSignOut={() => {
+                setGateDismissed(false);
+                signOut();
+              }}
+              onExport={handleExport}
+              onDelete={handleDelete}
+              lastSyncedAt={syncStatus.lastSyncedAt}
+              level={level}
+              onLevelChange={setLevel}
+              levelBoost={authStatus === 'authenticated'}
+            />
+          )}
+        </main>
+
+        {/* ── Footer — hidden on mobile ─────────────────────────── */}
+        {!mobile && (
+          <footer
+            style={{
+              borderTop: `2px solid ${COLORS.ink}`,
+              padding: '16px 32px',
+              marginTop: 64,
+              display: 'flex',
+              justifyContent: 'space-between',
+              fontFamily: FONT_MONO,
+              fontSize: 10,
+              letterSpacing: '0.15em',
+              color: COLORS.mute,
+              textTransform: 'uppercase',
             }}
-            onExport={handleExport}
-            onDelete={handleDelete}
-            lastSyncedAt={syncStatus.lastSyncedAt}
-            level={level}
-            onLevelChange={setLevel}
-            levelBoost={authStatus === 'authenticated'}
-          />
+          >
+            <span>Lernen × Sprechen × Verstehen</span>
+            <span>// Powered by Claude</span>
+          </footer>
         )}
-      </main>
 
-      {/* ── Footer — hidden on mobile ─────────────────────────── */}
-      {!mobile && (
-        <footer
-          style={{
-            borderTop: `2px solid ${COLORS.ink}`,
-            padding: '16px 32px',
-            marginTop: 64,
-            display: 'flex',
-            justifyContent: 'space-between',
-            fontFamily: FONT_MONO,
-            fontSize: 10,
-            letterSpacing: '0.15em',
-            color: COLORS.mute,
-            textTransform: 'uppercase',
-          }}
-        >
-          <span>Lernen × Sprechen × Verstehen</span>
-          <span>// Powered by Claude</span>
-        </footer>
-      )}
-
-      <Analytics />
-      {authOverlay}
-    </div>
+        <Analytics />
+        {authOverlay}
+      </div>
+    </SessionGuardContext.Provider>
   );
 }
