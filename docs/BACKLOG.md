@@ -157,17 +157,27 @@ Two traps worth keeping, both from #96:
   `scripts/dev/audit-contrast.mjs` with a `// BUG:` rather than fixed there.
 - **`card.de` is read directly by seven components.** Recorded as an accepted
   exception in `AGENTS.md`, not a defect. Do not "fix" it.
-- **`npm run audit:contrast` cannot complete locally.** Its signed-in pass aborts
-  with "the session seed no longer satisfies useAuth — check SESSION_KEY and
-  expires_at", so no pairing gets audited — the guest pass never reports either.
-  Confirmed pre-existing: the same failure reproduces on a clean tree with the
-  branch stashed, so it is not a regression from any one change. The practical
-  cost is that new UI ships unaudited unless every pairing it uses is a reuse of
-  one already in the codebase. Deliberately left alone while working on the
-  level controls (out of that mission's scope); worth its own mission, and note
-  the prior lesson recorded in `docs/DEMO_READINESS.md`: this gate has passed by
-  accident before, so fix it against a positive control rather than trusting a
-  green run.
+- **`npm run audit:contrast` cannot complete locally, though CI runs it fine.**
+  Locally the signed-in pass aborts with "the session seed no longer satisfies
+  useAuth — check SESSION_KEY and expires_at" and nothing is reported. In CI the
+  same gate audits 60 guest and 8 signed-in combinations and passes, because the
+  workflow supplies `VITE_SUPABASE_URL=https://stub.supabase.co` while a
+  developer's `.env` holds real values the seed no longer satisfies. Confirmed
+  pre-existing: the local failure reproduces on a clean tree. So the gate is
+  **not** blind — but a developer cannot run it before pushing, which is the
+  thing worth fixing.
+- **The header-sheet layout check only covers the Appearance sheet.**
+  `measureOpenSheet` in `scripts/dev/audit-contrast.mjs` selects
+  `[role="dialog"][aria-label="Appearance"]` and `auditThemeSheet` is the only
+  caller, so the ThemeChip sheet is the only one ever opened and measured. Every
+  other header sheet — currently the Status sheet added with `StatusChip` — is
+  outside the gate for BOTH clipping and interior contrast, since a sheet that
+  is never opened contributes no pairings to the guest walk either. "Header
+  sheet layout findings: 0" therefore means "the Appearance sheet is fine", not
+  "all header sheets are fine". The fix is to drive every header sheet rather
+  than one by name. Note the prior lesson in `docs/DEMO_READINESS.md`: this gate
+  has passed by accident before, so fix it against a positive control — make it
+  fail first — rather than trusting a green run.
 - **Local `.env` holds a Sentry user token where a DSN belongs.** The dev console
   logs `Invalid Sentry Dsn: sntryu_…` on every load. `sntryu_` is an auth-token
   prefix, not a DSN, so local error reporting is silently off. Production is
