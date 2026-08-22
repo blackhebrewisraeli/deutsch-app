@@ -166,18 +166,33 @@ Two traps worth keeping, both from #96:
   pre-existing: the local failure reproduces on a clean tree. So the gate is
   **not** blind — but a developer cannot run it before pushing, which is the
   thing worth fixing.
-- **The header-sheet layout check only covers the Appearance sheet.**
-  `measureOpenSheet` in `scripts/dev/audit-contrast.mjs` selects
-  `[role="dialog"][aria-label="Appearance"]` and `auditThemeSheet` is the only
-  caller, so the ThemeChip sheet is the only one ever opened and measured. Every
-  other header sheet — currently the Status sheet added with `StatusChip` — is
-  outside the gate for BOTH clipping and interior contrast, since a sheet that
-  is never opened contributes no pairings to the guest walk either. "Header
-  sheet layout findings: 0" therefore means "the Appearance sheet is fine", not
-  "all header sheets are fine". The fix is to drive every header sheet rather
-  than one by name. Note the prior lesson in `docs/DEMO_READINESS.md`: this gate
-  has passed by accident before, so fix it against a positive control — make it
-  fail first — rather than trusting a green run.
+
+  **Workaround that works today**, and how the header-sheet fix was developed
+  and verified locally — build with CI's stub config, then point the audit at
+  the preview:
+
+  ```
+  VITE_SUPABASE_URL=https://stub.supabase.co \
+  VITE_SUPABASE_ANON_KEY=stub-anon-key-not-a-secret \
+  VITE_LEAGUES_ENABLED=true npm run build
+  npx vite preview --port 5290 --strictPort &
+  npm run audit:contrast
+  ```
+
+  A proper fix makes `npm run audit:contrast` do this itself rather than
+  leaving the incantation in a backlog entry.
+
+- ~~**The header-sheet layout check only covers the Appearance sheet.**~~
+  Closed: the audit now DISCOVERS header sheets (`header
+button[aria-haspopup="dialog"]`) instead of selecting one by its literal
+  aria-label, drives each in turn, and colour-audits each one's interior while
+  it is open — a closed sheet contributes no pairings, so the interiors were
+  unaudited too. It also asserts its own coverage against `MIN_HEADER_SHEETS`
+  and prints how many sheets it measured, because "0 findings" and "0 sheets
+  checked" previously looked identical in the output. Proved with both
+  controls: a deliberate clipping bug in the Status sheet is now caught across
+  every mode/tone/viewport, and dropping a chip out of discovery fails the run
+  with "expected at least 2 header sheets, found 1".
 - **Local `.env` holds a Sentry user token where a DSN belongs.** The dev console
   logs `Invalid Sentry Dsn: sntryu_…` on every load. `sntryu_` is an auth-token
   prefix, not a DSN, so local error reporting is silently off. Production is

@@ -141,12 +141,41 @@ function collectFindings(tabName) {
   return out;
 }
 
-const SHEET_SELECTOR = '[role="dialog"][aria-label="Appearance"]';
+const SHEET_SELECTOR = '[role="dialog"]';
 
-/** Toggle the Appearance chip. Returns false when the header has no chip. */
-function clickThemeChip() {
-  const chip = [...document.querySelectorAll('button')].find(
-    (b) => (b.getAttribute('aria-label') || '').toLowerCase() === 'appearance'
+/**
+ * How many header sheets this audit expects to find. A floor, not an exact
+ * count, so adding a sheet does not break the build — but removing the
+ * discovery mechanism does.
+ *
+ * Currently: ThemeChip's Appearance sheet and StatusChip's Status sheet.
+ */
+const MIN_HEADER_SHEETS = 2;
+
+/**
+ * Every header popover, DISCOVERED rather than named.
+ *
+ * This used to select the Appearance chip by its literal aria-label, so when
+ * StatusChip added a second header sheet the audit went on measuring only the
+ * first one — and reported "Header sheet layout findings: 0", which reads as
+ * "all header sheets are fine" but meant "the one sheet I look at is fine".
+ * Discovery by role keeps a future sheet covered on the day it lands rather
+ * than the day someone remembers to add it here.
+ */
+function listSheetTriggers() {
+  const header = document.querySelector('header');
+  if (!header) return [];
+  return [...header.querySelectorAll('button[aria-haspopup="dialog"]')].map(
+    (b) => b.getAttribute('aria-label') || ''
+  );
+}
+
+/** Toggle one header sheet by its trigger's accessible name. */
+function clickSheetTrigger(label) {
+  const header = document.querySelector('header');
+  if (!header) return false;
+  const chip = [...header.querySelectorAll('button[aria-haspopup="dialog"]')].find(
+    (b) => (b.getAttribute('aria-label') || '') === label
   );
   if (!chip) return false;
   chip.click();
@@ -158,8 +187,8 @@ function clickThemeChip() {
  * it, and deliberately free of clicking — see auditThemeSheet below.
  */
 function measureOpenSheet() {
-  const sheet = document.querySelector('[role="dialog"][aria-label="Appearance"]');
-  if (!sheet) return [{ reason: 'Appearance sheet vanished before measurement' }];
+  const sheet = document.querySelector('[role="dialog"]');
+  if (!sheet) return [{ reason: 'sheet vanished before measurement' }];
   const vw = document.documentElement.clientWidth;
   const out = [];
   const r = sheet.getBoundingClientRect();
@@ -196,22 +225,57 @@ function measureOpenSheet() {
  * which reported "sheet did not open" for all 12 mode×tone×viewport
  * combinations and made this script exit 1 unconditionally — the reason it was
  * never wired into CI.
+ *
+ * Drives EVERY header sheet, and also colour-audits each one's interior while
+ * it is open. Both were previously limited to the Appearance sheet by name.
  */
-async function auditThemeSheet(page) {
-  if (!(await page.evaluate(clickThemeChip))) {
-    return [{ reason: 'no Appearance chip in header' }];
+async function auditHeaderSheets(page) {
+  const triggers = await page.evaluate(listSheetTriggers);
+  const layout = [];
+  const contrast = [];
+
+  // A sheet audit that measures nothing reports exactly what a clean one
+  // reports. That is not hypothetical: naming a single sheet is how the Status
+  // sheet went unaudited, and the totals looked healthy throughout. Assert the
+  // coverage, not just the result.
+  if (triggers.length < MIN_HEADER_SHEETS) {
+    layout.push({
+      reason: `expected at least ${MIN_HEADER_SHEETS} header sheets, found ${triggers.length}`,
+      found: triggers.join(' | ') || '(none)',
+    });
   }
-  try {
-    await page.waitForSelector(SHEET_SELECTOR, { state: 'visible', timeout: 3000 });
-  } catch {
-    return [{ reason: 'Appearance sheet did not open' }];
+
+  for (const label of triggers) {
+    const short = label.slice(0, 32);
+    if (!(await page.evaluate(clickSheetTrigger, label))) {
+      layout.push({ reason: 'sheet trigger vanished', sheet: short });
+      continue;
+    }
+    try {
+      await page.waitForSelector(SHEET_SELECTOR, { state: 'visible', timeout: 3000 });
+    } catch {
+      layout.push({ reason: 'sheet did not open', sheet: short });
+      continue;
+    }
+    // The sheet places itself in an effect after mount; measuring before that
+    // runs would report the pre-placement position as clipped.
+    await page.waitForTimeout(200);
+
+    for (const f of await page.evaluate(measureOpenSheet)) {
+      layout.push({ ...f, sheet: short });
+    }
+    // Contrast INSIDE the sheet. The tab walk below runs with every sheet
+    // closed, and a closed sheet contributes no pairings at all — so the
+    // interior of these popovers was never colour-audited either, not just
+    // their geometry.
+    for (const f of await page.evaluate(collectFindings, `sheet:${short}`)) {
+      contrast.push(f);
+    }
+
+    await page.evaluate(clickSheetTrigger, label); // close before the next one
   }
-  // The sheet places itself in an effect after mount; measuring before that
-  // runs would report the pre-placement position as clipped.
-  await page.waitForTimeout(200);
-  const out = await page.evaluate(measureOpenSheet);
-  await page.evaluate(clickThemeChip); // close again before the tab walk
-  return out;
+
+  return { layout, contrast, measured: triggers.length };
 }
 
 /**
@@ -491,6 +555,7 @@ async function main() {
 
   const findings = [];
   const layout = [];
+  let sheetsMeasured = 0;
   let combinations = 0;
   let signedInCombinations = 0;
 
@@ -505,8 +570,13 @@ async function main() {
         await page.waitForTimeout(400);
         await dismissEntryScreens(page);
 
-        for (const l of await auditThemeSheet(page)) {
+        const sheets = await auditHeaderSheets(page);
+        sheetsMeasured = Math.max(sheetsMeasured, sheets.measured);
+        for (const l of sheets.layout) {
           layout.push({ ...l, mode, tone, viewport: vp.width });
+        }
+        for (const f of sheets.contrast) {
+          findings.push({ ...f, mode, tone, viewport: vp.width });
         }
 
         for (const tab of TABS) {
@@ -567,7 +637,10 @@ async function main() {
       `AccountChip, account section, league table; ${profileCardsAudited} with the profile card.`
   );
   console.log(`Raw findings: ${findings.length}; unique: ${unique.length}`);
-  console.log(`Header sheet layout findings: ${layout.length}`);
+  console.log(
+    `Header sheets measured per combination: ${sheetsMeasured} ` +
+      `(geometry + interior contrast); layout findings: ${layout.length}`
+  );
 
   // A silent zero here would mean the league fixture stopped rendering, which
   // looks identical to "no findings" in the totals above.
