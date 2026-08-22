@@ -15,6 +15,7 @@ import TileExercise from './translate/TileExercise';
 import BlankExercise from './translate/BlankExercise';
 import TypingExercise from './translate/TypingExercise';
 import { generateMoreSentences } from './translate/generateSentences';
+import { useDirtySession } from '../lib/sessionGuard';
 
 // Module-level constant — avoids stale closure in useCallback/useEffect
 const BANK_MAP = {
@@ -24,6 +25,15 @@ const BANK_MAP = {
 };
 
 // mobile prop accepted for API consistency; TranslateTab layout is already single-column
+//
+// LIFECYCLE CONTRACT: this component does NOT reset itself when `level`
+// changes. The caller keys it by level (see App.jsx) so a switch mounts a
+// fresh instance — `exercises`, `idx` and `score` all initialise from the new
+// bank in one go, with no window where a new `level` is paired with the old
+// bank. That window is not cosmetic: the banks are differently shaped per
+// level, so a mismatched pair throws inside the exercise components.
+// Rendering this component without a `key` and switching `level` on a live
+// instance is therefore a bug at the call site, not here.
 export default function TranslateTab({
   level = 'a1',
   mobile: _mobile = false,
@@ -35,15 +45,10 @@ export default function TranslateTab({
   const [score, setScore] = useState(0);
   const [generating, setGenerating] = useState(false);
 
-  useEffect(() => {
-    setExercises(shuffle(BANK_MAP[level]));
-    setIdx(0);
-    setScore(0);
-  }, [level]);
-
   // Pick up review targets handed in from the Stats Review feed.
-  // Level mismatch is handled in App.jsx (it switches level first, which
-  // re-runs the effect above; then this effect locates the exercise).
+  // Level mismatch is handled in App.jsx: it switches level first, so this
+  // instance is already the new level's — mounted with the new bank — by the
+  // time the target arrives, and this effect only has to locate the exercise.
   useEffect(() => {
     if (!reviewTarget) return;
     if (reviewTarget.context !== level) return; // still mid-level-switch
@@ -76,6 +81,15 @@ export default function TranslateTab({
     setIdx(next);
   }, [idx, exercises.length, level]);
 
+  const SET_SIZE = 10;
+  const setIdx_ = idx % SET_SIZE;
+
+  // Switching level restarts the set, so tell the guard when there is
+  // something to restart. Nothing here is persisted — no XP is awarded and
+  // no SRS box moves — so the only thing at stake is position in the current
+  // set of ten. That is worth one question, not a blocked control.
+  useDirtySession(setIdx_ > 0 ? `exercise ${setIdx_ + 1} of ${SET_SIZE}` : null);
+
   if (generating) {
     return (
       <div
@@ -93,9 +107,6 @@ export default function TranslateTab({
       </div>
     );
   }
-
-  const SET_SIZE = 10;
-  const setIdx_ = idx % SET_SIZE;
 
   return (
     <div>

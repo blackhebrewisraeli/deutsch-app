@@ -1,8 +1,12 @@
 import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE } from '../../lib/theme';
+import { LEVEL_MODES } from '../../lib/levelPref';
 
 // The "A1 — WORD TILES · Exercise 3 / 10" header above each exercise.
 export default function ExerciseHeader({ level, idx, total }) {
-  const labels = { a1: 'A1 — WORD TILES', a2: 'A2 — FILL THE BLANKS', b1: 'B1 — FREE TRANSLATION' };
+  // Derived from LEVEL_MODES rather than a second copy of the same three
+  // strings — the level switchers caption the mode too, and the two must
+  // agree. (This is why B1 now reads FREE TYPING, not FREE TRANSLATION.)
+  const mode = LEVEL_MODES[level];
   return (
     <div
       style={{
@@ -21,7 +25,7 @@ export default function ExerciseHeader({ level, idx, total }) {
           textTransform: 'uppercase',
         }}
       >
-        {labels[level]}
+        {mode ? `${level.toUpperCase()} — ${mode.label.toUpperCase()}` : ''}
       </span>
       <span
         style={{
