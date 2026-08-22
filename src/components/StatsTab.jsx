@@ -20,14 +20,14 @@ import ReviewFeed from './stats/ReviewFeed';
 import VocabSrsWidget from './stats/VocabSrsWidget';
 import LevelCard from './gamification/LevelCard';
 import GoalPicker from './gamification/GoalPicker';
-import LevelPicker from './gamification/LevelPicker';
+import LevelSwitcher from './ui/LevelSwitcher';
 import BadgeGrid from './gamification/BadgeGrid';
 import AccountSection from './stats/AccountSection';
 import LeaderboardSection from './stats/LeaderboardSection';
 import ProfileCard from './stats/ProfileCard';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
 import { isAuthConfigured } from '../lib/auth.js';
-import { writeLevel, LEVEL_NAMES } from '../lib/levelPref';
+import { writeLevel, LEVEL_NAMES, LEVEL_MODES } from '../lib/levelPref';
 import { LEVEL_MULTIPLIERS } from '../lib/gameConfig';
 
 // Section 05 — practice dashboard. Reads the forward-only event log from
@@ -216,10 +216,11 @@ export default function StatsTab({
                 </button>
               </div>
               <div style={{ marginTop: SPACE[5] }}>
-                <SectionLabel num="·" text="Practice level" />
-                <LevelPicker
-                  level={level}
-                  onPick={(next) => {
+                <SectionLabel num="·" text="Learning level" />
+                <LevelSwitcher
+                  value={level}
+                  variant="full"
+                  onChange={(next) => {
                     writeLevel(next);
                     onLevelChange(next);
                   }}
@@ -238,6 +239,23 @@ export default function StatsTab({
                     ? ` · ×${LEVEL_MULTIPLIERS[level]} XP per answer`
                     : ''}
                 </div>
+                {/* What the level actually changes, in the learner's terms.
+                    Printed verbatim, never case-transformed: lowercasing the
+                    detail turned B1's "AI-graded" into "ai-graded". */}
+                {LEVEL_MODES[level] && (
+                  <div
+                    style={{
+                      marginTop: SPACE[2],
+                      fontFamily: FONTS.body,
+                      fontSize: FONT_SIZE.base,
+                      color: COLORS.inkSoft,
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    Translate exercises: <strong>{LEVEL_MODES[level].label}</strong> —{' '}
+                    {LEVEL_MODES[level].detail}.
+                  </div>
+                )}
               </div>
               <div style={{ marginTop: SPACE[5] }}>
                 <SectionLabel num="·" text="Badges" />

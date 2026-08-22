@@ -30,6 +30,23 @@ const LEGACY = { beginner: 'a1', intermediate: 'b1' };
 export const LEVEL_NAMES = { a1: 'Beginner', a2: 'Elementary', b1: 'Intermediate' };
 
 /**
+ * What the Translate exercise actually asks for at each level.
+ *
+ * Single source of truth: ExerciseHeader prints `label` above every exercise
+ * and the level switchers print `detail` next to the choice. They were about
+ * to be two copies of the same sentence, and a switcher that promises "fill
+ * the blanks" over a tab headed "free translation" is worse than no caption.
+ *
+ * `label` is title case here and uppercased at the call site that wants caps,
+ * so the string is written once rather than once per casing.
+ */
+export const LEVEL_MODES = Object.freeze({
+  a1: { label: 'Word tiles', detail: 'Assemble the full sentence' },
+  a2: { label: 'Fill the blanks', detail: 'Select the missing words' },
+  b1: { label: 'Free typing', detail: 'AI-graded translation' },
+});
+
+/**
  * Map a raw stored value to a level, or null when it is not one.
  * Legacy values resolve; anything else does not. Single source of truth for
  * "is this a level?" so readLevel and hasStoredLevel cannot disagree.

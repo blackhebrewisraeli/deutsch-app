@@ -88,17 +88,17 @@ describe('StatsTab — Leagues view', () => {
   });
 });
 
-describe('StatsTab — Practice level', () => {
+describe('StatsTab — Learning level', () => {
   it('offers a level picker and reports the chosen level', async () => {
     const onLevelChange = vi.fn();
     render(<StatsTab level="a1" onLevelChange={onLevelChange} />);
-    await userEvent.click(screen.getByRole('button', { name: 'B1' }));
+    await userEvent.click(screen.getByRole('radio', { name: /B1/ }));
     expect(onLevelChange).toHaveBeenCalledWith('b1');
   });
 
   it('persists the chosen level', async () => {
     render(<StatsTab level="a1" onLevelChange={() => {}} />);
-    await userEvent.click(screen.getByRole('button', { name: 'A2' }));
+    await userEvent.click(screen.getByRole('radio', { name: /A2/ }));
     expect(localStorage.getItem('deutsch-level')).toBe('a2');
   });
 
@@ -106,6 +106,31 @@ describe('StatsTab — Practice level', () => {
     render(<StatsTab level="a1" onLevelChange={() => {}} />);
     expect(screen.getByText('Beginner')).toBeInTheDocument();
     expect(screen.queryByText(/XP per answer/)).toBeNull();
+  });
+
+  it.each([
+    ['a1', /Word tiles/, /Assemble the full sentence/],
+    ['a2', /Fill the blanks/, /Select the missing words/],
+    ['b1', /Free typing/, /AI-graded translation/],
+  ])('describes the %s exercise mode', (lvl, label, detail) => {
+    render(<StatsTab level={lvl} onLevelChange={() => {}} />);
+    const line = screen.getByText(/Translate exercises:/);
+    expect(line).toHaveTextContent(label);
+    expect(line).toHaveTextContent(detail);
+  });
+
+  // Case-transforming the descriptor mangled the acronym ("ai-graded").
+  it('keeps the AI acronym uppercase in the B1 descriptor', () => {
+    render(<StatsTab level="b1" onLevelChange={() => {}} />);
+    expect(screen.getByText(/Translate exercises:/)).toHaveTextContent('AI-graded');
+    expect(screen.queryByText(/ai-graded/)).toBeNull();
+  });
+
+  it('describes only the selected level, not all three', () => {
+    render(<StatsTab level="a1" onLevelChange={() => {}} />);
+    const line = screen.getByText(/Translate exercises:/);
+    expect(line).not.toHaveTextContent(/AI-graded/);
+    expect(line).not.toHaveTextContent(/missing words/);
   });
 
   it('names the level XP bonus for an account holder above A1', () => {
