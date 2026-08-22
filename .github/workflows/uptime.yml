@@ -52,13 +52,25 @@ jobs:
           code=$(curl -sS -o /dev/null -w '%{http_code}' --max-time 30 "$APP_URL/") || code=000
           [ "$code" = "200" ] && ok "HTTP $code" || fail "demo root returned HTTP $code (expected 200)"
 
+          # The lexicon is pack-namespaced (/lexicon/<packId>/) since the
+          # multi-pack engine work; German is the only pack. This probe still
+          # asked for a bare /lexicon/manifest.json, which has 404'd ever since,
+          # and reported it as "total=0" — indistinguishable from the demo
+          # serving an empty lexicon. It read as a content outage and was
+          # investigated as one. So: check the transport and the contents
+          # separately, and say which one failed.
           echo "2. lexicon is served and non-empty"
-          body=$(curl -sS --max-time 30 "$APP_URL/lexicon/manifest.json") || body=''
-          total=$(printf '%s' "$body" | jq -r '.total // 0' 2>/dev/null || echo 0)
-          if [ "${total:-0}" -gt 0 ] 2>/dev/null; then
-            ok "manifest.total = $total"
+          code=$(curl -sS -o /tmp/lexicon-manifest.json -w '%{http_code}' \
+                 --max-time 30 "$APP_URL/lexicon/de/manifest.json") || code=000
+          if [ "$code" != "200" ]; then
+            fail "lexicon manifest returned HTTP $code (expected 200) — the file moved or is unpublished; the path is pack-namespaced, currently /lexicon/de/manifest.json"
           else
-            fail "lexicon manifest missing or empty (total=${total:-unparseable})"
+            total=$(jq -r '.total // 0' /tmp/lexicon-manifest.json 2>/dev/null || echo 0)
+            if [ "${total:-0}" -gt 0 ] 2>/dev/null; then
+              ok "manifest.total = $total"
+            else
+              fail "lexicon manifest served but empty (total=${total:-unparseable}) — this one really is a content problem"
+            fi
           fi
 
           # 3-5 are the round trips the old "is it configured?" check never made.
