@@ -178,7 +178,14 @@ button[aria-haspopup="dialog"]`) instead of selecting one by its literal
   checked" previously looked identical in the output. Proved with both
   controls: a deliberate clipping bug in the Status sheet is now caught across
   every mode/tone/viewport, and dropping a chip out of discovery fails the run
-  with "expected at least 2 header sheets, found 1".
+  with "expected at least 2 header sheets, found 1". AccountChip was brought
+  into the same pattern afterwards — it had advertised `aria-haspopup="true"`
+  (menu) over a panel with no role, so it was neither correct ARIA nor
+  discoverable. Its sheet only exists with a session, so the floor is per-pass
+  (2 guest / 3 signed-in) and the signed-in walk opens the sheets too.
+  Opening it for the first time immediately found a real defect: the email line
+  rendered at 1:1 in light mode, invisible, because the panel carried its own
+  background but inherited the masthead's on-charcoal ink.
 - **Local `.env` holds a Sentry user token where a DSN belongs.** The dev console
   logs `Invalid Sentry Dsn: sntryu_…` on every load. `sntryu_` is an auth-token
   prefix, not a DSN, so local error reporting is silently off. Production is
