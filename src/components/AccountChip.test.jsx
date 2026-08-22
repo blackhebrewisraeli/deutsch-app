@@ -30,6 +30,48 @@ describe('AccountChip', () => {
     expect(onSignOut).toHaveBeenCalled();
   });
 
+  // The sheet used to advertise `aria-haspopup="true"` (menu) over a panel with
+  // no role, so a screen reader was told "menu", opened it, and found an
+  // unlabelled div. It is a small panel with mixed content — email text plus
+  // one action — which is a dialog, not a menu.
+  it('advertises and renders a labelled dialog, not a menu', async () => {
+    render(<AccountChip user={{ email: 'a@b.co' }} onSignOut={() => {}} />);
+    const trigger = screen.getByRole('button', { name: 'Account' });
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+
+    await userEvent.click(trigger);
+    expect(screen.getByRole('dialog', { name: 'Account' })).toBeInTheDocument();
+    expect(trigger).toHaveAttribute('aria-expanded', 'true');
+    // A menu was never actually rendered; assert it is not one now either.
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('closes on Escape and returns focus to the trigger', async () => {
+    render(<AccountChip user={{ email: 'a@b.co' }} onSignOut={() => {}} />);
+    const trigger = screen.getByRole('button', { name: 'Account' });
+    await userEvent.click(trigger);
+    await userEvent.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(trigger).toHaveFocus();
+  });
+
+  it('closes on an outside click but not on a click inside', async () => {
+    render(
+      <div>
+        <AccountChip user={{ email: 'a@b.co' }} onSignOut={() => {}} />
+        <button type="button">elsewhere</button>
+      </div>
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Account' }));
+    // Inside first — a sheet that closes on its own content is unusable.
+    await userEvent.click(screen.getByText('a@b.co'));
+    expect(screen.getByRole('dialog')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'elsewhere' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
   it('shows a pending-sync dot when sync is queued', () => {
     render(
       <AccountChip

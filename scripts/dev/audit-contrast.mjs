@@ -289,13 +289,17 @@ function collectFindings(tabName) {
 const SHEET_SELECTOR = '[role="dialog"]';
 
 /**
- * How many header sheets this audit expects to find. A floor, not an exact
+ * How many header sheets each pass expects to find. A floor, not an exact
  * count, so adding a sheet does not break the build — but removing the
  * discovery mechanism does.
  *
- * Currently: ThemeChip's Appearance sheet and StatusChip's Status sheet.
+ * Guest sees two: ThemeChip's Appearance sheet and StatusChip's Status sheet.
+ * A signed-in user also gets AccountChip's Account sheet, which renders only
+ * with a session — so a single global floor would either miss it or fail the
+ * guest walk.
  */
-const MIN_HEADER_SHEETS = 2;
+const MIN_HEADER_SHEETS_GUEST = 2;
+const MIN_HEADER_SHEETS_SIGNED_IN = 3;
 
 /**
  * Every header popover, DISCOVERED rather than named.
@@ -374,7 +378,7 @@ function measureOpenSheet() {
  * Drives EVERY header sheet, and also colour-audits each one's interior while
  * it is open. Both were previously limited to the Appearance sheet by name.
  */
-async function auditHeaderSheets(page) {
+async function auditHeaderSheets(page, minSheets, passLabel = 'guest') {
   const triggers = await page.evaluate(listSheetTriggers);
   const layout = [];
   const contrast = [];
@@ -383,9 +387,9 @@ async function auditHeaderSheets(page) {
   // reports. That is not hypothetical: naming a single sheet is how the Status
   // sheet went unaudited, and the totals looked healthy throughout. Assert the
   // coverage, not just the result.
-  if (triggers.length < MIN_HEADER_SHEETS) {
+  if (triggers.length < minSheets) {
     layout.push({
-      reason: `expected at least ${MIN_HEADER_SHEETS} header sheets, found ${triggers.length}`,
+      reason: `expected at least ${minSheets} header sheets in the ${passLabel} pass, found ${triggers.length}`,
       found: triggers.join(' | ') || '(none)',
     });
   }
@@ -596,6 +600,16 @@ async function auditSignedIn(page, mode, tone) {
   }
 
   const out = [];
+  const sheetLayout = [];
+
+  // The header sheets again, now that a session exists — this is the only pass
+  // in which AccountChip renders a sheet at all. Its trigger "rode along" in
+  // the colour sweep below, but its CONTENTS (the email line, the red Sign
+  // out) were never opened, so they were never measured for contrast or for
+  // clipping. A sheet that is never opened contributes no pairings.
+  const signedInSheets = await auditHeaderSheets(page, MIN_HEADER_SHEETS_SIGNED_IN, 'signed-in');
+  out.push(...signedInSheets.contrast);
+  sheetLayout.push(...signedInSheets.layout);
 
   // Stats' default view — this is where AccountSection renders for a signed-in
   // user (email, export, handle field). The header AccountChip rides along.
@@ -663,7 +677,12 @@ async function auditSignedIn(page, mode, tone) {
     out.push(...(await page.evaluate(collectFindings, 'ProfileCard')));
   }
 
-  return { findings: out, profileCardOpened: opened };
+  return {
+    findings: out,
+    profileCardOpened: opened,
+    sheetLayout,
+    sheetsMeasured: signedInSheets.measured,
+  };
 }
 
 async function applyTheme(page, mode, tone) {
@@ -706,6 +725,7 @@ async function main() {
   const findings = [];
   const layout = [];
   let sheetsMeasured = 0;
+  let signedInSheetsMeasured = 0;
   let combinations = 0;
   let signedInCombinations = 0;
 
@@ -720,7 +740,7 @@ async function main() {
         await page.waitForTimeout(400);
         await dismissEntryScreens(page);
 
-        const sheets = await auditHeaderSheets(page);
+        const sheets = await auditHeaderSheets(page, MIN_HEADER_SHEETS_GUEST, 'guest');
         sheetsMeasured = Math.max(sheetsMeasured, sheets.measured);
         for (const l of sheets.layout) {
           layout.push({ ...l, mode, tone, viewport: vp.width });
@@ -762,6 +782,10 @@ async function main() {
       signedInCombinations += 1;
       const res = await auditSignedIn(signedInPage, mode, tone);
       if (res.profileCardOpened) profileCardsAudited += 1;
+      signedInSheetsMeasured = Math.max(signedInSheetsMeasured, res.sheetsMeasured);
+      for (const l of res.sheetLayout) {
+        layout.push({ ...l, mode, tone, viewport: SIGNED_IN_VIEWPORT.width, pass: 'signed-in' });
+      }
       for (const f of res.findings) {
         findings.push({ ...f, mode, tone, viewport: SIGNED_IN_VIEWPORT.width });
       }
@@ -788,8 +812,9 @@ async function main() {
   );
   console.log(`Raw findings: ${findings.length}; unique: ${unique.length}`);
   console.log(
-    `Header sheets measured per combination: ${sheetsMeasured} ` +
-      `(geometry + interior contrast); layout findings: ${layout.length}`
+    `Header sheets measured per combination: ${sheetsMeasured} guest / ` +
+      `${signedInSheetsMeasured} signed-in (geometry + interior contrast); ` +
+      `layout findings: ${layout.length}`
   );
 
   // A silent zero here would mean the league fixture stopped rendering, which
