@@ -29,18 +29,35 @@ export default function AuthSheet({
   googleBusy = false,
 }) {
   const sheetRef = useRef(null);
+  const openerRef = useRef(null);
+  const wasOpenRef = useRef(false);
+
+  // Captured during RENDER, on the pass where `open` first turns true — NOT in
+  // the effect below. React applies a child's `autoFocus` during the commit,
+  // which runs before effects, so by effect time `document.activeElement` is
+  // already GoogleButton and the real opener is lost. Reading it here, before
+  // the commit, is the only point at which the trigger is still focused.
+  //
+  // This shipped broken and was caught by driving production: every test in the
+  // suite runs with Google OFF, where nothing autofocuses and the effect-time
+  // read happened to be correct. Production runs with it ON.
+  if (open && !wasOpenRef.current) openerRef.current = document.activeElement;
+  wasOpenRef.current = open;
 
   // Focus in on open, and back out to the opener on close. The sheet returns
   // null rather than unmounting, so this keys on `open` — the cleanup runs when
   // `open` flips false just as it would on unmount.
   useEffect(() => {
     if (!open || !isAuthConfigured()) return undefined;
-    const opener = document.activeElement;
     // Only if focus is not already inside: with Google configured,
     // GoogleButton's autoFocus has already landed on the primary action during
     // commit, and stealing it back would bury the main affordance.
     if (!sheetRef.current?.contains(document.activeElement)) sheetRef.current?.focus();
     return () => {
+      const opener = openerRef.current;
+      openerRef.current = null;
+      // The opener can be gone — a trigger inside a surface this sheet's own
+      // success unmounts — in which case there is nothing to go back to.
       if (opener instanceof HTMLElement && document.contains(opener)) opener.focus();
     };
   }, [open]);
