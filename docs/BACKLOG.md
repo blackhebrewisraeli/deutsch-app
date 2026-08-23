@@ -151,6 +151,15 @@ Two traps worth keeping, both from #96:
   session and stubbed league responses. The freeze chip named in the original
   entry was never actually a gap — the existing seed yields two freezes, so the
   guest walk already rendered it.
+- **The contrast gate covers header sheets and two modals, not every overlay.**
+  Header sheets are DISCOVERED (`header button[aria-haspopup="dialog"]`); full
+  modals are LISTED, because reaching one is an app state rather than a button
+  in a fixed place — but each entry opens the modal itself and the run fails if
+  it does not appear, so a modal that stops being reachable reports that rather
+  than dropping out silently. Covered today: the sign-in sheet and the trial
+  wall. `ProfileCard` is already reached by the signed-in pass. Not covered:
+  `VitalsOverlay` (dev-only) and `AuthCallbackLanding` (a post-OAuth route,
+  reachable only with a real callback URL). Add new overlays to `MODALS`.
 - **League table rows are not keyboard reachable.** They are `<li onClick>` with
   no role, tabindex or key handler, so the profile card cannot be opened without
   a mouse. Found while writing the signed-in audit pass; flagged in
