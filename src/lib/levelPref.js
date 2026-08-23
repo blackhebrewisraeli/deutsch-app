@@ -1,4 +1,4 @@
-import { stampSettings } from './settingsStamp';
+import { stampLevel } from './settingsStamp';
 
 /**
  * NOT part of synced `deutsch-app-state-v1` — the level lives outside that
@@ -98,7 +98,7 @@ export function writeLevel(level) {
   } catch {
     // best-effort; the caller's in-memory state still updates
   }
-  stampSettings();
+  stampLevel();
   notifyLevelChange(level);
   return true;
 }

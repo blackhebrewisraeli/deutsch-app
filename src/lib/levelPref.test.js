@@ -9,8 +9,8 @@ import {
   setUserLevel,
 } from './levelPref';
 
-vi.mock('./settingsStamp', () => ({ stampSettings: vi.fn() }));
-import { stampSettings } from './settingsStamp';
+vi.mock('./settingsStamp', () => ({ stampLevel: vi.fn() }));
+import { stampLevel } from './settingsStamp';
 
 describe('levelPref', () => {
   beforeEach(() => {
@@ -42,22 +42,22 @@ describe('levelPref', () => {
   it('persists and stamps on write', () => {
     writeLevel('b1');
     expect(localStorage.getItem('deutsch-level')).toBe('b1');
-    expect(stampSettings).toHaveBeenCalledTimes(1);
+    expect(stampLevel).toHaveBeenCalledTimes(1);
   });
 
   it('ignores an unknown level rather than persisting it', () => {
     writeLevel('a1');
     writeLevel('c2');
     expect(localStorage.getItem('deutsch-level')).toBe('a1');
-    expect(stampSettings).toHaveBeenCalledTimes(1);
+    expect(stampLevel).toHaveBeenCalledTimes(1);
   });
 
-  it('still stamps settings when storage refuses the write', () => {
+  it('still stamps the level when storage refuses the write', () => {
     const spy = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
       throw new Error('QuotaExceededError');
     });
     expect(() => writeLevel('b1')).not.toThrow();
-    expect(stampSettings).toHaveBeenCalledTimes(1);
+    expect(stampLevel).toHaveBeenCalledTimes(1);
     spy.mockRestore();
   });
 

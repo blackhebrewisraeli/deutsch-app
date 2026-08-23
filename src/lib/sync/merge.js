@@ -60,9 +60,14 @@ export function mergeDailyAdditive({ local, server, lastSynced }) {
 }
 
 // Settings is one jsonb blob per user → whole-object LWW by settingsUpdatedAt
-// (missing side loses; exact tie → remote) — EXCEPT accumulative fields that LWW
-// must never drop across devices: learnedWords (union, #41), and the streak
-// freeze state — gamification.frozenDays (union) + gamification.bestStreak (max).
+// (missing side loses; exact tie → remote) — EXCEPT fields that whole-row LWW
+// must never clobber: learnedWords (union, #41), the streak freeze state —
+// gamification.frozenDays (union) + gamification.bestStreak (max) — and level,
+// which gets its OWN timestamp (levelUpdatedAt) rather than riding the shared
+// settingsUpdatedAt. Without that, a device whose *unrelated* local write is
+// merely newer than the server's last settings write can drag level backwards
+// even though that device never touched level this session (regression
+// 2026-08-24: a stale local a1 clobbered a correctly-set server b1).
 export function mergeSettings(local, remote) {
   if (!local) return remote;
   if (!remote) return local;
@@ -70,6 +75,15 @@ export function mergeSettings(local, remote) {
   const rt = remote.settingsUpdatedAt ?? -Infinity;
   const winner = lt > rt ? local : remote;
   const out = { ...winner };
+
+  // level: independent LWW by levelUpdatedAt, not the whole-row winner.
+  if (local.level !== undefined || remote.level !== undefined) {
+    const llt = local.levelUpdatedAt ?? -Infinity;
+    const rlt = remote.levelUpdatedAt ?? -Infinity;
+    const levelWinner = llt > rlt ? local : remote;
+    out.level = levelWinner.level;
+    out.levelUpdatedAt = levelWinner.levelUpdatedAt;
+  }
 
   // learnedWords: union — a word stays learned if either device has it (#41).
   const lw = local.learnedWords;

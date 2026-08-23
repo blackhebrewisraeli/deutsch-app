@@ -55,6 +55,7 @@ export async function pullAndMerge(userId) {
       gamification: s.gamification,
       learnedWords: s.learnedWords,
       level,
+      levelUpdatedAt: s.levelUpdatedAt,
       settingsUpdatedAt: s.settingsUpdatedAt,
     },
     setRemote.settingsUpdatedAt == null ? null : setRemote
@@ -96,6 +97,7 @@ export async function pullAndMerge(userId) {
     gamification: cur.gamification,
     learnedWords: cur.learnedWords,
     level: localStorage.getItem(LEVEL_KEY) ?? undefined,
+    levelUpdatedAt: cur.levelUpdatedAt,
     settingsUpdatedAt: cur.settingsUpdatedAt,
   };
   const adoptedSettings = mergeSettings(
@@ -108,6 +110,7 @@ export async function pullAndMerge(userId) {
     daily: adoptedDaily,
     gamification: adoptedSettings.gamification ?? cur.gamification,
     learnedWords: adoptedSettings.learnedWords ?? cur.learnedWords,
+    levelUpdatedAt: adoptedSettings.levelUpdatedAt ?? cur.levelUpdatedAt,
     settingsUpdatedAt: adoptedSettings.settingsUpdatedAt ?? cur.settingsUpdatedAt,
   });
   if (adoptedSettings.level) localStorage.setItem(LEVEL_KEY, adoptedSettings.level);
@@ -124,7 +127,8 @@ export async function pullAndMerge(userId) {
           learnedWords: setMerged.learnedWords,
           settingsUpdatedAt: setMerged.settingsUpdatedAt,
         },
-        setMerged.level
+        setMerged.level,
+        setMerged.levelUpdatedAt
       ),
       user_id: userId,
     },

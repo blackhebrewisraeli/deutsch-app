@@ -130,6 +130,16 @@ describe('mergeSettings', () => {
     expect(mergeSettings(a, b).learnedWords).toEqual({ x: true, y: true });
   });
 
+  it('level follows its own timestamp, not the whole-row winner (regression 2026-08-24)', () => {
+    // Local's blob write is newer overall (wins goal, the scalar LWW)...
+    const local = { settingsUpdatedAt: 200, goal: 50, level: 'a1', levelUpdatedAt: 50 };
+    // ...but the server's LEVEL was set more recently than local's stale a1.
+    const remote = { settingsUpdatedAt: 100, goal: 30, level: 'b1', levelUpdatedAt: 150 };
+    const out = mergeSettings(local, remote);
+    expect(out.goal).toBe(50); // scalar settings still whole-row LWW (local newer)
+    expect(out.level).toBe('b1'); // level follows its own more-recent timestamp, survives the row LWW
+  });
+
   it('unions frozenDays and maxes bestStreak across devices (sync-safe)', () => {
     const local = {
       settingsUpdatedAt: 200,

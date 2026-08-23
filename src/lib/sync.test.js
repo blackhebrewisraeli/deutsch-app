@@ -162,6 +162,42 @@ describe('sync engine', () => {
     expect(after.daily[DAY].total).toBe(4); // the concurrently-recorded 4th answer must survive
   });
 
+  // Regression 2026-08-24: a real account's level was 'b1' server-side. A
+  // browser profile whose local `deutsch-level` had drifted to 'a1' (for
+  // reasons unrelated to level) triggered a pullAndMerge whose LOCAL blob had
+  // a newer settingsUpdatedAt than the server's b1-setting write. Whole-row
+  // LWW then dragged level back to 'a1' even though level itself was never
+  // touched on that device this session.
+  it('does not let a newer-but-unrelated local write drag level backwards (regression 2026-08-24)', async () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({
+        gamification: { goal: 80 }, // some other setting changed locally, more recently…
+        settingsUpdatedAt: 500,
+        levelUpdatedAt: 50, // …but level itself is stale on this device
+      })
+    );
+    localStorage.setItem('deutsch-level', 'a1');
+
+    const seeded = makeFakeClient(
+      {
+        settings: [
+          {
+            data: { goal: 30, level: 'b1', levelUpdatedAt: 300, settingsUpdatedAt: 100 },
+            user_id: 'user-1',
+          },
+        ],
+      },
+      { persist: true }
+    );
+    __setClientForTest(seeded);
+    await pullAndMerge('user-1');
+
+    expect(localStorage.getItem('deutsch-level')).toBe('b1'); // level survives the row LWW
+    const pushedSettings = seeded._tables.settings[0];
+    expect(pushedSettings.data.goal).toBe(80); // the genuinely newer scalar setting still wins
+  });
+
   it('serializes overlapping reconciles so concurrent triggers cannot double-count', async () => {
     localStorage.setItem(
       'deutsch-app-state-v1',
