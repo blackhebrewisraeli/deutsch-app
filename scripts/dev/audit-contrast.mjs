@@ -53,6 +53,160 @@ const AUDIT_PORT = Number(process.env.AUDIT_PORT ?? 5293);
 
 const EXPLICIT_BASE = process.env.AUDIT_BASE;
 const BASE = EXPLICIT_BASE ?? `http://localhost:${AUDIT_PORT}`;
+// ─── Modals and drawers ───────────────────────────────────────────────────
+//
+// Header sheets are discovered from their triggers; full-screen modals cannot
+// be, because reaching one is an app state rather than a button in a fixed
+// place. They are therefore listed — but each entry OPENS the modal itself and
+// the run fails if it does not appear, so a modal that stops being reachable
+// reports that instead of silently dropping out of the audit.
+//
+// Both of these were unaudited before: the guest walk never signed in and never
+// exhausted the trial, so neither surface had been measured in any mode.
+
+/** The guest "Sign in" affordance lives in the header. */
+function clickHeaderSignIn() {
+  const btn = [...document.querySelectorAll('header button')].find(
+    (b) => (b.textContent || '').trim().toLowerCase() === 'sign in'
+  );
+  if (!btn) return false;
+  btn.click();
+  return true;
+}
+
+function dismissAuthSheet() {
+  const close = document.querySelector(
+    '[aria-label="Close sign-in"], [aria-label="Dismiss sign-in"]'
+  );
+  if (close) close.click();
+}
+
+/**
+ * Force the guest trial to read as exhausted, then nudge the app to re-derive.
+ * A reload would also work and costs ~2s per combination; `deutsch:progress` is
+ * the event App already recomputes `game` on, so the wall appears in place.
+ */
+function exhaustTrial() {
+  const raw = localStorage.getItem('deutsch-app-state-v1');
+  const state = raw ? JSON.parse(raw) : {};
+  const day = Object.keys(state.daily ?? {})[0] ?? '2026-01-01';
+  state.daily = state.daily ?? {};
+  // Past TRIAL_ROUND_CAP (60). Set here rather than imported: this string is
+  // serialized into the page, which has no access to the module graph.
+  state.daily[day] = { ...(state.daily[day] ?? {}), total: 99 };
+  localStorage.setItem('deutsch-app-state-v1', JSON.stringify(state));
+  window.dispatchEvent(new CustomEvent('deutsch:progress'));
+}
+
+function restoreTrial() {
+  const raw = localStorage.getItem('deutsch-app-state-v1');
+  const state = raw ? JSON.parse(raw) : {};
+  for (const key of Object.keys(state.daily ?? {})) delete state.daily[key].total;
+  localStorage.setItem('deutsch-app-state-v1', JSON.stringify(state));
+  window.dispatchEvent(new CustomEvent('deutsch:progress'));
+}
+
+/** Measure whichever modal is open: geometry, same rules as a header sheet. */
+function measureOpenModal(selector) {
+  const el = document.querySelector(selector);
+  if (!el) return [{ reason: 'modal vanished before measurement' }];
+  const vw = document.documentElement.clientWidth;
+  const out = [];
+  const r = el.getBoundingClientRect();
+  if (r.left < 0 || r.right > vw) {
+    out.push({
+      reason: 'modal outside viewport',
+      left: +r.left.toFixed(1),
+      right: +r.right.toFixed(1),
+      vw,
+    });
+  }
+  for (const node of el.querySelectorAll('*')) {
+    if (![...node.childNodes].some((n) => n.nodeType === 3 && n.textContent.trim())) continue;
+    const b = node.getBoundingClientRect();
+    if (b.left < 0 || b.right > vw) {
+      out.push({
+        reason: 'modal content clipped',
+        text: node.textContent.trim().slice(0, 24),
+        left: +b.left.toFixed(1),
+      });
+    }
+  }
+  return out;
+}
+
+const MODALS = [
+  {
+    name: 'sign-in',
+    // Native <dialog open> — implicit role="dialog", so aria-modal is real
+    // here and this selector reaches it.
+    selector: 'dialog[open]',
+    open: async (page) => page.evaluate(clickHeaderSignIn),
+    close: async (page) => page.evaluate(dismissAuthSheet),
+  },
+  {
+    name: 'trial wall',
+    selector: '[role="dialog"][aria-label="Save your progress"]',
+    // The wall waits for `toasts.length === 0` BY DESIGN — App holds it back
+    // so a running goal/streak celebration finishes before the wall lands.
+    // Seeding progress re-runs that celebration, so the wall appears a few
+    // seconds later, not immediately. A 3s timeout reported it as unreachable;
+    // Playwright polls, so a longer bound costs only the wait actually needed.
+    timeout: 10000,
+    open: async (page) => {
+      // Must be on a PRACTICE tab: the wall deliberately never covers Stats,
+      // which is the escape hatch to sign in from. The tab walk ends on Stats,
+      // so without this the wall can never appear and the audit reports it as
+      // unreachable — which is what it did on the first run.
+      await openTab(page, 'Vocab');
+      await page.evaluate(exhaustTrial);
+      return true;
+    },
+    close: async (page) => page.evaluate(restoreTrial),
+  },
+];
+
+async function auditModals(page) {
+  const layout = [];
+  const contrast = [];
+  let measured = 0;
+
+  for (const modal of MODALS) {
+    const opened = await modal.open(page);
+    if (opened === false) {
+      layout.push({ reason: `no way to open the ${modal.name} modal`, modal: modal.name });
+      continue;
+    }
+    try {
+      await page.waitForSelector(modal.selector, {
+        state: 'visible',
+        timeout: modal.timeout ?? 3000,
+      });
+    } catch {
+      layout.push({ reason: `${modal.name} modal did not open`, modal: modal.name });
+      await modal.close(page);
+      continue;
+    }
+    await page.waitForTimeout(200);
+    measured += 1;
+    for (const f of await page.evaluate(measureOpenModal, modal.selector)) {
+      layout.push({ ...f, modal: modal.name });
+    }
+    for (const f of await page.evaluate(collectFindings, `modal:${modal.name}`)) {
+      contrast.push(f);
+    }
+    await modal.close(page);
+    await page.waitForTimeout(150);
+  }
+
+  if (measured < MODALS.length) {
+    layout.push({
+      reason: `expected ${MODALS.length} modals, measured ${measured}`,
+    });
+  }
+  return { layout, contrast, measured };
+}
+
 // ─── Provisioning the target ──────────────────────────────────────────────
 //
 // Only used when the caller did not supply AUDIT_BASE.
@@ -726,6 +880,7 @@ async function main() {
   const layout = [];
   let sheetsMeasured = 0;
   let signedInSheetsMeasured = 0;
+  let modalsMeasured = 0;
   let combinations = 0;
   let signedInCombinations = 0;
 
@@ -761,6 +916,18 @@ async function main() {
               viewport: vp.width,
             });
           }
+        }
+
+        // Last in the iteration: opening the trial wall mutates stored
+        // progress, so it must not run before the tab walk it would change.
+        // The next iteration re-seeds and reloads, so nothing carries over.
+        const modals = await auditModals(page);
+        modalsMeasured = Math.max(modalsMeasured, modals.measured);
+        for (const l of modals.layout) {
+          layout.push({ ...l, mode, tone, viewport: vp.width });
+        }
+        for (const f of modals.contrast) {
+          findings.push({ ...f, mode, tone, viewport: vp.width });
         }
       }
     }
@@ -815,6 +982,10 @@ async function main() {
     `Header sheets measured per combination: ${sheetsMeasured} guest / ` +
       `${signedInSheetsMeasured} signed-in (geometry + interior contrast); ` +
       `layout findings: ${layout.length}`
+  );
+  console.log(
+    `Modals measured per combination: ${modalsMeasured}/${MODALS.length} ` +
+      `(${MODALS.map((m) => m.name).join(', ')})`
   );
 
   // A silent zero here would mean the league fixture stopped rendering, which
