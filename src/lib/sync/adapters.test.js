@@ -73,6 +73,19 @@ describe('settings adapter', () => {
     expect(back.settingsUpdatedAt).toBe(123);
   });
 
+  it('carries levelUpdatedAt round-trip, independent of settingsUpdatedAt', () => {
+    const local = {
+      gamification: { goal: 50 },
+      learnedWords: {},
+      settingsUpdatedAt: 123,
+    };
+    const row = settingsToRow(local, 'b1', 999);
+    expect(row.data.levelUpdatedAt).toBe(999);
+    const back = settingsFromRow(row);
+    expect(back.levelUpdatedAt).toBe(999);
+    expect(back.settingsUpdatedAt).toBe(123);
+  });
+
   it('carries frozenDays / bestStreak / lastReconcileDay round-trip', () => {
     const local = {
       gamification: {

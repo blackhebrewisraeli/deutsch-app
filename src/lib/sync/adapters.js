@@ -40,8 +40,10 @@ export function dailyFromRows(rows) {
 }
 
 // Settings is one row. `level` lives in a separate localStorage key, so the
-// engine passes it in / reads it out.
-export function settingsToRow(local, level) {
+// engine passes it in / reads it out. `levelUpdatedAt` travels alongside it —
+// level gets its own LWW clock, independent of settingsUpdatedAt (see
+// mergeSettings in sync/merge.js).
+export function settingsToRow(local, level, levelUpdatedAt) {
   return {
     data: {
       goal: local.gamification?.goal,
@@ -53,6 +55,7 @@ export function settingsToRow(local, level) {
       lastReconcileDay: local.gamification?.lastReconcileDay,
       learnedWords: local.learnedWords,
       level,
+      levelUpdatedAt,
       settingsUpdatedAt: local.settingsUpdatedAt,
     },
   };
@@ -71,6 +74,7 @@ export function settingsFromRow(row) {
     },
     learnedWords: d.learnedWords ?? {},
     level: d.level,
+    levelUpdatedAt: d.levelUpdatedAt,
     settingsUpdatedAt: d.settingsUpdatedAt,
   };
 }

@@ -25,7 +25,7 @@ vi.mock('../lib/gamification', () => ({
   DEFAULT_GOAL: 20,
 }));
 
-vi.mock('../lib/settingsStamp', () => ({ stampSettings: () => {} }));
+vi.mock('../lib/settingsStamp', () => ({ stampSettings: () => {}, stampLevel: () => {} }));
 
 // Stub out heavy sub-components so tests are fast
 vi.mock('./stats/TodaySnapshot.jsx', () => ({ default: () => <div /> }));
