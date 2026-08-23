@@ -4,6 +4,7 @@ import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, RADIUS, SHADOW, SPACE } from 
 import { isAuthConfigured, isGoogleAuthConfigured } from '../../lib/auth.js';
 import MagicLinkForm from './MagicLinkForm';
 import GoogleButton from './GoogleButton';
+import useFocusTrap from '../../lib/useFocusTrap.js';
 
 /**
  * In-app auth modal used by WelcomeGate, the trial wall, AccountChip,
@@ -19,10 +20,6 @@ import GoogleButton from './GoogleButton';
  * held as a ref — no ref can know which of the five opened it.
  */
 
-// Tab stops the trap cycles through. `[tabindex="-1"]` is excluded: the sheet
-// itself carries -1 so it can be a programmatic target without becoming a stop.
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 export default function AuthSheet({
   open,
   intent = 'signin',
@@ -48,37 +45,15 @@ export default function AuthSheet({
     };
   }, [open]);
 
+  // `<dialog open>` is not in the top layer — only showModal() gets native
+  // focus containment — so `aria-modal` here is a promise this code has to keep
+  // by hand. The sheet renders null rather than unmounting, hence the flag.
+  useFocusTrap(sheetRef, open && isAuthConfigured());
+
   useEffect(() => {
     if (!open || !isAuthConfigured()) return undefined;
     const onKey = (e) => {
-      if (e.key === 'Escape') {
-        onClose?.();
-        return;
-      }
-      // `<dialog open>` is not in the top layer — only showModal() gets native
-      // focus containment — so `aria-modal` here is a promise this code has to
-      // keep by hand.
-      if (e.key !== 'Tab') return;
-      const sheet = sheetRef.current;
-      if (!sheet) return;
-      const stops = sheet.querySelectorAll(FOCUSABLE);
-      if (stops.length === 0) {
-        e.preventDefault();
-        sheet.focus();
-        return;
-      }
-      const first = stops[0];
-      const last = stops[stops.length - 1];
-      const here = document.activeElement;
-      if (e.shiftKey) {
-        if (here === first || here === sheet) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else if (here === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      if (e.key === 'Escape') onClose?.();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);

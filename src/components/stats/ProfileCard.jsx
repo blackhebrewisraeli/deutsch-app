@@ -1,12 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { fetchProfile, TIER_NAMES } from '../../lib/leagues.js';
 import { COLORS, SPACE, RADIUS, Z } from '../../lib/theme.js';
-
-// Tab stops the trap cycles through. `[tabindex="-1"]` is excluded on purpose:
-// the card container carries -1 so it can be focused programmatically, and it
-// must not become a stop of its own.
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+import useFocusTrap from '../../lib/useFocusTrap.js';
 
 export default function ProfileCard({ userId, onClose }) {
   const [profile, setProfile] = useState(null);
@@ -34,44 +29,19 @@ export default function ProfileCard({ userId, onClose }) {
     };
   }, []);
 
-  // Escape dismisses, matching AccountChip / ThemeChip / AuthSheet. Listening
-  // on `document` rather than the card means it still fires if focus has been
-  // dragged outside by something we don't control.
-  //
   // Tab wraps inside the card. This is a modal — there is a scrim over the page
   // and `aria-modal` tells assistive tech the rest of the document is inert —
   // so letting Tab walk out into a leaderboard the user cannot see would make
-  // both claims false.
+  // both claims false. The card only renders while open, so the trap is always
+  // armed.
+  useFocusTrap(cardRef, true);
+
+  // Escape dismisses, matching AccountChip / ThemeChip / AuthSheet. Listening
+  // on `document` rather than the card means it still fires if focus has been
+  // dragged outside by something we don't control.
   useEffect(() => {
     const onKey = (e) => {
-      if (e.key === 'Escape') {
-        onClose?.();
-        return;
-      }
-      if (e.key !== 'Tab') return;
-      const card = cardRef.current;
-      if (!card) return;
-      const stops = card.querySelectorAll(FOCUSABLE);
-      if (stops.length === 0) {
-        // Nothing to land on (the error state has no controls): hold the card.
-        e.preventDefault();
-        card.focus();
-        return;
-      }
-      const first = stops[0];
-      const last = stops[stops.length - 1];
-      const here = document.activeElement;
-      if (e.shiftKey) {
-        // The card container is the entry point, so going backwards off it
-        // wraps to the end just as it would from the first real stop.
-        if (here === first || here === card) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else if (here === last) {
-        e.preventDefault();
-        first.focus();
-      }
+      if (e.key === 'Escape') onClose?.();
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
