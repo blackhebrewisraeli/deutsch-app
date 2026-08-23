@@ -143,7 +143,18 @@ describe('AuthSheet', () => {
   // keeping that promise: Tab walked straight out into the page under the
   // scrim, and closing dropped focus to <body> rather than returning it to
   // whichever of the five triggers opened the sheet.
-  describe('keyboard loop', () => {
+  //
+  // Run under BOTH Google configurations. The rest of this file runs with the
+  // flag off — "the merge state and the one CI runs" — but production runs with
+  // it on, and that difference is not cosmetic: GoogleButton's `autoFocus`
+  // fires during React's commit, ahead of this component's effects, which is
+  // exactly what broke focus-restore in production while every test was green.
+  // Testing focus-in under one flag and focus-return under the other left the
+  // combination that ships completely uncovered.
+  describe.each([
+    ['Google off', false],
+    ['Google on', true],
+  ])('keyboard loop — %s', (_label, googleOn) => {
     function Harness() {
       const [open, setOpen] = useState(false);
       return (
@@ -161,23 +172,21 @@ describe('AuthSheet', () => {
       );
     }
 
+    beforeEach(() => {
+      isGoogleAuthConfigured.mockReturnValue(googleOn);
+    });
+
+    const openSheet = async (user) => {
+      const trigger = screen.getByRole('button', { name: 'Sign in trigger' });
+      await user.click(trigger);
+      return { trigger, dialog: await screen.findByRole('dialog') };
+    };
+
     it('moves focus into the sheet when it opens', async () => {
       const user = userEvent.setup();
       render(<Harness />);
-      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
-      const dialog = await screen.findByRole('dialog');
+      const { dialog } = await openSheet(user);
       expect(dialog.contains(document.activeElement)).toBe(true);
-    });
-
-    // Guards the OTHER direction: with Google configured, GoogleButton's
-    // autoFocus already lands focus on the primary action. Moving focus to the
-    // sheet unconditionally would take it away and bury the main affordance.
-    it('leaves autoFocus alone when Google is configured', async () => {
-      isGoogleAuthConfigured.mockReturnValue(true);
-      const user = userEvent.setup();
-      render(<Harness />);
-      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
-      expect(screen.getByRole('button', { name: /continue with google/i })).toHaveFocus();
     });
 
     // Starts from the LAST control INSIDE the sheet. Tabbing from the trigger
@@ -186,8 +195,7 @@ describe('AuthSheet', () => {
     it('wraps Tab from the last control back into the sheet', async () => {
       const user = userEvent.setup();
       render(<Harness />);
-      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
-      const dialog = await screen.findByRole('dialog');
+      const { dialog } = await openSheet(user);
 
       const stops = dialog.querySelectorAll('a[href], button, input, select, textarea');
       expect(stops.length).toBeGreaterThan(0);
@@ -201,8 +209,7 @@ describe('AuthSheet', () => {
     it('wraps Shift+Tab from the first control back into the sheet', async () => {
       const user = userEvent.setup();
       render(<Harness />);
-      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
-      const dialog = await screen.findByRole('dialog');
+      const { dialog } = await openSheet(user);
 
       dialog.querySelector('button').focus();
       expect(dialog.contains(document.activeElement)).toBe(true);
@@ -211,15 +218,14 @@ describe('AuthSheet', () => {
       expect(dialog.contains(document.activeElement)).toBe(true);
     });
 
-    // Focus is placed inside by hand rather than relying on focus-in, so this
-    // fails for its own reason instead of passing because focus never left the
-    // trigger in the first place.
+    // The one that shipped broken. With Google ON, autoFocus takes focus during
+    // the commit, so an effect-time read of document.activeElement captures the
+    // Google button rather than the trigger — and on close that node is gone,
+    // so the restore silently skipped and focus fell to <body>.
     it('returns focus to the trigger on close', async () => {
       const user = userEvent.setup();
       render(<Harness />);
-      const trigger = screen.getByRole('button', { name: 'Sign in trigger' });
-      await user.click(trigger);
-      const dialog = await screen.findByRole('dialog');
+      const { trigger, dialog } = await openSheet(user);
 
       dialog.querySelector('button').focus();
       expect(dialog.contains(document.activeElement)).toBe(true);
@@ -236,9 +242,39 @@ describe('AuthSheet', () => {
     it('does not put the scrim in the tab order', async () => {
       const user = userEvent.setup();
       render(<Harness />);
-      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
+      await openSheet(user);
       const scrim = screen.queryByRole('button', { name: /dismiss sign-in/i });
       expect(scrim === null || scrim.tabIndex === -1).toBe(true);
+    });
+  });
+
+  // Guards the OTHER direction, and only makes sense with the flag on: with
+  // Google configured, GoogleButton's autoFocus already lands focus on the
+  // primary action. Moving focus to the sheet unconditionally would take it
+  // away and bury the main affordance.
+  describe('autoFocus', () => {
+    it('leaves the primary action focused when Google is configured', async () => {
+      isGoogleAuthConfigured.mockReturnValue(true);
+      const user = userEvent.setup();
+      function Harness() {
+        const [open, setOpen] = useState(false);
+        return (
+          <>
+            <button type="button" onClick={() => setOpen(true)}>
+              Sign in trigger
+            </button>
+            <AuthSheet
+              open={open}
+              intent="signin"
+              onClose={() => setOpen(false)}
+              onSuccess={() => {}}
+            />
+          </>
+        );
+      }
+      render(<Harness />);
+      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
+      expect(screen.getByRole('button', { name: /continue with google/i })).toHaveFocus();
     });
   });
 });
