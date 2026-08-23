@@ -13,7 +13,7 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-1,641_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-1,417_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
   <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-23_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
   &nbsp;
@@ -133,7 +133,7 @@ All AI features call **Claude Haiku 4.5** through a versioned server-side API (`
 | **Social**           | Weekly XP leagues, ~25-person cohorts, promotion / relegation                                                          |
 | **AI**               | Claude Haiku 4.5 behind `/api/v1/ai/*` — key stays server-side                                                         |
 | **Data**             | Local-first (`localStorage`), optional Supabase sync under row-level security                                          |
-| **Quality gates**    | 1,641 tests · 23 adversarial RLS tests · lint + format + full suite on every commit                                      |
+| **Quality gates**    | 1,417 tests · 23 adversarial RLS tests · lint + format + full suite on every commit                                      |
 
 ---
 
@@ -147,7 +147,7 @@ Choose your level on the splash screen. It is stored in `localStorage` and drive
 |  **A2 — Elementary**  | You can handle familiar situations with some grammar knowledge | **Fill the blanks** — sentence shown with 2–3 key words missing; select from a tile bank  |
 | **B1 — Intermediate** | You can describe experiences and explain opinions in German    | **Free typing + AI grading** — translate the sentence yourself; Claude grades your answer |
 
-You can change your level at any time from the header's status control or the Stats tab — no need to sign out or clear onboarding state. Switching level while a set is in progress asks for confirmation first, since it discards the current run. Signed-in learners additionally earn a per-level XP multiplier (named in Settings), rewarding practice at a harder level.
+You can change your level at any time by clearing the onboarding state (or via returning to the splash screen on first visit to a new device).
 
 ---
 
@@ -449,9 +449,9 @@ When the **built-in sentence bank** (10 sentences per level) is exhausted, Claud
 
 ### Progress tracking
 
-A single header **StatusChip** — merging what used to be a separate XP badge and CEFR chip — shows **level**, **streak**, and **daily goal** progress (XP-derived), persisted in `localStorage`:
+The header shows **level**, **streak**, and **daily goal** progress (XP-derived), persisted in `localStorage`:
 
-- **Level badge** — XP from all graded exercises; rank names (Anfänger → Fließend, …); tap to open the shared `LevelSwitcher` and change CEFR level on the spot
+- **Level badge** — XP from all graded exercises; rank names (Anfänger → Fließend, …)
 - 🔥 **Streak** — consecutive days with at least one visit
 - **Goal ring** — today's XP vs. daily target (configurable in Stats)
 
@@ -633,27 +633,6 @@ A pre-demo readiness pass ([`docs/DEMO_READINESS.md`](./docs/DEMO_READINESS.md))
 
 </details>
 
-<details>
-<summary><b>Entry, accessibility &amp; audit hardening (2026-08-17 → 2026-08-24)</b> — a keyboard-trap sweep and a self-checking contrast gate</summary>
-<br/>
-
-A second pass, started the same day the table above shipped, reworked how learners enter the app and closed a run of keyboard-accessibility gaps the test suite had been silently passing through:
-
-| Change                          | Detail                                                                                                                                                                                                                                                                       |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Entry gate on session**       | Onboarding now gates on an actual account session instead of a device flag, and level can be changed from Settings **without signing out**. Signed-in learners earn a per-level XP multiplier.                                                                            |
-| **One header status control**   | The header's XP badge and CEFR chip merged into a single `StatusChip`; a shared `LevelSwitcher` (used in the header and in Stats) replaced the Stats-only `LevelPicker`, and switching level mid-set now asks for confirmation before discarding progress.               |
-| **Keyboard focus traps**        | Consolidated three separate ad-hoc implementations into one `useFocusTrap` hook, then used it to fix real bugs: ProfileCard, AuthSheet, and AuthCallbackLanding all leaked keyboard focus out of an open modal. `AccountChip` was reclassified as the dialog it actually is. |
-| **A prod-only focus bug**       | AuthSheet's first fix passed every test but never worked in production: React runs `autoFocus` during commit, before effects run, so the effect meant to remember the modal's opener captured the wrong element. Fixed by capturing the opener before `autoFocus` can steal it. |
-| **League rows are real buttons**| 14 leaderboard rows were `<li onClick>` — clickable with a mouse, invisible to Tab. Rewritten as native `<button>` elements, reachable and operable by keyboard.                                                                                                            |
-| **Contrast gate, actually checking** | The CI contrast gate had been green for weeks while silently auditing the wrong screen. It now provisions its own signed-in target account, drives every header sheet (not just the one named in its selector), and covers modals/drawers generally, not just header sheets. |
-| **Uptime probe path**           | The lexicon uptime check was still probing a pre-namespacing URL and reporting a `total=0` false-positive outage on a healthy backend. Fixed to probe the pack-namespaced path.                                                                                            |
-| **Ivory light re-skin**         | New light palette, flag-colour accent tiers (task chrome moved to the red tier, the gold tier retired), and a charcoal header masthead. Remaining hardcoded colours/shadows folded onto design tokens; a dark-mode overlay scrim that was inverting is fixed.             |
-| **Sentry release tracking**     | Builds now stamp the deploy commit as the Sentry release and upload source maps on Vercel builds, so production stack traces resolve to real source lines instead of minified bundles.                                                                                    |
-| **Ops**                         | CI pins the Supabase CLI version instead of resolving latest; the weekly league-settle cron now accepts the GET request Vercel Cron actually sends.                                                                                                                        |
-
-</details>
-
 </details>
 
 ---
@@ -678,10 +657,10 @@ A second pass, started the same day the table above shipped, reworked how learne
 | Sync               | **localStorage ↔ Supabase** engine                          | Built + merged (B2.2): folds local state into per-user rows via LWW / additive-delta / union merges, behind the `VITE_SYNC_ENABLED` build flag — **live in production**                                                                                                                                                                                                      |
 | Auth               | **Supabase Auth** (magic-link + OTP)                        | Passwordless, anonymous-first sign-in UI; gates the sync engine                                                                                                                                                                                                                                                                                                              |
 | Backend data       | **Supabase** (Postgres + RLS)                               | Live: durable per-IP rate quotas via an atomic RPC; five user-owned tables under adversarially-tested row-level security (revoked-by-default Data API grants) backing the sync engine                                                                                                                                                                                        |
-| Error monitoring   | **Sentry** (errors-only)                                    | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay; each build stamps the deploy commit as the release and uploads source maps                                                                                                                                                                                                             |
+| Error monitoring   | **Sentry** (errors-only)                                    | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay                                                                                                                                                                                                                                                                                         |
 | Linting            | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars                                                                                                                                                                                                                                                                                                                            |
 | Formatting         | **Prettier 3**                                              | Consistent code style, enforced on every commit                                                                                                                                                                                                                                                                                                                              |
-| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **1,641 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **23-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
+| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **1,417 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **23-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
 | CI                 | **GitHub Actions**                                          | `ci.yml` runs lint + test + build on every push to `main` and every PR, plus the RLS suite against a local Supabase                                                                                                                                                                                                                                                           |
 | Uptime             | **GitHub Actions** (`uptime.yml`)                           | Every 6h, exercises real round trips — demo root, lexicon manifest, GoTrue `/health` and `/settings`, PostgREST — and fails loudly if any hop is down. Read-only; never sends mail                                                                                                                                                                                            |
 | Pre-commit         | **Husky + lint-staged**                                     | Runs ESLint + Prettier + the full test suite before every `git commit`                                                                                                                                                                                                                                                                                                       |
@@ -1081,17 +1060,16 @@ deutsch-app/
 │   │   ├── ErrorBoundary.jsx
 │   │   ├── SplashScreen.jsx
 │   │   ├── StatsTab.jsx
-│   │   ├── StatusChip.jsx     ← Header XP badge + streak + goal ring + LevelSwitcher, merged into one dialog
 │   │   ├── TranslateTab.jsx
 │   │   ├── UI.jsx
 │   │   ├── VocabTab.jsx
-│   │   ├── WelcomeGate.jsx    ← Anonymous-first onboarding gate, gated on account session
+│   │   ├── WelcomeGate.jsx    ← Anonymous-first onboarding gate
 │   │   ├── auth/              ← MagicLinkForm
 │   │   ├── chat/              ← ChatInput, MessageBubble, TaskPanel, …
 │   │   ├── gamification/      ← LevelBadge, GoalRing, BadgeGrid, …
 │   │   ├── stats/             ← Heatmap, ReviewFeed, VocabSrsWidget, …
 │   │   ├── translate/         ← TileExercise, BlankExercise, TypingExercise, …
-│   │   └── ui/                ← Button, Toast, Confetti, DeckProgress, LevelSwitcher (shared header + Stats)
+│   │   └── ui/                ← Button, Toast, Confetti, DeckProgress
 │   │
 │   ├── data/
 │   │   ├── content.js         ← ALPHABET, PRESET_DECKS, SCENARIOS, CHAT_TASKS,
@@ -1102,10 +1080,8 @@ deutsch-app/
 │   │   ├── auth.js            ← Supabase Auth (magic-link / OTP) — sole @supabase/supabase-js importer
 │   │   ├── claude.js          ← Anthropic API client (dev proxy / prod serverless)
 │   │   ├── gamification.js    ← XP, levels, daily goal, achievements
-│   │   ├── levelPref.js       ← Single helper for reading/writing the CEFR level preference
 │   │   ├── matching.js        ← Exact / fuzzy answer matching (language-agnostic)
-│   │   ├── observability.js   ← Sentry init (errors-only), release + source-map stamped on build
-│   │   ├── sessionGuard.js    ← Confirm-before-discard guard when switching level mid-set
+│   │   ├── observability.js   ← Sentry init (errors-only)
 │   │   ├── settingsStamp.js   ← settingsUpdatedAt stamping (sync LWW)
 │   │   ├── sound.js           ← Web Audio synth effects (correct, level-up, …)
 │   │   ├── speech.js          ← SpeechSynthesis wrapper
@@ -1115,7 +1091,6 @@ deutsch-app/
 │   │   ├── sync.js            ← Sync orchestrator (flag-gated by VITE_SYNC_ENABLED)
 │   │   ├── sync/              ← adapters · merge (LWW / additive / union) · syncMeta
 │   │   ├── theme.js           ← Design tokens
-│   │   ├── useFocusTrap.js    ← Shared keyboard focus-trap hook — one implementation for every modal
 │   │   ├── useSyncStatus.js   ← Sync status hook (pending · lastSyncedAt)
 │   │   ├── useWindowWidth.js  ← Responsive hook + breakpoint helpers
 │   │   └── utils.js           ← (+ co-located *.test.js throughout)
