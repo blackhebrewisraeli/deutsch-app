@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../../lib/theme';
 import { authCallbackKind, authCallbackReason, isAuthConfigured } from '../../lib/auth.js';
 import Button from '../ui/Button';
@@ -11,6 +11,11 @@ function clearAuthParamsFromUrl() {
   window.history.replaceState({}, '', pathname || '/');
 }
 
+// Tab stops the trap cycles through. `[tabindex="-1"]` is excluded: the panel
+// carries -1 so it can be a programmatic target without becoming a stop.
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 /**
  * Explicit UI for the magic-link / PKCE auth callback.
  * Detection lives in authCallbackKind() — this is the visible half only.
@@ -20,10 +25,21 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
   // Captured at mount: clearAuthParamsFromUrl() wipes the URL, so reading the
   // reason lazily later would always come back null.
   const [reason] = useState(() => (isAuthConfigured() ? authCallbackReason() : null));
+  const panelRef = useRef(null);
   const [phase, setPhase] = useState(() => {
     if (!kind) return null;
     return kind === 'error' ? 'error' : 'pending';
   });
+
+  // The transient phases are a passing status; the error phases are a message
+  // that needs acknowledging and carry the only control on screen. Those are
+  // two different things, so they get two different roles rather than one
+  // compromise — `alertdialog` is exactly "an alert the user must act on".
+  //
+  // Every error phase sets copy.action below; pending and success never do.
+  // Derived from `phase` rather than from `copy` because the effects below sit
+  // before the early return, and hooks cannot be conditional.
+  const actionable = phase === 'error';
 
   useEffect(() => {
     if (kind !== 'pending' || phase !== 'pending') return undefined;
@@ -54,6 +70,55 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
     const dismiss = setTimeout(() => setPhase(null), 1200);
     return () => clearTimeout(dismiss);
   }, [phase]);
+
+  // Focus only on the branch that has something to do. "Signing you in…" and
+  // "Signed in" are passing status: no controls, and both clear themselves, so
+  // pulling focus out of whatever the user was doing would be a regression, not
+  // a fix. An error panel never self-dismisses and holds the only control on
+  // screen — leaving focus behind meant tabbing through the whole app chrome,
+  // invisible under the scrim, to reach one button.
+  //
+  // No focus RESTORE on the way out, unlike the other dialogs: this panel is
+  // not opened from a trigger. It is the first thing on screen after an
+  // external redirect, and its action unmounts the app's whole signed-out
+  // surface — there is no element to go back to.
+  useEffect(() => {
+    if (!actionable) return;
+    panelRef.current?.focus();
+  }, [actionable]);
+
+  // Tab wraps. `aria-modal` on the error panel says the rest of the page is
+  // inert, and the scrim means the user cannot see any of it — so Tab must not
+  // wander out into it. No Escape handler: the panel is not dismissible, its
+  // one action is the way out, exactly as TrialWall documents for itself.
+  useEffect(() => {
+    if (!actionable) return undefined;
+    const onKey = (e) => {
+      if (e.key !== 'Tab') return;
+      const panel = panelRef.current;
+      if (!panel) return;
+      const stops = panel.querySelectorAll(FOCUSABLE);
+      if (stops.length === 0) {
+        e.preventDefault();
+        panel.focus();
+        return;
+      }
+      const first = stops[0];
+      const last = stops[stops.length - 1];
+      const here = document.activeElement;
+      if (e.shiftKey) {
+        if (here === first || here === panel) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (here === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [actionable]);
 
   if (!isAuthConfigured() || !phase) return null;
 
@@ -100,8 +165,11 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
       }}
     >
       <div
-        role="status"
-        aria-live="polite"
+        ref={panelRef}
+        role={actionable ? 'alertdialog' : 'status'}
+        tabIndex={actionable ? -1 : undefined}
+        aria-modal={actionable ? 'true' : undefined}
+        aria-live={actionable ? undefined : 'polite'}
         aria-label={copy.title}
         style={{
           background: COLORS.paper,
