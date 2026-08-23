@@ -33,6 +33,29 @@ vi.mock('./lib/auth', async (importOriginal) => ({
   }),
 }));
 
+// VITE_SYNC_ENABLED is false on a developer's machine AND false in CI, but
+// true in production — so before this mock existed the enabled half of both
+// sync effects in App had never run in a test. `SYNC_ENABLED` is a getter, not
+// a value: App reads it inside an effect body, which compiles to a property
+// access on the module namespace, so a getter lets a single test flip the flag
+// that ships without re-importing App.
+const syncMock = vi.hoisted(() => ({
+  enabled: false,
+  start: vi.fn(),
+  stop: vi.fn(),
+  markDirty: vi.fn(),
+}));
+
+vi.mock('./lib/sync', async (importOriginal) => ({
+  ...(await importOriginal()),
+  get SYNC_ENABLED() {
+    return syncMock.enabled;
+  },
+  start: syncMock.start,
+  stop: syncMock.stop,
+  markDirty: syncMock.markDirty,
+}));
+
 const TAB_NAMES = ['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
 
 const setViewportWidth = (width) => {
@@ -875,5 +898,29 @@ describe('level coordination', () => {
     await user.click(screen.getByRole('radio', { name: /A2/ }));
     await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
     expect(screen.getByRole('radio', { name: /A2/ })).toBeChecked();
+  });
+});
+
+// ── Sync orchestration ───────────────────────────────────────
+// App wires the sync engine in two effects, both guarded by SYNC_ENABLED. The
+// flag is false on both machines that run this suite and true in production,
+// so the guarded side shipped with no test at all — the same flag-split that
+// let #148 reach production green. These drive the value that ships.
+describe('sync engine wiring', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.setItem('deutsch-level', 'a1');
+    syncMock.enabled = false;
+    syncMock.start.mockClear();
+    syncMock.stop.mockClear();
+    syncMock.markDirty.mockClear();
+    authMock.status = 'anonymous';
+  });
+
+  it('starts the engine for a signed-in user when sync is enabled', () => {
+    syncMock.enabled = true;
+    authMock.status = 'authenticated';
+    renderPastEntry(<App />);
+    expect(syncMock.start).toHaveBeenCalledWith('u1');
   });
 });
