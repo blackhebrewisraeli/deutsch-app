@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, RADIUS, SHADOW, SPACE } from '../../lib/theme';
 import { isAuthConfigured, isGoogleAuthConfigured } from '../../lib/auth.js';
@@ -13,7 +13,16 @@ import GoogleButton from './GoogleButton';
  * Does not touch Supabase directly — MagicLinkForm awaits the code-split
  * client via signInWithMagicLink / verifyCode, and Google goes through the
  * single handler App passes as onGoogle.
+ *
+ * Keyboard loop: because a single instance in App serves five different
+ * triggers, the opener is captured from `document.activeElement` rather than
+ * held as a ref — no ref can know which of the five opened it.
  */
+
+// Tab stops the trap cycles through. `[tabindex="-1"]` is excluded: the sheet
+// itself carries -1 so it can be a programmatic target without becoming a stop.
+const FOCUSABLE =
+  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 export default function AuthSheet({
   open,
   intent = 'signin',
@@ -22,10 +31,54 @@ export default function AuthSheet({
   onGoogle,
   googleBusy = false,
 }) {
+  const sheetRef = useRef(null);
+
+  // Focus in on open, and back out to the opener on close. The sheet returns
+  // null rather than unmounting, so this keys on `open` — the cleanup runs when
+  // `open` flips false just as it would on unmount.
+  useEffect(() => {
+    if (!open || !isAuthConfigured()) return undefined;
+    const opener = document.activeElement;
+    // Only if focus is not already inside: with Google configured,
+    // GoogleButton's autoFocus has already landed on the primary action during
+    // commit, and stealing it back would bury the main affordance.
+    if (!sheetRef.current?.contains(document.activeElement)) sheetRef.current?.focus();
+    return () => {
+      if (opener instanceof HTMLElement && document.contains(opener)) opener.focus();
+    };
+  }, [open]);
+
   useEffect(() => {
     if (!open || !isAuthConfigured()) return undefined;
     const onKey = (e) => {
-      if (e.key === 'Escape') onClose?.();
+      if (e.key === 'Escape') {
+        onClose?.();
+        return;
+      }
+      // `<dialog open>` is not in the top layer — only showModal() gets native
+      // focus containment — so `aria-modal` here is a promise this code has to
+      // keep by hand.
+      if (e.key !== 'Tab') return;
+      const sheet = sheetRef.current;
+      if (!sheet) return;
+      const stops = sheet.querySelectorAll(FOCUSABLE);
+      if (stops.length === 0) {
+        e.preventDefault();
+        sheet.focus();
+        return;
+      }
+      const first = stops[0];
+      const last = stops[stops.length - 1];
+      const here = document.activeElement;
+      if (e.shiftKey) {
+        if (here === first || here === sheet) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else if (here === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
@@ -52,8 +105,16 @@ export default function AuthSheet({
         boxSizing: 'border-box',
       }}
     >
+      {/* Pointer affordance only. It duplicates the labelled "Close sign-in"
+          button inside the sheet, so as a tab stop it was a second, redundant
+          way to do the same thing — sitting BEFORE the sheet in DOM order, so
+          Tab hit it first. Out of the tab order, still clickable. Not
+          `aria-hidden`: `aria-modal` already excludes it from assistive tech,
+          and hiding it here would only break the backdrop-click test's query
+          for no gain. */}
       <button
         type="button"
+        tabIndex={-1}
         aria-label="Dismiss sign-in"
         onClick={onClose}
         style={{
@@ -67,9 +128,11 @@ export default function AuthSheet({
         }}
       />
       <dialog
+        ref={sheetRef}
         open
         aria-modal="true"
         aria-label={heading}
+        tabIndex={-1}
         style={{
           position: 'relative',
           zIndex: 1,

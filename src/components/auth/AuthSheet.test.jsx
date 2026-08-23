@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useState } from 'react';
 import { COLORS } from '../../lib/theme';
 
 const { isAuthConfigured, isGoogleAuthConfigured, signInWithGoogle } = vi.hoisted(() => ({
@@ -133,6 +134,111 @@ describe('AuthSheet', () => {
     it('keeps the email form intact — it gains a sibling, not a rewrite', () => {
       render(<AuthSheet open intent="create" onClose={() => {}} onSuccess={() => {}} />);
       expect(screen.getByTestId('magic-link-form')).toHaveTextContent('Create your account');
+    });
+  });
+
+  // ── Keyboard loop ──────────────────────────────────────────
+  // The sheet claims `aria-modal="true"` and lays a scrim over the page, so it
+  // asserts to assistive tech that nothing behind it is reachable. It was not
+  // keeping that promise: Tab walked straight out into the page under the
+  // scrim, and closing dropped focus to <body> rather than returning it to
+  // whichever of the five triggers opened the sheet.
+  describe('keyboard loop', () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Sign in trigger
+          </button>
+          <AuthSheet
+            open={open}
+            intent="signin"
+            onClose={() => setOpen(false)}
+            onSuccess={() => {}}
+          />
+        </>
+      );
+    }
+
+    it('moves focus into the sheet when it opens', async () => {
+      const user = userEvent.setup();
+      render(<Harness />);
+      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+
+    // Guards the OTHER direction: with Google configured, GoogleButton's
+    // autoFocus already lands focus on the primary action. Moving focus to the
+    // sheet unconditionally would take it away and bury the main affordance.
+    it('leaves autoFocus alone when Google is configured', async () => {
+      isGoogleAuthConfigured.mockReturnValue(true);
+      const user = userEvent.setup();
+      render(<Harness />);
+      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
+      expect(screen.getByRole('button', { name: /continue with google/i })).toHaveFocus();
+    });
+
+    // Starts from the LAST control INSIDE the sheet. Tabbing from the trigger
+    // instead passes by DOM-order coincidence — it lands on the close button,
+    // which happens to be inside the dialog.
+    it('wraps Tab from the last control back into the sheet', async () => {
+      const user = userEvent.setup();
+      render(<Harness />);
+      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
+      const dialog = await screen.findByRole('dialog');
+
+      const stops = dialog.querySelectorAll('a[href], button, input, select, textarea');
+      expect(stops.length).toBeGreaterThan(0);
+      stops[stops.length - 1].focus();
+      expect(dialog.contains(document.activeElement)).toBe(true);
+
+      await user.tab();
+      expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+
+    it('wraps Shift+Tab from the first control back into the sheet', async () => {
+      const user = userEvent.setup();
+      render(<Harness />);
+      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
+      const dialog = await screen.findByRole('dialog');
+
+      dialog.querySelector('button').focus();
+      expect(dialog.contains(document.activeElement)).toBe(true);
+
+      await user.tab({ shift: true });
+      expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+
+    // Focus is placed inside by hand rather than relying on focus-in, so this
+    // fails for its own reason instead of passing because focus never left the
+    // trigger in the first place.
+    it('returns focus to the trigger on close', async () => {
+      const user = userEvent.setup();
+      render(<Harness />);
+      const trigger = screen.getByRole('button', { name: 'Sign in trigger' });
+      await user.click(trigger);
+      const dialog = await screen.findByRole('dialog');
+
+      dialog.querySelector('button').focus();
+      expect(dialog.contains(document.activeElement)).toBe(true);
+
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    // The scrim is a pointer affordance that duplicates the labelled "Close
+    // sign-in" button, and `aria-modal` already hides it from assistive tech.
+    // Leaving it in the tab order gave keyboard users a stop that screen
+    // readers cannot announce.
+    it('does not put the scrim in the tab order', async () => {
+      const user = userEvent.setup();
+      render(<Harness />);
+      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
+      const scrim = screen.queryByRole('button', { name: /dismiss sign-in/i });
+      expect(scrim === null || scrim.tabIndex === -1).toBe(true);
     });
   });
 });
