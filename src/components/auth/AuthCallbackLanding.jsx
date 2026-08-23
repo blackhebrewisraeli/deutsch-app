@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../../lib/theme';
 import { authCallbackKind, authCallbackReason, isAuthConfigured } from '../../lib/auth.js';
 import Button from '../ui/Button';
+import useFocusTrap from '../../lib/useFocusTrap.js';
 
 function clearAuthParamsFromUrl() {
   if (typeof window === 'undefined') return;
@@ -10,11 +11,6 @@ function clearAuthParamsFromUrl() {
   if (!search && !hash) return;
   window.history.replaceState({}, '', pathname || '/');
 }
-
-// Tab stops the trap cycles through. `[tabindex="-1"]` is excluded: the panel
-// carries -1 so it can be a programmatic target without becoming a stop.
-const FOCUSABLE =
-  'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 /**
  * Explicit UI for the magic-link / PKCE auth callback.
@@ -91,34 +87,7 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
   // inert, and the scrim means the user cannot see any of it — so Tab must not
   // wander out into it. No Escape handler: the panel is not dismissible, its
   // one action is the way out, exactly as TrialWall documents for itself.
-  useEffect(() => {
-    if (!actionable) return undefined;
-    const onKey = (e) => {
-      if (e.key !== 'Tab') return;
-      const panel = panelRef.current;
-      if (!panel) return;
-      const stops = panel.querySelectorAll(FOCUSABLE);
-      if (stops.length === 0) {
-        e.preventDefault();
-        panel.focus();
-        return;
-      }
-      const first = stops[0];
-      const last = stops[stops.length - 1];
-      const here = document.activeElement;
-      if (e.shiftKey) {
-        if (here === first || here === panel) {
-          e.preventDefault();
-          last.focus();
-        }
-      } else if (here === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [actionable]);
+  useFocusTrap(panelRef, actionable);
 
   if (!isAuthConfigured() || !phase) return null;
 
