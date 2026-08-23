@@ -33,6 +33,29 @@ vi.mock('./lib/auth', async (importOriginal) => ({
   }),
 }));
 
+// VITE_SYNC_ENABLED is false on a developer's machine AND false in CI, but
+// true in production — so before this mock existed the enabled half of both
+// sync effects in App had never run in a test. `SYNC_ENABLED` is a getter, not
+// a value: App reads it inside an effect body, which compiles to a property
+// access on the module namespace, so a getter lets a single test flip the flag
+// that ships without re-importing App.
+const syncMock = vi.hoisted(() => ({
+  enabled: false,
+  start: vi.fn(),
+  stop: vi.fn(),
+  markDirty: vi.fn(),
+}));
+
+vi.mock('./lib/sync', async (importOriginal) => ({
+  ...(await importOriginal()),
+  get SYNC_ENABLED() {
+    return syncMock.enabled;
+  },
+  start: syncMock.start,
+  stop: syncMock.stop,
+  markDirty: syncMock.markDirty,
+}));
+
 const TAB_NAMES = ['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
 
 const setViewportWidth = (width) => {
@@ -875,5 +898,74 @@ describe('level coordination', () => {
     await user.click(screen.getByRole('radio', { name: /A2/ }));
     await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
     expect(screen.getByRole('radio', { name: /A2/ })).toBeChecked();
+  });
+});
+
+// ── Sync orchestration ───────────────────────────────────────
+// App wires the sync engine in two effects, both guarded by SYNC_ENABLED. The
+// flag is false on both machines that run this suite and true in production,
+// so the guarded side shipped with no test at all — the same flag-split that
+// let #148 reach production green. These drive the value that ships.
+describe('sync engine wiring', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.setItem('deutsch-level', 'a1');
+    syncMock.enabled = false;
+    syncMock.start.mockClear();
+    syncMock.stop.mockClear();
+    syncMock.markDirty.mockClear();
+    authMock.status = 'anonymous';
+  });
+
+  it('starts the engine for a signed-in user when sync is enabled', () => {
+    syncMock.enabled = true;
+    authMock.status = 'authenticated';
+    renderPastEntry(<App />);
+    expect(syncMock.start).toHaveBeenCalledWith('u1');
+  });
+
+  // A second effect, a second spy: progress anywhere in the app dispatches
+  // `deutsch:progress`, and sync's job is to mark the local state dirty so the
+  // next push carries it. Guarded by the same flag, so it shipped untested for
+  // the same reason.
+  it('marks state dirty when progress is recorded', () => {
+    syncMock.enabled = true;
+    authMock.status = 'authenticated';
+    renderPastEntry(<App />);
+    expect(syncMock.markDirty).not.toHaveBeenCalled();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('deutsch:progress'));
+    });
+    expect(syncMock.markDirty).toHaveBeenCalledTimes(1);
+  });
+
+  // The cleanup half. Without it the listener outlives the signed-in session
+  // and a guest's practice would keep marking an ex-user's state dirty.
+  it('stops listening for progress once the app unmounts', () => {
+    syncMock.enabled = true;
+    authMock.status = 'authenticated';
+    const { unmount } = renderPastEntry(<App />);
+    unmount();
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('deutsch:progress'));
+    });
+    expect(syncMock.markDirty).not.toHaveBeenCalled();
+  });
+
+  // The disabled side of the same guard, asserted rather than assumed: with a
+  // user present but the flag off, nothing may be wired up at all.
+  it('wires nothing when the flag is off, even with a signed-in user', () => {
+    syncMock.enabled = false;
+    authMock.status = 'authenticated';
+    renderPastEntry(<App />);
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('deutsch:progress'));
+    });
+    expect(syncMock.start).not.toHaveBeenCalled();
+    expect(syncMock.markDirty).not.toHaveBeenCalled();
+    expect(syncMock.stop).toHaveBeenCalled();
   });
 });

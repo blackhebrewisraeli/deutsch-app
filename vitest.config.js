@@ -22,7 +22,16 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/lib/**', 'src/data/**', 'src/components/**', 'api/**'],
+      // src/App.jsx is listed explicitly. It was absent for the app's whole
+      // life, so the 939-line orchestrator that owns the sync effects, the
+      // trial-wall gate and the entry gate never appeared in a coverage
+      // report — a sweep for uncovered flag branches found 58 of them and
+      // silently missed App's four. An audit that cannot see a file reports
+      // zero findings there and zero files inspected identically.
+      //
+      // src/data/** is gone, not omitted: the directory was deleted in Phase
+      // 1.5 (PR #101) and the stale glob had been matching nothing since.
+      include: ['src/lib/**', 'src/components/**', 'src/App.jsx', 'api/**'],
       exclude: ['src/**/*.test.{js,jsx}', 'api/**/*.test.js'],
     },
   },
