@@ -166,4 +166,84 @@ describe('AuthCallbackLanding', () => {
       vi.useRealTimers();
     }
   });
+
+  // ── Focus, on the branch that has something to do ──────────
+  // This overlay lays a scrim over the whole app. On the transient phases that
+  // is harmless — they carry no controls and clear themselves. The error
+  // phases are different: they never self-dismiss, and they carry the only
+  // control on screen. Focus was left wherever it happened to be, so reaching
+  // that one button meant tabbing through the entire app chrome underneath the
+  // scrim, none of which the user can see.
+  describe('focus', () => {
+    function focusedTrigger() {
+      const b = document.createElement('button');
+      b.textContent = 'behind the scrim';
+      document.body.appendChild(b);
+      b.focus();
+      return b;
+    }
+
+    it('is an alertdialog when it carries an action', () => {
+      authCallbackKind.mockReturnValue('error');
+      authCallbackReason.mockReturnValue('expired');
+      render(
+        <AuthCallbackLanding status="anonymous" onSignedIn={() => {}} onRequestNew={() => {}} />
+      );
+      const panel = screen.getByRole('alertdialog');
+      expect(panel.getAttribute('aria-modal')).toBe('true');
+      expect(panel).toHaveAccessibleName(/that link expired/i);
+    });
+
+    it('moves focus into the panel on an actionable error', () => {
+      authCallbackKind.mockReturnValue('error');
+      authCallbackReason.mockReturnValue('expired');
+      focusedTrigger();
+      render(
+        <AuthCallbackLanding status="anonymous" onSignedIn={() => {}} onRequestNew={() => {}} />
+      );
+      const panel = screen.getByRole('alertdialog');
+      expect(panel.contains(document.activeElement)).toBe(true);
+    });
+
+    it('keeps Tab inside the panel on an actionable error', async () => {
+      authCallbackKind.mockReturnValue('error');
+      authCallbackReason.mockReturnValue('expired');
+      const user = userEvent.setup();
+      focusedTrigger();
+      render(
+        <AuthCallbackLanding status="anonymous" onSignedIn={() => {}} onRequestNew={() => {}} />
+      );
+      const panel = screen.getByRole('alertdialog');
+      expect(panel.contains(document.activeElement)).toBe(true);
+
+      await user.tab();
+      expect(panel.contains(document.activeElement)).toBe(true);
+      await user.tab();
+      expect(panel.contains(document.activeElement)).toBe(true);
+    });
+
+    // The other direction, and the reason this is scoped to the error branch:
+    // "Signing you in…" is a passing status with nothing to act on. Yanking
+    // focus out of whatever the user was doing, for a panel that clears itself,
+    // would be worse than leaving it alone.
+    it('leaves focus alone while the callback is still pending', () => {
+      authCallbackKind.mockReturnValue('pending');
+      const trigger = focusedTrigger();
+      render(
+        <AuthCallbackLanding status="loading" onSignedIn={() => {}} onRequestNew={() => {}} />
+      );
+      expect(screen.getByRole('status')).toBeInTheDocument();
+      expect(document.activeElement).toBe(trigger);
+    });
+
+    it('leaves focus alone on the self-dismissing success panel', async () => {
+      authCallbackKind.mockReturnValue('pending');
+      const trigger = focusedTrigger();
+      render(
+        <AuthCallbackLanding status="authenticated" onSignedIn={() => {}} onRequestNew={() => {}} />
+      );
+      expect(await screen.findByText('Signed in')).toBeInTheDocument();
+      expect(document.activeElement).toBe(trigger);
+    });
+  });
 });
