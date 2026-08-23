@@ -7,6 +7,8 @@ export default function ProfileCard({ userId, onClose }) {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(false);
   const cardRef = useRef(null);
+  const openerRef = useRef(null);
+  const capturedRef = useRef(false);
 
   // Focus lands on the card itself, not on its Close button: the card is
   // labelled, so a screen reader announces "Player profile" and the user reads
@@ -19,12 +21,30 @@ export default function ProfileCard({ userId, onClose }) {
   // the scrim — so on close we put focus back on it and the user keeps their
   // place in a list that can be 25 rows long. Without this, closing dropped
   // focus to <body> and the next Tab restarted at the top of the page.
-  // Captured on mount rather than in a render-time ref so it reads the
-  // activeElement of the commit that mounted us.
+
+  // Captured during RENDER, on the first pass — NOT in the effect below. React
+  // applies a child's `autoFocus` during the commit, which runs before effects,
+  // so an effect-time read of `document.activeElement` returns whatever won the
+  // commit rather than the row that opened us. On close that control has
+  // unmounted with the card, and focus falls to <body>.
+  //
+  // The card has no autofocusing child today, which is exactly why this was
+  // invisible: the effect-time read happened to be correct, and the test that
+  // covered it used a trigger with no autofocusing sibling. AuthSheet shipped
+  // that same shape to production green and broken, and was fixed in PR 148.
+  // (Written without a leading hash: noHardcodedHex.test.js matches a hash
+  // followed by three or more hex digits, so a PR reference reads as a colour.)
+  // Reading it here, before the commit, is the only point at which the opener
+  // is still focused.
+  if (!capturedRef.current) {
+    capturedRef.current = true;
+    openerRef.current = document.activeElement;
+  }
+
   useEffect(() => {
-    const opener = document.activeElement;
     cardRef.current?.focus();
     return () => {
+      const opener = openerRef.current;
       if (opener instanceof HTMLElement && document.contains(opener)) opener.focus();
     };
   }, []);

@@ -320,6 +320,15 @@ export default function App() {
     localStorage.setItem('deutsch-onboarded', '1');
   };
   // Opens the shared AuthSheet in-place — no WelcomeGate round-trip.
+  //
+  // The guard's false side is deliberately untested, not overlooked: every
+  // route to requestSignIn is already gated on the same flag. AuthCallbackLanding
+  // and AuthSheet both return null when auth is unconfigured, trialWallUp
+  // requires isAuthConfigured(), and AccountChip / AccountSection render their
+  // sign-in affordance only for a signed-out user — which cannot coexist with
+  // an unconfigured backend, since a session can only come from one. Reaching
+  // this line would mean constructing a state the app cannot enter, and the
+  // test would assert nothing except that the line is green.
   const requestSignIn = () => {
     if (!isAuthConfigured()) return;
     setAuthModal('signin');

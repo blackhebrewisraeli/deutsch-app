@@ -118,6 +118,80 @@ it('returns focus to the row that opened it', async () => {
   expect(document.activeElement).toBe(row);
 });
 
+// The #148 shape. React applies a child's `autoFocus` during the COMMIT, which
+// runs before this component's effects — so an effect that reads
+// `document.activeElement` to find its opener reads the autofocused control
+// instead of the trigger, and on close that control has unmounted with the
+// dialog, dropping focus to <body>.
+//
+// AuthSheet shipped green and broken in production for exactly this reason:
+// every test ran with Google off, where nothing autofocuses, so the effect-time
+// read happened to be right. This Harness puts a commit-phase focus steal in
+// the same commit that mounts the card, which is what the plain Harness above
+// cannot express.
+function HarnessWithCommitPhaseFocus() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button type="button" onClick={() => setOpen(true)}>
+        3. Rival
+      </button>
+      {open && (
+        <>
+          {/* Stands in for any control that carries autoFocus inside a dialog
+              — GoogleButton is the real one in AuthSheet. It unmounts with the
+              card, so if it is mistaken for the opener there is nothing left to
+              restore focus to. */}
+          <button type="button" autoFocus>
+            Primary action
+          </button>
+          <ProfileCard userId="x" onClose={() => setOpen(false)} />
+        </>
+      )}
+    </>
+  );
+}
+
+it('returns focus to the row even when something autofocuses during the commit', async () => {
+  fetchProfile.mockResolvedValue(PROFILE);
+  const user = userEvent.setup();
+
+  // Every element focused between the click and the card settling. The
+  // autofocused control has to appear in here for this test to mean anything.
+  const focusTrail = [];
+  const onFocusIn = (e) => focusTrail.push(e.target);
+
+  render(<HarnessWithCommitPhaseFocus />);
+
+  const row = screen.getByRole('button', { name: '3. Rival' });
+  row.focus();
+  // Armed BEFORE the click: the steal happens inside the commit that the click
+  // triggers, so a listener attached afterwards has already missed it.
+  document.addEventListener('focusin', onFocusIn);
+  await user.click(row);
+  await screen.findByText('Rival');
+  document.removeEventListener('focusin', onFocusIn);
+
+  const dialog = await screen.findByRole('dialog');
+
+  // Precondition, asserted rather than assumed: the commit-phase steal has to
+  // have actually happened, or this test passes for the wrong reason. It is
+  // observed through focusin because it does not survive to be read from
+  // activeElement — ProfileCard's own effect focuses the card immediately
+  // after, so by the time the effect finishes the steal is already painted
+  // over. That is precisely what makes this class invisible to a normal
+  // end-state assertion.
+  expect(focusTrail).toContain(screen.getByRole('button', { name: 'Primary action' }));
+  expect(dialog.contains(document.activeElement)).toBe(true);
+
+  await user.keyboard('{Escape}');
+  await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+  expect(document.activeElement).toBe(row);
+  expect(document.activeElement).not.toBe(document.body);
+  expect(dialog.isConnected).toBe(false);
+});
+
 it('keeps Tab inside the card', async () => {
   fetchProfile.mockResolvedValue(PROFILE);
   const user = userEvent.setup();
