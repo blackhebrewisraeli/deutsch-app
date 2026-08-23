@@ -1,5 +1,4 @@
-// Structural colour token values per mode × tone.
-// Day-light = brighter of the pair; Night-light = darker of the pair.
+// Structural colour token values per mode.
 //
 // Light mode is warm ivory. It was saturated parchment (#FDF3C0) through T1/T2;
 // the ivory re-skin kept `fg` and the semantic success/error inks untouched, so
@@ -8,7 +7,6 @@
 // Keys are the CSS custom-property suffixes: `--c-<key>`.
 
 /** @typedef {'light' | 'dark'} ThemeMode */
-/** @typedef {'day' | 'night'} ThemeTone */
 
 // Several tokens are the same colour at a different opacity. Written out by hand
 // that was 52 near-identical literals across four palettes — `#EDEBE810` sitting
@@ -112,7 +110,7 @@ function withDerived(base) {
   return out;
 }
 
-const LIGHT_DAY = withDerived({
+const LIGHT = withDerived({
   ...ACCENT_TIERS_LIGHT,
   ground: '#FBF8F1',
   surface: '#FFFFFF',
@@ -144,37 +142,8 @@ const LIGHT_DAY = withDerived({
   track: '#EAE4D6',
 });
 
-/** Dimmer ivory — Night-light alternate for Light mode.
- *  Surface stays near-white so body/error/success text clear AA; ground is
- *  the visibly darker plane. The pack's light accent.fg is chosen to clear
- *  body AA against this dimmer ground too — see packs/de/theme.js. */
-const LIGHT_NIGHT = withDerived({
-  ...ACCENT_TIERS_LIGHT,
-  ground: '#EDE8DC',
-  surface: '#FBF8F1',
-  'surface-alt': '#E4DED0',
-  border: '#D5CEBE',
-  'border-strong': '#C2BAA6',
-  fg: '#16110b',
-  'fg-muted': '#5C5142',
-  'fg-subtle': '#2a2218',
-  // Dimmer ivory keeps eating mid greens/reds the way dimmer parchment did,
-  // so the deeper pair from the parchment palette carries over unchanged.
-  success: '#1F5C28',
-  'success-fill': '#DCEDE0',
-  error: '#A82020',
-  'error-fill': '#F5E0E0',
-  warning: '#F5C518',
-  'success-deep': '#164420',
-  'error-deep': '#8B1818',
-  lip: '#D8D1C0',
-  press: '#000000',
-  'mute-deep': '#5C5548',
-  track: '#DDD6C6',
-});
-
-/** Current Nocturne — Day-light (default) for Dark mode. */
-const DARK_DAY = withDerived({
+/** Nocturne — Dark mode. */
+const DARK = withDerived({
   ...ACCENT_TIERS_DARK,
   ground: '#0F0F11',
   surface: '#1A1A1E',
@@ -203,37 +172,13 @@ const DARK_DAY = withDerived({
   track: '#2A2A34',
 });
 
-/** Deeper Nocturne — Night-light alternate for Dark mode. */
-const DARK_NIGHT = withDerived({
-  ...ACCENT_TIERS_DARK,
-  ground: '#08080A',
-  surface: '#121218',
-  'surface-alt': '#1B1B22',
-  border: '#22222A',
-  'border-strong': '#2E2E38',
-  fg: '#EDEBE8',
-  'fg-muted': '#9A9AA4',
-  'fg-subtle': '#8A8A96',
-  success: '#3FA34D',
-  'success-fill': '#142418',
-  error: '#FF6B6B',
-  'error-fill': '#221010',
-  warning: '#FFCE00',
-  'success-deep': '#2F7D3A',
-  'error-deep': '#C92A2A',
-  lip: '#22222C',
-  press: '#000000',
-  'mute-deep': '#6E6E78',
-  track: '#22222C',
-});
-
 /**
- * Per-mode × per-tone structural colour values.
- * @type {Record<ThemeMode, Record<ThemeTone, Record<string, string>>>}
+ * Per-mode structural colour values.
+ * @type {Record<ThemeMode, Record<string, string>>}
  */
 export const MODE_COLORS = {
-  light: { day: LIGHT_DAY, night: LIGHT_NIGHT },
-  dark: { day: DARK_DAY, night: DARK_NIGHT },
+  light: LIGHT,
+  dark: DARK,
 };
 
 /** Legacy accent defaults (pre-pack). Pack theme overlays these in applyTheme. */
@@ -266,12 +211,9 @@ export function tokenToCssVar(key) {
 }
 
 /**
- * Resolve a structural palette for mode × tone.
+ * Resolve a structural palette for a mode.
  * @param {ThemeMode} mode
- * @param {ThemeTone} [tone]
  */
-export function resolvePalette(mode, tone = 'day') {
-  const family = mode === 'dark' ? 'dark' : 'light';
-  const t = tone === 'night' ? 'night' : 'day';
-  return MODE_COLORS[family][t];
+export function resolvePalette(mode) {
+  return mode === 'dark' ? MODE_COLORS.dark : MODE_COLORS.light;
 }

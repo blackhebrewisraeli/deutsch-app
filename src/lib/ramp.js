@@ -91,7 +91,7 @@ function liftSurface(from, target, inks, prefer) {
  * Surface elevation: ground → surface-1 → surface-2 → surface-3.
  * Existing `surface` / `surface-alt` keep their exact palette values.
  *
- * @param {Record<string, string>} palette — structural palette (mode×tone)
+ * @param {Record<string, string>} palette — structural palette for a mode
  * @param {'light' | 'dark'} mode
  */
 export function deriveSurfaceRamp(palette, mode) {

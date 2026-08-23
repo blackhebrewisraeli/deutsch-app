@@ -6,71 +6,22 @@ import { activePack } from '../packs';
 /** Per-device preference — NOT part of synced `deutsch-app-state-v1`. */
 export const THEME_MODE_KEY = 'deutsch-theme-mode';
 
-/** Per-device Day-light / Night-light tone — also NOT synced. */
-export const THEME_TONE_KEY = 'deutsch-theme-tone';
-
-export const THEME_PREFS = ['system', 'light', 'dark'];
-export const THEME_TONES = ['day', 'night'];
+export const THEME_MODES = ['light', 'dark'];
 
 /**
  * Read the stored preference. Returns null when unset or corrupt so resolution
  * can fall through to prefers-color-scheme / dark default.
- * @returns {'system' | 'light' | 'dark' | null}
+ * @returns {'light' | 'dark' | null}
  */
 export function readThemePreference() {
   try {
     const v = localStorage.getItem(THEME_MODE_KEY);
     if (v == null) return null;
-    if (THEME_PREFS.includes(v)) return v;
+    if (THEME_MODES.includes(v)) return v;
   } catch {
     // private mode / blocked storage
   }
   return null;
-}
-
-/** Preference shown in the UI — unset maps to System. */
-export function getThemePreferenceForUI() {
-  return readThemePreference() ?? 'system';
-}
-
-/**
- * Whether an explicit preference is stored, as opposed to falling through to
- * the OS. Distinguishes "chose System" from "never chose", which
- * `getThemePreferenceForUI` flattens — both report `'system'` there.
- * A corrupt or blocked read counts as unset.
- * @returns {boolean}
- */
-export function hasStoredTheme() {
-  return readThemePreference() !== null;
-}
-
-/**
- * Read the stored tone. Returns null when unset or corrupt.
- * @returns {'day' | 'night' | null}
- */
-export function readThemeTone() {
-  try {
-    const v = localStorage.getItem(THEME_TONE_KEY);
-    if (v == null) return null;
-    if (THEME_TONES.includes(v)) return v;
-  } catch {
-    // private mode / blocked storage
-  }
-  return null;
-}
-
-/** Tone shown in the UI — unset/corrupt maps to Day-light. */
-export function getThemeToneForUI() {
-  return readThemeTone() ?? 'day';
-}
-
-/**
- * Resolve tone for apply — corrupt/unset → day.
- * @param {'day' | 'night' | null} tone
- * @returns {'day' | 'night'}
- */
-export function resolveThemeTone(tone) {
-  return tone === 'night' ? 'night' : 'day';
 }
 
 /**
@@ -89,7 +40,9 @@ export function getSystemMode() {
 
 /**
  * Resolution order: explicit light/dark → system (prefers-color-scheme) → dark.
- * @param {'system' | 'light' | 'dark' | null} preference
+ * This is the automatic fallback for a user who has never picked — it is not a
+ * selectable option, so it stays internal rather than a "System" UI toggle.
+ * @param {'light' | 'dark' | null} preference
  * @param {'light' | 'dark' | null} systemMode
  * @returns {'light' | 'dark'}
  */
@@ -99,12 +52,15 @@ export function resolveThemeMode(preference, systemMode) {
   return 'dark';
 }
 
-/** Apply the currently resolved mode × tone to :root. */
+/** Resolved mode shown as active in the UI — unset falls through to system/dark. */
+export function getThemeModeForUI() {
+  return resolveThemeMode(readThemePreference(), getSystemMode());
+}
+
+/** Apply the currently resolved mode to :root. */
 export function applyCurrentTheme() {
-  const preference = readThemePreference();
-  const mode = resolveThemeMode(preference, getSystemMode());
-  const tone = resolveThemeTone(readThemeTone());
-  applyTheme(mode, activePack.theme, tone);
+  const mode = resolveThemeMode(readThemePreference(), getSystemMode());
+  applyTheme(mode, activePack.theme);
   return mode;
 }
 
@@ -114,7 +70,7 @@ export function applyCurrentTheme() {
  * @returns {'light' | 'dark' | null}
  */
 export function setThemePreference(preference) {
-  if (!THEME_PREFS.includes(preference)) {
+  if (!THEME_MODES.includes(preference)) {
     return applyCurrentTheme();
   }
   try {
@@ -123,32 +79,12 @@ export function setThemePreference(preference) {
     // still apply in-memory for this session
   }
   const mode = resolveThemeMode(preference, getSystemMode());
-  const tone = resolveThemeTone(readThemeTone());
-  applyTheme(mode, activePack.theme, tone);
+  applyTheme(mode, activePack.theme);
   return mode;
 }
 
 /**
- * Persist Day-light / Night-light tone and re-apply. Unknown values ignored.
- * @param {string} tone
- * @returns {'light' | 'dark' | null}
- */
-export function setThemeTone(tone) {
-  if (!THEME_TONES.includes(tone)) {
-    return applyCurrentTheme();
-  }
-  try {
-    localStorage.setItem(THEME_TONE_KEY, tone);
-  } catch {
-    // still apply in-memory for this session
-  }
-  const mode = resolveThemeMode(readThemePreference(), getSystemMode());
-  applyTheme(mode, activePack.theme, resolveThemeTone(tone));
-  return mode;
-}
-
-/**
- * Watch OS colour-scheme changes while the preference is system/unset.
+ * Watch OS colour-scheme changes while no explicit preference is stored.
  * @param {(mode: 'light' | 'dark') => void} [onChange]
  * @returns {() => void} unsubscribe
  */

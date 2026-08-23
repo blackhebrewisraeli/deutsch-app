@@ -1,39 +1,30 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Sun } from 'lucide-react';
-import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../lib/theme';
-import {
-  getThemePreferenceForUI,
-  setThemePreference,
-  getThemeToneForUI,
-  setThemeTone,
-  watchSystemTheme,
-} from '../lib/themeMode';
+import { COLORS, RADIUS, SHADOW, SPACE } from '../lib/theme';
+import { getThemeModeForUI, setThemePreference, watchSystemTheme } from '../lib/themeMode';
 import AppearancePicker from './AppearancePicker';
-import TonePicker from './TonePicker';
 
 const SHEET_WIDTH = 280;
 const SHEET_GUTTER = 12;
 
-// Header theme affordance — mode + tone in one compact sheet, reachable from
-// every tab. Mirrors AccountChip's icon-button → sheet pattern so the header
-// stays one control denser rather than five buttons inline.
+// Header theme affordance — a compact sheet reachable from every tab. Mirrors
+// AccountChip's icon-button → sheet pattern so the header stays one control
+// denser rather than several buttons inline.
 export default function ThemeChip() {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState(() => getThemePreferenceForUI());
-  const [tone, setTone] = useState(() => getThemeToneForUI());
+  const [mode, setMode] = useState(() => getThemeModeForUI());
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
   const [anchor, setAnchor] = useState({ top: 60, right: SHEET_GUTTER });
 
-  // Keep the picker in sync if the OS scheme changes under System.
-  useEffect(() => watchSystemTheme(() => setMode(getThemePreferenceForUI())), []);
+  // Keep the picker in sync if the OS scheme changes while no explicit choice is stored.
+  useEffect(() => watchSystemTheme(() => setMode(getThemeModeForUI())), []);
 
   // The chip is not the rightmost header item — AccountChip sits to its right —
   // so a plain `right: 0` sheet hangs off the *left* edge of a 320px viewport
-  // (measured: left -65.7px, with "Mode"/"Tone" and the SYSTEM/DAY-LIGHT pills
-  // cut off). Left overflow never shows up in scrollWidth, so no overflow
-  // assertion catches it. Anchor to the chip where there is room, clamp to the
-  // viewport where there is not.
+  // (measured: left -65.7px, with the LIGHT/DARK pills cut off). Left overflow
+  // never shows up in scrollWidth, so no overflow assertion catches it. Anchor
+  // to the chip where there is room, clamp to the viewport where there is not.
   const place = useCallback(() => {
     const rect = buttonRef.current?.getBoundingClientRect();
     if (!rect) return;
@@ -110,48 +101,16 @@ export default function ThemeChip() {
             borderRadius: RADIUS.md,
             boxShadow: SHADOW.bar,
             padding: SPACE[4],
-            // Wide enough for the three mode pills, never wider than the viewport.
+            // Wide enough for the two mode pills, never wider than the viewport.
             width: `min(${SHEET_WIDTH}px, calc(100vw - ${SHEET_GUTTER * 2}px))`,
             zIndex: 60,
           }}
         >
-          <div
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: COLORS.mute,
-              marginBottom: SPACE[3],
-            }}
-          >
-            Mode
-          </div>
           <AppearancePicker
             mode={mode}
             onPick={(pref) => {
               setThemePreference(pref);
               setMode(pref);
-            }}
-          />
-          <div
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              letterSpacing: '0.1em',
-              textTransform: 'uppercase',
-              color: COLORS.mute,
-              marginTop: SPACE[4],
-              marginBottom: SPACE[3],
-            }}
-          >
-            Tone
-          </div>
-          <TonePicker
-            tone={tone}
-            onPick={(next) => {
-              setThemeTone(next);
-              setTone(next);
             }}
           />
         </div>
