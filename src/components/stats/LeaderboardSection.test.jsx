@@ -1,5 +1,6 @@
 import { it, expect, vi, afterEach } from 'vitest';
 import { render, screen, waitFor, cleanup } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 
 vi.mock('../../lib/auth.js', () => ({
   useAuth: vi.fn(),
@@ -78,4 +79,68 @@ it('shows promotion and relegation zone labels in a full league (no sparse note)
   expect(screen.getByText(/Promotion/)).toBeTruthy();
   expect(screen.getByText(/Relegation/)).toBeTruthy();
   expect(screen.queryByText(/still filling up/i)).toBeNull();
+});
+
+// ── Keyboard reachability ────────────────────────────────────────────────
+// The rows used to be `<li onClick>`: clickable with a mouse, invisible to the
+// keyboard. These assert the row is a real control, and they assert the
+// DENOMINATOR (every row, not just the first) so a regression that leaves one
+// row behind can't pass.
+
+const threeRows = [
+  { user_id: 'me', handle: 'Me', weekly_xp: 30, rank: null },
+  { user_id: 'a', handle: 'Rival A', weekly_xp: 20, rank: null },
+  { user_id: 'b', handle: 'Rival B', weekly_xp: 10, rank: null },
+];
+
+it('puts every league row in the tab order, in standings order', async () => {
+  const user = userEvent.setup();
+  signIn(threeRows);
+  render(<LeaderboardSection onSelectUser={() => {}} />);
+  await waitFor(() => expect(screen.getByText('Rival B')).toBeTruthy());
+
+  const rows = screen.getAllByRole('button');
+  expect(rows).toHaveLength(threeRows.length); // the denominator
+
+  for (const row of rows) {
+    await user.tab();
+    expect(document.activeElement).toBe(row);
+  }
+});
+
+it.each([
+  ['Enter', '{Enter}'],
+  ['Space', ' '],
+])('activates the focused row with %s', async (_label, keys) => {
+  const user = userEvent.setup();
+  const onSelectUser = vi.fn();
+  signIn(threeRows);
+  render(<LeaderboardSection onSelectUser={onSelectUser} />);
+  await waitFor(() => expect(screen.getByText('Rival A')).toBeTruthy());
+
+  await user.tab();
+  await user.tab(); // second row — 'a'
+  await user.keyboard(keys);
+
+  expect(onSelectUser).toHaveBeenCalledTimes(1);
+  expect(onSelectUser).toHaveBeenCalledWith('a');
+});
+
+it('still selects a row on a mouse click', async () => {
+  const user = userEvent.setup();
+  const onSelectUser = vi.fn();
+  signIn(threeRows);
+  render(<LeaderboardSection onSelectUser={onSelectUser} />);
+  await waitFor(() => expect(screen.getByText('Rival B')).toBeTruthy());
+
+  await user.click(screen.getByText('Rival B'));
+  expect(onSelectUser).toHaveBeenCalledWith('b');
+});
+
+it('names each row for a screen reader from its rank, handle, and XP', async () => {
+  signIn(threeRows);
+  render(<LeaderboardSection onSelectUser={() => {}} />);
+  await waitFor(() => expect(screen.getByText('Rival A')).toBeTruthy());
+
+  expect(screen.getByRole('button', { name: /2\.\s*Rival A\s*20 XP/ })).toBeTruthy();
 });

@@ -9,9 +9,22 @@ import {
 } from '../../lib/leagues.js';
 import { zoneCounts } from '../../lib/leagueZones.js';
 import { weekRemaining } from '../../lib/leagueCountdown.js';
-import { COLORS, SPACE } from '../../lib/theme.js';
+import { COLORS, RADIUS, SPACE } from '../../lib/theme.js';
 
 const SPARSE_BELOW = 5; // show the "still filling up" note under this many members
+
+const ROW_CLASS = 'league-row';
+
+// Inline styles can't express :focus-visible, so a scoped rule carries the
+// focus ring — the same approach WelcomeGate and TrialWall use. The offset is
+// NEGATIVE on purpose: the rows are full-bleed inside the list, so an outset
+// ring would be clipped by the container edge and overlap the neighbouring row.
+const ROW_FOCUS_CSS = `
+.${ROW_CLASS}:focus-visible {
+  outline: 3px solid ${COLORS.ink};
+  outline-offset: -3px;
+}
+`;
 
 function ZoneLabel({ text, color }) {
   return (
@@ -101,6 +114,7 @@ export default function LeaderboardSection({ onSelectUser }) {
         </span>
       </div>
 
+      <style>{ROW_FOCUS_CSS}</style>
       <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {state.rows.map((row, i) => {
           const isMe = row.user_id === userId;
@@ -110,22 +124,47 @@ export default function LeaderboardSection({ onSelectUser }) {
             <Fragment key={row.user_id}>
               {showPromote && <ZoneLabel text="↑ Promotion" color={COLORS.green} />}
               {showRelegate && <ZoneLabel text="↓ Relegation" color={COLORS.red} />}
-              <li
-                onClick={() => onSelectUser(row.user_id)}
-                style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  cursor: 'pointer',
-                  padding: SPACE[2],
-                  background: isMe ? COLORS.paperDeep : 'transparent',
-                  fontWeight: isMe ? 700 : 400,
-                  color: COLORS.ink,
-                }}
-              >
-                <span>
-                  {i + 1}. <span>{row.handle}</span>
-                </span>
-                <span>{row.weekly_xp} XP</span>
+              <li style={{ padding: 0 }}>
+                {/* The row is a real <button>, not a clickable <li>: that is
+                    what puts it in the tab order and gives it Enter AND Space
+                    for free. It fills the list item so the whole row stays the
+                    click target. */}
+                <button
+                  type="button"
+                  className={ROW_CLASS}
+                  onClick={() => onSelectUser(row.user_id)}
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: SPACE[2],
+                    width: '100%',
+                    boxSizing: 'border-box',
+                    textAlign: 'left',
+                    font: 'inherit',
+                    border: 'none',
+                    borderRadius: RADIUS.sm,
+                    cursor: 'pointer',
+                    padding: SPACE[2],
+                    background: isMe ? COLORS.paperDeep : 'transparent',
+                    fontWeight: isMe ? 700 : 400,
+                    color: COLORS.ink,
+                  }}
+                >
+                  {/* minWidth:0 lets a long handle ellipsize instead of
+                      widening the row past a 320px viewport. */}
+                  <span
+                    style={{
+                      minWidth: 0,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {i + 1}. <span>{row.handle}</span>
+                  </span>
+                  <span style={{ flexShrink: 0 }}>{row.weekly_xp} XP</span>
+                </button>
               </li>
             </Fragment>
           );
