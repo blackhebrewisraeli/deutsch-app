@@ -62,7 +62,7 @@ import StatusChip from './components/StatusChip';
 import GoalRing from './components/gamification/GoalRing';
 import GoalStrip from './components/gamification/GoalStrip';
 import { Analytics } from '@vercel/analytics/react';
-import { useWindowWidth, isMobile, isTiny, bp } from './lib/useWindowWidth';
+import { useWindowWidth, isMobile, isTiny, isTablet, bp } from './lib/useWindowWidth';
 
 export default function App() {
   const [tab, setTab] = useState('home');
@@ -282,6 +282,21 @@ export default function App() {
   const width = useWindowWidth();
   const mobile = isMobile(width);
   const tiny = isTiny(width);
+  // The nav's labels need their own breakpoint, well above `mobile`. The
+  // buttons are `flex: 1` with `minWidth: 0`, so they all take an equal share
+  // and the widest label sets the floor: "Translate" stops fitting once a
+  // button drops under ~131px, i.e. under ~858px of viewport. `mobile` flips
+  // at 640, so across 640-858 the label overflowed its own button into the
+  // next one's — and because minWidth is 0 the nav never widened and never
+  // scrolled, so it rendered as text on top of text rather than as an
+  // overflow. Nothing that watches for sideways scroll can catch that.
+  //
+  // bp.tablet (900) rather than a new ~858 constant: the measurement is taken
+  // against Fraunces and a fallback serif can set wider, so the headroom is
+  // deliberate — at 900 the tightest label clears its button by only 6px.
+  // Icons carry the same aria-labels either way; this is the "decoration
+  // gives way" rule the wordmark and the goal ring already follow.
+  const navIconOnly = isTablet(width);
 
   // Auth
   const { user, status: authStatus } = useAuth();
@@ -731,7 +746,7 @@ export default function App() {
                   // buttons refused to shrink below their label and pushed the nav
                   // 28px past a 640px viewport, on every tab.
                   minWidth: 0,
-                  padding: mobile ? '12px 6px' : '14px 18px',
+                  padding: navIconOnly ? '12px 6px' : '14px 18px',
                   background: active ? COLORS.ink : 'transparent',
                   color: active ? COLORS.paper : COLORS.ink,
                   border: 'none',
@@ -739,7 +754,7 @@ export default function App() {
                   boxShadow: active ? SHADOW.press(COLORS.press) : 'none',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: mobile ? 'center' : 'flex-start',
+                  justifyContent: navIconOnly ? 'center' : 'flex-start',
                   gap: 10,
                   position: 'relative',
                   transition: 'all 0.15s',
@@ -751,8 +766,8 @@ export default function App() {
                   if (!active) e.currentTarget.style.background = 'transparent';
                 }}
               >
-                {mobile ? (
-                  // Mobile: icon only
+                {navIconOnly ? (
+                  // Icon only, until the labels have room — see navIconOnly.
                   <Icon size={20} />
                 ) : (
                   <>
@@ -782,8 +797,8 @@ export default function App() {
                   <span
                     style={{
                       position: 'absolute',
-                      top: mobile ? 4 : 8,
-                      right: mobile ? 4 : 8,
+                      top: navIconOnly ? 4 : 8,
+                      right: navIconOnly ? 4 : 8,
                       minWidth: 18,
                       height: 18,
                       padding: '0 5px',
