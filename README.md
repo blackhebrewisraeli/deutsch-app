@@ -13,7 +13,7 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-1,641_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-1,551_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
   <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-23_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
   &nbsp;
@@ -77,7 +77,7 @@
 
 | | |
 |---|---|
-| ✦ | [**Features**](#-features) — 5 tabs |
+| ✦ | [**Features**](#-features) — 6 tabs |
 | 🇩🇪 | [Grammar & vocabulary](#-german-grammar--vocabulary-coverage) |
 | 📖 | [Importing vocabulary](#-importing-vocabulary) |
 | 🌐 | [Browser support](#-browser-support) |
@@ -124,7 +124,7 @@ All AI features call **Claude Haiku 4.5** through a versioned server-side API (`
 |                      |                                                                                                                        |
 | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | **Live**             | [deutsch-app-dusky.vercel.app](https://deutsch-app-dusky.vercel.app) — installable PWA, works offline after first load |
-| **Exercise modules** | 5 — Chat · Alphabet · Vocab · Translate · Stats                                                                        |
+| **Tabs**             | 6 — Home · Chat · Alphabet · Vocab · Translate · Stats (Chat/Alphabet/Vocab/Translate are the practice modules)          |
 | **Levels**           | A1 · A2 · B1, each with its own exercise mode                                                                          |
 | **Vocabulary**       | 4,288 words · 26 generated decks + 4 hand-written starter decks                                                        |
 | **Grammar drills**   | 7 deck groups — der/die/das, plurals, Perfekt, Präsens, Präteritum, opposites, listening                               |
@@ -133,7 +133,7 @@ All AI features call **Claude Haiku 4.5** through a versioned server-side API (`
 | **Social**           | Weekly XP leagues, ~25-person cohorts, promotion / relegation                                                          |
 | **AI**               | Claude Haiku 4.5 behind `/api/v1/ai/*` — key stays server-side                                                         |
 | **Data**             | Local-first (`localStorage`), optional Supabase sync under row-level security                                          |
-| **Quality gates**    | 1,641 tests · 23 adversarial RLS tests · lint + format + full suite on every commit                                      |
+| **Quality gates**    | 1,551 tests · 23 adversarial RLS tests · lint + format + full suite on every commit                                      |
 
 ---
 
@@ -681,7 +681,7 @@ A second pass, started the same day the table above shipped, reworked how learne
 | Error monitoring   | **Sentry** (errors-only)                                    | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay; each build stamps the deploy commit as the release and uploads source maps                                                                                                                                                                                                             |
 | Linting            | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars                                                                                                                                                                                                                                                                                                                            |
 | Formatting         | **Prettier 3**                                              | Consistent code style, enforced on every commit                                                                                                                                                                                                                                                                                                                              |
-| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **1,641 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **23-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
+| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **1,551 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **23-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
 | CI                 | **GitHub Actions**                                          | `ci.yml` runs lint + test + build on every push to `main` and every PR, plus the RLS suite against a local Supabase                                                                                                                                                                                                                                                           |
 | Uptime             | **GitHub Actions** (`uptime.yml`)                           | Every 6h, exercises real round trips — demo root, lexicon manifest, GoTrue `/health` and `/settings`, PostgREST — and fails loudly if any hop is down. Read-only; never sends mail                                                                                                                                                                                            |
 | Pre-commit         | **Husky + lint-staged**                                     | Runs ESLint + Prettier + the full test suite before every `git commit`                                                                                                                                                                                                                                                                                                       |
@@ -1079,7 +1079,7 @@ deutsch-app/
 │   │   ├── AlphabetTab.jsx
 │   │   ├── ChatTab.jsx
 │   │   ├── ErrorBoundary.jsx
-│   │   ├── SplashScreen.jsx
+│   │   ├── HomeTab.jsx        ← Landing dashboard: level card + goal ring / streak
 │   │   ├── StatsTab.jsx
 │   │   ├── StatusChip.jsx     ← Header XP badge + streak + goal ring + LevelSwitcher, merged into one dialog
 │   │   ├── TranslateTab.jsx
