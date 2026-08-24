@@ -3,7 +3,7 @@ import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'luci
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
-import { readLevel, writeLevel, hasStoredLevel, LEVEL_CHANGE_EVENT } from './lib/levelPref';
+import { readLevel, writeLevel, LEVEL_CHANGE_EVENT } from './lib/levelPref';
 import { SessionGuardContext, useSessionGuardValue } from './lib/sessionGuard';
 import { getReviewItems, todayKey, TABS } from './lib/stats';
 import { trialStatus } from './lib/trial';
@@ -36,7 +36,6 @@ import AlphabetTab from './components/AlphabetTab';
 import VocabTab from './components/VocabTab';
 import TranslateTab from './components/TranslateTab';
 import StatsTab from './components/StatsTab';
-import SplashScreen from './components/SplashScreen';
 import WelcomeGate from './components/WelcomeGate';
 import TrialWall from './components/TrialWall';
 import AuthSheet from './components/auth/AuthSheet';
@@ -301,20 +300,14 @@ export default function App() {
   // Dismissal is component state, not storage: the gate is a property of "is
   // there a session", so it comes back on the next load for anyone without one.
   const [gateDismissed, setGateDismissed] = useState(false);
-  // Seeded from `deutsch-level`, not from isAuthConfigured(): env-independent
-  // (spec F7), and it states the real precondition — someone who has never
-  // picked a level needs the picker however they arrived.
-  const [showSplash, setShowSplash] = useState(() => !hasStoredLevel());
   const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
 
   const handleGuest = () => {
     setGateDismissed(true);
-    setShowSplash(true);
   };
   const handleAuthDone = () => {
     setAuthModal(null);
     setGateDismissed(true);
-    setShowSplash(true);
     // Nothing reads this key any more; kept because AGENTS.md forbids removing
     // or migrating a storage key.
     localStorage.setItem('deutsch-onboarded', '1');
@@ -438,11 +431,6 @@ export default function App() {
   // Onboarding + level
   const [level, setLevel] = useState(readLevel);
   const sessionGuard = useSessionGuardValue();
-
-  const handleSplashComplete = (chosenLevel) => {
-    setLevel(chosenLevel);
-    setShowSplash(false);
-  };
 
   // `level` is held here and prop-drilled into every tab, so any writer that
   // is not this component (sync pulling a level from another device, the
@@ -570,14 +558,6 @@ export default function App() {
       </>
     );
   }
-
-  if (showSplash)
-    return (
-      <>
-        <SplashScreen onComplete={handleSplashComplete} />
-        {authOverlay}
-      </>
-    );
 
   return (
     // Practice tabs register their in-flight state here; the header's status

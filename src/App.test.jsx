@@ -66,21 +66,21 @@ const setViewportWidth = (width) => {
   });
 };
 
-// Task 2 made the entry gate a function of account session rather than a
-// device flag, and made the post-gate splash unconditional (continuing past
-// the gate, guest or authenticated, always lands on the level picker once).
-// Tests below this point that only care about the app shell — not the gate
-// or splash themselves — render then walk through both screens once, exactly
-// as a real guest would. `fireEvent` (not `userEvent`) because one call site
-// runs under fake timers and a synchronous click avoids the delay-based
-// interactions `userEvent` schedules internally. A no-op when the gate or
-// splash never appeared (e.g. an authenticated or auth-unconfigured mock).
+// The entry gate is a function of account session, not a device flag (see
+// docs/superpowers/specs/2026-08-17-entry-flow-and-level-xp-design.md). There
+// is no longer a level-picker screen behind it — see
+// docs/superpowers/specs/2026-08-24-entry-flow-and-home-dashboard-design.md
+// §6 — so continuing past the gate lands directly on the app shell. Tests
+// below this point that only care about the app shell — not the gate itself
+// — render then dismiss the gate once, exactly as a real guest would.
+// `fireEvent` (not `userEvent`) because one call site runs under fake timers
+// and a synchronous click avoids the delay-based interactions `userEvent`
+// schedules internally. A no-op when the gate never appeared (e.g. an
+// authenticated or auth-unconfigured mock).
 const renderPastEntry = (ui) => {
   const result = render(ui);
   const guestBtn = screen.queryByRole('button', { name: 'Try it first — free →' });
   if (guestBtn) fireEvent.click(guestBtn);
-  const levelBtn = screen.queryByRole('button', { name: /Beginner \(A1\)/ });
-  if (levelBtn) fireEvent.click(levelBtn);
   return result;
 };
 
@@ -593,7 +593,6 @@ describe('entry gate', () => {
   });
 
   const gate = () => screen.queryByRole('button', { name: 'Try it first — free →' });
-  const levelPicker = () => screen.queryByRole('button', { name: /Beginner \(A1\)/ });
 
   it('shows the gate to a guest who has already onboarded once', () => {
     // The whole point of the change: a device flag must not hide the gate.
@@ -603,11 +602,11 @@ describe('entry gate', () => {
     expect(gate()).toBeInTheDocument();
   });
 
-  it('shows the level picker after the guest continues', async () => {
+  it('lands in the app — no level picker — after the guest continues', async () => {
     localStorage.setItem('deutsch-level', 'a1');
     render(<App />);
     await userEvent.click(gate());
-    expect(levelPicker()).toBeInTheDocument();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
   it('lets a signed-in user straight through to the app', () => {
@@ -616,7 +615,6 @@ describe('entry gate', () => {
     localStorage.setItem('deutsch-level', 'a1');
     render(<App />);
     expect(gate()).toBeNull();
-    expect(levelPicker()).toBeNull();
     expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
@@ -648,7 +646,7 @@ describe('entry gate', () => {
     expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
-  it('shows the level picker to anyone who has never chosen a level', () => {
+  it('defaults silently to a1 for anyone who has never chosen a level', () => {
     authMock.configured = false;
     // The storage shim is one module-level instance shared by every test in
     // the file (see 'guest trial wall' above) — earlier tests in this very
@@ -656,14 +654,21 @@ describe('entry gate', () => {
     // chosen a level".
     localStorage.removeItem('deutsch-level');
     render(<App />);
-    expect(levelPicker()).toBeInTheDocument();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('banner')).getByRole('button', { name: /open status/i })
+    ).toHaveTextContent('A1');
+    // Never written until an explicit choice — the default is silent and in-memory.
+    expect(localStorage.getItem('deutsch-level')).toBeNull();
   });
 
-  it('asks for a level again when the stored one is corrupt', () => {
-    authMock.configured = false; // no gate, so the splash is what renders
+  it('treats a corrupt stored level as a1 rather than asking again', () => {
+    authMock.configured = false; // no gate, so the app shell is what renders
     localStorage.setItem('deutsch-level', 'c2');
     render(<App />);
-    expect(screen.getByRole('button', { name: /Beginner \(A1\)/ })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('banner')).getByRole('button', { name: /open status/i })
+    ).toHaveTextContent('A1');
   });
 
   it('enables the level XP boost for a signed-in user', () => {
@@ -695,10 +700,9 @@ describe('entry gate', () => {
     const user = userEvent.setup();
     const { rerender } = render(<App />);
 
-    // Latch gateDismissed the way a real signed-in session does, then land
-    // on the level picker and pick a level to reach the app shell.
+    // Latch gateDismissed the way a real signed-in session does, landing
+    // directly on the app shell.
     await user.click(gate());
-    await user.click(levelPicker());
 
     authMock.status = 'authenticated';
     authMock.mayHaveSession = true;
