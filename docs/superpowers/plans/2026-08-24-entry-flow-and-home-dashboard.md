@@ -801,7 +801,7 @@ shows a bigger one — otherwise it would be an exact duplicate."
 - [ ] **Step 1: Run the full suite**
 
 Run: `npm test`
-Expected: every test file passes, no unexpected drop in total test count beyond the one deleted file (`SplashScreen.test.jsx`, 8 tests removed) offset by the new ones added in Tasks 1–4.
+Expected: every test file passes, no unexpected drop in total test count beyond the one deleted file (`SplashScreen.test.jsx`, 5 tests removed) offset by the new ones added in Tasks 1–4.
 
 - [ ] **Step 2: Lint and format**
 
