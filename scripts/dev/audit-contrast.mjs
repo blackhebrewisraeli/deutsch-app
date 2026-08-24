@@ -2,7 +2,7 @@
 /**
  * Rendered-DOM contrast audit.
  *
- * Walks 2 modes × 2 tones × 5 tabs × 3 viewports with a populated account and
+ * Walks 2 modes × 2 tones × 6 tabs × 3 viewports with a populated account and
  * reports every text node whose contrast against its nearest opaque background
  * falls below WCAG AA (4.5:1 body / 3:1 large), plus any header popover that
  * renders outside the viewport (a class jsdom and scrollWidth both miss).
@@ -318,7 +318,7 @@ async function provisionTarget() {
 
 const MODES = ['light', 'dark'];
 const TONES = ['day', 'night'];
-const TABS = ['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
+const TABS = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
 // The signed-in pass sweeps mode x tone at one viewport. Contrast is a function
 // of the palette, not the width; width only moves things around, and the guest
 // walk already covers all three widths for the shared chrome.
@@ -598,26 +598,14 @@ async function auditHeaderSheets(page, minSheets, passLabel = 'guest') {
  * settles on 'anonymous', and the gate returns.
  */
 async function dismissEntryScreens(page) {
-  // WelcomeGate — "Try it first — free →". Clicking it forces the splash on,
-  // regardless of a stored level, so the level step below is not optional
-  // once this one fires.
+  // WelcomeGate — "Try it first — free →". Landing directly on the app shell
+  // (Home tab) once dismissed — there is no longer a level-picker screen
+  // behind it.
   const gate = await page.$('.welcome-guest');
   if (gate) {
     await gate.click();
     await page.waitForTimeout(200);
   }
-
-  // SplashScreen — level picker. Matched on its handler's effect rather than
-  // its emoji label, which is decorative and free to change.
-  const picked = await page.evaluate(() => {
-    const b = [...document.querySelectorAll('button')].find((x) =>
-      /\(A1\)/.test(x.textContent || '')
-    );
-    if (!b) return false;
-    b.click();
-    return true;
-  });
-  if (picked) await page.waitForTimeout(300);
 
   // Fail loudly and once, rather than as 12 downstream "no Appearance chip"
   // findings that say nothing about the real cause.
@@ -625,8 +613,7 @@ async function dismissEntryScreens(page) {
   if (!onShell) {
     throw new Error(
       'audit-contrast: never reached the app shell — still on an entry screen ' +
-        'after dismissing the gate and picking a level. The entry flow changed; ' +
-        'update dismissEntryScreens().'
+        'after dismissing the gate. The entry flow changed; update dismissEntryScreens().'
     );
   }
 }

@@ -255,7 +255,7 @@ export default function VocabTab({
   return (
     <div>
       <Hero
-        kicker="Section 03"
+        kicker="Section 04"
         title="Wortschatz"
         sub="Flip, listen, learn. Pick a preset or generate a deck on any topic."
       />

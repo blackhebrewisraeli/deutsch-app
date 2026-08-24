@@ -73,9 +73,9 @@ const setViewportWidth = (width) => {
 // §6 — so continuing past the gate lands directly on the app shell. Tests
 // below this point that only care about the app shell — not the gate itself
 // — render then dismiss the gate once, exactly as a real guest would.
-// `fireEvent` (not `userEvent`) because one call site runs under fake timers
-// and a synchronous click avoids the delay-based interactions `userEvent`
-// schedules internally. A no-op when the gate never appeared (e.g. an
+// `fireEvent` (not `userEvent`) for a synchronous click that avoids the
+// delay-based interactions `userEvent` schedules internally. A no-op when the
+// gate never appeared (e.g. an
 // authenticated or auth-unconfigured mock).
 const renderPastEntry = (ui) => {
   const result = render(ui);
@@ -140,6 +140,12 @@ describe('App navigation a11y', () => {
     expect(nav.getByRole('button', { name: 'Chat' })).not.toHaveAttribute('aria-current');
     expect(nav.getByRole('button', { name: 'Stats' })).not.toHaveAttribute('aria-current');
   });
+
+  it('renders HomeTab content on the default landing tab', () => {
+    setViewportWidth(1280);
+    renderPastEntry(<App />);
+    expect(screen.getByRole('heading', { name: 'Willkommen' })).toBeInTheDocument();
+  });
 });
 
 // The header held logo + level badge + streak + goal ring + account chip,
@@ -199,7 +205,10 @@ describe('header at mobile width', () => {
     expect(header.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
   });
 
-  it.each(['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'])(
+  // Home is deliberately excluded here — it shows its own GoalRing/streak
+  // widgets instead of GoalStrip, on every viewport, covered by
+  // 'renders HomeTab content on the default landing tab' below.
+  it.each(['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'])(
     'shows daily-goal progress on the %s tab on mobile',
     async (tabName) => {
       setViewportWidth(375);

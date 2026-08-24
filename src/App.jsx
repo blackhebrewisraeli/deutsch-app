@@ -816,10 +816,12 @@ export default function App() {
           }}
         >
           {/* On mobile this is the only daily-goal indicator — the header ring is
-            dropped there for width — so it has to appear on every tab. On
-            desktop the ring covers it, and the strip stays scoped to the two
-            practice tabs it was built for. */}
-          {(mobile || tab === 'translate' || tab === 'vocab') && (
+            dropped there for width — so it has to appear on every tab except
+            Home, which already shows its own goal ring below (same reason the
+            desktop header ring hides on Home — see the GoalRing guard further
+            up in this file). On desktop the ring covers it, and the strip
+            stays scoped to the two practice tabs it was built for. */}
+          {(mobile || tab === 'translate' || tab === 'vocab') && tab !== 'home' && (
             <GoalStrip
               streak={game.streak}
               current={game.goal.current}

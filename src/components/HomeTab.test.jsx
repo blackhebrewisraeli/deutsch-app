@@ -13,6 +13,8 @@ describe('HomeTab', () => {
     expect(screen.getByText('Anfänger')).toBeInTheDocument();
     expect(screen.getByTitle('Daily goal · 50%')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
+    expect(screen.getByText(/300 XP total/)).toBeInTheDocument();
+    expect(screen.getByText('12')).toBeInTheDocument();
   });
 
   // Home is a quick glance, not a second Stats — the deep-dive widgets

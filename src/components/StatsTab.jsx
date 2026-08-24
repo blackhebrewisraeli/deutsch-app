@@ -121,7 +121,7 @@ export default function StatsTab({
       {LEAGUES_ENABLED && activeView === 'leagues' ? (
         <div>
           <Hero
-            kicker="Section 05"
+            kicker="Section 06"
             title="Ligen"
             sub="Compete with learners at your level. Weekly XP decides who advances."
           />
@@ -132,7 +132,7 @@ export default function StatsTab({
       ) : (
         <div>
           <Hero
-            kicker="Section 05"
+            kicker="Section 06"
             title="Statistik"
             sub="A picture of your practice. Today's snapshot, the year so far, and how your effort breaks down across the four sections."
           />
