@@ -111,7 +111,7 @@ export default function TranslateTab({
   return (
     <div>
       <Hero
-        kicker="Section 04"
+        kicker="Section 05"
         title="Übersetzen"
         sub="The app gives you a sentence. You translate it. Three modes depending on your level."
       />

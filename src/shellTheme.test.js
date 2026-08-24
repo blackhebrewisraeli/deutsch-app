@@ -8,7 +8,7 @@ import { MODE_COLORS } from './lib/themeTokens';
 // fails the build the moment the two disagree.
 const html = readFileSync('index.html', 'utf8');
 
-/** The shell writes its palette through a JS map keyed `mode-tone`. */
+/** The shell writes its palette through a JS map keyed by mode. */
 function shellPalette(key) {
   const m = html.match(new RegExp(`'${key}':\\s*\\[([^\\]]+)\\]`));
   if (!m) throw new Error(`index.html has no shell palette for "${key}"`);
@@ -17,29 +17,27 @@ function shellPalette(key) {
 
 describe('pre-JS shell colours match the theme tokens', () => {
   for (const mode of ['light', 'dark']) {
-    for (const tone of ['day', 'night']) {
-      it(`${mode}.${tone} ground and fg match themeTokens`, () => {
-        const [bg, fg] = shellPalette(`${mode}-${tone}`);
-        const palette = MODE_COLORS[mode][tone];
-        expect(bg).toBe(palette.ground.toLowerCase());
-        expect(fg).toBe(palette.fg.toLowerCase());
-      });
+    it(`${mode} ground and fg match themeTokens`, () => {
+      const [bg, fg] = shellPalette(mode);
+      const palette = MODE_COLORS[mode];
+      expect(bg).toBe(palette.ground.toLowerCase());
+      expect(fg).toBe(palette.fg.toLowerCase());
+    });
 
-      it(`${mode}.${tone} wordmark dot matches the palette error colour`, () => {
-        const [, , dot] = shellPalette(`${mode}-${tone}`);
-        // App.jsx renders the dot in "Deutsch." as COLORS.red — `error`.
-        expect(dot).toBe(MODE_COLORS[mode][tone].error.toLowerCase());
-      });
-    }
+    it(`${mode} wordmark dot matches the palette error colour`, () => {
+      const [, , dot] = shellPalette(mode);
+      // App.jsx renders the dot in "Deutsch." as COLORS.red — `error`.
+      expect(dot).toBe(MODE_COLORS[mode].error.toLowerCase());
+    });
   }
 
-  it('falls back to light.day and dark.day in the static CSS', () => {
+  it('falls back to light and dark in the static CSS', () => {
     // The CSS custom properties are what render if the inline script throws
     // (private mode). They must still be real theme grounds.
     const lightBlock = html.match(/:root\s*\{([^}]+)\}/)[1];
     const darkBlock = html.match(/prefers-color-scheme:\s*dark\s*\)\s*\{\s*:root\s*\{([^}]+)\}/)[1];
-    expect(lightBlock).toContain(MODE_COLORS.light.day.ground.toLowerCase());
-    expect(darkBlock).toContain(MODE_COLORS.dark.day.ground.toLowerCase());
+    expect(lightBlock).toContain(MODE_COLORS.light.ground.toLowerCase());
+    expect(darkBlock).toContain(MODE_COLORS.dark.ground.toLowerCase());
   });
 
   it('keeps the shell out of the accessibility tree and un-tappable', () => {

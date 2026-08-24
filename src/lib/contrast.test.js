@@ -17,9 +17,9 @@ function resolveModeValue(value, mode) {
   return value[mode];
 }
 
-/** Resolved ramp tokens for a mode × tone using the German pack seeds. */
-function rampFor(mode, tone) {
-  const structural = MODE_COLORS[mode][tone];
+/** Resolved ramp tokens for a mode using the German pack seeds. */
+function rampFor(mode) {
+  const structural = MODE_COLORS[mode];
   const packAccent = resolveModeValue(accent.fill, mode);
   const packAccentOn = resolveModeValue(accent.onFill, mode);
   const packAltFill = resolveModeValue(accentAlt.fill, mode);
@@ -41,16 +41,16 @@ function rampFor(mode, tone) {
 
 /**
  * Pairings the token model is designed to support at WCAG AA,
- * for every mode × tone palette — including derived ramp steps.
+ * for every mode palette — including derived ramp steps.
  *
  * Roles:
  * - soft steps are backgrounds (body ink on top)
  * - accent / accent-deep are fills (onFill on top)
  * - success-deep / error-deep are lip/press fills, not body text
  */
-function pairsFor(mode, tone) {
-  const { c, packAccent, packAccentOn, packAccentFg, packAltFill, packAltOn } = rampFor(mode, tone);
-  const label = `${mode}.${tone}`;
+function pairsFor(mode) {
+  const { c, packAccent, packAccentOn, packAccentFg, packAltFill, packAltOn } = rampFor(mode);
+  const label = mode;
 
   /** @type {{ fg: string, bg: string, min: number, name: string }[]} */
   const pairs = [
@@ -207,30 +207,28 @@ describe('contrast helpers', () => {
   });
 });
 
-describe('token model contrast (all mode × tone palettes)', () => {
+describe('token model contrast (all mode palettes)', () => {
   for (const mode of ['light', 'dark']) {
-    for (const tone of ['day', 'night']) {
-      describe(`${mode}.${tone}`, () => {
-        for (const pair of pairsFor(mode, tone)) {
-          it(`${pair.name} ≥ ${pair.min}:1`, () => {
-            const ratio = contrastRatio(pair.fg, pair.bg);
-            expect(
-              ratio,
-              `${pair.name}: ${pair.fg} on ${pair.bg} = ${ratio.toFixed(2)}:1 (need ${pair.min})`
-            ).toBeGreaterThanOrEqual(pair.min);
-          });
-        }
-      });
-    }
+    describe(mode, () => {
+      for (const pair of pairsFor(mode)) {
+        it(`${pair.name} ≥ ${pair.min}:1`, () => {
+          const ratio = contrastRatio(pair.fg, pair.bg);
+          expect(
+            ratio,
+            `${pair.name}: ${pair.fg} on ${pair.bg} = ${ratio.toFixed(2)}:1 (need ${pair.min})`
+          ).toBeGreaterThanOrEqual(pair.min);
+        });
+      }
+    });
   }
 
   it('fails with the offending pair named when a foreground is darkened', () => {
-    const name = 'dark.day fg on ground';
+    const name = 'dark fg on ground';
     const fg = '#3a3a3a';
-    const bg = MODE_COLORS.dark.day.ground;
+    const bg = MODE_COLORS.dark.ground;
     const ratio = contrastRatio(fg, bg);
     expect(ratio).toBeLessThan(AA_NORMAL);
-    expect(`${name}: ${fg} on ${bg} = ${ratio.toFixed(2)}:1`).toMatch(/dark\.day fg on ground/);
+    expect(`${name}: ${fg} on ${bg} = ${ratio.toFixed(2)}:1`).toMatch(/dark fg on ground/);
   });
 });
 
@@ -255,36 +253,26 @@ describe('accent tiers are fills, not foregrounds', () => {
   // obsidian): near-invisible in both.
   it("each tier's ink is invisible on the page ground it does not belong to", () => {
     for (const mode of ['light', 'dark']) {
-      for (const tone of ['day', 'night']) {
-        const c = MODE_COLORS[mode][tone];
-        expect(
-          contrastRatio(c['accent-red-on'], c.ground),
-          `${mode}.${tone} accent-red-on must not be legible off its tier`
-        ).toBeLessThan(AA_NORMAL);
-      }
+      const c = MODE_COLORS[mode];
+      expect(
+        contrastRatio(c['accent-red-on'], c.ground),
+        `${mode} accent-red-on must not be legible off its tier`
+      ).toBeLessThan(AA_NORMAL);
     }
   });
 
   it('has no gold tier — COLORS.gold already owns reward', () => {
     for (const mode of ['light', 'dark']) {
-      for (const tone of ['day', 'night']) {
-        expect(MODE_COLORS[mode][tone]['accent-gold']).toBeUndefined();
-      }
+      expect(MODE_COLORS[mode]['accent-gold']).toBeUndefined();
     }
   });
 
   it('every tier ships a paired ink in every palette', () => {
     for (const mode of ['light', 'dark']) {
-      for (const tone of ['day', 'night']) {
-        const c = MODE_COLORS[mode][tone];
-        for (const tier of ['black', 'red']) {
-          expect(c[`accent-${tier}`], `${mode}.${tone} accent-${tier}`).toMatch(
-            /^#[0-9A-Fa-f]{6}$/
-          );
-          expect(c[`accent-${tier}-on`], `${mode}.${tone} accent-${tier}-on`).toMatch(
-            /^#[0-9A-Fa-f]{6}$/
-          );
-        }
+      const c = MODE_COLORS[mode];
+      for (const tier of ['black', 'red']) {
+        expect(c[`accent-${tier}`], `${mode} accent-${tier}`).toMatch(/^#[0-9A-Fa-f]{6}$/);
+        expect(c[`accent-${tier}-on`], `${mode} accent-${tier}-on`).toMatch(/^#[0-9A-Fa-f]{6}$/);
       }
     }
   });

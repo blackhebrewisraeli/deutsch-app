@@ -128,7 +128,7 @@ export default function AlphabetTab({
   return (
     <div>
       <Hero
-        kicker="Section 02"
+        kicker="Section 03"
         title="Das Alphabet"
         sub="Browse all letters or test your ear — can you identify what you heard?"
       />

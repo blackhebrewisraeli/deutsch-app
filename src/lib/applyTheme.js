@@ -18,18 +18,15 @@ function resolveModeValue(value, mode) {
  *
  * @param {'light' | 'dark'} mode
  * @param {object} [packTheme] — `activePack.theme` when available
- * @param {'day' | 'night'} [tone='day'] — Day-light / Night-light alternate
  */
-export function applyTheme(mode = 'light', packTheme, tone = 'day') {
+export function applyTheme(mode = 'light', packTheme) {
   if (typeof document === 'undefined') return;
 
   const resolved = mode === 'dark' ? 'dark' : 'light';
-  const resolvedTone = tone === 'night' ? 'night' : 'day';
   const root = document.documentElement;
   root.dataset.theme = resolved;
-  root.dataset.tone = resolvedTone;
 
-  const structural = resolvePalette(resolved, resolvedTone);
+  const structural = resolvePalette(resolved);
   const defaults = DEFAULT_ACCENTS[resolved];
   const accent = packTheme?.accent;
   const accentAlt = packTheme?.accentAlt;

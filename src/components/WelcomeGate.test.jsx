@@ -104,4 +104,15 @@ describe('WelcomeGate', () => {
     const { container } = render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} />);
     expect(container.firstChild).toHaveClass('entry-screen');
   });
+
+  // Theme access must exist from the very first frame the app can show — not
+  // only after guest/account is chosen. See
+  // docs/superpowers/specs/2026-08-24-entry-flow-and-home-dashboard-design.md §5.
+  it('offers the theme toggle from the moment the entry screen renders', async () => {
+    render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} />);
+    const appearance = screen.getByRole('button', { name: /^appearance$/i });
+    expect(appearance).toBeInTheDocument();
+    await userEvent.click(appearance);
+    expect(screen.getByRole('dialog', { name: /appearance/i })).toBeInTheDocument();
+  });
 });

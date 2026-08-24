@@ -70,17 +70,14 @@
       // because it runs ahead of every other byte of script.
       (function () {
         try {
-          var mode = localStorage.getItem('deutsch-theme-mode') || 'system';
-          var tone = localStorage.getItem('deutsch-theme-tone') || 'day';
-          if (mode === 'system') {
+          var mode = localStorage.getItem('deutsch-theme-mode');
+          if (mode !== 'light' && mode !== 'dark') {
             mode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
           }
           var g = {
-            'light-day': ['#fbf8f1', '#16110b', '#c41e1e'],
-            'light-night': ['#ede8dc', '#16110b', '#a82020'],
-            'dark-day': ['#0f0f11', '#edebe8', '#ff6b6b'],
-            'dark-night': ['#08080a', '#edebe8', '#ff6b6b'],
-          }[mode + '-' + (tone === 'night' ? 'night' : 'day')];
+            'light': ['#fbf8f1', '#16110b', '#c41e1e'],
+            'dark': ['#0f0f11', '#edebe8', '#ff6b6b'],
+          }[mode];
           if (g) {
             var s = document.documentElement.style;
             s.setProperty('--shell-bg', g[0]);

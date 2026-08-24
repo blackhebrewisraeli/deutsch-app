@@ -56,7 +56,7 @@ vi.mock('./lib/sync', async (importOriginal) => ({
   markDirty: syncMock.markDirty,
 }));
 
-const TAB_NAMES = ['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
+const TAB_NAMES = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
 
 const setViewportWidth = (width) => {
   Object.defineProperty(window, 'innerWidth', {
@@ -66,21 +66,21 @@ const setViewportWidth = (width) => {
   });
 };
 
-// Task 2 made the entry gate a function of account session rather than a
-// device flag, and made the post-gate splash unconditional (continuing past
-// the gate, guest or authenticated, always lands on the level picker once).
-// Tests below this point that only care about the app shell — not the gate
-// or splash themselves — render then walk through both screens once, exactly
-// as a real guest would. `fireEvent` (not `userEvent`) because one call site
-// runs under fake timers and a synchronous click avoids the delay-based
-// interactions `userEvent` schedules internally. A no-op when the gate or
-// splash never appeared (e.g. an authenticated or auth-unconfigured mock).
+// The entry gate is a function of account session, not a device flag (see
+// docs/superpowers/specs/2026-08-17-entry-flow-and-level-xp-design.md). There
+// is no longer a level-picker screen behind it — see
+// docs/superpowers/specs/2026-08-24-entry-flow-and-home-dashboard-design.md
+// §6 — so continuing past the gate lands directly on the app shell. Tests
+// below this point that only care about the app shell — not the gate itself
+// — render then dismiss the gate once, exactly as a real guest would.
+// `fireEvent` (not `userEvent`) for a synchronous click that avoids the
+// delay-based interactions `userEvent` schedules internally. A no-op when the
+// gate never appeared (e.g. an
+// authenticated or auth-unconfigured mock).
 const renderPastEntry = (ui) => {
   const result = render(ui);
   const guestBtn = screen.queryByRole('button', { name: 'Try it first — free →' });
   if (guestBtn) fireEvent.click(guestBtn);
-  const levelBtn = screen.queryByRole('button', { name: /Beginner \(A1\)/ });
-  if (levelBtn) fireEvent.click(levelBtn);
   return result;
 };
 
@@ -136,8 +136,15 @@ describe('App navigation a11y', () => {
     setViewportWidth(1280);
     renderPastEntry(<App />);
     const nav = within(screen.getByRole('navigation'));
-    expect(nav.getByRole('button', { name: 'Chat' })).toHaveAttribute('aria-current', 'page');
+    expect(nav.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+    expect(nav.getByRole('button', { name: 'Chat' })).not.toHaveAttribute('aria-current');
     expect(nav.getByRole('button', { name: 'Stats' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('renders HomeTab content on the default landing tab', () => {
+    setViewportWidth(1280);
+    renderPastEntry(<App />);
+    expect(screen.getByRole('heading', { name: 'Willkommen' })).toBeInTheDocument();
   });
 });
 
@@ -180,13 +187,27 @@ describe('header at mobile width', () => {
     expect(header.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
   });
 
-  it('keeps the goal ring in the header on desktop', () => {
+  it('keeps the goal ring in the header on desktop', async () => {
     setViewportWidth(1280);
+    const user = userEvent.setup();
     renderPastEntry(<App />);
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' }));
     const header = within(screen.getByRole('banner'));
     expect(header.getByTitle(/Daily goal/)).toBeInTheDocument();
   });
 
+  // Home already shows its own, bigger GoalRing — the header's compact one
+  // would be an exact duplicate sitting right above it.
+  it('hides the header goal ring on the Home tab, where HomeTab already shows one', () => {
+    setViewportWidth(1280);
+    renderPastEntry(<App />);
+    const header = within(screen.getByRole('banner'));
+    expect(header.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
+  });
+
+  // Home is deliberately excluded here — it shows its own GoalRing/streak
+  // widgets instead of GoalStrip, on every viewport, covered by
+  // 'renders HomeTab content on the default landing tab' below.
   it.each(['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'])(
     'shows daily-goal progress on the %s tab on mobile',
     async (tabName) => {
@@ -271,9 +292,11 @@ describe('header at mobile width', () => {
 
   // On desktop the header ring carries the signal, so the strip stays scoped to
   // the two practice tabs it was built for.
-  it('leaves the strip off the chat tab on desktop, where the ring covers it', () => {
+  it('leaves the strip off the chat tab on desktop, where the ring covers it', async () => {
     setViewportWidth(1280);
+    const user = userEvent.setup();
     renderPastEntry(<App />);
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' }));
     expect(goalStrip()).not.toBeInTheDocument();
     expect(within(screen.getByRole('banner')).getByTitle(/Daily goal/)).toBeInTheDocument();
   });
@@ -423,6 +446,12 @@ describe('guest trial wall', () => {
     const { default: AppWithAuth } = await import('./App.jsx');
     setViewportWidth(1280);
     renderPastEntry(<AppWithAuth />);
+    // Home is the landing tab now and is never walled — land on a practice
+    // tab first, exactly as every test below originally assumed when Chat
+    // was the default landing tab.
+    await userEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' })
+    );
   }
 
   const wall = () => screen.queryByRole('dialog', { name: 'Save your progress' });
@@ -448,6 +477,15 @@ describe('guest trial wall', () => {
     const user = userEvent.setup();
     await renderApp();
     await goToTab(user, 'Stats');
+    expect(wall()).not.toBeInTheDocument();
+  });
+
+  it('never walls the Home tab — it is the new landing surface', async () => {
+    await renderApp();
+    // renderApp already navigated to Chat (walled); step back to Home.
+    await userEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Home' })
+    );
     expect(wall()).not.toBeInTheDocument();
   });
 
@@ -508,24 +546,29 @@ describe('guest trial wall', () => {
   // "Tagesziel erreicht!" toast and the confetti burst. The wall must wait for
   // the celebration to finish rather than stamping itself over it.
   it('waits for a running celebration to finish before it appears', async () => {
+    // All four tabs sampled but only 40 XP against a 50 XP goal: one half of
+    // the peak met, so the trial is still running.
+    await renderApp({
+      state: {
+        daily: {
+          [todayKey()]: {
+            total: 8,
+            byTab: { chat: 2, alphabet: 2, vocab: 2, translate: 2 },
+            byLevel: { a1: { correct: 4, almost: 0, wrong: 0 } },
+          },
+        },
+        gamification: { goal: 50 },
+      },
+    });
+    expect(wall()).not.toBeInTheDocument();
+
+    // Fake timers activate only now — renderApp's own Chat-tab click (added
+    // for the Home-landing-tab change) needs real timers to resolve; the
+    // click's internal delay is a real setTimeout that fake time never
+    // advances, so starting fake timers before renderApp() hangs it forever.
+    // Only the celebration-timing assertions below need deterministic time.
     vi.useFakeTimers();
     try {
-      // All four tabs sampled but only 40 XP against a 50 XP goal: one half of
-      // the peak met, so the trial is still running.
-      await renderApp({
-        state: {
-          daily: {
-            [todayKey()]: {
-              total: 8,
-              byTab: { chat: 2, alphabet: 2, vocab: 2, translate: 2 },
-              byLevel: { a1: { correct: 4, almost: 0, wrong: 0 } },
-            },
-          },
-          gamification: { goal: 50 },
-        },
-      });
-      expect(wall()).not.toBeInTheDocument();
-
       // The round that tips the day over the goal. Preserve the gamification
       // block App just wrote so this reads as one more round, not a reset.
       const cur = JSON.parse(localStorage.getItem('deutsch-app-state-v1'));
@@ -593,7 +636,6 @@ describe('entry gate', () => {
   });
 
   const gate = () => screen.queryByRole('button', { name: 'Try it first — free →' });
-  const levelPicker = () => screen.queryByRole('button', { name: /Beginner \(A1\)/ });
 
   it('shows the gate to a guest who has already onboarded once', () => {
     // The whole point of the change: a device flag must not hide the gate.
@@ -603,11 +645,11 @@ describe('entry gate', () => {
     expect(gate()).toBeInTheDocument();
   });
 
-  it('shows the level picker after the guest continues', async () => {
+  it('lands in the app — no level picker — after the guest continues', async () => {
     localStorage.setItem('deutsch-level', 'a1');
     render(<App />);
     await userEvent.click(gate());
-    expect(levelPicker()).toBeInTheDocument();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
   it('lets a signed-in user straight through to the app', () => {
@@ -616,7 +658,6 @@ describe('entry gate', () => {
     localStorage.setItem('deutsch-level', 'a1');
     render(<App />);
     expect(gate()).toBeNull();
-    expect(levelPicker()).toBeNull();
     expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
@@ -648,7 +689,7 @@ describe('entry gate', () => {
     expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
-  it('shows the level picker to anyone who has never chosen a level', () => {
+  it('defaults silently to a1 for anyone who has never chosen a level', () => {
     authMock.configured = false;
     // The storage shim is one module-level instance shared by every test in
     // the file (see 'guest trial wall' above) — earlier tests in this very
@@ -656,14 +697,21 @@ describe('entry gate', () => {
     // chosen a level".
     localStorage.removeItem('deutsch-level');
     render(<App />);
-    expect(levelPicker()).toBeInTheDocument();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('banner')).getByRole('button', { name: /open status/i })
+    ).toHaveTextContent('A1');
+    // Never written until an explicit choice — the default is silent and in-memory.
+    expect(localStorage.getItem('deutsch-level')).toBeNull();
   });
 
-  it('asks for a level again when the stored one is corrupt', () => {
-    authMock.configured = false; // no gate, so the splash is what renders
+  it('treats a corrupt stored level as a1 rather than asking again', () => {
+    authMock.configured = false; // no gate, so the app shell is what renders
     localStorage.setItem('deutsch-level', 'c2');
     render(<App />);
-    expect(screen.getByRole('button', { name: /Beginner \(A1\)/ })).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('banner')).getByRole('button', { name: /open status/i })
+    ).toHaveTextContent('A1');
   });
 
   it('enables the level XP boost for a signed-in user', () => {
@@ -695,10 +743,9 @@ describe('entry gate', () => {
     const user = userEvent.setup();
     const { rerender } = render(<App />);
 
-    // Latch gateDismissed the way a real signed-in session does, then land
-    // on the level picker and pick a level to reach the app shell.
+    // Latch gateDismissed the way a real signed-in session does, landing
+    // directly on the app shell.
     await user.click(gate());
-    await user.click(levelPicker());
 
     authMock.status = 'authenticated';
     authMock.mayHaveSession = true;

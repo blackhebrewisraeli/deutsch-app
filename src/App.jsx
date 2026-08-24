@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
-import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
+import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages, Home } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
-import { readLevel, writeLevel, hasStoredLevel, LEVEL_CHANGE_EVENT } from './lib/levelPref';
+import { readLevel, writeLevel, LEVEL_CHANGE_EVENT } from './lib/levelPref';
 import { SessionGuardContext, useSessionGuardValue } from './lib/sessionGuard';
 import { getReviewItems, todayKey, TABS } from './lib/stats';
 import { trialStatus } from './lib/trial';
@@ -31,12 +31,12 @@ import {
 import { activePack } from './packs';
 const { decks: PRESET_DECKS } = activePack.content;
 import { StatBlock } from './components/UI';
+import HomeTab from './components/HomeTab';
 import ChatTab from './components/ChatTab';
 import AlphabetTab from './components/AlphabetTab';
 import VocabTab from './components/VocabTab';
 import TranslateTab from './components/TranslateTab';
 import StatsTab from './components/StatsTab';
-import SplashScreen from './components/SplashScreen';
 import WelcomeGate from './components/WelcomeGate';
 import TrialWall from './components/TrialWall';
 import AuthSheet from './components/auth/AuthSheet';
@@ -65,7 +65,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { useWindowWidth, isMobile, isTiny, bp } from './lib/useWindowWidth';
 
 export default function App() {
-  const [tab, setTab] = useState('chat');
+  const [tab, setTab] = useState('home');
   const [stats, setStats] = useState({ streak: 0, learnedCount: 0, lastVisit: null });
   const [learnedWords, setLearnedWords] = useState({});
   const [reviewTarget, setReviewTarget] = useState(null);
@@ -301,20 +301,14 @@ export default function App() {
   // Dismissal is component state, not storage: the gate is a property of "is
   // there a session", so it comes back on the next load for anyone without one.
   const [gateDismissed, setGateDismissed] = useState(false);
-  // Seeded from `deutsch-level`, not from isAuthConfigured(): env-independent
-  // (spec F7), and it states the real precondition — someone who has never
-  // picked a level needs the picker however they arrived.
-  const [showSplash, setShowSplash] = useState(() => !hasStoredLevel());
   const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
 
   const handleGuest = () => {
     setGateDismissed(true);
-    setShowSplash(true);
   };
   const handleAuthDone = () => {
     setAuthModal(null);
     setGateDismissed(true);
-    setShowSplash(true);
     // Nothing reads this key any more; kept because AGENTS.md forbids removing
     // or migrating a storage key.
     localStorage.setItem('deutsch-onboarded', '1');
@@ -439,11 +433,6 @@ export default function App() {
   const [level, setLevel] = useState(readLevel);
   const sessionGuard = useSessionGuardValue();
 
-  const handleSplashComplete = (chosenLevel) => {
-    setLevel(chosenLevel);
-    setShowSplash(false);
-  };
-
   // `level` is held here and prop-drilled into every tab, so any writer that
   // is not this component (sync pulling a level from another device, the
   // splash, a future caller of writeLevel) would move localStorage and leave
@@ -507,11 +496,12 @@ export default function App() {
   };
 
   const tabs = [
-    { id: 'chat', label: 'Chat', icon: MessageSquare, num: '01' },
-    { id: 'alphabet', label: 'Alphabet', icon: Type, num: '02' },
-    { id: 'vocab', label: 'Vocab', icon: BookOpen, num: '03' },
-    { id: 'translate', label: 'Translate', icon: Languages, num: '04' },
-    { id: 'stats', label: 'Stats', icon: BarChart3, num: '05' },
+    { id: 'home', label: 'Home', icon: Home, num: '01' },
+    { id: 'chat', label: 'Chat', icon: MessageSquare, num: '02' },
+    { id: 'alphabet', label: 'Alphabet', icon: Type, num: '03' },
+    { id: 'vocab', label: 'Vocab', icon: BookOpen, num: '04' },
+    { id: 'translate', label: 'Translate', icon: Languages, num: '05' },
+    { id: 'stats', label: 'Stats', icon: BarChart3, num: '06' },
   ];
 
   // Stats nav badge — count of wrong items + due vocab cards.
@@ -570,14 +560,6 @@ export default function App() {
       </>
     );
   }
-
-  if (showSplash)
-    return (
-      <>
-        <SplashScreen onComplete={handleSplashComplete} />
-        {authOverlay}
-      </>
-    );
 
   return (
     // Practice tabs register their in-flight state here; the header's status
@@ -703,7 +685,9 @@ export default function App() {
             {/* Held back until bp.wide: the desktop header wants 700px but
               `mobile` flips at 640, so the ring overflowed by 60px in between.
               It duplicates the goal strip under the nav, so it waits for room. */}
-            {width >= bp.wide && <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />}
+            {width >= bp.wide && tab !== 'home' && (
+              <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />
+            )}
             <ThemeChip />
             <AccountChip
               user={user}
@@ -832,15 +816,27 @@ export default function App() {
           }}
         >
           {/* On mobile this is the only daily-goal indicator — the header ring is
-            dropped there for width — so it has to appear on every tab. On
-            desktop the ring covers it, and the strip stays scoped to the two
-            practice tabs it was built for. */}
-          {(mobile || tab === 'translate' || tab === 'vocab') && (
+            dropped there for width — so it has to appear on every tab except
+            Home, which already shows its own goal ring below (same reason the
+            desktop header ring hides on Home — see the GoalRing guard further
+            up in this file). On desktop the ring covers it, and the strip
+            stays scoped to the two practice tabs it was built for. */}
+          {(mobile || tab === 'translate' || tab === 'vocab') && tab !== 'home' && (
             <GoalStrip
               streak={game.streak}
               current={game.goal.current}
               target={game.goal.target}
               mult={game.mult}
+            />
+          )}
+          {tab === 'home' && (
+            <HomeTab
+              lvl={game.lvl}
+              totalXp={totalXp(liveState.daily ?? {})}
+              learnedCount={stats.learnedCount ?? 0}
+              goalPct={game.goal.pct}
+              goalMet={game.goal.met}
+              streak={game.streak}
             />
           )}
           {/* The four practice tabs share one positioned wrapper so the trial
