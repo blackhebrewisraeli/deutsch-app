@@ -146,6 +146,43 @@ describe('App navigation a11y', () => {
     renderPastEntry(<App />);
     expect(screen.getByRole('heading', { name: 'Willkommen' })).toBeInTheDocument();
   });
+
+  // The labelled nav needs 809px (measured: six labels + the 01-06 prefixes +
+  // padding + gaps), but labels used to switch on at `mobile` = 640. In that
+  // 640-809 band every button is forced to an equal flex share — 105px at
+  // 700px — while "Translate" alone wants 149px, so the label overflowed its
+  // button and ran into the neighbour's.
+  //
+  // No overflow assertion catches this: the buttons carry minWidth: 0, so the
+  // nav never grows and never scrolls sideways — it just renders text on top
+  // of text. (A jsdom scrollWidth check would be worse than useless here;
+  // jsdom reports 0 for every element, so it could not fail. The width itself
+  // is verified in a real browser.) The honest assertion is what the button
+  // renders: an icon-only button has no text of its own.
+  it('renders the nav icon-only below the width where labels fit', () => {
+    setViewportWidth(700);
+    renderPastEntry(<App />);
+    const nav = within(screen.getByRole('navigation'));
+    for (const name of TAB_NAMES) {
+      const button = nav.getByRole('button', { name });
+      expect(button).toHaveAttribute('aria-label', name);
+      // Icon-only: the accessible name comes from aria-label, never from text
+      // the button paints. Asserted as "does not contain the label" rather
+      // than "has no text at all" because the Stats button also carries the
+      // attention badge, which is legitimately text.
+      expect(button.textContent).not.toContain(name);
+      expect(button.querySelector('svg')).toBeInTheDocument();
+    }
+  });
+
+  // Positive control for the test above: without this, simply never rendering
+  // labels at any width would pass it.
+  it('restores the nav labels once there is room for them', () => {
+    setViewportWidth(900);
+    renderPastEntry(<App />);
+    const nav = within(screen.getByRole('navigation'));
+    expect(nav.getByRole('button', { name: 'Translate' })).toHaveTextContent('Translate');
+  });
 });
 
 // The header held logo + level badge + streak + goal ring + account chip,
