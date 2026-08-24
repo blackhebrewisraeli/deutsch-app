@@ -56,7 +56,7 @@ vi.mock('./lib/sync', async (importOriginal) => ({
   markDirty: syncMock.markDirty,
 }));
 
-const TAB_NAMES = ['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
+const TAB_NAMES = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
 
 const setViewportWidth = (width) => {
   Object.defineProperty(window, 'innerWidth', {
@@ -136,7 +136,8 @@ describe('App navigation a11y', () => {
     setViewportWidth(1280);
     renderPastEntry(<App />);
     const nav = within(screen.getByRole('navigation'));
-    expect(nav.getByRole('button', { name: 'Chat' })).toHaveAttribute('aria-current', 'page');
+    expect(nav.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
+    expect(nav.getByRole('button', { name: 'Chat' })).not.toHaveAttribute('aria-current');
     expect(nav.getByRole('button', { name: 'Stats' })).not.toHaveAttribute('aria-current');
   });
 });
@@ -180,14 +181,25 @@ describe('header at mobile width', () => {
     expect(header.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
   });
 
-  it('keeps the goal ring in the header on desktop', () => {
+  it('keeps the goal ring in the header on desktop', async () => {
     setViewportWidth(1280);
+    const user = userEvent.setup();
     renderPastEntry(<App />);
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' }));
     const header = within(screen.getByRole('banner'));
     expect(header.getByTitle(/Daily goal/)).toBeInTheDocument();
   });
 
-  it.each(['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'])(
+  // Home already shows its own, bigger GoalRing — the header's compact one
+  // would be an exact duplicate sitting right above it.
+  it('hides the header goal ring on the Home tab, where HomeTab already shows one', () => {
+    setViewportWidth(1280);
+    renderPastEntry(<App />);
+    const header = within(screen.getByRole('banner'));
+    expect(header.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
+  });
+
+  it.each(['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'])(
     'shows daily-goal progress on the %s tab on mobile',
     async (tabName) => {
       setViewportWidth(375);
@@ -271,9 +283,11 @@ describe('header at mobile width', () => {
 
   // On desktop the header ring carries the signal, so the strip stays scoped to
   // the two practice tabs it was built for.
-  it('leaves the strip off the chat tab on desktop, where the ring covers it', () => {
+  it('leaves the strip off the chat tab on desktop, where the ring covers it', async () => {
     setViewportWidth(1280);
+    const user = userEvent.setup();
     renderPastEntry(<App />);
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' }));
     expect(goalStrip()).not.toBeInTheDocument();
     expect(within(screen.getByRole('banner')).getByTitle(/Daily goal/)).toBeInTheDocument();
   });
@@ -423,6 +437,12 @@ describe('guest trial wall', () => {
     const { default: AppWithAuth } = await import('./App.jsx');
     setViewportWidth(1280);
     renderPastEntry(<AppWithAuth />);
+    // Home is the landing tab now and is never walled — land on a practice
+    // tab first, exactly as every test below originally assumed when Chat
+    // was the default landing tab.
+    await userEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' })
+    );
   }
 
   const wall = () => screen.queryByRole('dialog', { name: 'Save your progress' });
@@ -448,6 +468,15 @@ describe('guest trial wall', () => {
     const user = userEvent.setup();
     await renderApp();
     await goToTab(user, 'Stats');
+    expect(wall()).not.toBeInTheDocument();
+  });
+
+  it('never walls the Home tab — it is the new landing surface', async () => {
+    await renderApp();
+    // renderApp already navigated to Chat (walled); step back to Home.
+    await userEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Home' })
+    );
     expect(wall()).not.toBeInTheDocument();
   });
 
@@ -508,24 +537,29 @@ describe('guest trial wall', () => {
   // "Tagesziel erreicht!" toast and the confetti burst. The wall must wait for
   // the celebration to finish rather than stamping itself over it.
   it('waits for a running celebration to finish before it appears', async () => {
+    // All four tabs sampled but only 40 XP against a 50 XP goal: one half of
+    // the peak met, so the trial is still running.
+    await renderApp({
+      state: {
+        daily: {
+          [todayKey()]: {
+            total: 8,
+            byTab: { chat: 2, alphabet: 2, vocab: 2, translate: 2 },
+            byLevel: { a1: { correct: 4, almost: 0, wrong: 0 } },
+          },
+        },
+        gamification: { goal: 50 },
+      },
+    });
+    expect(wall()).not.toBeInTheDocument();
+
+    // Fake timers activate only now — renderApp's own Chat-tab click (added
+    // for the Home-landing-tab change) needs real timers to resolve; the
+    // click's internal delay is a real setTimeout that fake time never
+    // advances, so starting fake timers before renderApp() hangs it forever.
+    // Only the celebration-timing assertions below need deterministic time.
     vi.useFakeTimers();
     try {
-      // All four tabs sampled but only 40 XP against a 50 XP goal: one half of
-      // the peak met, so the trial is still running.
-      await renderApp({
-        state: {
-          daily: {
-            [todayKey()]: {
-              total: 8,
-              byTab: { chat: 2, alphabet: 2, vocab: 2, translate: 2 },
-              byLevel: { a1: { correct: 4, almost: 0, wrong: 0 } },
-            },
-          },
-          gamification: { goal: 50 },
-        },
-      });
-      expect(wall()).not.toBeInTheDocument();
-
       // The round that tips the day over the goal. Preserve the gamification
       // block App just wrote so this reads as one more round, not a reset.
       const cur = JSON.parse(localStorage.getItem('deutsch-app-state-v1'));

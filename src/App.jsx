@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages } from 'lucide-react';
+import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages, Home } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
@@ -31,6 +31,7 @@ import {
 import { activePack } from './packs';
 const { decks: PRESET_DECKS } = activePack.content;
 import { StatBlock } from './components/UI';
+import HomeTab from './components/HomeTab';
 import ChatTab from './components/ChatTab';
 import AlphabetTab from './components/AlphabetTab';
 import VocabTab from './components/VocabTab';
@@ -64,7 +65,7 @@ import { Analytics } from '@vercel/analytics/react';
 import { useWindowWidth, isMobile, isTiny, bp } from './lib/useWindowWidth';
 
 export default function App() {
-  const [tab, setTab] = useState('chat');
+  const [tab, setTab] = useState('home');
   const [stats, setStats] = useState({ streak: 0, learnedCount: 0, lastVisit: null });
   const [learnedWords, setLearnedWords] = useState({});
   const [reviewTarget, setReviewTarget] = useState(null);
@@ -495,11 +496,12 @@ export default function App() {
   };
 
   const tabs = [
-    { id: 'chat', label: 'Chat', icon: MessageSquare, num: '01' },
-    { id: 'alphabet', label: 'Alphabet', icon: Type, num: '02' },
-    { id: 'vocab', label: 'Vocab', icon: BookOpen, num: '03' },
-    { id: 'translate', label: 'Translate', icon: Languages, num: '04' },
-    { id: 'stats', label: 'Stats', icon: BarChart3, num: '05' },
+    { id: 'home', label: 'Home', icon: Home, num: '01' },
+    { id: 'chat', label: 'Chat', icon: MessageSquare, num: '02' },
+    { id: 'alphabet', label: 'Alphabet', icon: Type, num: '03' },
+    { id: 'vocab', label: 'Vocab', icon: BookOpen, num: '04' },
+    { id: 'translate', label: 'Translate', icon: Languages, num: '05' },
+    { id: 'stats', label: 'Stats', icon: BarChart3, num: '06' },
   ];
 
   // Stats nav badge — count of wrong items + due vocab cards.
@@ -683,7 +685,9 @@ export default function App() {
             {/* Held back until bp.wide: the desktop header wants 700px but
               `mobile` flips at 640, so the ring overflowed by 60px in between.
               It duplicates the goal strip under the nav, so it waits for room. */}
-            {width >= bp.wide && <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />}
+            {width >= bp.wide && tab !== 'home' && (
+              <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />
+            )}
             <ThemeChip />
             <AccountChip
               user={user}
@@ -821,6 +825,16 @@ export default function App() {
               current={game.goal.current}
               target={game.goal.target}
               mult={game.mult}
+            />
+          )}
+          {tab === 'home' && (
+            <HomeTab
+              lvl={game.lvl}
+              totalXp={totalXp(liveState.daily ?? {})}
+              learnedCount={stats.learnedCount ?? 0}
+              goalPct={game.goal.pct}
+              goalMet={game.goal.met}
+              streak={game.streak}
             />
           )}
           {/* The four practice tabs share one positioned wrapper so the trial
