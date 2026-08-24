@@ -2,6 +2,7 @@ import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE } from '..
 import { isAuthConfigured } from '../lib/auth.js';
 import Button from './ui/Button';
 import GoogleButton from './auth/GoogleButton';
+import ThemeChip from './ThemeChip';
 
 /** Minimum comfortable touch target, px — the iOS Human Interface guideline. */
 const TAP_TARGET_MIN = 44;
@@ -16,6 +17,7 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
     <div
       className="entry-screen"
       style={{
+        position: 'relative',
         background: COLORS.paper,
         color: COLORS.ink,
         display: 'flex',
@@ -27,6 +29,13 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
         padding: 24,
       }}
     >
+      {/* Theme access from the very first frame. This is the only screen that
+          renders before the main app's own header (which already has
+          ThemeChip) once the level-picker splash is gone, so it gets its own
+          corner rather than a shared shell. */}
+      <div style={{ position: 'absolute', top: 16, right: 16 }}>
+        <ThemeChip />
+      </div>
       <div
         style={{ fontSize: 64, fontWeight: FONT_WEIGHT.black, letterSpacing: LETTER_SPACING.tight }}
       >
