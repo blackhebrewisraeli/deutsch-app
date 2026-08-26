@@ -200,7 +200,9 @@ export default function TutorialOverlay({ anchors = {}, onDismiss }) {
         <div style={{ display: 'flex', gap: SPACE[2], alignItems: 'center' }}>
           <Button
             variant="primary"
-            style={{ flex: 1, minWidth: 0 }}
+            // nowrap: at 320px "GOT IT" broke onto two lines beside the Skip
+            // control. Both labels are short enough that this cannot overflow.
+            style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap' }}
             onClick={() => (isLast ? dismiss() : setStepIndex((i) => i + 1))}
           >
             {isLast ? 'Got it' : 'Next'}

@@ -94,6 +94,25 @@ describe('reporting an issue from inside an exercise', () => {
       expect(payload.itemLabel).toBe(second.de);
     });
 
+    // jsdom computes no layout, so this pins the structural property that the
+    // browser measurement proved, not the pixels: the progress row must be able
+    // to wrap, and the report button must not sit in the dot cluster. Removing
+    // either put the Vocab tab 125px past a 320px viewport. See the comment
+    // above this row in VocabTab.jsx for the measurements.
+    it('keeps the report button out of the deck-progress cluster, in a row that can wrap', () => {
+      renderTab();
+      const button = screen.getByRole('button', { name: /report an issue/i });
+      const dots = screen.getAllByTestId('deck-progress-dot');
+      const strip = dots[0].parentElement;
+
+      expect(button.parentElement).not.toBe(strip);
+      expect(strip.contains(button)).toBe(false);
+
+      const row = strip.parentElement;
+      expect(row.contains(button)).toBe(true); // same row, different group
+      expect(row.style.flexWrap).toBe('wrap');
+    });
+
     it('never puts the German word on screen while reporting it', async () => {
       // The word is concealed by CardFace for the drill decks — the report
       // dialog must not be the back door to it.

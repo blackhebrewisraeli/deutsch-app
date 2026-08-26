@@ -315,26 +315,46 @@ export default function VocabTab({
           {card && (
             <>
               {/* Progress bar */}
+              {/* `flexWrap` is load-bearing, and it fixes a bug that predates
+                the report button. Measured in Chrome at 320px:
+
+                  before this change, no button ...... 73px sideways scroll
+                  report button in the dots cluster .. 125px
+                  this layout ........................ 0px
+
+                DeckProgress's dots are `flex: 0 1 26px`, so they can shrink —
+                but sharing a line with the "N cards remaining" label left them
+                too little room to shrink into, and the strip stood at 305px in
+                a 304px row. Giving the row `flexWrap` drops the strip onto its
+                own line, where that shrink finally has somewhere to go: 288px
+                at both 10 dots and 12, which is DOT_THRESHOLD and therefore the
+                widest the strip can ever be. The report button then sits in the
+                left group, where it costs the row nothing.
+
+                So: do not remove flexWrap, and do not move the button back in
+                beside the dots. Verified in a browser because jsdom computes no
+                layout — the test below pins the property, not the pixels. */}
               <div
                 style={{
                   display: 'flex',
+                  flexWrap: 'wrap',
                   justifyContent: 'space-between',
                   alignItems: 'center',
+                  gap: SPACE[2],
                   marginBottom: SPACE[4],
                 }}
               >
-                <div
-                  style={{
-                    fontFamily: FONTS.mono,
-                    fontSize: FONT_SIZE.tag,
-                    letterSpacing: LETTER_SPACING.caps,
-                    color: COLORS.mute,
-                  }}
-                >
-                  {queue.length} card{queue.length !== 1 ? 's' : ''} remaining
-                </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[2] }}>
-                  <DeckProgress cards={activeDeck} learnedWords={learnedWords} />
+                  <div
+                    style={{
+                      fontFamily: FONTS.mono,
+                      fontSize: FONT_SIZE.tag,
+                      letterSpacing: LETTER_SPACING.caps,
+                      color: COLORS.mute,
+                    }}
+                  >
+                    {queue.length} card{queue.length !== 1 ? 's' : ''} remaining
+                  </div>
                   {/* itemLabel is card.de — the very thing CardFace conceals on
                     the Hören and Artikel decks. Captured for triage, never
                     rendered; see FeedbackDialog. */}
@@ -348,6 +368,7 @@ export default function VocabTab({
                     }}
                   />
                 </div>
+                <DeckProgress cards={activeDeck} learnedWords={learnedWords} />
               </div>
 
               {deckComplete && (
