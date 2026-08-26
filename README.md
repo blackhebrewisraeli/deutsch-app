@@ -843,11 +843,11 @@ Development and Production are **separate blast radii**. A developer running the
 | **Secrets never scope down**   | A production secret is never created in a Development-scope environment variable. Server-side keys are Production + Preview only, marked Sensitive, and are not `env pull`-able. | ✅ |
 | **The browser holds no secret**| `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and every other server credential live only in Vercel functions. The bundle ships publishable values only (`VITE_SUPABASE_ANON_KEY`, the Sentry DSN), which are safe precisely because RLS is the guard. | ✅ |
 | **Local schema work is local** | Schema changes and the adversarial RLS suite (`npm run test:rls`) run against a **local Supabase** in Docker, never against the cloud project. CI does the same. | ✅ |
-| **Separate data planes**       | Development runs against its own Supabase project with its own synthetic learners, so no local session can reach a production row. **Today it does not:** `.env` points local development at the same project Production uses. Closing this is the next security item on the roadmap. | ⬜ |
+| **Separate data planes**       | Local development runs against the **local Supabase stack** (`supabase start`, Docker) with its own synthetic learners — `.env.example` ships the published local defaults, and Vercel deliberately holds **no** Development-scope Supabase entry, so `vercel dev` cannot inject a cloud URL. No local session can reach a production row. | ✅ |
 | **No production data locally** | Production rows are never copied to a developer machine. Reproducing a bug uses a synthetic fixture or an anonymised extract — never a `pg_dump` of live learners. | ⬜ |
 | **Preview is production-shaped, not production-fed** | Preview deployments exercise the production code path with production-shaped configuration, but must terminate in the non-production data plane once the split above lands. | 🚧 |
 
-> **Why this is worth stating before it is fully true.** The service-role key sat readable-back in a Development-scope variable for 75 days before [#155](https://github.com/blackhebrewisraeli/deutsch-app/pull/155) removed it. Nothing failed, no test went red, and no reviewer noticed — the boundary had never been written down, so nothing could contradict it. Writing the standard first is what makes the drift visible.
+> **Why writing the standard down first mattered.** The service-role key sat readable-back in a Development-scope variable for 75 days before [#155](https://github.com/blackhebrewisraeli/deutsch-app/pull/155) removed it. Nothing failed, no test went red, and no reviewer noticed — the boundary had never been written down, so nothing could contradict it. The row above was published as ⬜ for exactly that reason, and closed days later: `.env.example` had been handing every new developer the **production** project ref as its default, and local `.env` still carried a real service-role key — which bypasses RLS, so local development held unrestricted **write** access to live learner data, not merely read. Naming the gap in the table is what turned it into a task.
 
 ### Roles
 
@@ -956,6 +956,8 @@ npm run dev:full     # UI-only work: npm run dev (AI calls disabled)
 ```
 
 Open **[http://localhost:5173](http://localhost:5173)**.
+
+**Working on accounts, sync or leagues?** Start the local database first — `supabase start` (needs Docker), then copy `.env.example` to `.env` as-is. Those defaults point at the local stack on purpose: local development never talks to the cloud project that serves production ([why](#-security--role-architecture)). Without it the app simply runs guest-only, which is fine for everything that does not need an account.
 
 **Available scripts:**
 
