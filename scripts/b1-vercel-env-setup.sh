@@ -131,9 +131,20 @@ echo "→ setting SUPABASE_URL"
 upsert_cli SUPABASE_URL "$SUPABASE_URL" "" production development
 upsert_preview_api SUPABASE_URL "$SUPABASE_URL" encrypted
 
+# The service-role key bypasses RLS entirely, so it is stored --sensitive
+# (write-only: Vercel will not read it back through the CLI or API).
+#
+# Deliberately NOT set on `development`. Vercel cannot mark a var sensitive AND
+# let `vercel env pull` read it back, so a development-scope copy could only be
+# --no-sensitive — i.e. a readable-back copy of the production service-role key,
+# since this project has a single Supabase instance for every environment.
+# It bought nothing: `vercel dev` already resolves the key from the gitignored
+# local `.env`, verified by probing process.env inside a running function both
+# before and after the development entry was removed (2026-08-26).
+# For a fresh clone, put the key in `.env` from Supabase → Settings → API,
+# exactly as this script's own header instructs.
 echo "→ setting SUPABASE_SERVICE_ROLE_KEY"
 upsert_cli SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY" --sensitive production
-upsert_cli SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY" --no-sensitive development
 upsert_preview_api SUPABASE_SERVICE_ROLE_KEY "$SUPABASE_SERVICE_ROLE_KEY" sensitive
 
 echo "→ setting ALLOWED_ORIGINS (production only)"
