@@ -13,9 +13,9 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-1,551_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-1,625_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
-  <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-23_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
+  <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-38_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
   &nbsp;
   <img alt="Lexicon" src="https://img.shields.io/badge/Lexicon-4,288_words-D62828?style=flat-square"/>
   &nbsp;
@@ -134,7 +134,7 @@ All AI features call **Claude Haiku 4.5** through a versioned server-side API (`
 | **Social**           | Weekly XP leagues, ~25-person cohorts, promotion / relegation                                                          |
 | **AI**               | Claude Haiku 4.5 behind `/api/v1/ai/*` — key stays server-side                                                         |
 | **Data**             | Local-first (`localStorage`), optional Supabase sync under row-level security                                          |
-| **Quality gates**    | 1,551 tests · 23 adversarial RLS tests · lint + format + full suite on every commit                                      |
+| **Quality gates**    | 1,625 tests · 38 adversarial RLS tests · lint + format + full suite on every commit                                      |
 
 ---
 
@@ -682,7 +682,7 @@ A second pass, started the same day the table above shipped, reworked how learne
 | Error monitoring   | **Sentry** (errors-only)                                    | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay; each build stamps the deploy commit as the release and uploads source maps                                                                                                                                                                                                             |
 | Linting            | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars                                                                                                                                                                                                                                                                                                                            |
 | Formatting         | **Prettier 3**                                              | Consistent code style, enforced on every commit                                                                                                                                                                                                                                                                                                                              |
-| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **1,551 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **23-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
+| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **1,625 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **38-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
 | CI                 | **GitHub Actions**                                          | `ci.yml` runs lint + test + build on every push to `main` and every PR, plus the RLS suite against a local Supabase                                                                                                                                                                                                                                                           |
 | Uptime             | **GitHub Actions** (`uptime.yml`)                           | Every 6h, exercises real round trips — demo root, lexicon manifest, GoTrue `/health` and `/settings`, PostgREST — and fails loudly if any hop is down. Read-only; never sends mail                                                                                                                                                                                            |
 | Pre-commit         | **Husky + lint-staged**                                     | Runs ESLint + Prettier + the full test suite before every `git commit`                                                                                                                                                                                                                                                                                                       |
@@ -877,7 +877,7 @@ The posture that makes this hold:
 
 - **Revoked by default.** Data API privileges are granted explicitly per table and per role ([`20260612201311_data_api_explicit_grants.sql`](./supabase/migrations/20260612201311_data_api_explicit_grants.sql)); nothing is auto-exposed. A new table is unreachable until someone grants it deliberately.
 - **Two independent gates.** A request must clear the *privilege* layer (does this role hold `select` on this table at all?) and then the *policy* layer (does this row belong to this caller?). `anon` never reaches the second gate.
-- **Adversarially tested.** A **23-test RLS suite** (`npm run test:rls`) attacks the policies through real PostgREST — as `anon`, as a signed-in learner reaching for another learner's rows, as a caller forging a `user_id` — and runs in CI against a local Supabase on every push and PR. A policy regression fails the build.
+- **Adversarially tested.** A **38-test RLS suite** (`npm run test:rls`) attacks the policies through real PostgREST — as `anon`, as a signed-in learner reaching for another learner's rows, as a caller forging a `user_id` — and runs in CI against a local Supabase on every push and PR. A policy regression fails the build.
 - **Least privilege in the grants themselves.** `authenticated` holds `delete` on the four data tables but not on `profiles`, mirroring the deliberate absence of a delete policy: removing an account is an operator path, not something a client can do by sending a `DELETE`.
 
 **The standard for anything added later:** a new user-owned table ships with RLS enabled, an explicit grant, an owner-scoped policy, and at least one adversarial test that proves a non-owner is refused — in the same PR that creates it. A table that reaches `main` without all four is a defect, not a follow-up.
