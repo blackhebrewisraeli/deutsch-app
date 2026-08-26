@@ -4,8 +4,22 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import { todayKey } from './lib/stats';
 import { isLevelBoostEnabled, setLevelBoostEnabled } from './lib/xpEntitlement';
+import { TUTORIAL_KEY } from './lib/tutorialPref';
 
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
+
+/**
+ * Mark the first-run walkthrough as already seen.
+ *
+ * Every block in this file except the walkthrough's own renders the app as a
+ * RETURNING learner, which is what they always implicitly assumed — before the
+ * tour existed there was nothing on top of the shell. Without this the tour's
+ * scrim and its "Skip tutorial" button sit over each of them, and its button
+ * collides with Translate's own SKIP.
+ */
+const asReturningLearner = () => localStorage.setItem(TUTORIAL_KEY, 'true');
+
+beforeEach(asReturningLearner);
 
 const authMock = vi.hoisted(() => ({
   configured: true,
@@ -447,6 +461,7 @@ describe('guest trial wall', () => {
     // the file — clear it so a seeded account from an earlier block cannot
     // decide whether the trial is exhausted here.
     localStorage.clear();
+    asReturningLearner();
     localStorage.setItem('deutsch-level', 'a1');
     vi.resetModules();
   });
@@ -830,6 +845,7 @@ describe('level coordination', () => {
     // ChatTab's mount scroll. jsdom has no scrollIntoView.
     Element.prototype.scrollIntoView = vi.fn();
     localStorage.clear();
+    asReturningLearner();
     authMock.configured = false;
     authMock.status = 'anonymous';
     authMock.mayHaveSession = false;
@@ -1051,5 +1067,124 @@ describe('sync engine wiring', () => {
     expect(syncMock.start).not.toHaveBeenCalled();
     expect(syncMock.markDirty).not.toHaveBeenCalled();
     expect(syncMock.stop).toHaveBeenCalled();
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════
+//  First-run walkthrough
+// ═══════════════════════════════════════════════════════════════
+//
+// The overlay's own placement maths is unit-tested against stubbed rects in
+// tutorial/geometry.test.js. What can only be checked here is the wiring: that
+// each step's ref is attached to the DOM node it claims, and that the tour
+// reaches a learner past the entry gate at all. jsdom lays nothing out, so the
+// rects are stubbed onto the REAL header and nav nodes and a resize is fired to
+// make the overlay re-measure them.
+describe('first-run walkthrough', () => {
+  const asRect = (left, top, width, height) => () => ({
+    left,
+    top,
+    width,
+    height,
+    right: left + width,
+    bottom: top + height,
+    x: left,
+    y: top,
+  });
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    localStorage.setItem('deutsch-level', 'a1');
+    authMock.configured = false;
+    authMock.status = 'anonymous';
+    authMock.mayHaveSession = false;
+    setViewportWidth(1280);
+  });
+
+  const tour = () => screen.queryByRole('dialog', { name: /tutorial/i });
+  const statusChip = () =>
+    within(screen.getByRole('banner')).getByRole('button', { name: /open status/i });
+  const navButton = (name) => within(screen.getByRole('navigation')).getByRole('button', { name });
+  // The status step anchors to the wrapper around StatusChip, not to the chip
+  // button inside it — StatusChip owns its own root ref, so the walkthrough
+  // gets its handle from outside. In a browser the wrapper is a flex item
+  // sized to that chip; jsdom lays nothing out, so it is what must be stubbed.
+  const statusAnchor = () => statusChip().closest('[data-tutorial-anchor="status"]');
+
+  it('greets a learner who has never dismissed it', () => {
+    renderPastEntry(<App />);
+    expect(tour()).toBeInTheDocument();
+    expect(screen.getByText('Step 1 of 3')).toBeInTheDocument();
+  });
+
+  it('stays away once the learner has dismissed it', () => {
+    asReturningLearner();
+    renderPastEntry(<App />);
+    expect(tour()).not.toBeInTheDocument();
+  });
+
+  it('hands the app back and remembers, when Skip tutorial is clicked', async () => {
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+    await user.click(screen.getByRole('button', { name: /skip tutorial/i }));
+
+    expect(tour()).not.toBeInTheDocument();
+    expect(localStorage.getItem(TUTORIAL_KEY)).toBe('true');
+    // The app underneath is intact and usable.
+    expect(navButton('Chat')).toBeInTheDocument();
+  });
+
+  it('anchors each step to the header chip, then Chat, then Stats', async () => {
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+
+    // Distinct, non-overlapping rects so a ref pointing at the wrong node
+    // cannot coincidentally land in the right place.
+    statusAnchor().getBoundingClientRect = asRect(900, 10, 52, 52);
+    navButton('Chat').getBoundingClientRect = asRect(200, 90, 120, 48);
+    navButton('Stats').getBoundingClientRect = asRect(600, 90, 120, 48);
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    const bubbleCentre = () => {
+      const b = screen.getByTestId('tutorial-bubble');
+      return Number.parseFloat(b.style.left) + Number.parseFloat(b.style.width) / 2;
+    };
+
+    expect(bubbleCentre()).toBeCloseTo(926, 0); // status chip centre
+    await user.click(screen.getByRole('button', { name: /next/i }));
+    expect(bubbleCentre()).toBeCloseTo(260, 0); // Chat nav centre
+    await user.click(screen.getByRole('button', { name: /next/i }));
+    expect(bubbleCentre()).toBeCloseTo(660, 0); // Stats nav centre
+  });
+
+  it('keeps the whole tour inside a 320px viewport, over the real chrome', async () => {
+    const user = userEvent.setup();
+    setViewportWidth(320);
+    Object.defineProperty(window, 'innerHeight', {
+      writable: true,
+      configurable: true,
+      value: 568,
+    });
+    renderPastEntry(<App />);
+
+    // Icon-only nav at bp.tiny: six buttons across 320px, the last flush right.
+    statusAnchor().getBoundingClientRect = asRect(262, 8, 42, 42);
+    navButton('Chat').getBoundingClientRect = asRect(55, 60, 45, 44);
+    navButton('Stats').getBoundingClientRect = asRect(265, 60, 45, 44);
+    act(() => {
+      window.dispatchEvent(new Event('resize'));
+    });
+
+    for (let step = 1; step <= 3; step += 1) {
+      const b = screen.getByTestId('tutorial-bubble');
+      const left = Number.parseFloat(b.style.left);
+      const width = Number.parseFloat(b.style.width);
+      expect(left, `step ${step} left edge`).toBeGreaterThanOrEqual(0);
+      expect(left + width, `step ${step} right edge`).toBeLessThanOrEqual(320);
+      if (step < 3) await user.click(screen.getByRole('button', { name: /next/i }));
+    }
   });
 });

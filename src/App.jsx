@@ -61,6 +61,7 @@ import ToastStack from './components/ui/Toast';
 import StatusChip from './components/StatusChip';
 import GoalRing from './components/gamification/GoalRing';
 import GoalStrip from './components/gamification/GoalStrip';
+import TutorialOverlay from './components/TutorialOverlay';
 import { Analytics } from '@vercel/analytics/react';
 import { useWindowWidth, isMobile, isTiny, isTablet, bp } from './lib/useWindowWidth';
 
@@ -70,6 +71,15 @@ export default function App() {
   const [learnedWords, setLearnedWords] = useState({});
   const [reviewTarget, setReviewTarget] = useState(null);
   const [streakBurst, setStreakBurst] = useState(false);
+
+  // ── First-run walkthrough anchors ─────────────────────────────
+  // The overlay measures these three nodes to place its bubbles. They are refs
+  // rather than a context registry because the targets are all rendered right
+  // here — a provider would be indirection with one consumer.
+  const statusAnchorRef = useRef(null);
+  const chatAnchorRef = useRef(null);
+  const statsAnchorRef = useRef(null);
+  const tutorialAnchors = { status: statusAnchorRef, chat: chatAnchorRef, stats: statsAnchorRef };
 
   // ── Gamification ──────────────────────────────────────────────
   // Derived from storage, refreshed on every `deutsch:progress` event.
@@ -672,16 +682,21 @@ export default function App() {
             {/* One control for both "levels": the earned XP one and the chosen
               CEFR one. They stay distinct inside the sheet, under their own
               headings — see StatusChip. */}
-            <StatusChip
-              level={level}
-              onLevelChange={setLevel}
-              xpLevel={game.lvl.level}
-              progress={game.lvl.progress}
-              rank={game.lvl.rankName}
-              xpIntoLevel={game.lvl.xpIntoLevel}
-              xpToNext={game.lvl.xpToNext}
-              size={mobile ? 42 : 52}
-            />
+            {/* A wrapper, not a ref forwarded into StatusChip: the chip is one
+              of three non-modal header popovers under a guard test, and giving
+              the walkthrough a handle on it is not worth reopening that. */}
+            <span ref={statusAnchorRef} data-tutorial-anchor="status" style={{ display: 'flex' }}>
+              <StatusChip
+                level={level}
+                onLevelChange={setLevel}
+                xpLevel={game.lvl.level}
+                progress={game.lvl.progress}
+                rank={game.lvl.rankName}
+                xpIntoLevel={game.lvl.xpIntoLevel}
+                xpToNext={game.lvl.xpToNext}
+                size={mobile ? 42 : 52}
+              />
+            </span>
             <StatBlock
               label={mobile ? '' : 'STREAK'}
               value={stats.streak}
@@ -736,6 +751,9 @@ export default function App() {
             return (
               <button
                 key={t.id}
+                ref={
+                  t.id === 'chat' ? chatAnchorRef : t.id === 'stats' ? statsAnchorRef : undefined
+                }
                 onClick={() => setTab(t.id)}
                 aria-label={t.label}
                 aria-current={active ? 'page' : undefined}
@@ -950,6 +968,11 @@ export default function App() {
             <span>// Powered by Claude</span>
           </footer>
         )}
+
+        {/* Only reachable past the entry gate, which early-returns above — so a
+          brand-new account meets the gate first and the tour on the frame after
+          it, never both at once. */}
+        <TutorialOverlay anchors={tutorialAnchors} />
 
         <Analytics />
         {authOverlay}
