@@ -91,6 +91,7 @@
 | ⚙️ | [How it works](#-how-it-works) |
 | 🛠️ | [Tech stack](#-tech-stack) |
 | 🌍 | [Architecture](#-multi-language-architecture) |
+| 🛡️ | [Security & roles](#-security--role-architecture) |
 | 🚀 | [Deploy](#-deploy-to-production) |
 | 📁 | [Project structure](#-project-structure) |
 
@@ -818,6 +819,86 @@ User: Return: [{ en, de, template, blanks: [{ word, distractors }], note }]
 ```
 
 All JSON responses strip markdown fences (` ```json ... ``` `) before `JSON.parse()` as a defensive measure.
+
+</details>
+
+---
+
+## 🛡️ Security & Role Architecture
+
+<details>
+<summary>▸ <b>Environment isolation, roles, and the RLS seal — the standard and where reality sits against it</b></summary>
+
+
+This section is a **standard**, not a changelog. It states the boundaries the project commits to as it matures, and marks honestly which are enforced today (✅), partially enforced (🚧), or still planned (⬜). Where reality diverges from the standard, that gap is written down here rather than left implicit.
+
+The governing principle throughout is **least privilege**: every actor — a browser, a serverless function, a developer, a CI job — gets the narrowest access that lets it do its job, and nothing wider. Access is granted by role, never by identity, and never "temporarily".
+
+### Environment isolation
+
+Development and Production are **separate blast radii**. A developer running the app locally must never be able to read, mutate, or destroy production learner data — not by accident, not by a misdirected migration, not by a stray `delete` in a REPL.
+
+| Boundary                       | Rule                                                                                                                                                                   | State |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---: |
+| **Secrets never scope down**   | A production secret is never created in a Development-scope environment variable. Server-side keys are Production + Preview only, marked Sensitive, and are not `env pull`-able. | ✅ |
+| **The browser holds no secret**| `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and every other server credential live only in Vercel functions. The bundle ships publishable values only (`VITE_SUPABASE_ANON_KEY`, the Sentry DSN), which are safe precisely because RLS is the guard. | ✅ |
+| **Local schema work is local** | Schema changes and the adversarial RLS suite (`npm run test:rls`) run against a **local Supabase** in Docker, never against the cloud project. CI does the same. | ✅ |
+| **Separate data planes**       | Development runs against its own Supabase project with its own synthetic learners, so no local session can reach a production row. **Today it does not:** `.env` points local development at the same project Production uses. Closing this is the next security item on the roadmap. | ⬜ |
+| **No production data locally** | Production rows are never copied to a developer machine. Reproducing a bug uses a synthetic fixture or an anonymised extract — never a `pg_dump` of live learners. | ⬜ |
+| **Preview is production-shaped, not production-fed** | Preview deployments exercise the production code path with production-shaped configuration, but must terminate in the non-production data plane once the split above lands. | 🚧 |
+
+> **Why this is worth stating before it is fully true.** The service-role key sat readable-back in a Development-scope variable for 75 days before [#155](https://github.com/blackhebrewisraeli/deutsch-app/pull/155) removed it. Nothing failed, no test went red, and no reviewer noticed — the boundary had never been written down, so nothing could contradict it. Writing the standard first is what makes the drift visible.
+
+### Roles
+
+Three roles, defined by what they may reach rather than by who holds them. Roles are additive in privilege but **not** in data access: `Admin` is not a super-`Learner`, and no role grants the ability to read an individual learner's content.
+
+| Role          | Who it is                                            | May reach                                                                                                                            | May never reach                                                                                     | State |
+| ------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | :---: |
+| **`Learner`** | The end user of the app — signed in or anonymous     | **Own rows only**: their SRS state, stats, decks, settings, profile. League standings only as the aggregated, display-safe projection the leaderboard already exposes. | Any other learner's rows; any server credential; any table not in the five user-owned tables.        | ✅ |
+| **`Developer`**| Anyone with repository write access                  | Source, specs, CI, and the **Development** data plane in full. Production **telemetry** — Sentry issues, Vercel logs, uptime results — which carry no PII by configuration. | Production learner rows, production secrets in readable form, and the production service-role key.   | 🚧 |
+| **`Admin`**   | The project owner / on-call operator                 | System-wide: production secrets rotation, migrations, Vercel and Supabase dashboards, account deletion, league settlement.            | Nothing is technically out of reach — which is exactly why the role is held by the fewest people possible and every use is deliberate. | 🚧 |
+
+**Mapping onto what enforces it.** The three roles above are the *organisational* contract; underneath, Postgres enforces its own, and the two are deliberately not the same set:
+
+| Postgres role   | Privileges                                                                              | Held by                          |
+| --------------- | ----------------------------------------------------------------------------------------- | -------------------------------- |
+| `anon`          | **Nothing.** Denied at the privilege layer, before RLS is even consulted.                | Unauthenticated Data API callers |
+| `authenticated` | Own-row CRUD on the five user tables, bounded by RLS. No `delete` on `profiles` — account deletion is a server-side operation. | A signed-in `Learner`            |
+| `service_role`  | Full access to every table. The key never leaves a Vercel function.                     | The server lane only             |
+
+A `Developer` or an `Admin` acting through the app is a `Learner` — they receive `authenticated`, not `service_role`. Elevation is a separate, deliberate act through an operator surface, never an implicit property of being on the team.
+
+### Data segregation — Row Level Security
+
+**RLS is the boundary, not a layer of defence in depth behind one.** The five user-owned tables (`profiles`, `srs_state`, `stats_daily`, `decks`, `settings`) each have RLS enabled and are hermetically sealed to their owner: a policy predicate on `auth.uid()` decides every row, on every read and every write.
+
+The posture that makes this hold:
+
+- **Revoked by default.** Data API privileges are granted explicitly per table and per role ([`20260612201311_data_api_explicit_grants.sql`](./supabase/migrations/20260612201311_data_api_explicit_grants.sql)); nothing is auto-exposed. A new table is unreachable until someone grants it deliberately.
+- **Two independent gates.** A request must clear the *privilege* layer (does this role hold `select` on this table at all?) and then the *policy* layer (does this row belong to this caller?). `anon` never reaches the second gate.
+- **Adversarially tested.** A **23-test RLS suite** (`npm run test:rls`) attacks the policies through real PostgREST — as `anon`, as a signed-in learner reaching for another learner's rows, as a caller forging a `user_id` — and runs in CI against a local Supabase on every push and PR. A policy regression fails the build.
+- **Least privilege in the grants themselves.** `authenticated` holds `delete` on the four data tables but not on `profiles`, mirroring the deliberate absence of a delete policy: removing an account is an operator path, not something a client can do by sending a `DELETE`.
+
+**The standard for anything added later:** a new user-owned table ships with RLS enabled, an explicit grant, an owner-scoped policy, and at least one adversarial test that proves a non-owner is refused — in the same PR that creates it. A table that reaches `main` without all four is a defect, not a follow-up.
+
+### Boundaries in one picture
+
+```
+  Learner (browser)          Developer (local)             Admin (operator)
+        │                          │                              │
+        │ anon key + JWT           │ local Supabase (Docker)      │ dashboards, rotation
+        ▼                          ▼                              ▼
+ ┌──────────────────┐      ┌──────────────────┐          ┌──────────────────┐
+ │  authenticated   │      │  Development     │          │  Production      │
+ │  own rows only   │      │  data plane      │  ──✗──►  │  learner rows    │
+ │  RLS enforced    │      │  synthetic users │  never   │  service_role    │
+ └────────┬─────────┘      └──────────────────┘          └──────────────────┘
+          │                                                       ▲
+          │  never holds a server credential                      │
+          └───────────────► /api/v1/* (Vercel function) ──────────┘
+                            the only holder of service_role
+```
 
 </details>
 
