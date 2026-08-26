@@ -10,6 +10,7 @@ const {
 import { shuffle } from '../lib/utils';
 import { Hero } from './UI';
 import ExerciseHeader from './translate/ExerciseHeader';
+import FeedbackButton from './FeedbackButton';
 import PromptCard from './translate/PromptCard';
 import TileExercise from './translate/TileExercise';
 import BlankExercise from './translate/BlankExercise';
@@ -116,7 +117,24 @@ export default function TranslateTab({
         sub="The app gives you a sentence. You translate it. Three modes depending on your level."
       />
       <div style={{ marginTop: SPACE[8], maxWidth: 760 }}>
-        <ExerciseHeader level={level} idx={setIdx_} total={SET_SIZE} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[2] }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <ExerciseHeader level={level} idx={setIdx_} total={SET_SIZE} />
+          </div>
+          {/* itemId is the English prompt: these rows carry no id of their own
+            (the review feed already keys them by `en`). itemLabel is the
+            expected German, which is what triage needs to judge a "the AI
+            marked me wrong" report — and is never rendered, since at B1 it is
+            exactly what the learner is being asked to type. */}
+          <FeedbackButton
+            context={{
+              surface: 'translate',
+              level,
+              itemId: exercise.en,
+              itemLabel: exercise.de ?? null,
+            }}
+          />
+        </div>
 
         <div
           style={{

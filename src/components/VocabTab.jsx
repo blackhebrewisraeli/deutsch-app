@@ -13,6 +13,7 @@ import { deckPrompts } from '../lib/prompts';
 import { recordEvent, recordItem } from '../lib/stats';
 import { getDueCards, recordVocabAnswer } from '../lib/srs';
 import DeckProgress from './ui/DeckProgress';
+import FeedbackButton from './FeedbackButton';
 import DeckPicker from './vocab/DeckPicker';
 import CardFace from './vocab/CardFace';
 import ChoiceGrid from './vocab/ChoiceGrid';
@@ -332,7 +333,21 @@ export default function VocabTab({
                 >
                   {queue.length} card{queue.length !== 1 ? 's' : ''} remaining
                 </div>
-                <DeckProgress cards={activeDeck} learnedWords={learnedWords} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[2] }}>
+                  <DeckProgress cards={activeDeck} learnedWords={learnedWords} />
+                  {/* itemLabel is card.de — the very thing CardFace conceals on
+                    the Hören and Artikel decks. Captured for triage, never
+                    rendered; see FeedbackDialog. */}
+                  <FeedbackButton
+                    context={{
+                      surface: 'vocab',
+                      level,
+                      deckId,
+                      itemId: card.id,
+                      itemLabel: card.de ?? null,
+                    }}
+                  />
+                </div>
               </div>
 
               {deckComplete && (
