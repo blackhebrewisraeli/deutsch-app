@@ -70,6 +70,15 @@ describe('injectGlobalStyles', () => {
     expect(sheet()).toMatch(/@media \(hover: hover\) and \(pointer: fine\)/);
   });
 
+  it('keeps the busy spinner visible under reduced motion, just still', () => {
+    injectGlobalStyles();
+    const reduced =
+      sheet().match(/@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\s*\}/)?.[1] ?? '';
+    expect(reduced).toContain('.ui-spinner');
+    // display:none would remove the only visible sign that anything is happening.
+    expect(reduced).not.toMatch(/\.ui-spinner[^;]*display:\s*none/);
+  });
+
   it('does not apply hover to a disabled or busy button', () => {
     injectGlobalStyles();
     const hoverRule = sheet().match(/\[data-ui="button"\][^{]*:hover/)?.[0] ?? '';

@@ -69,9 +69,15 @@ describe('WelcomeGate', () => {
       expect(onGoogle).toHaveBeenCalledTimes(1);
     });
 
-    it('disables the button while a redirect is in flight', () => {
+    // This used to assert toBeDisabled(). A disabled element leaves the tab
+    // order, so the button took the user's focus with it at the moment they
+    // acted. The redirect guard now lives in Button's `busy`, which blocks the
+    // click without disabling — see GoogleButton.test.jsx.
+    it('marks the button busy during a redirect without dropping it from the tab order', () => {
       render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} googleBusy />);
-      expect(screen.getByRole('button', { name: /continue with google/i })).toBeDisabled();
+      const button = screen.getByRole('button', { name: /continue with google/i });
+      expect(button).toHaveAttribute('aria-busy', 'true');
+      expect(button).not.toBeDisabled();
     });
   });
 

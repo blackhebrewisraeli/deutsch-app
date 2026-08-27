@@ -27,7 +27,14 @@ export default function GoogleButton({ onClick, busy = false, autoFocus = false 
     <Button
       onClick={onClick}
       // A redirect takes a beat; a double-tap must not start two round trips.
-      disabled={busy}
+      //
+      // `busy`, not `disabled`. A disabled element leaves the tab order, so a
+      // button that disables itself at the moment it is activated takes the
+      // user's focus position with it and drops them at <body> — and this is
+      // the button that carries autoFocus on two of its three call sites, so it
+      // is exactly the one that must not lose focus mid-action. Button's `busy`
+      // guards onClick instead, and adds aria-busy plus a spinner.
+      busy={busy}
       autoFocus={autoFocus}
       style={{
         display: 'flex',

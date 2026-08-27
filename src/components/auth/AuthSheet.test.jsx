@@ -126,9 +126,15 @@ describe('AuthSheet', () => {
       expect(onGoogle).toHaveBeenCalledTimes(1);
     });
 
-    it('disables the button while a redirect is already in flight', () => {
+    // This used to assert toBeDisabled(). A disabled element leaves the tab
+    // order, and inside a focus-trapped sheet that is worse than elsewhere: the
+    // trap's first stop disappears mid-action. Button's `busy` blocks the click
+    // without disabling — see GoogleButton.test.jsx.
+    it('marks the button busy while a redirect is already in flight, without disabling it', () => {
       render(<AuthSheet open intent="signin" onClose={() => {}} onSuccess={() => {}} googleBusy />);
-      expect(screen.getByRole('button', { name: /continue with google/i })).toBeDisabled();
+      const button = screen.getByRole('button', { name: /continue with google/i });
+      expect(button).toHaveAttribute('aria-busy', 'true');
+      expect(button).not.toBeDisabled();
     });
 
     it('keeps the email form intact — it gains a sibling, not a rewrite', () => {

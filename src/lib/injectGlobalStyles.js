@@ -60,8 +60,13 @@ export function injectGlobalStyles() {
     @keyframes confetti { 0% { transform: translate(0,0) rotate(0); opacity: 1; } 100% { transform: translate(var(--dx), 120px) rotate(var(--rot)); opacity: 0; } }
     .pop    { animation: pop 0.28s ease-out; }
     .wiggle { animation: wiggle 0.30s ease-in-out; }
+    @keyframes ui-spin { to { transform: rotate(360deg); } }
+    .ui-spinner { animation: ui-spin 0.7s linear infinite; }
     @media (prefers-reduced-motion: reduce) {
       .pop, .wiggle, .slide-up { animation: none !important; }
+      /* Stops turning, stays visible: aria-busy alone is not a visible
+         affordance, so removing the glyph would leave nothing to see. */
+      .ui-spinner { animation: none !important; }
       .confetti-layer { display: none !important; }
     }
   `;
