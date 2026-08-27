@@ -26,21 +26,70 @@ they are listed as blocked rather than "available".
 
 ## Ready to execute
 
-### UI sub-project 1b — grow the UI primitive set
-
-**Unblocked.** Design: `docs/ui-primitives-spec.md`. Plan:
-`docs/superpowers/plans/2026-08-27-ui-primitives.md` — eight PRs, each with its
-own test cycle, dependencies mapped. Tasks 1, 2, 6 and 8 have no dependency on
-each other and can run in parallel.
-
-Task 4 (Button) is the only one with visible behaviour changes — `BUTTON.secondary`
-loses `flex: 1` and `BUTTON.ghost` changes colour — so all seven `variant="secondary"`
-call sites get checked inside that PR, not after it.
-
-Prior context: the `VocabTab.jsx` split shipped as #104 (807 → 325 lines, seven
-modules in `src/components/vocab/`).
+Nothing queued.
 
 ## Recently shipped
+
+### UI sub-project 1b — the primitive set
+
+**Done.** Design at `docs/ui-primitives-spec.md`, plan at
+`docs/superpowers/plans/2026-08-27-ui-primitives.md`, shipped as #166 (spec +
+plan), #167–#173 (Tasks 1–7) and #176 (Task 8, alongside the toast close
+button). `src/components/ui/` now holds twelve sources: the six that existed
+plus `Heading`, `Text` (Body/Meta), `tone`, `Surface`, `InteractiveCard` and
+`Layout` (Stack/Row/Grid/PageFrame).
+
+Writing the spec against the code — rather than from first principles — is what
+made this worth doing, because it turned up nine real defects that had nothing
+to do with adding primitives:
+
+- **`BUTTON.ghost` painted its label `COLORS.paper`**, the page-ground colour,
+  so ghost text was invisible on any ground-coloured surface. It had zero
+  consumers, which is exactly why no test had ever caught it.
+- **Three hand-rolled `:focus-visible` recipes** with two different spellings,
+  and no global rule at all — the other ~78 raw `<button>` elements had only the
+  UA default.
+- **The colour guard walked `.jsx` only** (five `.js` files under
+  `src/components` were unscanned) and matched hex only, so `rgba()` and named
+  colours sailed through.
+- **`BUTTON.secondary` carried `flex: 1`** — a layout decision inside a colour
+  token, which was stretching two buttons vertically in column containers.
+- **`ui/Button` applied press styles after the caller's `style`**, so an
+  override silently lost.
+- **`GoogleButton` implemented busy as `disabled={busy}`** — on the component
+  that carries `autoFocus` at two of its three call sites, so it dropped the
+  user's focus to `<body>` at the moment they acted.
+- **`FeedbackDialog` and `TutorialOverlay` never returned focus** to what opened
+  them. Five of the seven dismissible surfaces already did.
+
+Four guards now make the recurring structural mistakes unrepresentable rather
+than remembered: colour literals in any notation, palette-layer imports inside
+`ui/`, a bare `1fr` grid track, and a control nested inside an
+`InteractiveCard`. Each was staged red against a fixture that could express the
+failure before being trusted.
+
+**The migration was deliberately NOT part of this.** Spec §12 makes it
+opportunistic: new code uses the primitives, and a surface migrates when someone
+is already editing it. So ~85 raw `<button>` elements and ~30 raw `fontSize`
+literals remain on purpose — that is the policy, not an unfinished task. The two
+exceptions were migrated: `UI.jsx`'s `Hero` / `SectionLabel` / `StatBlock` now
+sit on the primitives (nine consumers, none of which needed a change), and the
+three hand-rolled focus rings are gone.
+
+### Known gap — the focus ring is invisible on ink-coloured planes
+
+Spec §10.1 defines one ring, `2px solid COLORS.ink`. `COLORS.ink` is
+`var(--c-fg)`, which is also the plane colour of every surface built on ink —
+toasts, `CARD.dark`, the `accentBlack` masthead. Measured in a real browser, the
+standard ring scores **1.00:1** against a toast in both modes: it is literally
+the same colour. The paired ink scores 17.69:1 in light and 16.09:1 in dark.
+
+`Toast`'s close button works around this with its own scoped rule using
+`COLORS.paper`, and that is currently the only correct treatment in the app.
+The spec should grow a dark-plane variant — probably a `data-focus-on-dark`
+attribute the global sheet matches, so the workaround does not have to be
+re-invented per component. Small, but it needs deciding before the next control
+lands on a dark plane.
 
 ### The charcoal masthead — `accentBlack`'s consumer
 
