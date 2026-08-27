@@ -18,12 +18,12 @@ Starting these without a written design means the implementing agent invents the
 architecture, which is the expensive thing to undo. That is the whole reason
 they are listed as blocked rather than "available".
 
-| Item                                                       | Notes                                                                                                                                                                                              |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **UI sub-project 1b** — grow the UI primitive set          | The `VocabTab.jsx` split shipped as #104 (807 → 325 lines, seven modules in `src/components/vocab/`)                                                                                               |
-| **UI sub-project 2** — the Nocturne visual redesign proper | Layout and rhythm. Two slices are already out: T2 took _depth_ early, and the ivory re-skin took _light mode off parchment_ (see "Recently shipped"). What remains here is composition, not colour |
-| **UI sub-project 3** — graphics assets                     | Logo, icon set, empty/error states, OG image. The font slice shipped as #103                                                                                                                       |
-| **Auth Phase E** — phone/SMS OTP                           | Deliberately deferred: the only auth component with a per-use cost                                                                                                                                 |
+| Item                                                       | Notes                                                                                                                                                                                                                                                |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **UI sub-project 1b** — grow the UI primitive set          | **Design landed: `docs/ui-primitives-spec.md`.** Still blocked on a plan — the spec's §14 build sequence needs writing up before anyone starts. The `VocabTab.jsx` split shipped as #104 (807 → 325 lines, seven modules in `src/components/vocab/`) |
+| **UI sub-project 2** — the Nocturne visual redesign proper | Layout and rhythm. Two slices are already out: T2 took _depth_ early, and the ivory re-skin took _light mode off parchment_ (see "Recently shipped"). What remains here is composition, not colour                                                   |
+| **UI sub-project 3** — graphics assets                     | Logo, icon set, empty/error states, OG image. The font slice shipped as #103                                                                                                                                                                         |
+| **Auth Phase E** — phone/SMS OTP                           | Deliberately deferred: the only auth component with a per-use cost                                                                                                                                                                                   |
 
 ## Ready to execute
 
