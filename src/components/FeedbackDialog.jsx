@@ -44,6 +44,31 @@ export default function FeedbackDialog({ context, onClose }) {
 
   useFocusTrap(panelRef, true);
 
+  // Captured during the FIRST RENDER, not in an effect. React runs autoFocus
+  // during commit, before effects, so an effect that reads document.activeElement
+  // records whatever this dialog just focused rather than the control that
+  // opened it. Render happens before commit, so this always sees the opener.
+  const openerRef = useRef(null);
+  if (openerRef.current === null && typeof document !== 'undefined') {
+    const active = document.activeElement;
+    openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+  }
+
+  // Restore on unmount. FeedbackButton renders this conditionally, so unmount IS
+  // close — covering Escape, Cancel and a successful send alike. Without it,
+  // dismissing drops focus to <body> and a keyboard user restarts from the top
+  // of the page, several tab stops back from the trigger they were just on.
+  useEffect(
+    () => () => {
+      const opener = openerRef.current;
+      openerRef.current = null;
+      // The opener can be gone — the surface holding it may have unmounted —
+      // in which case there is nothing to go back to.
+      if (opener instanceof HTMLElement && document.contains(opener)) opener.focus();
+    },
+    []
+  );
+
   useEffect(() => {
     // The textarea is what the learner came here to use.
     (textareaRef.current ?? panelRef.current)?.focus();
