@@ -250,7 +250,10 @@ export default function FeedbackDialog({ context, onClose }) {
               >
                 {busy ? 'Sending…' : 'Send'}
               </Button>
-              <Button variant="secondary" style={{ flexShrink: 0 }} onClick={onClose}>
+              {/* `flex: 1` is explicit now that BUTTON.secondary no longer carries
+                  it. This row is Send + Cancel as equal halves; without it Cancel
+                  collapses to its label and Send takes the rest. */}
+              <Button variant="secondary" style={{ flex: 1, flexShrink: 0 }} onClick={onClose}>
                 Cancel
               </Button>
             </div>

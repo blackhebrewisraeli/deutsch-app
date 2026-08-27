@@ -67,7 +67,11 @@ describe('theme tokens', () => {
 
   it('btnSecondary alias matches BUTTON.secondary', () => {
     expect(btnSecondary).toBe(BUTTON.secondary);
-    expect(btnSecondary.flex).toBe(1);
+    // No `flex` on the recipe. It was a layout decision hiding inside a colour
+    // token: two of the seven consumers render this inside a column, where
+    // flex:1 stretched the button vertically. The two that share a row now pass
+    // `flex: 1` themselves, where it is visible at the call site.
+    expect(btnSecondary.flex).toBeUndefined();
   });
 
   it('CARD and TEXT presets include expected keys', () => {

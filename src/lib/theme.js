@@ -264,23 +264,50 @@ export const BUTTON = {
     color: COLORS.ink,
     boxShadow: SHADOW.press(COLORS.lip),
   },
+  // No `flex: 1` here. It was a layout decision hiding inside a colour recipe,
+  // and two of the seven consumers render this inside a `flexDirection: column`
+  // container, where it stretched the button VERTICALLY. Callers that shared a
+  // row now ask for `flex: 1` themselves, where it is visible.
   secondary: {
     ...btnBase,
     background: COLORS.card,
     color: COLORS.ink,
     boxShadow: SHADOW.press(COLORS.lip),
-    flex: 1,
   },
+  // Ink, NOT COLORS.paper. `paper` is the page ground: the old recipe painted
+  // the label in the ground colour, so ghost text was invisible on any
+  // ground-coloured surface and legible only on a dark plane. It had zero
+  // consumers, so nothing ever rendered it and no test ever caught it. A caller
+  // placing a ghost button on a dark plane (accentBlack, CARD.dark) passes the
+  // paired ink via `style` — that is the accent-tier rule, not a variant.
   ghost: {
     ...btnBase,
     background: 'transparent',
-    color: COLORS.paper,
-    border: BORDER.ghost,
+    color: COLORS.ink,
+    border: BORDER.panel,
     boxShadow: 'none',
     textTransform: 'none',
     fontSize: FONT_SIZE.tag,
     letterSpacing: LETTER_SPACING.wider,
     padding: `${SPACE[1]}px ${SPACE[3]}px`,
+  },
+  // Square, label-free, header-sized. Button sizes it 32x32 (md) / 28x28 (sm),
+  // matching the measured fit of the existing header chips. `aria-label` is
+  // mandatory on this variant; Button warns in development without one.
+  //
+  // 32, not 44: the header's functional cluster is a constant 287px and the
+  // spare width at 320px is ~10px, so three 32px chips cannot become three 44px
+  // chips. 32 clears WCAG 2.2 SC 2.5.8 (24px minimum) with margin.
+  icon: {
+    ...btnBase,
+    background: COLORS.surface,
+    color: COLORS.ink,
+    border: BORDER.panel,
+    borderRadius: RADIUS.pill,
+    boxShadow: 'none',
+    padding: 0,
+    letterSpacing: LETTER_SPACING.normal,
+    flexShrink: 0,
   },
 };
 

@@ -235,9 +235,13 @@ export default function AccountSection({
               >
                 Yes, delete everything
               </Button>
+              {/* `flex: 1` is explicit now that BUTTON.secondary no longer
+                  carries it — this Cancel used to fill the rest of the confirm
+                  row beside the destructive action. */}
               <Button
                 variant="secondary"
                 aria-label="Cancel"
+                style={{ flex: 1 }}
                 onClick={() => setConfirmDelete(false)}
               >
                 Cancel

@@ -39,14 +39,27 @@ describe('GoogleButton', () => {
   });
 
   // A redirect takes a beat; a double-tap must not start two round trips.
-  it('is disabled while busy and does not fire', async () => {
+  //
+  // This used to assert `toBeDisabled()`. That was the defect: a disabled
+  // element leaves the tab order, so the button took the user's focus position
+  // with it at the moment they acted and dropped them at <body>. It is also the
+  // button that carries autoFocus on two of its three call sites. The guard now
+  // lives in Button's `busy`, which blocks the second click WITHOUT disabling.
+  it('does not fire a second time while busy, and keeps its place in the tab order', async () => {
     const user = userEvent.setup();
     const onClick = vi.fn();
     render(<GoogleButton onClick={onClick} busy />);
     const button = screen.getByRole('button', { name: 'Continue with Google' });
-    expect(button).toBeDisabled();
+
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(button).not.toBeDisabled();
+
     await user.click(button);
     expect(onClick).not.toHaveBeenCalled();
+
+    // The point of the change: focus can still be on it, and still land on it.
+    button.focus();
+    expect(document.activeElement).toBe(button);
   });
 
   // No dead affordance: the guard is in the component so no call site can
