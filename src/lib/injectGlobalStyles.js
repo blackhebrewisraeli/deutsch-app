@@ -1,3 +1,5 @@
+import { FOCUS } from './theme';
+
 /**
  * App-wide base styles + keyframes formerly injected by App.jsx <style>.
  * Uses CSS custom properties so scrollbar / pulse colours follow the theme.
@@ -12,6 +14,26 @@ export function injectGlobalStyles() {
     * { box-sizing: border-box; }
     body { margin: 0; }
     button { font-family: inherit; cursor: pointer; }
+    /* One focus ring for the whole app. Any element with a [data-ui] attribute
+       gets it — that is how a primitive opts in. :focus-visible, not :focus, so
+       a mouse click does not ring. This replaced three hand-rolled recipes that
+       had drifted to three different spellings, and gave the ~78 raw <button>
+       elements a ring they never had. */
+    [data-ui]:focus-visible {
+      outline: ${FOCUS.ring};
+      outline-offset: ${FOCUS.offset}px;
+    }
+    /* Full-bleed rows and cards: an outset ring is clipped by the container. */
+    [data-ui][data-focus-inset]:focus-visible { outline-offset: ${FOCUS.inset}px; }
+    /* Hover is gated on a fine pointer: a touch device latches the hover style
+       on tap and keeps it until the next tap elsewhere. brightness() rather than
+       a hover token per variant — seven variants x two modes is fourteen palette
+       entries to keep in contrast, to express "slightly lighter". A relative
+       filter cannot drift out of contrast, because it moves plane and ink
+       together. */
+    @media (hover: hover) and (pointer: fine) {
+      [data-ui="button"]:not([disabled]):not([aria-busy="true"]):hover { filter: brightness(1.04); }
+    }
     /* Full-height entry screens (welcome gate, level splash). 100vh on iOS
        Safari means the viewport WITHOUT the URL bar, so a 100vh element is
        taller than what you can actually see and its bottom sits behind the

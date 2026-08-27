@@ -117,16 +117,17 @@ export default function TrialWall({
         </Button>
         {googleOn ? (
           <>
-            {/* Inline styles can't express :focus-visible; a scoped rule gives
-                the bare tertiary a visible ring, as WelcomeGate does. */}
-            <style>{`.trial-tertiary:focus-visible { outline: 2px solid ${COLORS.ink}; outline-offset: 2px; border-radius: 4px; }`}</style>
             <button
-              className="trial-tertiary"
+              // Opts into the app's one focus ring, defined in injectGlobalStyles.
+              data-ui="button"
               type="button"
               onClick={onSignIn}
               style={{
                 background: 'none',
                 border: 'none',
+                // The ring follows the element's own radius, so the radius the
+                // deleted scoped rule used to set has to live here instead.
+                borderRadius: SPACE[1],
                 color: COLORS.mute,
                 fontFamily: FONTS.mono,
                 fontSize: FONT_SIZE.tag,

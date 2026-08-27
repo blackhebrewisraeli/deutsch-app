@@ -52,9 +52,6 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
       >
         Learn German with an AI tutor
       </p>
-      {/* Inline styles can't express :focus-visible; a scoped rule gives the
-          bare guest button a visible focus ring against the ground colour. */}
-      <style>{`.welcome-guest:focus-visible { outline: 2px solid ${COLORS.ink}; outline-offset: 2px; border-radius: 4px; }`}</style>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12, width: 260 }}>
         {authOn && (
           <>
@@ -66,11 +63,15 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
           </>
         )}
         <button
-          className="welcome-guest"
+          // Opts into the app's one focus ring, defined in injectGlobalStyles.
+          data-ui="button"
           onClick={onGuest}
           style={{
             background: 'none',
             border: 'none',
+            // The ring follows the element's own radius, so the radius the
+            // deleted scoped rule used to set has to live here instead.
+            borderRadius: SPACE[1],
             color: COLORS.ink,
             fontFamily: FONTS.mono,
             fontSize: FONT_SIZE.tag,

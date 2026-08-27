@@ -39,4 +39,41 @@ describe('injectGlobalStyles', () => {
     injectGlobalStyles();
     expect(sheet()).toMatch(/\.entry-screen-foot\s*\{[^}]*safe-area-inset-bottom/);
   });
+
+  // Before this rule existed the app had three hand-rolled `:focus-visible`
+  // recipes (WelcomeGate, TrialWall, LeaderboardSection) with three different
+  // spellings, and the other 78 raw <button> elements had no ring at all.
+  // Keying off [data-ui] means a primitive opts in by existing.
+  it('gives every [data-ui] element a focus-visible ring', () => {
+    injectGlobalStyles();
+    expect(sheet()).toMatch(/\[data-ui\]:focus-visible\s*\{[^}]*outline:/);
+  });
+
+  it('uses the theme ink for the ring, so it flips with the mode', () => {
+    injectGlobalStyles();
+    // var(--c-fg), not a literal — the ring must not be a light-mode colour.
+    expect(sheet()).toMatch(/\[data-ui\]:focus-visible\s*\{[^}]*var\(--c-fg\)/);
+  });
+
+  it('offers an inset offset for full-bleed rows', () => {
+    injectGlobalStyles();
+    // League rows are flush to their container, so an outset ring is clipped
+    // by the parent edge and overlaps the neighbouring row.
+    expect(sheet()).toMatch(/\[data-focus-inset\]:focus-visible\s*\{[^}]*outline-offset:\s*-3px/);
+  });
+
+  it('gates button hover behind a fine pointer', () => {
+    injectGlobalStyles();
+    // Without the gate a touch device latches the hover style on tap and keeps
+    // it until the next tap elsewhere. This app is phone-first, so that is the
+    // common case, not the edge case.
+    expect(sheet()).toMatch(/@media \(hover: hover\) and \(pointer: fine\)/);
+  });
+
+  it('does not apply hover to a disabled or busy button', () => {
+    injectGlobalStyles();
+    const hoverRule = sheet().match(/\[data-ui="button"\][^{]*:hover/)?.[0] ?? '';
+    expect(hoverRule).toContain(':not([disabled])');
+    expect(hoverRule).toContain(':not([aria-busy="true"])');
+  });
 });
