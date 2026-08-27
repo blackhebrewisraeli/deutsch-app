@@ -65,7 +65,7 @@ export function clearUserLocalState() {
  */
 export async function signOutAndReset(opts = {}) {
   const signOutFn = opts.signOut ?? authSignOut;
-  let error = null;
+  let error;
   try {
     const result = await signOutFn();
     error = result?.error ?? null;
