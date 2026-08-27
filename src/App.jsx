@@ -390,8 +390,8 @@ export default function App() {
 
   const showToast = (title) => pushToasts([{ kind: 'info', title, sub: '', icon: 'ℹ️' }]);
 
-  // Session first, then wipe user persistence (theme stays), then a hard load
-  // so in-memory XP / SRS / level cannot leak into the next guest or account.
+  // Session first, then wipe user persistence (theme stays), then
+  // window.location.reload() so in-memory XP / SRS / level cannot leak.
   const handleSignOut = async () => {
     setGateDismissed(false);
     const { error } = await signOutAndReset();

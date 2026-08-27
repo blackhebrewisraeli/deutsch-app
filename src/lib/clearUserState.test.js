@@ -125,25 +125,39 @@ describe('signOutAndReset', () => {
     expect(localStorage.getItem(THEME_MODE_KEY)).toBe('light');
   });
 
-  it('hard-resets via location.assign("/") when no reload override is passed', async () => {
+  it('hard-reloads the document when no reload override is passed', async () => {
     const go = vi.spyOn(locationReset, 'go').mockImplementation(() => {});
     await signOutAndReset({ signOut: async () => ({ error: null }) });
     expect(go).toHaveBeenCalledTimes(1);
     go.mockRestore();
   });
 
-  it('locationReset.go assigns the app root', () => {
-    const assign = vi.fn();
+  it('locationReset.go reloads even when already at /', () => {
+    const reload = vi.fn();
     const original = window.location;
     Object.defineProperty(window, 'location', {
       configurable: true,
-      value: { ...original, assign },
+      value: { href: '/', reload },
     });
-    locationReset.go();
-    expect(assign).toHaveBeenCalledWith('/');
-    Object.defineProperty(window, 'location', {
-      configurable: true,
-      value: original,
+    try {
+      locationReset.go();
+      expect(window.location.href).toBe('/');
+      expect(reload).toHaveBeenCalledTimes(1);
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: original,
+      });
+    }
+  });
+
+  it('blocks saveState from rewriting the blob after the wipe', async () => {
+    await signOutAndReset({
+      signOut: async () => ({ error: null }),
+      reload: () => {},
     });
+    saveState({ stats: { streak: 12 }, gamification: { xp: 1112 } });
+    expect(localStorage.getItem(STATE_KEY)).toBeNull();
+    expect(loadState()).toBeNull();
   });
 });

@@ -17,8 +17,28 @@ const STORAGE_KEY = 'deutsch-app-state-v1';
 // the pure helpers in stats.js / srs.js. Keep it that way.
 let cachedRaw = null;
 let cachedState = null;
+// Sign-out sets this so a persist effect cannot rewrite the blob in the
+// gap between localStorage.clear() and window.location.reload().
+let persistFrozen = false;
+
+/** Stop load/save of the state blob. Survives until reload (or thawPersist). */
+export function freezePersist() {
+  persistFrozen = true;
+  cachedRaw = null;
+  cachedState = null;
+}
+
+/** Tests only — production never thaws; the next document load is a new heap. */
+export function thawPersist() {
+  persistFrozen = false;
+}
 
 export const loadState = () => {
+  if (persistFrozen) {
+    cachedRaw = null;
+    cachedState = null;
+    return null;
+  }
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw === null) {
@@ -37,6 +57,7 @@ export const loadState = () => {
 };
 
 export const saveState = (state) => {
+  if (persistFrozen) return;
   try {
     const raw = JSON.stringify(state);
     localStorage.setItem(STORAGE_KEY, raw);

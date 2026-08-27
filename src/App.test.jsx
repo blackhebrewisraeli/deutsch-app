@@ -794,8 +794,9 @@ describe('entry gate', () => {
   // or clicking a real control, so it passed identically whether or not the
   // reset existed — it could not fail against the unfixed code.
   //
-  // Hard navigation is stubbed: jsdom cannot actually leave. Production
-  // assigns '/' after the wipe so React memory cannot keep the old account.
+  // Hard reload is stubbed: jsdom cannot actually leave. Production calls
+  // window.location.reload() after the wipe so React memory cannot keep
+  // the old account. assign('/') is a no-op when already at `/`.
   it('re-gates, wipes user storage, and hard-resets on Sign out', async () => {
     localStorage.setItem('deutsch-level', 'b1');
     localStorage.setItem(
