@@ -601,7 +601,12 @@ async function dismissEntryScreens(page) {
   // WelcomeGate — "Try it first — free →". Landing directly on the app shell
   // (Home tab) once dismissed — there is no longer a level-picker screen
   // behind it.
-  const gate = await page.$('.welcome-guest');
+  // `[data-entry="guest"]`, not the old `.welcome-guest` class: that class only
+  // ever existed to carry a scoped :focus-visible rule, and when the app moved
+  // to one global focus ring the class went with it — taking this selector's
+  // only way past the gate. This hook is named for what the button is, so a
+  // styling change cannot silently remove it.
+  const gate = await page.$('[data-entry="guest"]');
   if (gate) {
     await gate.click();
     await page.waitForTimeout(200);

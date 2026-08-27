@@ -65,6 +65,13 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
         <button
           // Opts into the app's one focus ring, defined in injectGlobalStyles.
           data-ui="button"
+          // Stable hook for scripts/dev/audit-contrast.mjs, which clicks this
+          // to get past the gate and reach the app shell. It used to select the
+          // `welcome-guest` class — but that class existed only to carry a
+          // scoped :focus-visible rule, so deleting the rule deleted the
+          // audit's only way in. A hook named for what the button IS survives
+          // styling changes; one borrowed from styling does not.
+          data-entry="guest"
           onClick={onGuest}
           style={{
             background: 'none',
