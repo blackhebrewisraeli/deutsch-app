@@ -52,7 +52,7 @@ import {
   signInWithGoogle,
   humanAuthError,
 } from './lib/auth';
-import { signOutAndReset } from './lib/clearUserState';
+import { clearUserLocalState } from './lib/clearUserState';
 import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
 import { setLevelBoostEnabled } from './lib/xpEntitlement';
 import { useSyncStatus } from './lib/useSyncStatus';
@@ -390,12 +390,18 @@ export default function App() {
 
   const showToast = (title) => pushToasts([{ kind: 'info', title, sub: '', icon: 'ℹ️' }]);
 
-  // Session first, then wipe user persistence (theme stays), then
-  // window.location.reload() so in-memory XP / SRS / level cannot leak.
+  // supabase.auth.signOut() can revoke the local session (header → SIGN IN)
+  // and still return { error } on a failed server call. Skipping the hard
+  // navigation in that case left XP / streak / the nav badge mounted.
+  // Always wipe, then the exact document load — no React reset, no early return.
   const handleSignOut = async () => {
-    setGateDismissed(false);
-    const { error } = await signOutAndReset();
-    if (error) showToast('Could not sign out — try again.');
+    try {
+      await signOut();
+    } finally {
+      clearUserLocalState();
+      window.location.href = '/';
+      window.location.reload();
+    }
   };
 
   const handleExport = async () => {

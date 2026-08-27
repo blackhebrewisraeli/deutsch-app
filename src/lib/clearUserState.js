@@ -32,11 +32,7 @@ export const PRESERVED_LOCAL_KEYS = Object.freeze([THEME_MODE_KEY]);
  */
 export const locationReset = {
   go() {
-    try {
-      window.location.href = '/';
-    } catch {
-      // jsdom throws on navigation; some browsers no-op a same-URL href.
-    }
+    window.location.href = '/';
     window.location.reload();
   },
 };
@@ -60,19 +56,27 @@ export function clearUserLocalState() {
 }
 
 /**
- * Revoke the session, wipe user persistence, then hard-reset the SPA.
- * On a signOut error the local account is left intact so sync cannot clobber
- * a still-authenticated user with an empty blob.
+ * Wipe user persistence then hard-reset the SPA. Always runs the reset after
+ * signOut settles — supabase can clear the local session and still return
+ * `{ error }` on a failed server call.
  *
  * @param {{ signOut?: () => Promise<{ error?: unknown }>, reload?: () => void }} [opts]
  * @returns {Promise<{ error: unknown }>}
  */
 export async function signOutAndReset(opts = {}) {
   const signOutFn = opts.signOut ?? authSignOut;
-  const { error } = await signOutFn();
-  if (error) return { error };
+  let error = null;
+  try {
+    const result = await signOutFn();
+    error = result?.error ?? null;
+  } catch (err) {
+    error = err;
+  }
+  // Local session is already gone even when the server call fails. Wipe and
+  // hard-navigate anyway — skipping this is how SIGN IN appeared with XP still
+  // on screen.
   clearUserLocalState();
   if (opts.reload) opts.reload();
   else locationReset.go();
-  return { error: null };
+  return { error };
 }

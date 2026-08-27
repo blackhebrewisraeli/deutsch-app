@@ -6,8 +6,7 @@ import { todayKey } from './lib/stats';
 import { isLevelBoostEnabled, setLevelBoostEnabled } from './lib/xpEntitlement';
 import { TUTORIAL_KEY } from './lib/tutorialPref';
 import { THEME_MODE_KEY } from './lib/themeMode';
-import { loadState } from './lib/storage';
-import { locationReset } from './lib/clearUserState';
+import { loadState, thawPersist } from './lib/storage';
 
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 
@@ -794,9 +793,9 @@ describe('entry gate', () => {
   // or clicking a real control, so it passed identically whether or not the
   // reset existed — it could not fail against the unfixed code.
   //
-  // Hard reload is stubbed: jsdom cannot actually leave. Production calls
-  // window.location.reload() after the wipe so React memory cannot keep
-  // the old account. assign('/') is a no-op when already at `/`.
+  // Hard navigation is stubbed: jsdom cannot leave the document. Production
+  // sets window.location.href = '/' then window.location.reload() in a
+  // finally after signOut, so a server error cannot skip the reset.
   it('re-gates, wipes user storage, and hard-resets on Sign out', async () => {
     localStorage.setItem('deutsch-level', 'b1');
     localStorage.setItem(
@@ -804,9 +803,14 @@ describe('entry gate', () => {
       JSON.stringify({ stats: { streak: 9, learnedCount: 20 }, gamification: { xp: 300 } })
     );
     localStorage.setItem(THEME_MODE_KEY, 'light');
-    const reload = vi.spyOn(locationReset, 'go').mockImplementation(() => {});
+    const reload = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: '/', reload },
+    });
     const user = userEvent.setup();
-    const { rerender } = render(<App />);
+    const { rerender, unmount } = render(<App />);
 
     try {
       // Latch gateDismissed the way a real signed-in session does, landing
@@ -824,21 +828,67 @@ describe('entry gate', () => {
       );
       await user.click(screen.getByRole('button', { name: 'Sign out' }));
       await waitFor(() => expect(authSignOutMock).toHaveBeenCalled());
-      await waitFor(() => expect(reload).toHaveBeenCalled());
+      await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+      expect(window.location.href).toBe('/');
 
       expect(localStorage.getItem('deutsch-app-state-v1')).toBeNull();
       expect(localStorage.getItem('deutsch-level')).toBeNull();
       expect(localStorage.getItem(THEME_MODE_KEY)).toBe('light');
       expect(loadState()).toBeNull();
 
+      // A real reload starts a new heap. thawPersist + remount stands in for that.
+      thawPersist();
+      unmount();
       authMock.status = 'anonymous';
       authMock.mayHaveSession = false;
-      rerender(<App />);
+      render(<App />);
 
       expect(gate()).toBeInTheDocument();
       expect(isLevelBoostEnabled()).toBe(false);
     } finally {
-      reload.mockRestore();
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
+    }
+  });
+
+  it('hard-navigates even when signOut returns a server error', async () => {
+    localStorage.setItem('deutsch-level', 'b1');
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ stats: { streak: 9 }, gamification: { xp: 1112 } })
+    );
+    localStorage.setItem(THEME_MODE_KEY, 'light');
+    authSignOutMock.mockResolvedValueOnce({ error: { message: 'network' } });
+    const reload = vi.fn();
+    const originalLocation = window.location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: { href: '/', reload },
+    });
+    const user = userEvent.setup();
+    const { rerender } = render(<App />);
+
+    try {
+      await user.click(gate());
+      authMock.status = 'authenticated';
+      authMock.mayHaveSession = true;
+      rerender(<App />);
+      await user.click(
+        within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' })
+      );
+      await user.click(screen.getByRole('button', { name: 'Sign out' }));
+      await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
+      expect(window.location.href).toBe('/');
+      expect(localStorage.getItem('deutsch-app-state-v1')).toBeNull();
+      expect(loadState()).toBeNull();
+      expect(localStorage.getItem(THEME_MODE_KEY)).toBe('light');
+    } finally {
+      Object.defineProperty(window, 'location', {
+        configurable: true,
+        value: originalLocation,
+      });
     }
   });
 

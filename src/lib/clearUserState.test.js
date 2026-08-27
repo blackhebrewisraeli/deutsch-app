@@ -111,7 +111,7 @@ describe('signOutAndReset', () => {
     expect(loadState()).toBeNull();
   });
 
-  it('does not wipe or reload when signOut reports an error', async () => {
+  it('still wipes and hard-navigates when signOut reports a server error', async () => {
     const reload = vi.fn();
     const { error } = await signOutAndReset({
       signOut: async () => ({ error: { message: 'network' } }),
@@ -119,9 +119,9 @@ describe('signOutAndReset', () => {
     });
 
     expect(error).toEqual({ message: 'network' });
-    expect(reload).not.toHaveBeenCalled();
-    expect(localStorage.getItem(STATE_KEY)).toBeTruthy();
-    expect(loadState()?.stats?.streak).toBe(12);
+    expect(reload).toHaveBeenCalledTimes(1);
+    expect(localStorage.getItem(STATE_KEY)).toBeNull();
+    expect(loadState()).toBeNull();
     expect(localStorage.getItem(THEME_MODE_KEY)).toBe('light');
   });
 
