@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { loadState, saveState } from './storage';
+import { loadState, saveState, freezePersist, thawPersist } from './storage';
 
 const STORAGE_KEY = 'deutsch-app-state-v1';
 
@@ -116,6 +116,28 @@ describe('storage', () => {
       vi.restoreAllMocks();
       // The write never landed, so the previously stored state must still win.
       expect(loadState().stats.streak).toBe(1);
+    });
+  });
+
+  describe('persist freeze', () => {
+    afterEach(() => {
+      thawPersist();
+    });
+
+    it('ignores saveState and loadState while frozen', () => {
+      saveState({ stats: { streak: 4 } });
+      freezePersist();
+      saveState({ stats: { streak: 99 }, gamification: { xp: 1112 } });
+      expect(localStorage.getItem(STORAGE_KEY)).toBe(JSON.stringify({ stats: { streak: 4 } }));
+      expect(loadState()).toBeNull();
+    });
+
+    it('writes again after thawPersist', () => {
+      freezePersist();
+      saveState({ stats: { streak: 1 } });
+      thawPersist();
+      saveState({ stats: { streak: 2 } });
+      expect(loadState().stats.streak).toBe(2);
     });
   });
 });

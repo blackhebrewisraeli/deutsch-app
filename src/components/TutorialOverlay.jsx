@@ -96,8 +96,38 @@ export default function TutorialOverlay({ anchors = {}, onDismiss }) {
   // so on `open` alone this fired before the panel existed and focus stayed on
   // whatever was behind the scrim.
   const ready = open && box !== null;
+
+  // Captured during RENDER on the open transition, not in an effect. React runs
+  // autoFocus during commit, before effects, so an effect reading
+  // document.activeElement records what this overlay just focused rather than
+  // what preceded it. Render runs before commit, so this sees the real one.
+  //
+  // The tour has no opener control — it appears by itself on first run — so on a
+  // fresh load there is usually nothing focused and this stays null. It matters
+  // when something WAS focused: `ready` waits on measurement, so a keyboard user
+  // can be on a control at the moment the tour appears and takes focus away.
+  const openerRef = useRef(null);
+  const wasReadyRef = useRef(false);
+  if (ready && !wasReadyRef.current) {
+    const active = document.activeElement;
+    openerRef.current = active instanceof HTMLElement && active !== document.body ? active : null;
+  }
+  wasReadyRef.current = ready;
+
   useEffect(() => {
     if (ready) panelRef.current?.focus();
+  }, [ready]);
+
+  // Give focus back when the tour goes away. This overlay returns null rather
+  // than unmounting, so the cleanup keys on `ready` — it runs when `ready` flips
+  // false, exactly as it would on unmount.
+  useEffect(() => {
+    if (!ready) return undefined;
+    return () => {
+      const opener = openerRef.current;
+      openerRef.current = null;
+      if (opener instanceof HTMLElement && document.contains(opener)) opener.focus();
+    };
   }, [ready]);
 
   useEffect(() => {

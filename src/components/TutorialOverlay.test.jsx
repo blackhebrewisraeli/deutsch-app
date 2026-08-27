@@ -29,7 +29,7 @@ const asRect = ({ left, top, width, height }) => ({
 // Anchors get their rects stubbed through the ref callback, which React runs
 // during the commit's layout phase — i.e. before the overlay's own layout
 // effect measures them. Stubbing after render would be too late.
-function Harness({ rects = {}, missing = [], onDismiss }) {
+function Harness({ rects = {}, missing = [], onDismiss, showOverlay = true }) {
   const status = useRef(null);
   const chat = useRef(null);
   const stats = useRef(null);
@@ -56,7 +56,7 @@ function Harness({ rects = {}, missing = [], onDismiss }) {
       <button type="button" ref={attach('stats')}>
         Stats
       </button>
-      <TutorialOverlay anchors={anchors} onDismiss={onDismiss} />
+      {showOverlay && <TutorialOverlay anchors={anchors} onDismiss={onDismiss} />}
     </div>
   );
 }
@@ -154,6 +154,43 @@ describe('TutorialOverlay', () => {
     const panel = dialog();
     expect(panel).toHaveAttribute('aria-modal', 'true');
     expect(panel.contains(document.activeElement)).toBe(true);
+  });
+
+  // The tour takes focus so it is reachable without a mouse. It has to give it
+  // back: dropping focus to <body> on dismiss makes a keyboard user restart from
+  // the top of the page. The tour has no opener button of its own, so what it
+  // restores to is whatever held focus when it appeared.
+  it('returns focus to whatever held it when the tour is dismissed', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness rects={DEFAULT_RECTS} showOverlay={false} />);
+
+    const before = screen.getByRole('button', { name: 'Chat' });
+    before.focus();
+    expect(document.activeElement).toBe(before);
+
+    rerender(<Harness rects={DEFAULT_RECTS} showOverlay />);
+
+    // Guard against a false pass: if the tour never took focus, the restore
+    // assertion below would hold trivially.
+    expect(document.activeElement).not.toBe(before);
+    expect(dialog()).toContainElement(document.activeElement);
+
+    await user.keyboard('{Escape}');
+    expect(dialog()).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(before);
+  });
+
+  it('returns focus when the tour is finished rather than escaped', async () => {
+    const user = userEvent.setup();
+    const { rerender } = render(<Harness rects={DEFAULT_RECTS} showOverlay={false} />);
+    const before = screen.getByRole('button', { name: 'Chat' });
+    before.focus();
+
+    rerender(<Harness rects={DEFAULT_RECTS} showOverlay />);
+    await user.click(screen.getByRole('button', { name: /skip tutorial/i }));
+
+    expect(dialog()).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(before);
   });
 
   it('names the step it is on for assistive tech', () => {

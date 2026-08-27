@@ -12,6 +12,7 @@
 import '@testing-library/jest-dom/vitest';
 import { afterEach } from 'vitest';
 import { cleanup, configure } from '@testing-library/react';
+import { thawPersist } from './lib/storage';
 
 // findBy*/waitFor give up after 1s by default, which is a coin flip on a loaded
 // machine — a render that normally settles in 20ms can take seconds when the
@@ -22,6 +23,7 @@ configure({ asyncUtilTimeout: 5000 });
 
 afterEach(() => {
   cleanup();
+  thawPersist();
 });
 
 class StorageMock {
