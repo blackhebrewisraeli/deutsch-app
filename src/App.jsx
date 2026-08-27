@@ -52,6 +52,7 @@ import {
   signInWithGoogle,
   humanAuthError,
 } from './lib/auth';
+import { signOutAndReset } from './lib/clearUserState';
 import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
 import { setLevelBoostEnabled } from './lib/xpEntitlement';
 import { useSyncStatus } from './lib/useSyncStatus';
@@ -389,6 +390,14 @@ export default function App() {
 
   const showToast = (title) => pushToasts([{ kind: 'info', title, sub: '', icon: 'ℹ️' }]);
 
+  // Session first, then wipe user persistence (theme stays), then a hard load
+  // so in-memory XP / SRS / level cannot leak into the next guest or account.
+  const handleSignOut = async () => {
+    setGateDismissed(false);
+    const { error } = await signOutAndReset();
+    if (error) showToast('Could not sign out — try again.');
+  };
+
   const handleExport = async () => {
     const token = await getAccessToken();
     if (!token) {
@@ -722,10 +731,7 @@ export default function App() {
             <AccountChip
               user={user}
               onSignIn={requestSignIn}
-              onSignOut={() => {
-                setGateDismissed(false);
-                signOut();
-              }}
+              onSignOut={handleSignOut}
               pending={syncStatus.pending}
             />
           </div>
@@ -934,10 +940,7 @@ export default function App() {
               onReview={handleReview}
               user={user}
               onSignIn={requestSignIn}
-              onSignOut={() => {
-                setGateDismissed(false);
-                signOut();
-              }}
+              onSignOut={handleSignOut}
               onExport={handleExport}
               onDelete={handleDelete}
               lastSyncedAt={syncStatus.lastSyncedAt}

@@ -1,10 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, within, act, fireEvent } from '@testing-library/react';
+import { render, screen, within, act, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import { todayKey } from './lib/stats';
 import { isLevelBoostEnabled, setLevelBoostEnabled } from './lib/xpEntitlement';
 import { TUTORIAL_KEY } from './lib/tutorialPref';
+import { THEME_MODE_KEY } from './lib/themeMode';
+import { loadState } from './lib/storage';
+import { locationReset } from './lib/clearUserState';
 
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 
@@ -32,7 +35,7 @@ const authMock = vi.hoisted(() => ({
 // Mocked rather than inherited because isAuthConfigured() reads
 // import.meta.env.VITE_SUPABASE_*, which Vitest loads from .env — true on a
 // developer's machine, false in CI. See spec F7.
-const authSignOutMock = vi.hoisted(() => vi.fn());
+const authSignOutMock = vi.hoisted(() => vi.fn(() => Promise.resolve({ error: null })));
 
 vi.mock('./lib/auth', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -790,31 +793,52 @@ describe('entry gate', () => {
   // this test only flipped authMock.status without ever setting the latch
   // or clicking a real control, so it passed identically whether or not the
   // reset existed — it could not fail against the unfixed code.
-  it('re-gates and drops the boost when a signed-in user signs out via the real control', async () => {
-    localStorage.setItem('deutsch-level', 'a1');
+  //
+  // Hard navigation is stubbed: jsdom cannot actually leave. Production
+  // assigns '/' after the wipe so React memory cannot keep the old account.
+  it('re-gates, wipes user storage, and hard-resets on Sign out', async () => {
+    localStorage.setItem('deutsch-level', 'b1');
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ stats: { streak: 9, learnedCount: 20 }, gamification: { xp: 300 } })
+    );
+    localStorage.setItem(THEME_MODE_KEY, 'light');
+    const reload = vi.spyOn(locationReset, 'go').mockImplementation(() => {});
     const user = userEvent.setup();
     const { rerender } = render(<App />);
 
-    // Latch gateDismissed the way a real signed-in session does, landing
-    // directly on the app shell.
-    await user.click(gate());
+    try {
+      // Latch gateDismissed the way a real signed-in session does, landing
+      // directly on the app shell.
+      await user.click(gate());
 
-    authMock.status = 'authenticated';
-    authMock.mayHaveSession = true;
-    rerender(<App />);
-    expect(gate()).toBeNull();
-    expect(isLevelBoostEnabled()).toBe(true);
+      authMock.status = 'authenticated';
+      authMock.mayHaveSession = true;
+      rerender(<App />);
+      expect(gate()).toBeNull();
+      expect(isLevelBoostEnabled()).toBe(true);
 
-    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
-    await user.click(screen.getByRole('button', { name: 'Sign out' }));
-    expect(authSignOutMock).toHaveBeenCalled();
+      await user.click(
+        within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' })
+      );
+      await user.click(screen.getByRole('button', { name: 'Sign out' }));
+      await waitFor(() => expect(authSignOutMock).toHaveBeenCalled());
+      await waitFor(() => expect(reload).toHaveBeenCalled());
 
-    authMock.status = 'anonymous';
-    authMock.mayHaveSession = false;
-    rerender(<App />);
+      expect(localStorage.getItem('deutsch-app-state-v1')).toBeNull();
+      expect(localStorage.getItem('deutsch-level')).toBeNull();
+      expect(localStorage.getItem(THEME_MODE_KEY)).toBe('light');
+      expect(loadState()).toBeNull();
 
-    expect(gate()).toBeInTheDocument();
-    expect(isLevelBoostEnabled()).toBe(false);
+      authMock.status = 'anonymous';
+      authMock.mayHaveSession = false;
+      rerender(<App />);
+
+      expect(gate()).toBeInTheDocument();
+      expect(isLevelBoostEnabled()).toBe(false);
+    } finally {
+      reload.mockRestore();
+    }
   });
 
   it('keeps a level picked in settings after leaving and returning to the tab', async () => {
