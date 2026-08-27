@@ -192,6 +192,23 @@ export const TRANSITION = {
   slow: 'all 0.30s ease',
 };
 
+// ── Focus ────────────────────────────────────────────────────
+// One ring for the whole app. `COLORS.ink` is var(--c-fg), the highest-contrast
+// ink against every ground in both palettes, so the ring flips with the mode
+// with no code. Two offsets, both earned: `offset` for controls with air around
+// them, `inset` for elements flush to a container edge where an outset ring is
+// clipped by the parent's overflow and overlaps its neighbour. A third value
+// needs a reason.
+//
+// Consumed by injectGlobalStyles(), not by components: :focus-visible cannot be
+// expressed inline, so the rule lives in the one global sheet and every element
+// carrying a `data-ui` attribute picks it up.
+export const FOCUS = {
+  ring: `2px solid ${COLORS.ink}`,
+  offset: 2,
+  inset: -3,
+};
+
 // ── Z-index ──────────────────────────────────────────────────
 export const Z = {
   base: 0,

@@ -13,19 +13,6 @@ import { COLORS, RADIUS, SPACE } from '../../lib/theme.js';
 
 const SPARSE_BELOW = 5; // show the "still filling up" note under this many members
 
-const ROW_CLASS = 'league-row';
-
-// Inline styles can't express :focus-visible, so a scoped rule carries the
-// focus ring — the same approach WelcomeGate and TrialWall use. The offset is
-// NEGATIVE on purpose: the rows are full-bleed inside the list, so an outset
-// ring would be clipped by the container edge and overlap the neighbouring row.
-const ROW_FOCUS_CSS = `
-.${ROW_CLASS}:focus-visible {
-  outline: 3px solid ${COLORS.ink};
-  outline-offset: -3px;
-}
-`;
-
 function ZoneLabel({ text, color }) {
   return (
     <li
@@ -114,7 +101,6 @@ export default function LeaderboardSection({ onSelectUser }) {
         </span>
       </div>
 
-      <style>{ROW_FOCUS_CSS}</style>
       <ol style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         {state.rows.map((row, i) => {
           const isMe = row.user_id === userId;
@@ -131,7 +117,12 @@ export default function LeaderboardSection({ onSelectUser }) {
                     click target. */}
                 <button
                   type="button"
-                  className={ROW_CLASS}
+                  // The app's one focus ring, from injectGlobalStyles. The
+                  // offset is inset because the rows are full-bleed inside the
+                  // list: an outset ring is clipped by the container edge and
+                  // overlaps the neighbouring row.
+                  data-ui="button"
+                  data-focus-inset=""
                   onClick={() => onSelectUser(row.user_id)}
                   style={{
                     display: 'flex',
