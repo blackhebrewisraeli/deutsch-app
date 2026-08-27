@@ -845,7 +845,8 @@ Development and Production are **separate blast radii**. A developer running the
 | **Local schema work is local** | Schema changes and the adversarial RLS suite (`npm run test:rls`) run against a **local Supabase** in Docker, never against the cloud project. CI does the same. | ✅ |
 | **Separate data planes**       | Local development runs against the **local Supabase stack** (`supabase start`, Docker) with its own synthetic learners — `.env.example` ships the published local defaults, and Vercel deliberately holds **no** Development-scope Supabase entry, so `vercel dev` cannot inject a cloud URL. No local session can reach a production row. | ✅ |
 | **No production data locally** | Production rows are never copied to a developer machine. Reproducing a bug uses a synthetic fixture or an anonymised extract — never a `pg_dump` of live learners. | ⬜ |
-| **Preview is production-shaped, not production-fed** | Preview deployments exercise the production code path with production-shaped configuration, but must terminate in the non-production data plane once the split above lands. | 🚧 |
+| **Each plane owns its own secrets** | A credential issued by one project is never used against another. Preview's server lane holds Preview's own service-role key or none at all — never Production's. When it is absent the rate limiter degrades to per-instance counters rather than borrowing a foreign key. | 🚧 |
+| **Preview is production-shaped, not production-fed** | Preview deployments exercise the production code path against their **own Supabase project** (`Sprachschule Preview`, eu-central-1, same 9 migrations, same revoked-by-default grants). No Preview build holds a production credential of any kind. A Preview learner account is a Preview learner account. | ✅ |
 
 > **Why writing the standard down first mattered.** The service-role key sat readable-back in a Development-scope variable for 75 days before [#155](https://github.com/blackhebrewisraeli/deutsch-app/pull/155) removed it. Nothing failed, no test went red, and no reviewer noticed — the boundary had never been written down, so nothing could contradict it. The row above was published as ⬜ for exactly that reason, and closed days later: `.env.example` had been handing every new developer the **production** project ref as its default, and local `.env` still carried a real service-role key — which bypasses RLS, so local development held unrestricted **write** access to live learner data, not merely read. Naming the gap in the table is what turned it into a task.
 
@@ -884,20 +885,35 @@ The posture that makes this hold:
 
 ### Boundaries in one picture
 
+**Three data planes, no credential crossing between them.** Each plane owns its own Supabase instance, its own keys, and its own learners; an arrow between them is a boundary violation, not a feature.
+
 ```
-  Learner (browser)          Developer (local)             Admin (operator)
-        │                          │                              │
-        │ anon key + JWT           │ local Supabase (Docker)      │ dashboards, rotation
-        ▼                          ▼                              ▼
- ┌──────────────────┐      ┌──────────────────┐          ┌──────────────────┐
- │  authenticated   │      │  Development     │          │  Production      │
- │  own rows only   │      │  data plane      │  ──✗──►  │  learner rows    │
- │  RLS enforced    │      │  synthetic users │  never   │  service_role    │
- └────────┬─────────┘      └──────────────────┘          └──────────────────┘
-          │                                                       ▲
-          │  never holds a server credential                      │
-          └───────────────► /api/v1/* (Vercel function) ──────────┘
-                            the only holder of service_role
+        DEVELOPMENT                 PREVIEW                     PRODUCTION
+   ┌────────────────────┐   ┌────────────────────┐   ┌────────────────────┐
+   │ local Supabase     │   │ Sprachschule       │   │ Sprachschule       │
+   │ (Docker, on the    │   │ Preview            │   │ (eu-central-1)     │
+   │  developer's box)  │   │ (eu-central-1)     │   │                    │
+   │                    │   │                    │   │                    │
+   │ 127.0.0.1:54321    │   │ mqyscxcd…          │   │ xcnnlczv…          │
+   │ published local    │   │ own anon +         │   │ own anon +         │
+   │ default keys       │   │ own service_role   │   │ own service_role   │
+   │ synthetic learners │   │ throwaway learners │   │ REAL learners      │
+   └─────────┬──────────┘   └─────────┬──────────┘   └─────────┬──────────┘
+             │                        │                        │
+             │◄────────── ✗ never ───►│◄────────── ✗ never ───►│
+             │      no shared URL, no shared key, ever          │
+             ▼                        ▼                        ▼
+       `supabase start`          preview deploys           the live app
+       `npm run test:rls`        vercel Preview scope      vercel Production scope
+       Vercel Development
+       scope holds NOTHING
+
+  Within any one plane, the same rules apply:
+
+    Learner (browser) ──anon key + JWT──► authenticated ──► own rows only, RLS enforced
+          │
+          │ never holds a server credential
+          └──────────► /api/v1/* (Vercel function) ──► the only holder of service_role
 ```
 
 </details>
