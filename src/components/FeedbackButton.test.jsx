@@ -201,6 +201,38 @@ describe('FeedbackButton', () => {
     expect(Number.parseFloat(dialog.style.width)).toBe(400);
   });
 
+  // Closing a dialog must give focus back to what opened it. Without this,
+  // Escape drops focus to <body> and a keyboard user restarts from the top of
+  // the page — the dialog's own trigger, several tab stops back.
+  it('returns focus to the trigger when Escape dismisses the form', async () => {
+    const user = userEvent.setup();
+    render(<FeedbackButton context={VOCAB_CONTEXT} />);
+    const trigger = screen.getByRole('button', { name: /report an issue/i });
+
+    await user.click(trigger);
+    // Guard against a false pass: if focus never moved INTO the dialog, the
+    // restore assertion below would hold trivially and prove nothing.
+    expect(document.activeElement).not.toBe(trigger);
+    expect(screen.getByRole('dialog')).toContainElement(document.activeElement);
+
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(trigger);
+  });
+
+  it('returns focus to the trigger when Cancel dismisses the form', async () => {
+    const user = userEvent.setup();
+    render(<FeedbackButton context={VOCAB_CONTEXT} />);
+    const trigger = screen.getByRole('button', { name: /report an issue/i });
+
+    await user.click(trigger);
+    expect(document.activeElement).not.toBe(trigger);
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(document.activeElement).toBe(trigger);
+  });
+
   it('traps focus while the form is open', async () => {
     const user = userEvent.setup();
     const dialog = await openDialog(user);
