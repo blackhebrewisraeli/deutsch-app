@@ -47,7 +47,14 @@ export default defineConfig({
     include: ['src/**/*.test.{js,jsx}', 'api/**/*.test.js', 'scripts/**/*.test.js'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
+      // 'lcov' is here for SonarCloud, which reads coverage/lcov.info and
+      // nothing else — 'text' and 'html' are for humans and are invisible to it.
+      // Sonar currently reports 0.0% Coverage on New Code, and this is the first
+      // half of why: the file it looks for was never written. The second half is
+      // that SonarCloud's Automatic Analysis cannot ingest coverage at all —
+      // that needs CI-based scanner analysis, which is blocked on two dashboard
+      // actions (turn Automatic Analysis off, mint a SONAR_TOKEN). See the PR.
+      reporter: ['text', 'html', 'lcov'],
       // src/App.jsx is listed explicitly. It was absent for the app's whole
       // life, so the 939-line orchestrator that owns the sync effects, the
       // trial-wall gate and the entry gate never appeared in a coverage
