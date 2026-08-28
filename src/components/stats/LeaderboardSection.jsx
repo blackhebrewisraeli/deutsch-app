@@ -51,6 +51,12 @@ export default function LeaderboardSection({ onSelectUser }) {
   // this component.
   useEffect(() => {
     if (!LEAGUES_ENABLED || !userId) return;
+    // Retry re-runs this effect via `nonce` without remounting the section, so
+    // a stale error from the previous attempt must be cleared here — otherwise
+    // it stays 'error' and renders back over the refetch, and a second
+    // failure looks identical to the first (nothing unmounts, nothing is
+    // announced again).
+    setState((s) => (s.status === 'error' ? { status: 'idle', league: null, rows: [] } : s));
     let cancelled = false;
     (async () => {
       try {
