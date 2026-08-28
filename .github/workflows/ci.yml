@@ -24,8 +24,18 @@ jobs:
           cache: npm
 
       # .npmrc sets legacy-peer-deps=true (eslint-plugin-react peer-dep workaround)
+      #
+      # --ignore-scripts: a dependency's install/postinstall hook is arbitrary
+      # code from the registry running with the job's token in its environment.
+      # Only two packages in the tree declare one — esbuild and @sentry/cli —
+      # and neither needs it here: esbuild 0.21 ships its binary as a platform
+      # optionalDependency (@esbuild/<platform>), which npm installs without
+      # running anything, and @sentry/cli's binary is only used for source-map
+      # upload, which this build does not do. Verified by a clean
+      # `npm ci --ignore-scripts` followed by a full build and the whole suite.
+      # Our own `prepare: husky` is already a no-op in CI via HUSKY: 0 above.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Lint
         run: npm run lint
@@ -60,13 +70,20 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      # --ignore-scripts for the reason spelled out in the verify job above.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       # playwright itself is already a devDependency — only the browser binary
       # and its system libs are missing on the runner.
+      #
+      # `npx --no` runs ONLY the locally installed binary. Bare `npx <name>`
+      # silently fetches and executes whatever the registry answers with if the
+      # name is missing or misspelled, at whatever version it resolves — the
+      # version is pinned by package-lock.json only when the package is already
+      # local. --no turns that into a hard failure instead.
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: npx --no -- playwright install --with-deps chromium
 
       # Stub Supabase config, not real credentials. `isAuthConfigured()` only
       # checks that both values are truthy, so a fake host is enough to make the
@@ -88,7 +105,7 @@ jobs:
       # what users get, so it is what gets audited — not the dev server.
       - name: Audit contrast against the production build
         run: |
-          npx vite preview --port 5290 --strictPort &
+          npx --no -- vite preview --port 5290 --strictPort &
           # Poll rather than sleep — a fixed sleep is how this job becomes flaky.
           for i in $(seq 1 60); do
             if curl -sf "$AUDIT_BASE" > /dev/null; then
@@ -122,8 +139,9 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
 
+      # --ignore-scripts for the reason spelled out in the verify job above.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       # Pinned, not `latest`. Resolving `latest` makes setup-cli call the
       # unauthenticated GitHub releases API on every run, which fails the whole
