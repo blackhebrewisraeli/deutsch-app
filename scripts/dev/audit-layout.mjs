@@ -7,7 +7,11 @@
  *
  *   npm run build
  *   npx vite preview --port 5290 --strictPort &
- *   AUDIT_BASE=http://localhost:5290 npm run audit:layout > before.json
+ *   AUDIT_BASE=http://localhost:5290 npm run --silent audit:layout > before.json
+ *
+ * The --silent flag is not optional: without it, npm prints its own
+ * "> pkg@ver audit:layout" banner to STDOUT ahead of the JSON, which breaks
+ * JSON.parse on the captured file. Confirmed on npm 11.11.1.
  *
  * AUDIT_BASE is required. audit-contrast.mjs can provision its own server, but
  * that is ~200 lines this probe does not need, and its helpers are not exported
@@ -50,15 +54,43 @@ async function dismissEntryScreens(page) {
   }
 }
 
-/** Switch tabs by the nav button's accessible name. */
+/**
+ * Switch tabs by the nav button's accessible name, and verify the switch
+ * actually happened.
+ *
+ * A silent no-op here (label drifted, wrapping span ate the textContent) would
+ * otherwise leave the PREVIOUS tab active while this function returns clean —
+ * the sweep would still emit 18/18 rows and exit 0, having measured one tab
+ * six times under six different labels. Row count can't catch that; only
+ * checking the DOM after the click can.
+ */
 async function openTab(page, tab) {
-  await page.evaluate((t) => {
+  const clicked = await page.evaluate((t) => {
     const b = [...document.querySelectorAll('button')].find((x) =>
       new RegExp(`^\\s*${t}\\s*$`, 'i').test(x.getAttribute('aria-label') || x.textContent || '')
     );
-    if (b) b.click();
+    if (!b) return false;
+    b.click();
+    return true;
   }, tab);
+  if (!clicked) {
+    throw new Error(`audit-layout: no nav button matched tab "${tab}" — the accessible name may have drifted`);
+  }
   await page.waitForTimeout(500);
+
+  // The active nav button carries aria-current="page" (src/App.jsx:
+  // `aria-current={active ? 'page' : undefined}`) — the one signal on the
+  // button itself that distinguishes "this is the selected tab" from "this is
+  // just a button that exists". Confirm the click actually landed there.
+  const landed = await page.evaluate((t) => {
+    const b = [...document.querySelectorAll('button')].find((x) =>
+      new RegExp(`^\\s*${t}\\s*$`, 'i').test(x.getAttribute('aria-label') || x.textContent || '')
+    );
+    return b?.getAttribute('aria-current') === 'page';
+  }, tab);
+  if (!landed) {
+    throw new Error(`audit-layout: clicked "${tab}" but it never became the active tab (aria-current)`);
+  }
 }
 
 /**
