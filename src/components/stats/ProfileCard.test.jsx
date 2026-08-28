@@ -57,8 +57,14 @@ it('refetches when Retry is pressed', async () => {
 
   // Assert on the recovered UI, not on a call count: the count is an
   // implementation detail and would pass even if the retry re-rendered the
-  // same error.
+  // same error. The positive assertion alone is not enough here, though:
+  // `error` and `profile` render on independent sibling expressions rather
+  // than a single mutually-exclusive state field, so a stale `error === true`
+  // left over from the failed attempt renders right alongside the freshly
+  // loaded profile instead of replacing it. The absence of the alert is what
+  // actually proves the effect reset `error` before refetching.
   expect(await screen.findByText('Rival')).toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
 });
 
 it('calls onClose when the close button is clicked', async () => {
