@@ -144,3 +144,36 @@ it('names each row for a screen reader from its rank, handle, and XP', async () 
 
   expect(screen.getByRole('button', { name: /2\.\s*Rival A\s*20 XP/ })).toBeTruthy();
 });
+
+// ── Error recovery ───────────────────────────────────────────────────────
+
+it('announces a league load failure and offers a way back', async () => {
+  useAuth.mockReturnValue({ user: { id: 'me' } });
+  joinLeague.mockRejectedValue(new Error('boom'));
+  render(<LeaderboardSection onSelectUser={() => {}} />);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load your league.");
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+});
+
+it('refetches when Retry is pressed', async () => {
+  const user = userEvent.setup();
+  useAuth.mockReturnValue({ user: { id: 'me' } });
+  joinLeague.mockRejectedValueOnce(new Error('boom'));
+  joinLeague.mockResolvedValue({
+    league_id: 'L1',
+    tier: 0,
+    period_start: currentMonday(),
+    handle: 'Me',
+  });
+  refreshLeague.mockResolvedValue({ weekly_xp: 0 });
+  fetchStandings.mockResolvedValue([{ user_id: 'me', handle: 'Me', weekly_xp: 30, rank: null }]);
+
+  render(<LeaderboardSection onSelectUser={() => {}} />);
+  await user.click(await screen.findByRole('button', { name: 'Retry' }));
+
+  // Assert on the recovered UI, not on a call count: the count is an
+  // implementation detail and would pass even if the retry re-rendered the
+  // same error.
+  expect(await screen.findByRole('heading', { name: /League/ })).toBeInTheDocument();
+});

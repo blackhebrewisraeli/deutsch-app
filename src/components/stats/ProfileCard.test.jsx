@@ -31,6 +31,14 @@ it('renders fetched profile fields', async () => {
   expect(screen.getByText(/420/)).toBeTruthy();
 });
 
+it('announces a profile load failure and offers a way back', async () => {
+  fetchProfile.mockRejectedValue(new Error('boom'));
+  render(<ProfileCard userId="x" onClose={() => {}} />);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load profile.");
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+});
+
 it('calls onClose when the close button is clicked', async () => {
   fetchProfile.mockResolvedValue({
     handle: 'R',

@@ -1,5 +1,5 @@
 import { useEffect, useState, Fragment } from 'react';
-import { Users } from 'lucide-react';
+import { Users, AlertTriangle } from 'lucide-react';
 import { useAuth, getSupabase } from '../../lib/auth.js';
 import {
   joinLeague,
@@ -39,10 +39,16 @@ export default function LeaderboardSection({ onSelectUser }) {
   const { user } = useAuth();
   const userId = user?.id;
   const [state, setState] = useState({ status: 'idle', league: null, rows: [] });
+  const [nonce, setNonce] = useState(0);
 
   // Depend on the stable id, not the user object — a fresh object identity on
   // re-render would otherwise re-fire join/refresh and could double-create a
-  // membership.
+  // membership. `nonce` is the one deliberate exception: it only advances on
+  // an explicit Retry click, and joinLeague is idempotent per period (it
+  // looks up the caller's existing membership first, and recovers from a
+  // unique-constraint race), so replaying the effect here is the same shape
+  // as leaving the tab and coming back, which already unmounts and remounts
+  // this component.
   useEffect(() => {
     if (!LEAGUES_ENABLED || !userId) return;
     let cancelled = false;
@@ -61,7 +67,7 @@ export default function LeaderboardSection({ onSelectUser }) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, nonce]);
 
   if (!LEAGUES_ENABLED) return null;
 
@@ -70,7 +76,15 @@ export default function LeaderboardSection({ onSelectUser }) {
   }
 
   if (state.status === 'error') {
-    return <p style={{ color: COLORS.red, padding: SPACE[4] }}>Couldn't load your league.</p>;
+    return (
+      <StatusNote
+        tone="error"
+        icon={AlertTriangle}
+        action={{ label: 'Retry', onClick: () => setNonce((n) => n + 1) }}
+      >
+        Couldn&apos;t load your league.
+      </StatusNote>
+    );
   }
   if (state.status !== 'ready') {
     return <p style={{ color: COLORS.mute, padding: SPACE[4] }}>Loading league…</p>;

@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
+import { AlertTriangle } from 'lucide-react';
 import { fetchProfile, TIER_NAMES } from '../../lib/leagues.js';
 import { COLORS, SPACE, RADIUS, Z } from '../../lib/theme.js';
 import useFocusTrap from '../../lib/useFocusTrap.js';
+import StatusNote from '../ui/StatusNote';
 
 export default function ProfileCard({ userId, onClose }) {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(false);
+  const [nonce, setNonce] = useState(0);
   const cardRef = useRef(null);
   const openerRef = useRef(null);
   const capturedRef = useRef(false);
@@ -69,6 +72,10 @@ export default function ProfileCard({ userId, onClose }) {
 
   useEffect(() => {
     let cancelled = false;
+    // Retry re-runs this effect via `nonce` without remounting the card, so a
+    // stale error from the previous attempt must be cleared here — otherwise
+    // it stays true and renders back over freshly-loaded data.
+    setError(false);
     fetchProfile(userId)
       .then((p) => {
         if (!cancelled) setProfile(p);
@@ -79,7 +86,7 @@ export default function ProfileCard({ userId, onClose }) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, nonce]);
 
   return (
     <div
@@ -134,7 +141,15 @@ export default function ProfileCard({ userId, onClose }) {
         >
           ✕
         </button>
-        {error && <p style={{ color: COLORS.red }}>Couldn't load profile.</p>}
+        {error && (
+          <StatusNote
+            tone="error"
+            icon={AlertTriangle}
+            action={{ label: 'Retry', onClick: () => setNonce((n) => n + 1) }}
+          >
+            Couldn&apos;t load profile.
+          </StatusNote>
+        )}
         {!error && !profile && <p style={{ color: COLORS.mute }}>Loading…</p>}
         {profile && (
           <div>
