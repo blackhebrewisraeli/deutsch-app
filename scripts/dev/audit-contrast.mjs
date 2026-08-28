@@ -31,7 +31,22 @@
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// The pinned vite binary, by absolute path, rather than `npx vite`.
+//
+// Two reasons, one of them security. Bare `npx` is resolved through PATH, and
+// npx will fetch and execute a package from the registry when the name is not
+// installed locally — so a shadowed PATH entry or a typo becomes arbitrary code
+// on a machine that is mid-build (Sonar S4036). Spawning node_modules/.bin/vite
+// directly removes both: no PATH lookup, no on-demand install, and the version
+// is exactly what package-lock.json pinned.
+//
+// Derived from this file's own location, not process.cwd(), so the script
+// behaves the same however it is invoked.
+const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
+const VITE_BIN = join(REPO_ROOT, 'node_modules', '.bin', 'vite');
 
 // Stub Supabase config, not credentials. `isAuthConfigured()` only checks that
 // both values are truthy, so a fake host is enough to make the build render the
@@ -293,13 +308,13 @@ async function provisionTarget() {
     console.log(`Building with stub Supabase config → ${OUT_DIR}/`);
     // STUB_ENV is passed through the environment, which Vite resolves ahead of
     // any .env file, so a developer's real credentials do not win here.
-    await run('npx', ['vite', 'build', '--outDir', OUT_DIR], STUB_ENV);
+    await run(VITE_BIN, ['build', '--outDir', OUT_DIR], STUB_ENV);
   }
 
   console.log(`Serving ${OUT_DIR}/ on :${AUDIT_PORT}`);
   previewServer = spawn(
-    'npx',
-    ['vite', 'preview', '--outDir', OUT_DIR, '--port', String(AUDIT_PORT), '--strictPort'],
+    VITE_BIN,
+    ['preview', '--outDir', OUT_DIR, '--port', String(AUDIT_PORT), '--strictPort'],
     { stdio: 'ignore' }
   );
   previewServer.on('error', (err) => {

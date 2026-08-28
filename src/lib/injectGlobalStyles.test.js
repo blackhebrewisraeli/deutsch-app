@@ -35,9 +35,21 @@ describe('injectGlobalStyles', () => {
     expect(rule.indexOf('100vh')).toBeLessThan(rule.indexOf('100dvh'));
   });
 
-  it('pads the last stripe clear of the home indicator', () => {
+  // The app does not opt into safe areas (no viewport-fit=cover in index.html),
+  // so a safe-area inset in this sheet would always resolve to 0. The rule that
+  // used to live here padded `.entry-screen-foot`, a class no element carried.
+  // Negative assertion because the failure mode is a re-addition, not a removal:
+  // src/safeArea.test.js is the guard that ties this to the viewport meta.
+  it('ships no safe-area padding while the viewport does not opt in', () => {
     injectGlobalStyles();
-    expect(sheet()).toMatch(/\.entry-screen-foot\s*\{[^}]*safe-area-inset-bottom/);
+    // Comments stripped first: the sheet explains at length why the rule is
+    // absent, and that prose names both the old class and the inset. Asserting
+    // on the raw text would match the explanation instead of live CSS.
+    const rules = sheet().replace(/\/\*[\s\S]*?\*\//g, '');
+    expect(rules).not.toContain('entry-screen-foot');
+    expect(rules).not.toContain('safe-area-inset');
+    // The dvh handling is a different concern and must survive.
+    expect(rules).toContain('100dvh');
   });
 
   // Before this rule existed the app had three hand-rolled `:focus-visible`

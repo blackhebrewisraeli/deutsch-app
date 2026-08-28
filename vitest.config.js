@@ -47,13 +47,9 @@ export default defineConfig({
     include: ['src/**/*.test.{js,jsx}', 'api/**/*.test.js', 'scripts/**/*.test.js'],
     coverage: {
       provider: 'v8',
-      // 'lcov' is here for SonarCloud, which reads coverage/lcov.info and
-      // nothing else — 'text' and 'html' are for humans and are invisible to it.
-      // Sonar currently reports 0.0% Coverage on New Code, and this is the first
-      // half of why: the file it looks for was never written. The second half is
-      // that SonarCloud's Automatic Analysis cannot ingest coverage at all —
-      // that needs CI-based scanner analysis, which is blocked on two dashboard
-      // actions (turn Automatic Analysis off, mint a SONAR_TOKEN). See the PR.
+      // lcov is what SonarCloud reads (sonar.javascript.lcov.reportPaths).
+      // Without it the dashboard reported 0.0% Coverage on New Code for a repo
+      // with ~1760 tests — not a low number, a MISSING one.
       reporter: ['text', 'html', 'lcov'],
       // src/App.jsx is listed explicitly. It was absent for the app's whole
       // life, so the 939-line orchestrator that owns the sync effects, the
@@ -64,7 +60,11 @@ export default defineConfig({
       //
       // src/data/** is gone, not omitted: the directory was deleted in Phase
       // 1.5 (PR #101) and the stale glob had been matching nothing since.
-      include: ['src/lib/**', 'src/components/**', 'src/App.jsx', 'api/**'],
+      // src/packs/** added: 14 source files with 14 test files beside them,
+      // measured by nothing. Same defect as App.jsx below — a tested directory
+      // absent from the report is indistinguishable from an untested one, and
+      // once Sonar reads this lcov it would have called all 14 uncovered.
+      include: ['src/lib/**', 'src/components/**', 'src/packs/**', 'src/App.jsx', 'api/**'],
       exclude: ['src/**/*.test.{js,jsx}', 'api/**/*.test.js'],
     },
   },

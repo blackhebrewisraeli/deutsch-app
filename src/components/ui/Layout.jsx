@@ -9,7 +9,7 @@ import { SPACE } from '../../lib/theme';
 //   - a bare `1fr` track that refuses to shrink        (Grid)
 //   - a non-wrapping row at 320px                      (Row)
 //   - a flex child that cannot shrink below its text   (minWidth: 0)
-//   - a per-tab re-derivation of the safe-area inset   (PageFrame)
+//   - a per-tab re-derivation of the page measure      (PageFrame)
 
 // ── minWidth: 0 — necessary, and NOT sufficient ──────────────────────────────
 //
@@ -93,10 +93,24 @@ export function Grid({
   // to shrink below its content and pushes the page wider than the viewport.
   // Four separate mobile-overflow bugs came from this (docs/DEMO_READINESS.md
   // #15-#17), which is why it is structural here rather than remembered.
-  const tracks =
-    columns === 'auto-fit'
-      ? `repeat(auto-fit, minmax(${min}px, 1fr))`
-      : `repeat(${columns}, minmax(0, 1fr))`;
+  //
+  // String(columns), not a bare `columns === 'auto-fit'`. `columns` is a union —
+  // a track count, or the string 'auto-fit' — but its default is the number 2,
+  // and Sonar infers the parameter's type from that default alone. It therefore
+  // reads the bare strict-equality as number === string, concludes it can never
+  // be true, and raises S3403 "Remove this '===' check; it will always be false"
+  // as a Major bug. That is a false positive — the branch is reachable and
+  // covered (see 'emits minmax on the auto-fit path too' in Layout.test.jsx) —
+  // but it turned the whole main-branch quality gate red at PR #172 and kept it
+  // red for every merge after, because SonarCloud was not yet a required check.
+  //
+  // Coercing makes both operands strings, so the comparison is unambiguous to
+  // the analyser and identical at runtime: String(2) is '2', which is not
+  // 'auto-fit'. Do not "simplify" this back.
+  const autoFit = String(columns) === 'auto-fit';
+  const tracks = autoFit
+    ? `repeat(auto-fit, minmax(${min}px, 1fr))`
+    : `repeat(${columns}, minmax(0, 1fr))`;
 
   return (
     <Tag
@@ -113,8 +127,8 @@ export function Grid({
   );
 }
 
-// The outermost per-tab wrapper, and the one place the measure, the gutters and
-// the safe-area inset are decided.
+// The outermost per-tab wrapper, and the one place the measure and the gutters
+// are decided.
 //
 // The defaults describe THIS APP's shell rather than a general recommendation:
 // 1400 is App.jsx's <main> measure, and 900 (the value shipped in sub-project
@@ -123,12 +137,31 @@ export function Grid({
 //
 // `gutter` drives the inline edges AND the top because in this app they are the
 // same number — 16 on mobile, 32 on desktop. Bottom is its own prop because it
-// is the only edge that does not vary with viewport, and the only one that must
-// COMPOSE with the safe-area inset instead of being replaced by it.
+// is the only edge that does not vary with viewport.
 //
 // No useWindowWidth in here. A layout primitive that reads the viewport has a
 // hidden dependency and cannot be tested without stubbing the hook; the caller
 // already knows whether it is mobile.
+//
+// There is deliberately NO safe-area inset. This app does not opt into safe
+// areas: index.html's viewport meta is `width=device-width, initial-scale=1.0`
+// with no `viewport-fit=cover`, and without that opt-in iOS reports every
+// env(safe-area-inset-*) as 0 — in Mobile Safari and inside the installed PWA
+// alike (vite.config.js sets display:'standalone'). A
+// calc(<gutter>px + env(safe-area-inset-bottom, 0px)) sat here briefly; the
+// env() term always resolved to 0, so it was inert rather than protective
+// while reading as load-bearing.
+//
+// If the opt-in ever lands, the inset is ADDED to bottomGutter rather than
+// substituted for it — that composition is what the prop exists to guarantee,
+// so the inset can never replace the gutter and leave content flush with an
+// edge (spec §3.4). But opting in is a real visual change, not a one-attribute
+// fix: the masthead in App.jsx is `position: sticky; top: 0`, so
+// viewport-fit=cover would slide it under the status bar / Dynamic Island
+// unless it takes an inset-top, and the inline gutters would need
+// inset-left/right or landscape content goes under the notch. That needs a
+// notched device to verify and is not done.
+// src/safeArea.test.js fails if either half of the opt-in lands without the other.
 export function PageFrame({
   maxWidth = 1400,
   gutter = 4,
@@ -147,15 +180,11 @@ export function PageFrame({
         marginInline: 'auto',
         paddingInline: inline,
         paddingTop: inline,
-        // The calc() ADDS the safe-area inset to the gutter rather than
-        // substituting one for the other — that composition is what the prop
-        // exists to guarantee, so the inset can never replace the gutter and
-        // leave content flush with an edge. The inset itself currently
-        // resolves to 0 everywhere in this app, including the installed PWA:
-        // index.html's viewport meta has no viewport-fit=cover, and without
-        // it iOS reports every safe-area-inset-* as 0. This line is
-        // correct-in-advance for when that changes, not active behaviour today.
-        paddingBottom: `calc(${bottom}px + env(safe-area-inset-bottom, 0px))`,
+        // A plain gutter, with no env(safe-area-inset-bottom) term — see above.
+        // The §3.4 defect this still prevents is the original one: <main> has a
+        // real 32px bottom gutter, and adopting the primitive without this prop
+        // would have silently removed it from every tab.
+        paddingBottom: bottom,
         width: '100%',
         ...SHRINKABLE,
         ...style,
