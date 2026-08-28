@@ -141,7 +141,10 @@ export default function AlphabetTab({
           boxShadow: SHADOW.card,
           overflow: 'hidden',
           width: 'fit-content',
-          marginTop: SPACE[6],
+          // The rhythm rule: the gap between a tab's Hero and its first
+          // content block is SPACE[8]. Alphabet was the only tab that
+          // disagreed (spec §3.5, §4.3).
+          marginTop: SPACE[8],
           marginBottom: SPACE[6],
         }}
       >

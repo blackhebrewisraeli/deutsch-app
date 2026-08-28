@@ -270,7 +270,7 @@ export default function VocabTab({
           // wide). minmax(0, …) lets the track shrink and the content reflow.
           gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : '320px minmax(0, 1fr)',
           gap: mobile ? 16 : 32,
-          marginTop: 32,
+          marginTop: SPACE[8],
         }}
       >
         <DeckPicker
