@@ -225,6 +225,17 @@ jobs:
         if: steps.guard.outputs.configured == 'true'
         run: npm run test:coverage
 
+      # Pinned to a full commit SHA, not a tag. A tag is mutable — whoever
+      # controls the action's repo can repoint it at new code that then runs
+      # here with SONAR_TOKEN in scope. Sonar raises this as a Major issue
+      # ("Use full commit SHA hash for this dependency"), and it did exactly
+      # that to this line when it was written as @v4: the very first push of
+      # this PR failed on C Security Rating for one unpinned third-party
+      # action. GitHub-owned actions/* above are not flagged.
+      #
+      # 2291811 is the v8.2.1 release (2026-07-13). @v4, the version this was
+      # first written against, resolved to a commit from 2025-09-25. Bump
+      # deliberately: read the diff, then move both the SHA and the comment.
       - name: SonarCloud scan
         if: steps.guard.outputs.configured == 'true'
-        uses: SonarSource/sonarqube-scan-action@v4
+        uses: SonarSource/sonarqube-scan-action@22918119ff8e1ca75a623e15c8296b6ea4fbe28f # v8.2.1
