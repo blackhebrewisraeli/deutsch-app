@@ -93,10 +93,24 @@ export function Grid({
   // to shrink below its content and pushes the page wider than the viewport.
   // Four separate mobile-overflow bugs came from this (docs/DEMO_READINESS.md
   // #15-#17), which is why it is structural here rather than remembered.
-  const tracks =
-    columns === 'auto-fit'
-      ? `repeat(auto-fit, minmax(${min}px, 1fr))`
-      : `repeat(${columns}, minmax(0, 1fr))`;
+  //
+  // String(columns), not a bare `columns === 'auto-fit'`. `columns` is a union —
+  // a track count, or the string 'auto-fit' — but its default is the number 2,
+  // and Sonar infers the parameter's type from that default alone. It therefore
+  // reads the bare strict-equality as number === string, concludes it can never
+  // be true, and raises S3403 "Remove this '===' check; it will always be false"
+  // as a Major bug. That is a false positive — the branch is reachable and
+  // covered (see 'emits minmax on the auto-fit path too' in Layout.test.jsx) —
+  // but it turned the whole main-branch quality gate red at PR #172 and kept it
+  // red for every merge after, because SonarCloud was not yet a required check.
+  //
+  // Coercing makes both operands strings, so the comparison is unambiguous to
+  // the analyser and identical at runtime: String(2) is '2', which is not
+  // 'auto-fit'. Do not "simplify" this back.
+  const autoFit = String(columns) === 'auto-fit';
+  const tracks = autoFit
+    ? `repeat(auto-fit, minmax(${min}px, 1fr))`
+    : `repeat(${columns}, minmax(0, 1fr))`;
 
   return (
     <Tag
