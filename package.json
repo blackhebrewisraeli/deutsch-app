@@ -1,7 +1,7 @@
 {
   "name": "deutsch-app",
   "private": true,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "A bold, editorial-style German learning app powered by Claude AI",
   "scripts": {
