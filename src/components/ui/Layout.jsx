@@ -147,8 +147,14 @@ export function PageFrame({
         marginInline: 'auto',
         paddingInline: inline,
         paddingTop: inline,
-        // Keeps content clear of the home indicator on iOS — ADDED to the
-        // gutter, not substituted for it.
+        // The calc() ADDS the safe-area inset to the gutter rather than
+        // substituting one for the other — that composition is what the prop
+        // exists to guarantee, so the inset can never replace the gutter and
+        // leave content flush with an edge. The inset itself currently
+        // resolves to 0 everywhere in this app, including the installed PWA:
+        // index.html's viewport meta has no viewport-fit=cover, and without
+        // it iOS reports every safe-area-inset-* as 0. This line is
+        // correct-in-advance for when that changes, not active behaviour today.
         paddingBottom: `calc(${bottom}px + env(safe-area-inset-bottom, 0px))`,
         width: '100%',
         ...SHRINKABLE,

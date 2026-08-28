@@ -76,13 +76,20 @@ At the Hero → first-block boundary:
 | tab | Hero | value |
 | --- | --- | --- |
 | Home | `HomeTab.jsx:15` | `marginTop: SPACE[8]` = 32 |
-| Stats | `StatsTab.jsx:123` | `marginTop: SPACE[8]` = 32 |
+| Stats — Ligen | `StatsTab.jsx:123` | `marginTop: SPACE[8]` = 32 |
+| Stats — Statistik | `StatsTab.jsx:134` | `marginTop: SPACE[8]` = 32 |
 | Translate | `TranslateTab.jsx:114` | `marginTop: SPACE[8]` = 32 |
 | Vocab | `VocabTab.jsx:258` | `marginTop: 32` — raw literal, same value |
 | **Alphabet** | `AlphabetTab.jsx:130` | `marginTop: SPACE[6]` = **24** |
 | **Chat** | **none** | n/a — `ChatTab` renders no `Hero` |
 
+`StatsTab` renders **two** Heroes, not one: `activeView === 'leagues'` shows the Ligen Hero at `:123`, otherwise the Statistik Hero at `:134`. An earlier version of this table cited `:123` for a row it described as "Stats" but whose value — the 32px gap before `LevelCard` — belongs to the Statistik view at `:134`. Read directly from `StatsTab.jsx`, the Ligen Hero is *also* already at `SPACE[8]` (the `<div style={{ marginTop: SPACE[8] }}>` wrapping `LeaderboardSection`), so adding the missing row does not change the conclusion below.
+
 An earlier reading of this table claimed *four* tabs disagreed and that Chat sat at 24. Both were wrong: `ChatTab` has no `Hero`, and its `mobile ? 16 : 24` is a **grid gap**, not a margin. The real disagreement is **Alphabet alone**.
+
+**Verification gap this creates:** §7's geometry probe drives `openTab(page, 'Stats')`, which lands on whichever view is active by default (Statistik) and has no way to also select Ligen. The Ligen Hero is therefore never measured at any width — not 320, not 375, not 1400 — and the probe's 18/18 (six tabs × three widths) denominator gives no indication that one of the app's six Heroes is missing from every run.
+
+This section opens by promising everything in it was "read from the code, not assumed" (§3, line 31). This row was not — it's the one place in the spec where that promise was broken.
 
 ### 3.6 Rhythm varies *within* a tab too
 
@@ -127,7 +134,7 @@ The complete list of intended movement:
 | --- | --- |
 | `AlphabetTab.jsx:130` `SPACE[6]` → `SPACE[8]` | **+8px** above the first block |
 | `VocabTab.jsx:258` raw `32` → `SPACE[8]` | none — same value, now on the scale |
-| `<main>` → `PageFrame` | none, if §3.4's bottom gutter is preserved |
+| `<main>` → `PageFrame` | not strictly none: `<main>`'s bottom padding gains an `env(safe-area-inset-bottom, 0px)` term it never had. Measured **zero today** only because that term currently resolves to 0 everywhere — `index.html`'s viewport meta has no `viewport-fit=cover` (see the `PageFrame` comment in `src/components/ui/Layout.jsx`) — not because the term is inert |
 
 **Anything else that moves is a bug.** Stating the diff up front is what lets review check two numbers instead of hunting six screens.
 
@@ -153,7 +160,7 @@ It prints its **denominator** — tabs × widths visited — so a probe that sil
 
 **Stated limit:** this verifies only the geometry it names. Colour, typography, z-order, and anything visual outside those five measurements are unverified by it. That is an accepted trade, chosen over screenshot baselines to avoid committing binaries.
 
-**jsdom cannot substitute.** It computes no layout, and `env()` is dropped from the style attribute entirely (unlike `var()`, which it keeps verbatim) — so §3.4's bottom gutter has no assertable form in a unit test and must be measured in a browser.
+**jsdom cannot substitute.** It computes no layout, and this section's original claim was disproved during implementation: bare `env()` alone *is* dropped from the style attribute, but `env()` **inside `calc()` is kept** — jsdom only reorders its arguments on read-back. `calc(32px + env(safe-area-inset-bottom, 0px))` comes back from `.style.paddingBottom` as `calc(32px + env(0px * , * safe-area-inset-bottom))`. The branch ships four working assertions on that value via `.style.paddingBottom` — substring matches against the mangled-but-stable string. `toHaveStyle` was never used and would not have worked: it compares computed style, and jsdom computes no layout for this property, so it would never match. Substring assertions on `.style.paddingBottom` are the workable form here; a full-string or computed-style assertion is not.
 
 ## 8 · Out of scope
 
