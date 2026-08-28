@@ -18,17 +18,69 @@ Starting these without a written design means the implementing agent invents the
 architecture, which is the expensive thing to undo. That is the whole reason
 they are listed as blocked rather than "available".
 
-| Item                                                       | Notes                                                                                                                                                                                              |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **UI sub-project 2** — the Nocturne visual redesign proper | Layout and rhythm. Two slices are already out: T2 took _depth_ early, and the ivory re-skin took _light mode off parchment_ (see "Recently shipped"). What remains here is composition, not colour |
-| **UI sub-project 3** — graphics assets                     | Logo, icon set, empty/error states, OG image. The font slice shipped as #103                                                                                                                       |
-| **Auth Phase E** — phone/SMS OTP                           | Deliberately deferred: the only auth component with a per-use cost                                                                                                                                 |
+| Item                                   | Notes                                                                        |
+| -------------------------------------- | ---------------------------------------------------------------------------- |
+| **UI sub-project 3** — graphics assets | Logo, icon set, empty/error states, OG image. The font slice shipped as #103 |
+| **Auth Phase E** — phone/SMS OTP       | Deliberately deferred: the only auth component with a per-use cost           |
 
 ## Ready to execute
 
 Nothing queued.
 
 ## Recently shipped
+
+### UI sub-project 2 — the page skeleton
+
+**Shipped as #179.** Design at
+`docs/superpowers/specs/2026-08-28-ui-sub-project-2-layout-design.md`, plan at
+`docs/superpowers/plans/2026-08-28-ui-sub-project-2-layout.md`.
+
+`App.jsx`'s `<main>` and the six tabs now share one skeleton: `PageFrame`
+decides the measure, both gutters and the safe-area composition in one place,
+and the gap between a tab's `Hero` and its first block is `SPACE[8]` everywhere
+it applies. Sub-project 1b's layout primitives finally have a real consumer —
+before this, `PageFrame`, `Stack` and `Grid` had **zero**.
+
+**Read the scope carefully before treating this as "the redesign done".** The
+owner chose _consistency, not a new look_: the app should look as it did, on one
+skeleton. The measured result was exactly that — a geometry probe over six tabs
+× three widths found **three** differences in the whole app, all
+`Alphabet.heroGap: 24 → 32`, which was the one stated intentional change. A
+genuine visual redesign — new spacing scale, restructured screens, different
+density — was **not attempted** and remains open work if anyone wants it.
+
+Two decisions worth not re-deriving:
+
+- **The measure stays 1400.** `PageFrame` shipped in 1b with a `maxWidth: 900`
+  default that was a guess made with no consumer to check it against. Moving the
+  app to it would have cut Chat's conversation column from 688px to 188px — the
+  side columns are fixed, so the whole loss lands on the centre. The primitive
+  moved to describe the app instead.
+- **The bottom gutter is a plain value now — do not re-add an `env()` term.**
+  `PageFrame` shipped in 1b with `paddingBottom: env(safe-area-inset-bottom, 0px)`,
+  which is 0 on desktop, so adopting it naively would have silently removed 32px
+  of clearance from every tab. Sub-project 2 first fixed that by _composing_ —
+  `calc(gutter + env(...))`, so the inset could never replace the gutter. The
+  review of that change then found the deeper problem: `index.html` has no
+  `viewport-fit=cover`, so the inset resolved to 0 on every device anyway, and
+  the whole term was inert. **#180 removed it**, and the test now asserts the
+  bottom padding contains no `safe-area-inset` at all. Re-adding one is only
+  correct alongside the `viewport-fit=cover` opt-in, which is a real visual
+  change worth ~34px on notched iPhones.
+
+**Known limits of the verification**, recorded so nobody reads more into it than
+it proves. `scripts/dev/audit-layout.mjs` measures five properties — measure,
+inline padding, bottom padding, the Hero gap, horizontal overflow — and nothing
+else; colour, typography and z-order are outside it. All 18 rows are the **guest**
+state, so Stats with real data, Vocab mid-drill and open modals are unmeasured.
+`StatsTab` has **two** Heroes (Ligen at `:123`, Statistik at `:134`) and the probe
+only ever reaches Statistik, so one of the app's six Heroes is never measured —
+the rule already holds there, but the 18/18 denominator does not reveal the gap.
+
+Downstream: the review of this work is what found the `viewport-fit=cover` gap
+above. #180 then removed both inert declarations — `PageFrame`'s and an
+`.entry-screen-foot` rule that no element in the app ever carried — and guards
+the opt-in so the dead code cannot come back unnoticed.
 
 ### UI sub-project 1b — the primitive set
 
