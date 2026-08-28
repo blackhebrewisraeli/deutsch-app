@@ -1,3 +1,4 @@
+import { BookOpen } from 'lucide-react';
 import {
   COLORS,
   FONTS,
@@ -8,6 +9,7 @@ import {
   RADIUS,
   SHADOW,
 } from '../../lib/theme';
+import StatusNote from '../ui/StatusNote';
 
 // Short tab badge for each review row.
 const REVIEW_BADGE = {
@@ -20,18 +22,7 @@ const REVIEW_BADGE = {
 // (the parent navigates to the right tab + pre-loads the exercise).
 export default function ReviewFeed({ items, onReview }) {
   if (items.length === 0) {
-    return (
-      <div
-        style={{
-          fontFamily: FONTS.body,
-          fontStyle: 'italic',
-          color: COLORS.mute,
-          fontSize: FONT_SIZE.base,
-        }}
-      >
-        Nothing to review — keep practicing.
-      </div>
-    );
+    return <StatusNote icon={BookOpen}>Nothing to review — keep practicing.</StatusNote>;
   }
 
   return (

@@ -1,4 +1,5 @@
 import { useEffect, useState, Fragment } from 'react';
+import { Users } from 'lucide-react';
 import { useAuth, getSupabase } from '../../lib/auth.js';
 import {
   joinLeague,
@@ -10,6 +11,7 @@ import {
 import { zoneCounts } from '../../lib/leagueZones.js';
 import { weekRemaining } from '../../lib/leagueCountdown.js';
 import { COLORS, RADIUS, SPACE } from '../../lib/theme.js';
+import StatusNote from '../ui/StatusNote';
 
 const SPARSE_BELOW = 5; // show the "still filling up" note under this many members
 
@@ -64,11 +66,7 @@ export default function LeaderboardSection({ onSelectUser }) {
   if (!LEAGUES_ENABLED) return null;
 
   if (!user) {
-    return (
-      <div style={{ padding: SPACE[6], textAlign: 'center', color: COLORS.mute }}>
-        <p style={{ margin: 0 }}>Sign in to join a league and compete this week.</p>
-      </div>
-    );
+    return <StatusNote icon={Users}>Sign in to join a league and compete this week.</StatusNote>;
   }
 
   if (state.status === 'error') {

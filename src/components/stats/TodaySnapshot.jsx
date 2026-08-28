@@ -1,3 +1,4 @@
+import { CalendarDays } from 'lucide-react';
 import {
   COLORS,
   FONTS,
@@ -8,6 +9,7 @@ import {
   RADIUS,
   SHADOW,
 } from '../../lib/theme';
+import StatusNote from '../ui/StatusNote';
 
 // Section A — today's exercise count + three-way accuracy bar + streak.
 export default function TodaySnapshot({ snap }) {
@@ -78,16 +80,7 @@ export default function TodaySnapshot({ snap }) {
           ACCURACY · STREAK {streak}
         </div>
         {totalGraded === 0 ? (
-          <div
-            style={{
-              fontFamily: FONTS.body,
-              fontStyle: 'italic',
-              color: COLORS.mute,
-              fontSize: FONT_SIZE.base,
-            }}
-          >
-            No exercises graded yet today.
-          </div>
+          <StatusNote icon={CalendarDays}>No exercises graded yet today.</StatusNote>
         ) : (
           <>
             <div
