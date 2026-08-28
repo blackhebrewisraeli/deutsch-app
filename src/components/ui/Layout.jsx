@@ -9,7 +9,7 @@ import { SPACE } from '../../lib/theme';
 //   - a bare `1fr` track that refuses to shrink        (Grid)
 //   - a non-wrapping row at 320px                      (Row)
 //   - a flex child that cannot shrink below its text   (minWidth: 0)
-//   - a per-tab re-derivation of the safe-area inset   (PageFrame)
+//   - a per-tab re-derivation of the page measure      (PageFrame)
 
 // ── minWidth: 0 — necessary, and NOT sufficient ──────────────────────────────
 //
@@ -114,8 +114,23 @@ export function Grid({
 }
 
 // The outermost per-tab wrapper. Not a Stack with different defaults: it is the
-// one place the max measure and the safe-area inset are decided, and today both
+// one place the max measure and the page gutters are decided, and today both
 // are re-derived per tab.
+//
+// There is deliberately NO safe-area inset here. This app does not opt into safe
+// areas: index.html's viewport meta is `width=device-width, initial-scale=1.0`
+// with no `viewport-fit=cover`, and without that opt-in iOS reports every
+// env(safe-area-inset-*) as 0 — in Mobile Safari and inside the installed PWA
+// alike (vite.config.js sets display:'standalone'). A paddingBottom of
+// env(safe-area-inset-bottom, 0px) used to sit here; it always resolved to 0, so
+// it was inert rather than protective while reading as load-bearing.
+//
+// Opting in is a real visual change, not a one-attribute fix: the masthead in
+// App.jsx is `position: sticky; top: 0`, so with viewport-fit=cover it would
+// slide under the status bar / Dynamic Island unless it takes an inset-top, and
+// the inline gutters below would need inset-left/right or landscape content goes
+// under the notch. That work needs a notched device to verify and is not done.
+// src/safeArea.test.js fails if either half of the opt-in lands without the other.
 export function PageFrame({
   maxWidth = 900,
   gutter = 4,
@@ -130,8 +145,6 @@ export function PageFrame({
         maxWidth,
         marginInline: 'auto',
         paddingInline: SPACE[gutter] ?? SPACE[4],
-        // Keeps content clear of the home indicator on iOS.
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
         width: '100%',
         ...SHRINKABLE,
         ...style,

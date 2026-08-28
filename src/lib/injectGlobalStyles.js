@@ -43,8 +43,21 @@ export function injectGlobalStyles() {
        engines without dvh; both declarations are needed, which is why this is
        a class and not an inline style. */
     .entry-screen { min-height: 100vh; min-height: 100dvh; }
-    /* Keep the last stripe's content clear of the home indicator. */
-    .entry-screen-foot { padding-bottom: env(safe-area-inset-bottom, 0px); }
+    /* No safe-area rule follows, deliberately. The app does not opt into safe
+       areas: index.html's viewport meta has no viewport-fit=cover, so iOS
+       reports every safe-area inset as 0 — in Mobile Safari and in the installed
+       PWA alike. An .entry-screen-foot rule padding by that inset used to sit
+       here and was inert twice over: the inset resolved to 0, and no element in
+       the app ever carried the class.
+
+       (No backticks anywhere in this comment: it lives inside a template
+       literal, so one would end the string.)
+
+       The dvh handling above is NOT part of that and IS live: it tracks the
+       URL bar, which is independent of viewport-fit. Do not remove it.
+
+       src/safeArea.test.js fails if a safe-area inset reappears here without the
+       viewport opt-in landing alongside it. */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--c-surface-alt); }
     ::-webkit-scrollbar-thumb { background: var(--c-fg); border: 2px solid var(--c-surface-alt); }

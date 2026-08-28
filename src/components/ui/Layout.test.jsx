@@ -121,12 +121,16 @@ describe('PageFrame', () => {
     expect(el).toHaveStyle({ maxWidth: '900px' });
   });
 
-  // The safe-area inset has NO assertable form in jsdom: unlike var(), which
-  // jsdom stores verbatim, env() is dropped outright — `padding-bottom` does not
-  // appear in the style attribute at all. Asserting it here is impossible, not
-  // merely awkward, so it is verified in a real browser instead (see the PR).
-  // What IS assertable is that nothing else clobbers the declaration.
-  it('does not let another padding declaration replace the safe-area inset', () => {
+  // This assertion used to be spelled "nothing clobbers the safe-area inset" and
+  // was worthless: PageFrame set `paddingBottom: env(safe-area-inset-bottom, 0px)`,
+  // and jsdom drops env() outright rather than storing it like var(), so
+  // `padding-bottom` was absent from the style attribute either way. It passed
+  // whether the declaration was there or not.
+  //
+  // PageFrame now sets no bottom padding at all, so the same assertion finally
+  // has teeth: a literal paddingBottom IS recorded by jsdom, so re-adding one
+  // (the likely way a safe-area inset creeps back in) fails here.
+  it('sets no bottom padding, since the app does not opt into safe areas', () => {
     render(<PageFrame data-testid="p">x</PageFrame>);
     const attr = screen.getByTestId('p').getAttribute('style');
     expect(attr).not.toMatch(/padding-bottom/);
