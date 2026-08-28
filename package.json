@@ -20,6 +20,7 @@
     "where": "node scripts/where.js",
     "audit:dead": "node scripts/audit-dead.js",
     "audit:contrast": "node scripts/dev/audit-contrast.mjs",
+    "audit:layout": "node scripts/dev/audit-layout.mjs",
     "bench:perf": "node scripts/dev/bench-perf.mjs",
     "clean": "node scripts/clean.js",
     "prepare": "husky",

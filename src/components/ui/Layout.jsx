@@ -113,38 +113,64 @@ export function Grid({
   );
 }
 
-// The outermost per-tab wrapper. Not a Stack with different defaults: it is the
-// one place the max measure and the page gutters are decided, and today both
-// are re-derived per tab.
+// The outermost per-tab wrapper, and the one place the measure and the gutters
+// are decided.
 //
-// There is deliberately NO safe-area inset here. This app does not opt into safe
+// The defaults describe THIS APP's shell rather than a general recommendation:
+// 1400 is App.jsx's <main> measure, and 900 (the value shipped in sub-project
+// 1b, written with no consumer to check it against) would cut Chat's
+// conversation column from 688px to 188px.
+//
+// `gutter` drives the inline edges AND the top because in this app they are the
+// same number — 16 on mobile, 32 on desktop. Bottom is its own prop because it
+// is the only edge that does not vary with viewport.
+//
+// No useWindowWidth in here. A layout primitive that reads the viewport has a
+// hidden dependency and cannot be tested without stubbing the hook; the caller
+// already knows whether it is mobile.
+//
+// There is deliberately NO safe-area inset. This app does not opt into safe
 // areas: index.html's viewport meta is `width=device-width, initial-scale=1.0`
 // with no `viewport-fit=cover`, and without that opt-in iOS reports every
 // env(safe-area-inset-*) as 0 — in Mobile Safari and inside the installed PWA
-// alike (vite.config.js sets display:'standalone'). A paddingBottom of
-// env(safe-area-inset-bottom, 0px) used to sit here; it always resolved to 0, so
-// it was inert rather than protective while reading as load-bearing.
+// alike (vite.config.js sets display:'standalone'). A
+// calc(<gutter>px + env(safe-area-inset-bottom, 0px)) sat here briefly; the
+// env() term always resolved to 0, so it was inert rather than protective
+// while reading as load-bearing.
 //
-// Opting in is a real visual change, not a one-attribute fix: the masthead in
-// App.jsx is `position: sticky; top: 0`, so with viewport-fit=cover it would
-// slide under the status bar / Dynamic Island unless it takes an inset-top, and
-// the inline gutters below would need inset-left/right or landscape content goes
-// under the notch. That work needs a notched device to verify and is not done.
+// If the opt-in ever lands, the inset is ADDED to bottomGutter rather than
+// substituted for it — that composition is what the prop exists to guarantee,
+// so the inset can never replace the gutter and leave content flush with an
+// edge (spec §3.4). But opting in is a real visual change, not a one-attribute
+// fix: the masthead in App.jsx is `position: sticky; top: 0`, so
+// viewport-fit=cover would slide it under the status bar / Dynamic Island
+// unless it takes an inset-top, and the inline gutters would need
+// inset-left/right or landscape content goes under the notch. That needs a
+// notched device to verify and is not done.
 // src/safeArea.test.js fails if either half of the opt-in lands without the other.
 export function PageFrame({
-  maxWidth = 900,
+  maxWidth = 1400,
   gutter = 4,
+  bottomGutter = 8,
   as: Tag = 'div',
   style,
   children,
   ...rest
 }) {
+  const inline = SPACE[gutter] ?? SPACE[4];
+  const bottom = SPACE[bottomGutter] ?? SPACE[8];
   return (
     <Tag
       style={{
         maxWidth,
         marginInline: 'auto',
-        paddingInline: SPACE[gutter] ?? SPACE[4],
+        paddingInline: inline,
+        paddingTop: inline,
+        // A plain gutter, with no env(safe-area-inset-bottom) term — see above.
+        // The §3.4 defect this still prevents is the original one: <main> has a
+        // real 32px bottom gutter, and adopting the primitive without this prop
+        // would have silently removed it from every tab.
+        paddingBottom: bottom,
         width: '100%',
         ...SHRINKABLE,
         ...style,

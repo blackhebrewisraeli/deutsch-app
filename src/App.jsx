@@ -59,6 +59,7 @@ import { useSyncStatus } from './lib/useSyncStatus';
 import { useLeagueRewards } from './lib/useLeagueRewards';
 import Confetti from './components/ui/Confetti';
 import ToastStack from './components/ui/Toast';
+import { PageFrame } from './components/ui/Layout';
 import StatusChip from './components/StatusChip';
 import GoalRing from './components/gamification/GoalRing';
 import GoalStrip from './components/gamification/GoalStrip';
@@ -846,13 +847,11 @@ export default function App() {
         </nav>
 
         {/* ── Main ─────────────────────────────────────────────── */}
-        <main
-          style={{
-            padding: mobile ? '16px 16px 32px' : '32px 32px',
-            maxWidth: 1400,
-            margin: '0 auto',
-          }}
-        >
+        {/* The measure, both gutters and the safe-area inset all live in
+            PageFrame now. `gutter` covers the inline edges and the top, which
+            in this app are the same number; the 32px bottom is PageFrame's
+            bottomGutter default. */}
+        <PageFrame as="main" gutter={mobile ? 4 : 8}>
           {/* On mobile this is the only daily-goal indicator — the header ring is
             dropped there for width — so it has to appear on every tab except
             Home, which already shows its own goal ring below (same reason the
@@ -948,7 +947,7 @@ export default function App() {
               levelBoost={authStatus === 'authenticated'}
             />
           )}
-        </main>
+        </PageFrame>
 
         {/* ── Footer — hidden on mobile ─────────────────────────── */}
         {!mobile && (
