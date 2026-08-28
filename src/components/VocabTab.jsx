@@ -4,7 +4,8 @@ import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
 const { decks: PRESET_DECKS } = activePack.content;
-import { Volume2 } from 'lucide-react';
+import { Volume2, AlertTriangle } from 'lucide-react';
+import StatusNote from './ui/StatusNote';
 import { Hero } from './UI';
 import { shuffle } from '../lib/utils';
 import { exactMatch, bestGlossMatch } from '../lib/matching';
@@ -298,19 +299,13 @@ export default function VocabTab({
             </div>
           )}
           {isAuto && deckError && (
-            <div
-              style={{
-                padding: SPACE[8],
-                textAlign: 'center',
-                fontFamily: FONTS.mono,
-                color: COLORS.red,
-              }}
+            <StatusNote
+              tone="error"
+              icon={AlertTriangle}
+              action={{ label: 'Retry', onClick: retry }}
             >
-              Could not load this deck.{' '}
-              <button type="button" onClick={retry} style={{ textDecoration: 'underline' }}>
-                Retry
-              </button>
-            </div>
+              Could not load this deck.
+            </StatusNote>
           )}
           {card && (
             <>

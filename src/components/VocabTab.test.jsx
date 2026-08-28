@@ -330,6 +330,18 @@ describe('VocabTab', () => {
       // Core 100 (top rule) cards now render (das Haus is the lowest-rank fixture entry)
       expect(await screen.findByText('das Haus')).toBeInTheDocument();
     });
+
+    // Finding F1: this error replaces loading content asynchronously. Without a
+    // live region the swap is silent to a screen reader.
+    it('announces a deck-load failure', async () => {
+      const user = userEvent.setup();
+      globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 500 }));
+
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
+      await user.click(screen.getByRole('button', { name: /Core 100/i }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this deck.');
+    });
   });
 
   // The per-card dot strip was the only unbounded child of the progress row, so
