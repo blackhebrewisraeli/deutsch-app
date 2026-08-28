@@ -113,25 +113,43 @@ export function Grid({
   );
 }
 
-// The outermost per-tab wrapper. Not a Stack with different defaults: it is the
-// one place the max measure and the safe-area inset are decided, and today both
-// are re-derived per tab.
+// The outermost per-tab wrapper, and the one place the measure, the gutters and
+// the safe-area inset are decided.
+//
+// The defaults describe THIS APP's shell rather than a general recommendation:
+// 1400 is App.jsx's <main> measure, and 900 (the value shipped in sub-project
+// 1b, written with no consumer to check it against) would cut Chat's
+// conversation column from 688px to 188px.
+//
+// `gutter` drives the inline edges AND the top because in this app they are the
+// same number — 16 on mobile, 32 on desktop. Bottom is its own prop because it
+// is the only edge that does not vary with viewport, and the only one that must
+// COMPOSE with the safe-area inset instead of being replaced by it.
+//
+// No useWindowWidth in here. A layout primitive that reads the viewport has a
+// hidden dependency and cannot be tested without stubbing the hook; the caller
+// already knows whether it is mobile.
 export function PageFrame({
-  maxWidth = 900,
+  maxWidth = 1400,
   gutter = 4,
+  bottomGutter = 8,
   as: Tag = 'div',
   style,
   children,
   ...rest
 }) {
+  const inline = SPACE[gutter] ?? SPACE[4];
+  const bottom = SPACE[bottomGutter] ?? SPACE[8];
   return (
     <Tag
       style={{
         maxWidth,
         marginInline: 'auto',
-        paddingInline: SPACE[gutter] ?? SPACE[4],
-        // Keeps content clear of the home indicator on iOS.
-        paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+        paddingInline: inline,
+        paddingTop: inline,
+        // Keeps content clear of the home indicator on iOS — ADDED to the
+        // gutter, not substituted for it.
+        paddingBottom: `calc(${bottom}px + env(safe-area-inset-bottom, 0px))`,
         width: '100%',
         ...SHRINKABLE,
         ...style,

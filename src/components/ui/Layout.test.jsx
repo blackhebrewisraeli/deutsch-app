@@ -114,32 +114,61 @@ describe('Grid', () => {
 });
 
 describe('PageFrame', () => {
-  it('centres within a max measure', () => {
+  it('centres within the app measure', () => {
     render(<PageFrame data-testid="p">x</PageFrame>);
     const el = screen.getByTestId('p');
     expect(el.style.marginInline).toBe('auto');
-    expect(el).toHaveStyle({ maxWidth: '900px' });
+    // 1400, not 900. The 900 default was written with no consumer to check it
+    // against; the shell is 1400, and moving the app to 900 would cut Chat's
+    // conversation column from 688px to 188px (spec §3.3).
+    expect(el).toHaveStyle({ maxWidth: '1400px' });
   });
 
-  // The safe-area inset has NO assertable form in jsdom: unlike var(), which
-  // jsdom stores verbatim, env() is dropped outright — `padding-bottom` does not
-  // appear in the style attribute at all. Asserting it here is impossible, not
-  // merely awkward, so it is verified in a real browser instead (see the PR).
-  // What IS assertable is that nothing else clobbers the declaration.
-  it('does not let another padding declaration replace the safe-area inset', () => {
-    render(<PageFrame data-testid="p">x</PageFrame>);
-    const attr = screen.getByTestId('p').getAttribute('style');
-    expect(attr).not.toMatch(/padding-bottom/);
-    expect(attr).toContain('padding-inline');
-  });
-
-  it('takes its gutter from the SPACE scale', () => {
+  // In this app the inline and top gutters are always the same number —
+  // 16 mobile, 32 desktop — so one prop describes both (spec §4.1).
+  it('applies the gutter to the inline edges and the top alike', () => {
     render(
-      <PageFrame gutter={3} data-testid="p">
+      <PageFrame gutter={8} data-testid="p">
         x
       </PageFrame>
     );
-    expect(screen.getByTestId('p').style.paddingInline).toBe('12px');
+    const el = screen.getByTestId('p');
+    expect(el.style.paddingInline).toBe('32px');
+    expect(el.style.paddingTop).toBe('32px');
+  });
+
+  it('defaults the gutter to SPACE[4]', () => {
+    render(<PageFrame data-testid="p">x</PageFrame>);
+    const el = screen.getByTestId('p');
+    expect(el.style.paddingInline).toBe('16px');
+    expect(el.style.paddingTop).toBe('16px');
+  });
+
+  // The defect this prevents: PageFrame used to set
+  // `paddingBottom: env(safe-area-inset-bottom, 0px)`, which computes to 0 on
+  // desktop. <main> has a real 32px bottom gutter, so adopting the primitive
+  // naively would have removed it from every tab — invisible to unit tests,
+  // visible as content sitting closer to the nav (spec §3.4).
+  it('adds the safe-area inset to the bottom gutter rather than replacing it', () => {
+    render(<PageFrame data-testid="p">x</PageFrame>);
+    const pb = screen.getByTestId('p').style.paddingBottom;
+    expect(pb).toContain('32px');
+    expect(pb).toContain('safe-area-inset-bottom');
+    expect(pb).toMatch(/^calc\(/);
+  });
+
+  it('takes the bottom gutter from the SPACE scale', () => {
+    render(
+      <PageFrame bottomGutter={4} data-testid="p">
+        x
+      </PageFrame>
+    );
+    expect(screen.getByTestId('p').style.paddingBottom).toContain('16px');
+  });
+
+  it('renders the element `as` names, so <main> can be one', () => {
+    const { container } = render(<PageFrame as="main">x</PageFrame>);
+    expect(container.firstChild.tagName).toBe('MAIN');
   });
 });
 
