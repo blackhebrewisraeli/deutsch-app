@@ -10,7 +10,7 @@ composes `Stack`, `Body` and `Button` rather than re-deriving their styling.
 
 ## 1. Why
 
-Six surfaces in this app tell the user that something is absent or broken. They
+Seven surfaces in this app tell the user that something is absent or broken. They
 were written independently and share nothing. Two of them are byte-identical by
 coincidence; the other four each invented a recipe. Three announce nothing to a
 screen reader. One offers recovery, and its recovery control is the only button
@@ -35,6 +35,7 @@ it.
 | E1  | `stats/PerTabBars.jsx:16`         | "No exercises recorded yet."                      | `FONTS.body`, italic, `COLORS.mute`, `FONT_SIZE.base` |
 | E2  | `stats/ReviewFeed.jsx:22`         | "Nothing to review — keep practicing."            | byte-identical to E1                                  |
 | E3  | `stats/LeaderboardSection.jsx:66` | "Sign in to join a league and compete this week." | `SPACE[6]`, centred, `COLORS.mute`, no italic, `<p>`  |
+| E4  | `stats/TodaySnapshot.jsx:80`      | "No exercises graded yet today."                  | `FONTS.body`, italic, `COLORS.mute`, `FONT_SIZE.base` |
 
 E1, E2 and E4 are the same five declarations. E3 is the drift: same intent,
 different padding, no italic, no font family.
@@ -177,7 +178,7 @@ than the drift it fixes.
   the icon cannot drift out of contrast independently of its text.
 - Passed as a component reference (`icon={BarChart3}`), not an element. This
   keeps size and `aria-hidden` under `StatusNote`'s control rather than
-  repeating them at six call sites.
+  repeating them at seven call sites.
 
 ### 4.5 Accessibility
 
@@ -201,6 +202,7 @@ structure, tone and recovery, not wording.
 | E1  | `PerTabBars.jsx:16`         | `empty` | `BarChart3` _(imported already)_ | —                |
 | E2  | `ReviewFeed.jsx:22`         | `empty` | `BookOpen` _(imported already)_  | —                |
 | E3  | `LeaderboardSection.jsx:66` | `empty` | `Users` _(new)_                  | —                |
+| E4  | `TodaySnapshot.jsx:80`      | `empty` | `CalendarDays`                   | —                |
 | X1  | `VocabTab.jsx:300`          | `error` | `AlertTriangle` _(new)_          | existing `retry` |
 | X2  | `LeaderboardSection.jsx:74` | `error` | `AlertTriangle`                  | **new** retry    |
 | X3  | `ProfileCard.jsx:137`       | `error` | `AlertTriangle`                  | **new** retry    |
@@ -268,6 +270,19 @@ the third tone is a decision rather than a drift.
 heading and a destructive-action confirmation. They use error ink to mean
 _danger_, which is correct, and they are not status reports.
 
+**`AccountSection.jsx:47-56`'s signed-out teaser is excluded, not missed.**
+Structurally it is E3 plus an action: a muted mono line ("Sign in to sync your
+progress across devices.") followed by a `Button` CTA. It is not migrated
+because `StatusNote`'s `action` always renders `variant="secondary"` (§4.1),
+which would demote what is meant to be a primary sign-in call to action —
+migrating it is a call about CTA prominence, not a cleanup, and this system
+does not make that call. The cost of deferring it: `StatsTab.jsx` renders this
+section alongside `LeaderboardSection`, so both signed-out teasers are visible
+on the same screen, and after this branch they no longer match — E3 is now a
+centred icon block and this one stays a flush-left, unindented mono line.
+Whoever picks this up should know the inconsistency is the known price of not
+deciding CTA prominence here.
+
 ---
 
 ## 7. Verification
@@ -315,8 +330,21 @@ that jsdom hides. Adding a Playwright probe would be ceremony.
 
 This is not a pure refactor, and should not be described as one:
 
-- Four surfaces gain a 32px icon they do not have today.
-- E3 gains italic and loses its bespoke padding.
-- X1 loses mono and gains a real button in place of an underlined span.
-- X2 and X3 gain a Retry control that did not exist.
-- Errors become audible to screen readers for the first time.
+- All seven surfaces (E1–E4, X1–X3) gain a 32px icon they do not have today —
+  none of them had one before.
+- E1, E2 and E4 gain 24px padding on all sides and become centre-aligned; they
+  were flush-left with no padding before.
+- E3 gains italic, an icon, and a fixed `FONT_SIZE.base` where its `<p>`
+  previously inherited. Its padding is **unchanged** — `SPACE[6]` before and
+  after.
+- E4 sits in the right-hand grid cell of a card that already has `SPACE[6]`
+  padding, so it now adds a second 24px inset and centres, where it previously
+  continued the label's flush-left alignment.
+- X1's padding goes `SPACE[8]` → `SPACE[6]`, loses mono, and gains a real
+  button in place of an underlined span.
+- X2 and X3 gain 24px padding and centre-alignment, their message drops from
+  the inherited UA default size to `FONT_SIZE.base` (13px), and both gain a
+  Retry control that did not exist.
+- Errors now carry `role="alert"`, which no error surface previously had.
+  Whether that role is actually announced was not verified with a screen
+  reader.
