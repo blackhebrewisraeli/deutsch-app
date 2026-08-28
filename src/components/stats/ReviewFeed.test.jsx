@@ -37,5 +37,6 @@ describe('ReviewFeed', () => {
   it('shows the empty state when there are no items', () => {
     render(<ReviewFeed items={[]} onReview={() => {}} />);
     expect(screen.getByText('Nothing to review — keep practicing.')).toBeInTheDocument();
+    expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
   });
 });

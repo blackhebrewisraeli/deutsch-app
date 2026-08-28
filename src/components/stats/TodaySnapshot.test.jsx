@@ -23,6 +23,7 @@ describe('TodaySnapshot', () => {
   it('shows the empty state when nothing is graded yet', () => {
     render(<TodaySnapshot snap={snap({ exercises: 0 })} />);
     expect(screen.getByText('No exercises graded yet today.')).toBeInTheDocument();
+    expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
   });
 
   it('computes accuracy percentages out of the graded total', () => {

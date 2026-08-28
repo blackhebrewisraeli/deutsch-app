@@ -14,5 +14,6 @@ describe('PerTabBars', () => {
   it('shows the empty state when every tab is zero', () => {
     render(<PerTabBars breakdown={{ chat: 0, alphabet: 0, vocab: 0, translate: 0 }} />);
     expect(screen.getByText('No exercises recorded yet.')).toBeInTheDocument();
+    expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
   });
 });

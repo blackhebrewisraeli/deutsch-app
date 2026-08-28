@@ -37,6 +37,28 @@ it('announces a profile load failure and offers a way back', async () => {
 
   expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load profile.");
   expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
+});
+
+it('refetches when Retry is pressed', async () => {
+  const user = userEvent.setup();
+  fetchProfile.mockRejectedValueOnce(new Error('boom'));
+  fetchProfile.mockResolvedValue({
+    handle: 'Rival',
+    avatar_emoji: '🦊',
+    tier: 1,
+    total_xp: 420,
+    longest_streak: 9,
+    achievements: [],
+  });
+
+  render(<ProfileCard userId="x" onClose={() => {}} />);
+  await user.click(await screen.findByRole('button', { name: 'Retry' }));
+
+  // Assert on the recovered UI, not on a call count: the count is an
+  // implementation detail and would pass even if the retry re-rendered the
+  // same error.
+  expect(await screen.findByText('Rival')).toBeInTheDocument();
 });
 
 it('calls onClose when the close button is clicked', async () => {

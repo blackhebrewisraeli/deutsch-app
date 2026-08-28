@@ -52,6 +52,7 @@ it('shows the sign-in teaser when signed out', () => {
   useAuth.mockReturnValue({ user: null });
   render(<LeaderboardSection onSelectUser={() => {}} />);
   expect(screen.getByText(/sign in to join/i)).toBeTruthy();
+  expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
 });
 
 it('renders standings, tier, a countdown, and the sparse note for a small league', async () => {

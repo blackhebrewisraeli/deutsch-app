@@ -341,6 +341,7 @@ describe('VocabTab', () => {
       await user.click(screen.getByRole('button', { name: /Core 100/i }));
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this deck.');
+      expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
     });
   });
 
