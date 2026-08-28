@@ -165,3 +165,66 @@ jobs:
           export SUPABASE_ANON_KEY="${SUPABASE_ANON_KEY:-$ANON_KEY}"
           export SUPABASE_SERVICE_ROLE_KEY="${SUPABASE_SERVICE_ROLE_KEY:-$SERVICE_ROLE_KEY}"
           npm run test:rls
+
+  # SonarCloud, CI-based rather than Automatic Analysis — the only way a coverage
+  # report reaches the dashboard. See sonar-project.properties for the scope.
+  #
+  # Its own job, and deliberately NOT one of the required checks. `SonarCloud
+  # Code Analysis` (posted by the SonarCloud app, from whichever analysis it
+  # receives) stays the required one; this job only feeds it. That separation is
+  # what makes the rollout safe: while SONAR_TOKEN is unset every step below is
+  # skipped, so merging this changes nothing, and if the scan later fails — a
+  # wrong org, or the window where Automatic Analysis is still enabled and
+  # SonarCloud refuses a CI analysis — it goes red on its own without blocking
+  # any pull request.
+  #
+  # Order matters when enabling: add SONAR_TOKEN FIRST, then turn Automatic
+  # Analysis off. Doing it the other way leaves no analysis at all, and a
+  # required check that never appears blocks every PR indefinitely.
+  sonar:
+    name: SonarCloud Scan
+    runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    steps:
+      # Presence, never the value — `[ -z ]` tests without printing. Echoing a
+      # secret to check it is how one gets leaked into a public log.
+      - name: Is SonarCloud configured?
+        id: guard
+        run: |
+          if [ -z "$SONAR_TOKEN" ]; then
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "SONAR_TOKEN is not set — skipping. Add the secret to enable."
+          else
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # fetch-depth: 0 — Sonar attributes issues to commits via git blame to
+      # decide what is "new code". A shallow clone makes every line look new.
+      - name: Checkout
+        if: steps.guard.outputs.configured == 'true'
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node
+        if: steps.guard.outputs.configured == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        if: steps.guard.outputs.configured == 'true'
+        run: npm ci --ignore-scripts
+
+      # Produces coverage/lcov.info, which sonar-project.properties points at.
+      - name: Coverage
+        if: steps.guard.outputs.configured == 'true'
+        run: npm run test:coverage
+
+      - name: SonarCloud scan
+        if: steps.guard.outputs.configured == 'true'
+        uses: SonarSource/sonarqube-scan-action@v4
