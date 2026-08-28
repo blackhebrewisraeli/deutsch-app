@@ -87,7 +87,7 @@ At the Hero → first-block boundary:
 
 An earlier reading of this table claimed *four* tabs disagreed and that Chat sat at 24. Both were wrong: `ChatTab` has no `Hero`, and its `mobile ? 16 : 24` is a **grid gap**, not a margin. The real disagreement is **Alphabet alone**.
 
-**Verification gap this creates:** §7's geometry probe drives `openTab(page, 'Stats')`, which lands on whichever view is active by default (Statistik) and has no way to also select Ligen. The Ligen Hero is therefore never measured at any width — not 320, not 375, not 1400 — and the probe's 18/18 (six tabs × three widths) denominator gives no indication that one of the app's six Heroes is missing from every run.
+**Verification gap this creates:** §7's geometry probe drives `openTab(page, 'Stats')`, which lands on whichever view is active by default (Statistik) and has no way to also select Ligen. The Ligen Hero is therefore never measured at any width — not 320, not 375, not 1600 — and the probe's 18/18 (six tabs × three widths) denominator gives no indication that one of the app's six Heroes is missing from every run.
 
 This section opens by promising everything in it was "read from the code, not assumed" (§3, line 31). This row was not — it's the one place in the spec where that promise was broken.
 
