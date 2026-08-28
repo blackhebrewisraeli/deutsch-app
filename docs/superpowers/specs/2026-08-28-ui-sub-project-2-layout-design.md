@@ -148,7 +148,9 @@ One new script, `scripts/dev/audit-layout.mjs` (§7).
 
 `scripts/dev/audit-layout.mjs`, reusing `audit-contrast.mjs`'s harness: Playwright, `openTab(page, name)`, `dismissEntryScreens(page)` (which selects `[data-entry="guest"]` — a hook named for what the button *is*, precisely so a styling change cannot delete it again), and `AUDIT_BASE` against the production build.
 
-For each of the six tabs × {320, 375, 1400} it records:
+For each of the six tabs × {320, 375, 1600} it records:
+
+The widths are 320 / 375 / 1600, not 1400 — `max-width: 1400` never constrains anything at a 1400px viewport, so the measure is the one property that width would leave unverified; 1600 exercises it.
 
 - the page measure (`<main>`'s `clientWidth` and computed `max-width`)
 - computed inline padding, left and right
