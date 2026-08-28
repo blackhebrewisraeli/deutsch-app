@@ -123,7 +123,20 @@ upsert_cli() {
   for target in "${targets[@]}"; do
     echo "→ ${name} (${target})"
     $VERCEL env rm "$name" "$target" --yes 2>/dev/null || true
-    $VERCEL env add "$name" "$target" --value "$value" --yes --force $sensitive_flag
+    # The value goes in on STDIN, never as `--value "$value"`. Command-line
+    # arguments are readable from the process table (`ps`, /proc/*/cmdline) by
+    # any other process for as long as the call runs, and one of the values
+    # this function is handed is the Supabase service-role key, which bypasses
+    # RLS entirely. `vercel env add` documents stdin as the alternative to
+    # --value ("otherwise use stdin or the prompt").
+    #
+    # upsert_preview_api already does the equivalent thing for the API path,
+    # handing the secret to python3 through the environment rather than argv.
+    #
+    # printf '%s' rather than a herestring: <<< appends a newline, and a
+    # trailing newline inside a JWT is the kind of corruption that fails at
+    # runtime, far from here.
+    printf '%s' "$value" | $VERCEL env add "$name" "$target" --yes --force $sensitive_flag
   done
 }
 
