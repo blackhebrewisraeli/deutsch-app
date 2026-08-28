@@ -36,8 +36,8 @@ it.
 | E2  | `stats/ReviewFeed.jsx:22`         | "Nothing to review — keep practicing."            | byte-identical to E1                                  |
 | E3  | `stats/LeaderboardSection.jsx:66` | "Sign in to join a league and compete this week." | `SPACE[6]`, centred, `COLORS.mute`, no italic, `<p>`  |
 
-E1 and E2 are the same five declarations in the same order. E3 is the drift:
-same intent, different padding, no italic, no font family.
+E1, E2 and E4 are the same five declarations. E3 is the drift: same intent,
+different padding, no italic, no font family.
 
 ### 2.2 Error — content failed to arrive
 
@@ -54,10 +54,20 @@ Three surfaces, three recipes. One uses mono, two do not. Padding is 32, 16 and 
 Two claims made earlier in this project's planning were wrong, and are recorded
 here so they are not re-derived:
 
-- **`stats/TodaySnapshot.jsx:55` is not an empty state.** The italic muted line
-  there is the unit label "exercise(s)" under a count. It is always rendered.
-  It resembles E1/E2 because it uses the same declarations, which is precisely
-  why an eyeball census is not evidence.
+- **`stats/TodaySnapshot.jsx:55` is not an empty state, but `:80` is.** The
+  italic muted line at `:55` is the unit label "exercise(s)" under a count, and
+  is always rendered. The block at `:80` is a real empty state ("No exercises
+  graded yet today.") carrying the exact E1/E2 recipe. An earlier pass caught
+  the first and stopped reading, and so missed the second — in the same file.
+  The lesson is not "check TodaySnapshot"; it is that this recipe is **not a
+  reliable signal of what a block means** (see §7).
+
+- **Three blocks outside the family use the identical recipe.**
+  `TodaySnapshot.jsx:55` ("exercise(s)"), `VocabSrsWidget.jsx:70` ("card(s)")
+  and `ReviewFeed.jsx:105` (a review item's context line) are all
+  `FONTS.body` + italic + `COLORS.mute` + `FONT_SIZE.base`. They are unit
+  labels and secondary text, they are always rendered, and they must **not**
+  be migrated.
 - **`stats/LeaderboardSection.jsx:99`'s raw `fontSize: 13` is not an empty-state
   drift.** It is the league countdown. (It is still a raw literal where
   `FONT_SIZE.base` would do — 13 is exactly `FONT_SIZE.base` — but that is an
@@ -183,7 +193,7 @@ than the drift it fixes.
 
 ## 5. Call-site migration
 
-Six call sites. Each keeps its existing copy verbatim; this change is about
+Seven call sites. Each keeps its existing copy verbatim; this change is about
 structure, tone and recovery, not wording.
 
 | #   | Surface                     | `tone`  | Icon                             | Action           |
@@ -203,7 +213,7 @@ icons for those places** — `App.jsx` uses them for the Stats and Vocab nav tab
 The Stats empty state therefore wears the Stats icon, which is a stronger reason
 to pick them than novelty would be. `Users` and `AlertTriangle` are new to the
 bundle; `AlertTriangle` is shared by all three error sites, so the error tone
-has one face rather than three.
+has one face rather than three. `CalendarDays` is E4's.
 
 ### 5.1 Adding recovery to X2 and X3
 
@@ -274,20 +284,23 @@ _danger_, which is correct, and they are not status reports.
 rendered text and must keep passing **untouched**. If one needs editing, the
 migration changed behaviour and the change is wrong until explained.
 
-**Guard — no reintroduction:** a repository test asserting that the E1/E2 recipe
-(`fontStyle: 'italic'` together with `COLORS.mute`) appears nowhere in
-`src/components/stats/` **except at declared exceptions**.
+**Guard — the empty branch goes through the primitive.** Each migrated
+component's own test asserts that its empty (or error) branch renders an element
+carrying `data-ui="status-note"`.
 
-The exception list is not a convenience. `stats/TodaySnapshot.jsx:55` uses that
-exact recipe for the "exercise(s)" unit label (§2.3) and must *not* be migrated
-— so a naive recipe scan fires on correct code, which is worse than no guard at
-all. The allowlist is one entry, carries its reason inline, and any *second*
-appearance fails the test.
+This replaces an earlier design that scanned source text for the italic-muted
+recipe. That design cannot work, and the reason is worth recording because it is
+the whole argument for having a primitive at all: **the recipe does not identify
+an empty state.** The same five declarations serve E1, E2 and E4 — and also
+`TodaySnapshot.jsx:55`, `VocabSrsWidget.jsx:70` and `ReviewFeed.jsx:105`, which
+are unit labels and secondary text that must never be migrated. A text scan
+firing on three of nine files in `stats/` would need an allowlist excusing a
+third of the directory, at which point it asserts nothing and the next person to
+hit it deletes it.
 
-The guard must print its denominator (files scanned) and ship both controls: a
-positive case proving the matcher fires, and a negative proving it does not fire
-on a migrated call site. A guard that has never been seen to fail is not a
-guard.
+A rendering assertion has no such ambiguity: it fails if someone replaces
+`StatusNote` with hand-rolled markup in that branch, and it cannot fire on a
+unit label, because a unit label is not that branch.
 
 **Not a browser probe.** Sub-project 2 needed `audit-layout.mjs` because it was
 about geometry at 320px, which jsdom cannot compute. Nothing here is

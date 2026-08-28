@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Replace six independently-invented empty/error surfaces with one
+**Goal:** Replace seven independently-invented empty/error surfaces with one
 `StatusNote` primitive carrying two tones, a required icon, and optional recovery.
 
 **Architecture:** `StatusNote` composes the sub-project 1b primitives (`Stack`,
@@ -382,12 +382,13 @@ git commit -m "feat(ui): add the StatusNote primitive"
 
 ---
 
-### Task 3: Migrate the three empty states (E1, E2, E3)
+### Task 3: Migrate the four empty states (E1–E4)
 
 **Files:**
 - Modify: `src/components/stats/PerTabBars.jsx:16-28`
 - Modify: `src/components/stats/ReviewFeed.jsx:22-34`
 - Modify: `src/components/stats/LeaderboardSection.jsx:66-72`
+- Modify: `src/components/stats/TodaySnapshot.jsx:80-90`
 - Test: the existing suites for these three components
 
 **Interfaces:**
@@ -465,7 +466,34 @@ Replace the whole `if (!user) { … }` block with:
 Leave the `status === 'error'` and loading branches alone — they are Task 5 and
 out of scope respectively.
 
-- [ ] **Step 5: Run the stats suite and the linter**
+- [ ] **Step 5: Migrate E4**
+
+`src/components/stats/TodaySnapshot.jsx` contains **two** italic-muted blocks
+and only one of them is an empty state. Migrate the one at `:80`, inside the
+`totalGraded === 0 ?` ternary, whose text is "No exercises graded yet today."
+
+**Do not touch the block at `:55`.** That one is the unit label "exercise(s)"
+under a count, it is always rendered, and it uses the identical five
+declarations. Confirm you have the right one by the string it renders before
+you edit.
+
+Add the imports:
+
+```jsx
+import { CalendarDays } from 'lucide-react';
+import StatusNote from '../ui/StatusNote';
+```
+
+Replace the true-branch of that ternary with:
+
+```jsx
+          <StatusNote icon={CalendarDays}>No exercises graded yet today.</StatusNote>
+```
+
+Leave the ternary's false branch, and every other style block in the file,
+exactly as they are.
+
+- [ ] **Step 6: Run the stats suite and the linter**
 
 ```bash
 npx vitest run src/components/stats/ && npx eslint src/components/stats/
@@ -474,11 +502,11 @@ npx vitest run src/components/stats/ && npx eslint src/components/stats/
 Expected: PASS, with **no edits to any test file**. If a test needed changing,
 stop: the migration altered behaviour and needs explaining before it lands.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/components/stats/PerTabBars.jsx src/components/stats/ReviewFeed.jsx src/components/stats/LeaderboardSection.jsx
-git commit -m "refactor(stats): move the three empty states onto StatusNote"
+git add src/components/stats/PerTabBars.jsx src/components/stats/ReviewFeed.jsx src/components/stats/LeaderboardSection.jsx src/components/stats/TodaySnapshot.jsx
+git commit -m "refactor(stats): move the four empty states onto StatusNote"
 ```
 
 ---
@@ -713,123 +741,88 @@ git commit -m "feat(stats): give the league and profile errors a way back"
 ### Task 6: The guard against re-drift
 
 **Files:**
-- Create: `src/components/ui/statusNoteAdoption.test.js`
+- Modify: `src/components/stats/PerTabBars.test.jsx`
+- Modify: `src/components/stats/ReviewFeed.test.jsx`
+- Modify: `src/components/stats/LeaderboardSection.test.jsx`
+- Modify: `src/components/stats/TodaySnapshot.test.jsx`
+- Modify: `src/components/stats/ProfileCard.test.jsx`
+- Modify: `src/components/VocabTab.test.jsx`
 
 **Interfaces:**
-- Consumes: nothing at runtime — this is a source-text scan, in the same style
-  as `src/components/ui/tokenBoundary.test.js`.
+- Consumes: `data-ui="status-note"`, set on the root by `StatusNote` (Task 2).
 - Produces: nothing.
 
-- [ ] **Step 1: Write the guard**
+**Why this shape, and not a source scan.** An earlier draft of this plan
+specified a repository test scanning `src/components/stats/` for the
+italic-muted recipe. That cannot work. The same five declarations serve the
+empty states *and* three blocks that must never be migrated —
+`TodaySnapshot.jsx:55` ("exercise(s)"), `VocabSrsWidget.jsx:70` ("card(s)") and
+`ReviewFeed.jsx:105` (an item's context line). A scan would fire on three of
+nine files in that directory, needing an allowlist excusing a third of it, at
+which point it asserts nothing. The recipe does not identify an empty state —
+which is the whole reason a named primitive is worth having.
 
-Create `src/components/ui/statusNoteAdoption.test.js`:
+So the guard asserts the branch, not the bytes: each migrated component renders
+a `[data-ui="status-note"]` element where it used to render hand-rolled markup.
+It cannot fire on a unit label, because a unit label is not that branch.
 
-```js
-import { describe, it, expect } from 'vitest';
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative } from 'node:path';
+- [ ] **Step 1: Add the assertion to each migrated component's suite**
 
-const STATS_DIR = 'src/components/stats';
+Each of these goes into the existing test that already exercises that branch —
+find it by the copy it asserts on, and add one expectation. Do **not** create
+new test files, and do not change the existing assertions.
 
-// The recipe the three empty states each invented independently: body-italic in
-// muted ink. Once StatusNote exists, a NEW occurrence of it means someone
-// hand-rolled a status state again.
-const RECIPE = /fontStyle:\s*'italic'/;
-const MUTED = /COLORS\.mute\b/;
+For `PerTabBars.test.jsx`, in the test covering the zero-total case:
 
-// One entry, and it is not a convenience. TodaySnapshot uses this exact recipe
-// for the "exercise(s)" unit label under a count — it is always rendered and is
-// not a status state at all (docs/status-states-spec.md §2.3). A naive scan
-// fires on it, and a guard that fires on correct code gets deleted by the next
-// person to hit it. Any SECOND appearance fails.
-const ALLOWED = new Set(['TodaySnapshot.jsx']);
-
-function sources(dir, out = []) {
-  for (const name of readdirSync(dir)) {
-    const full = join(dir, name);
-    if (statSync(full).isDirectory()) {
-      sources(full, out);
-      continue;
-    }
-    if (/\.jsx?$/.test(name) && !/\.test\.jsx?$/.test(name)) out.push(full);
-  }
-  return out;
-}
-
-// A file "hand-rolls" a status state if it contains both halves of the recipe.
-function handRolls(text) {
-  return RECIPE.test(text) && MUTED.test(text);
-}
-
-describe('status states go through StatusNote', () => {
-  it('no stats component hand-rolls the italic-muted recipe', () => {
-    const files = sources(STATS_DIR);
-    // Denominator: an empty walk and a clean walk both report zero offenders.
-    expect(files.length).toBeGreaterThan(3);
-
-    const offenders = files
-      .filter((f) => !ALLOWED.has(relative(STATS_DIR, f)))
-      .filter((f) => handRolls(readFileSync(f, 'utf8')))
-      .map((f) => relative(STATS_DIR, f));
-
-    expect(
-      offenders,
-      `scanned ${files.length} files; hand-rolled status states:\n${offenders.join('\n')}`
-    ).toEqual([]);
-  });
-
-  // Both controls. A matcher that stopped matching reports the same clean run
-  // as a clean tree.
-  it('fires on the recipe and not on a migrated call site', () => {
-    expect(
-      handRolls("style={{ fontStyle: 'italic', color: COLORS.mute, fontSize: FONT_SIZE.base }}")
-    ).toBe(true);
-
-    // A migrated call site: no recipe at all.
-    expect(handRolls('return <StatusNote icon={BarChart3}>No exercises recorded yet.</StatusNote>;'))
-      .toBe(false);
-
-    // Half the recipe is not the recipe — muted text on its own is everywhere
-    // in this app and is not a status state.
-    expect(handRolls('<span style={{ color: COLORS.mute }}>{count}</span>')).toBe(false);
-  });
-
-  // The allowlist must name a file that actually exists and actually matches,
-  // or it is silently excusing nothing while looking like it excuses something.
-  it('keeps the allowlist honest', () => {
-    for (const name of ALLOWED) {
-      const text = readFileSync(join(STATS_DIR, name), 'utf8');
-      expect(handRolls(text), `${name} is allowlisted but no longer matches — remove it`).toBe(
-        true
-      );
-    }
-  });
-});
+```jsx
+    expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
 ```
 
-- [ ] **Step 2: Run it**
+Add the same single line to:
+- `ReviewFeed.test.jsx` — the test covering the empty `items` case
+- `LeaderboardSection.test.jsx` — the test covering the signed-out case
+- `TodaySnapshot.test.jsx` — the test covering `totalGraded === 0`
+- `ProfileCard.test.jsx` — the test covering the load failure
+- `VocabTab.test.jsx` — the deck-load failure test added in Task 4
+
+If any of these branches has no existing test, write one that renders the
+component in that state and asserts both the copy and the `data-ui` hook. Say
+which ones you had to add in your report.
+
+- [ ] **Step 2: Run them**
 
 ```bash
-npx vitest run src/components/ui/statusNoteAdoption.test.js
+npx vitest run src/components/stats/ src/components/VocabTab.test.jsx
 ```
 
-Expected: PASS on all three. If the first fails, a call site was missed in Tasks
-3–5; fix the call site, not the guard.
+Expected: PASS.
 
 - [ ] **Step 3: Prove the guard has teeth**
 
-Temporarily reintroduce the recipe into a migrated file — add
-`style={{ fontStyle: 'italic', color: COLORS.mute }}` to any element in
-`PerTabBars.jsx` — and re-run. It must FAIL and must name `PerTabBars.jsx`.
-Then revert the edit and confirm it passes again.
+Pick one — `PerTabBars.jsx` — and temporarily revert its empty branch to the
+hand-rolled markup it had before Task 3:
 
-A guard that has only ever been seen to pass is not known to be a guard.
+```jsx
+  if (total === 0) {
+    return (
+      <div style={{ fontFamily: FONTS.body, fontStyle: 'italic', color: COLORS.mute }}>
+        No exercises recorded yet.
+      </div>
+    );
+  }
+```
+
+Re-run `npx vitest run src/components/stats/PerTabBars.test.jsx`. It **must**
+FAIL on the `data-ui` assertion — and note that the *copy* assertion still
+passes, which is exactly why the copy assertion alone was never a guard.
+
+Then revert and confirm it passes again. Record both outcomes in your report.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/components/ui/statusNoteAdoption.test.js
-git commit -m "test(ui): guard against hand-rolled status states"
+git add src/components/stats/*.test.jsx src/components/VocabTab.test.jsx
+git commit -m "test: assert every status state renders through StatusNote"
 ```
 
 ---
@@ -889,12 +882,12 @@ SonarCloud are all green. Never merge locally, and never use `--no-verify`.
 | §4.3 Tone, `TONE.error`, comment fix | 1, 2 |
 | §4.4 Icon (32px, aria-hidden, currentColor, component ref) | 2 |
 | §4.5 A11y (`role="alert"`, focus ring via Button) | 2, 4, 5 |
-| §5 Call-site migration E1–E3 | 3 |
+| §5 Call-site migration E1–E4 | 3 |
 | §5 Call-site migration X1 | 4 |
 | §5.1 Recovery for X2, X3 | 5 |
 | §6 Out of scope (ErrorBoundary, form errors, loading) | untouched by every task; stated in 5 |
 | §7 Unit tests | 1, 2, 4, 5 |
-| §7 Guard with denominator + both controls | 6 |
+| §7 Guard: empty branch renders through the primitive | 6 |
 | §7 No browser probe; §8 visible change | 7 (manual 320px check) |
 
 No gaps.
