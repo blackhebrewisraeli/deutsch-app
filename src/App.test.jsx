@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, within, act, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
@@ -27,6 +27,9 @@ const authMock = vi.hoisted(() => ({
   configured: true,
   status: 'anonymous',
   mayHaveSession: false,
+  // Null matches the real module's behaviour with no Supabase configured, so
+  // every existing test is unaffected; the account-lane tests set a token.
+  token: null,
 }));
 
 // Spread the real module: App imports six names from it and StatsTab,
@@ -42,6 +45,7 @@ vi.mock('./lib/auth', async (importOriginal) => ({
   isGoogleAuthConfigured: () => false,
   mayHaveSession: () => authMock.mayHaveSession,
   signOut: authSignOutMock,
+  getAccessToken: () => Promise.resolve(authMock.token),
   useAuth: () => ({
     session: null,
     user: authMock.status === 'authenticated' ? { id: 'u1', email: 'a@b.co' } : null,
@@ -1261,5 +1265,85 @@ describe('first-run walkthrough', () => {
       expect(left + width, `step ${step} right edge`).toBeLessThanOrEqual(320);
       if (step < 3) await user.click(screen.getByRole('button', { name: /next/i }));
     }
+  });
+});
+
+// The account lane's client wiring: App owns the fetch, the reauth_required
+// branch and the post-delete reset, and none of it was covered before. The
+// reauth branch matters most — a 401 that does not open the sheet leaves the
+// user at a dead end with no way to finish deleting.
+describe('account deletion wiring', () => {
+  let fetchSpy;
+
+  beforeEach(() => {
+    // `configured` is deliberately reset here, not just status/token: earlier
+    // blocks in this file leave it false, and requestSignIn() is a no-op when
+    // auth is unconfigured — so without this the reauth assertion passes or
+    // fails depending on which tests ran before it.
+    authMock.configured = true;
+    authMock.status = 'authenticated';
+    authMock.token = 'tok';
+    fetchSpy = vi.spyOn(globalThis, 'fetch');
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+    authMock.status = 'anonymous';
+    authMock.token = null;
+  });
+
+  const jsonRes = (status, body) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    clone() {
+      return this;
+    },
+    json: () => Promise.resolve(body),
+  });
+
+  async function armDeletion() {
+    setViewportWidth(1280);
+    renderPastEntry(<App />);
+    await userEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' })
+    );
+    await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /type delete to confirm/i }),
+      'DELETE'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /permanently delete/i }));
+  }
+
+  it('sends the typed confirmation to the delete endpoint', async () => {
+    fetchSpy.mockResolvedValue(jsonRes(204, {}));
+    await armDeletion();
+
+    const call = fetchSpy.mock.calls.find(([url]) => String(url).includes('/account/delete'));
+    expect(call).toBeDefined();
+    const [, init] = call;
+    expect(init.method).toBe('DELETE');
+    expect(JSON.parse(init.body)).toEqual({ confirm: 'DELETE' });
+    expect(init.headers.Authorization).toBe('Bearer tok');
+  });
+
+  it('opens the sign-in sheet when the server demands a fresh authentication', async () => {
+    fetchSpy.mockResolvedValue(
+      jsonRes(401, { error: { code: 'reauth_required', message: 'Please sign in again.' } })
+    );
+    await armDeletion();
+
+    await waitFor(() =>
+      expect(screen.getByRole('dialog', { name: /sign in/i })).toBeInTheDocument()
+    );
+    // The phrase stays typed so retrying after re-auth is one click.
+    expect(screen.getByRole('textbox', { name: /type delete to confirm/i })).toHaveValue('DELETE');
+  });
+
+  it('does NOT open the sign-in sheet for an ordinary failure', async () => {
+    fetchSpy.mockResolvedValue(jsonRes(500, { error: { code: 'server_error', message: 'boom' } }));
+    await armDeletion();
+
+    expect(screen.queryByRole('dialog', { name: /sign in/i })).not.toBeInTheDocument();
   });
 });

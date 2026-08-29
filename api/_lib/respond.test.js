@@ -25,6 +25,7 @@ describe('sendError', () => {
     expect(ERROR_CODES).toEqual({
       bad_request: 400,
       unauthorized: 401,
+      reauth_required: 401,
       forbidden: 403,
       method_not_allowed: 405,
       rate_limited: 429,
@@ -35,6 +36,17 @@ describe('sendError', () => {
     sendError(res, 'bad_request', 'nope');
     expect(res.statusCode).toBe(400);
     expect(res.body).toEqual({ error: { code: 'bad_request', message: 'nope' } });
+  });
+
+  // reauth_required shares 401 with unauthorized but means something different:
+  // the session is fine, the operation just demands a recent authentication.
+  // The client branches on the CODE, so the code must survive the envelope.
+  it('keeps reauth_required distinguishable from unauthorized at the same status', () => {
+    const res = createRes();
+    sendError(res, 'reauth_required', 'Please sign in again to confirm this action.');
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error.code).toBe('reauth_required');
+    expect(res.body.error.code).not.toBe('unauthorized');
   });
 
   it('sets extra headers when provided', () => {

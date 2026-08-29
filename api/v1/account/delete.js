@@ -1,4 +1,34 @@
 import { createAccountHandler } from '../../_lib/accountHandler.js';
+import { sendError } from '../../_lib/respond.js';
+
+// How recently the caller must have actually authenticated. Not how old their
+// token is — see api/_lib/authTime.js for why those differ.
+//
+// In practice almost every deletion will hit the re-auth prompt, because amr
+// only advances on a real sign-in and sessions here survive for weeks on
+// refresh tokens. So this is less "was your session fresh?" and more "you have
+// this long, after proving who you are, to finish confirming" — 15 minutes is
+// forgiving for someone interrupted mid-flow while barely widening the one
+// exposure it leaves: a device grabbed within 15 minutes of a real sign-in.
+export const REAUTH_MAX_AGE_SEC = 15 * 60;
+
+// Typed rather than clicked. The two-step button it replaces guarded against a
+// mis-click; it never established intent.
+export const CONFIRM_PHRASE = 'DELETE';
+
+// Vercel normally parses a JSON body, but a DELETE body is unusual enough in
+// proxies and test harnesses that it can arrive as a raw string. Accept both
+// rather than reading `undefined.confirm` off an unparsed payload.
+function readConfirm(body) {
+  if (typeof body === 'string') {
+    try {
+      return JSON.parse(body)?.confirm;
+    } catch {
+      return undefined;
+    }
+  }
+  return body?.confirm;
+}
 
 // Permanent account deletion.
 //
@@ -31,7 +61,12 @@ export default createAccountHandler({
   userRate: { windowMs: 60 * 60 * 1000, max: 5 },
   name: 'account.delete',
   failureMessage: 'Failed to delete account.',
-  run: async ({ res, auth, db }) => {
+  recentAuthMaxAgeSec: REAUTH_MAX_AGE_SEC,
+  run: async ({ req, res, auth, db }) => {
+    if (readConfirm(req.body) !== CONFIRM_PHRASE) {
+      return sendError(res, 'bad_request', `Type ${CONFIRM_PHRASE} to confirm.`);
+    }
+
     const { error } = await db.auth.admin.deleteUser(auth.userId);
     if (error) throw error;
     return res.status(204).end();

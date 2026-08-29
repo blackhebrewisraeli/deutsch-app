@@ -358,8 +358,9 @@ DELETE /api/v1/account/delete
    ├─ 1. originAllowed(req)                        ← new, reuse lib/origin.js
    ├─ 2. rate limit, tight quota                   ← new, reuse lib/ratelimit.js
    ├─ 3. requireAuth(req) → userId                 ← exists
-   ├─ 4. reauth gate: session age < 15 min,        ← new
+   ├─ 4. reauth gate: amr auth age < 15 min,       ← new
    │       else 401 reauth_required
+   │       NOT session age / iat — see below
    ├─ 5. body: { confirm: "DELETE" } must match    ← new
    ├─ 6. auth.admin.deleteUser(userId)             ← exists; now the ONLY write
    │       └─ Postgres cascades all six tables
@@ -373,9 +374,36 @@ client ─ 9. clearUserLocalState() + signOut + hard reload   ← exists
 
 **On step 4 (re-authentication).** This is the single biggest gap between "has a confirm
 dialog" and "highly secure". Today a borrowed or stolen session can destroy the account with
-two clicks and no credential. The gate: if the session was issued more than 15 minutes ago,
+two clicks and no credential. The gate: if the caller authenticated more than 15 minutes ago,
 return `401 reauth_required`; the client re-authenticates (magic link, or Google re-consent)
 and retries. Both providers are live, so no new auth surface is needed.
+
+> **Which claim measures that — corrected 2026-08-29, during implementation.** This section
+> originally said "session age", whose obvious reading is the token's `iat`. That reading would
+> have produced security theatre, and it was worth measuring rather than assuming. Verified
+> against a real Supabase (sign in, refresh two seconds later, same `session_id`):
+>
+> | claim | at sign-in | after refresh | |
+> | --- | --- | --- | --- |
+> | `iat` | 1787977058 | 1787977**064** | **changed** |
+> | `amr[0].timestamp` | 1787977058 | 1787977058 | **unchanged** |
+>
+> `iat` is reissued on every access-token refresh, and supabase-js refreshes in the background
+> for the life of the refresh token — so a session stolen weeks ago presents a minutes-old `iat`
+> and would sail straight through the gate it is supposed to fail. **`amr` is the only claim that
+> records when the human actually proved who they were**, and it survives refreshes. Signing in
+> again mints a new `amr` timestamp, which is what lets the gate be satisfied at all (also
+> verified). Magic link — this app's actual method — yields `[{method:'otp', timestamp}]`, the
+> same shape as password.
+>
+> `amr` is optional and may arrive in the RFC-8176 string form with no timestamps, so "unknown"
+> is a real outcome: the implementation **fails closed** and asks for re-authentication rather
+> than silently disabling the gate. Logic and rationale live in `api/_lib/authTime.js`.
+>
+> One consequence worth stating plainly: because `amr` only advances on a real sign-in and
+> sessions here survive for weeks, **nearly every deletion will hit the re-auth prompt**. The
+> window is therefore less "was your session fresh?" and more "you have this long, after proving
+> who you are, to finish confirming".
 
 **On step 5,** a typed `DELETE` confirmation replaces the current second button. The two-step
 button in `AccountSection.jsx:200-247` is a mis-click guard, not an intent guard.
@@ -552,7 +580,7 @@ Each row is one PR, branched from an up-to-date `main`, landing green through
 | 5 | Move `AccountSection` → Settings sections; Stats keeps a pointer | ~8 files | none |
 | 6 | `PATCH /api/v1/account/profile` (generalise `league/handle`) + `ProfileSection` | ~5 files | none |
 | 7a | **Merged in PR #191** (`afa9a02`) — the three §6.2 defects: cascade-only delete, account-lane origin + rate limits, bound error logging, RLS zero-rows suite | 7 files | none |
-| 7b | Remaining §6.3 hardening: re-auth gate + typed `DELETE` confirmation (blocked on §11 Q1) | ~4 files | none |
+| 7b | **Done** — re-auth gate (amr-based) + typed `DELETE` confirmation + step 9 reset | 9 files | none |
 | — | *Optional Phase 2:* `user_missions` (§7.4) | — | **yes** |
 
 PRs 1–7 require **no migration at all**. Land 1→7 in order; 5 must land before 6 so the profile
@@ -566,10 +594,16 @@ rename (Phase 4), any `card.de` rename, and any second language pack.
 
 ## 11 · Open questions
 
-1. **Re-auth window.** §6.3 proposes 15 minutes. Shorter is safer and more annoying; magic-link
-   round-trips are slow enough that 15 is my recommendation. Confirm before PR 7.
+1. ~~**Re-auth window.**~~ **Resolved: 15 minutes**, as `REAUTH_MAX_AGE_SEC` in
+   `api/v1/account/delete.js`. Measurement changed what the number means — since `amr` only
+   advances on a real sign-in, nearly every deletion re-authenticates regardless, so the window
+   is the grace period for finishing the confirmation rather than a freshness filter. 15 is
+   forgiving for an interrupted user and barely widens the one exposure it leaves (a device
+   taken within 15 minutes of a genuine sign-in). One constant to change if that reads wrong.
 2. **Does `display_name` need a uniqueness or profanity rule?** `handle` is `UNIQUE` and public
    on the leaderboard. `display_name` is currently private to Settings and Home — but if it ever
    surfaces in leagues, it inherits the moderation question that `handle` already has.
 3. **Should export get the same re-auth gate as delete?** It returns the entire dataset in one
-   response. Not blocking for PR 7, but it is the same class of risk.
+   response. Still open — but now cheap: `createAccountHandler` takes `recentAuthMaxAgeSec`, so
+   export adopts the gate by adding one line. Deliberately not done unasked, because it makes a
+   non-destructive action materially more annoying.

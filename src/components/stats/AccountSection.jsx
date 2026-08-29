@@ -12,6 +12,10 @@ import Button from '../ui/Button';
 import { LEAGUES_ENABLED, updateHandle } from '../../lib/leagues';
 import { isAuthConfigured } from '../../lib/auth.js';
 
+// Mirrors CONFIRM_PHRASE in api/v1/account/delete.js. The server is the
+// authority — this only decides when the button stops being disabled.
+export const DELETE_CONFIRM_PHRASE = 'DELETE';
+
 function formatRelativeSync(ms) {
   if (!ms) return null;
   const sec = Math.floor((Date.now() - ms) / 1000);
@@ -35,6 +39,7 @@ export default function AccountSection({
   lastSyncedAt = null,
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [typed, setTyped] = useState('');
   const [exporting, setExporting] = useState(false);
   const [handle, setHandle] = useState('');
   const [avatar, setAvatar] = useState('');
@@ -54,6 +59,11 @@ export default function AccountSection({
       </div>
     );
   }
+
+  // Trim before comparing: phone keyboards add a trailing space after an
+  // autocapitalised word, and blocking on invisible whitespace reads as a bug.
+  // The trimmed phrase is what gets sent, so the server still sees it exactly.
+  const confirmArmed = typed.trim() === DELETE_CONFIRM_PHRASE;
 
   const handleExport = async () => {
     setExporting(true);
@@ -219,21 +229,47 @@ export default function AccountSection({
                 color: COLORS.red,
               }}
             >
-              Are you sure? This will erase all your progress.
+              This erases all your progress and cannot be undone. Type {DELETE_CONFIRM_PHRASE} to
+              confirm.
             </p>
+            <input
+              aria-label={`Type ${DELETE_CONFIRM_PHRASE} to confirm`}
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="characters"
+              spellCheck="false"
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: FONT_SIZE.base,
+                padding: `${SPACE[1]}px ${SPACE[2]}px`,
+                borderRadius: RADIUS.sm,
+                border: `1px solid ${COLORS.red}`,
+                background: 'transparent',
+                color: COLORS.ink,
+                width: '100%',
+                marginBottom: SPACE[2],
+              }}
+            />
             <div style={{ display: 'flex', gap: SPACE[2] }}>
+              {/* Disabled until the phrase matches, so the destructive control
+                  cannot be reached by muscle memory alone. */}
               <Button
                 variant="danger"
-                aria-label="Yes, delete everything"
+                aria-label={`Permanently delete my account`}
+                disabled={!confirmArmed}
                 onClick={async () => {
                   try {
-                    await onDelete?.();
+                    await onDelete?.(DELETE_CONFIRM_PHRASE);
                   } catch {
-                    setConfirmDelete(false);
+                    // Leave the phrase typed. The usual rejection here is
+                    // reauth_required, and retrying after signing in again
+                    // should be one click rather than a re-type.
                   }
                 }}
               >
-                Yes, delete everything
+                Permanently delete
               </Button>
               {/* `flex: 1` is explicit now that BUTTON.secondary no longer
                   carries it — this Cancel used to fill the rest of the confirm
@@ -242,7 +278,10 @@ export default function AccountSection({
                 variant="secondary"
                 aria-label="Cancel"
                 style={{ flex: 1 }}
-                onClick={() => setConfirmDelete(false)}
+                onClick={() => {
+                  setConfirmDelete(false);
+                  setTyped('');
+                }}
               >
                 Cancel
               </Button>

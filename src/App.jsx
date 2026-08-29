@@ -45,7 +45,6 @@ import AccountChip from './components/AccountChip';
 import ThemeChip from './components/ThemeChip';
 import {
   useAuth,
-  signOut,
   getAccessToken,
   isAuthConfigured,
   mayHaveSession,
@@ -421,24 +420,45 @@ export default function App() {
     }
   };
 
-  const handleDelete = async () => {
+  // Throws on every failure path so AccountSection keeps the typed phrase armed:
+  // the common rejection is reauth_required, and re-typing DELETE after signing
+  // in again would be pure friction.
+  const handleDelete = async (confirm) => {
     const token = await getAccessToken();
     if (!token) {
       showToast('Please sign in again.');
-      return;
+      throw new Error('no_token');
     }
-    try {
-      const res = await fetch('/api/v1/account/delete', {
-        method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) throw new Error();
-      localStorage.clear();
-      setGateDismissed(false);
-      await signOut();
-    } catch {
-      showToast('Could not delete account — try again.');
+
+    const res = await fetch('/api/v1/account/delete', {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+      body: JSON.stringify({ confirm }),
+    });
+
+    if (!res.ok) {
+      // reauth_required shares 401 with unauthorized, so branch on the code:
+      // the session is fine, it just wasn't proven recently enough to erase an
+      // account. Send them through the same AuthSheet and let them retry.
+      const code = await res
+        .clone()
+        .json()
+        .then((b) => b?.error?.code)
+        .catch(() => null);
+      if (code === 'reauth_required') {
+        showToast('Please sign in again to confirm deletion.');
+        requestSignIn();
+      } else {
+        showToast('Could not delete account — try again.');
+      }
+      throw new Error(code ?? 'delete_failed');
     }
+
+    // signOutAndReset owns the load-bearing order — signOut settles first, then
+    // local state is wiped (theme preserved) and the document hard-reloads.
+    // This path used to clear localStorage before signing out, which is the
+    // same ordering bug that once left XP on screen under a SIGN IN header.
+    await signOutAndReset();
   };
 
   useEffect(() => {

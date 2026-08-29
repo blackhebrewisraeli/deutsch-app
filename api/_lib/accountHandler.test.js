@@ -170,3 +170,86 @@ describe('createAccountHandler', () => {
     spy.mockRestore();
   });
 });
+
+// ── re-auth gate (§6.3 step 4) ────────────────────────────────────────────
+//
+// Keyed on the token's amr timestamp, never iat — see authTime.js for why.
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+const tokenAuthedAgo = (sec) => {
+  const ts = Math.floor(Date.now() / 1000) - sec;
+  return `${b64({ alg: 'HS256' })}.${b64({ amr: [{ method: 'otp', timestamp: ts }] })}.sig`;
+};
+const reqWithToken = (token) => ({
+  method: 'DELETE',
+  headers: { 'x-forwarded-for': `10.1.0.${++ipSeq}`, authorization: `Bearer ${token}` },
+});
+
+describe('createAccountHandler — re-auth gate', () => {
+  beforeEach(() => {
+    requireAuth.mockResolvedValue(USER);
+    serviceClient.mockReturnValue({ marker: 'db' });
+  });
+  afterEach(() => vi.clearAllMocks());
+
+  const gated = (run) =>
+    createAccountHandler({
+      method: 'DELETE',
+      ipRate: { windowMs: 60_000, max: 100 },
+      userRate: { windowMs: 60_000, max: 100 },
+      recentAuthMaxAgeSec: 900,
+      run,
+      store: new MemoryStore(),
+    });
+
+  it('lets a freshly authenticated caller through', async () => {
+    const run = vi.fn().mockResolvedValue(undefined);
+    const res = createRes();
+    await gated(run)(reqWithToken(tokenAuthedAgo(60)), res);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a stale authentication with 401 reauth_required, without running the operation', async () => {
+    const run = vi.fn();
+    const res = createRes();
+    await gated(run)(reqWithToken(tokenAuthedAgo(3600)), res);
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error.code).toBe('reauth_required');
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  // The gate's entire purpose: a stolen session refreshes its access token
+  // forever, so iat is always minutes old while amr stays at the original
+  // sign-in. A token like this must NOT pass.
+  it('rejects an indefinitely-refreshed session whose iat is fresh but amr is old', async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const refreshed = `${b64({ alg: 'HS256' })}.${b64({
+      iat: nowSec - 5,
+      amr: [{ method: 'otp', timestamp: nowSec - 30 * 24 * 3600 }],
+    })}.sig`;
+    const run = vi.fn();
+    const res = createRes();
+    await gated(run)(reqWithToken(refreshed), res);
+
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error.code).toBe('reauth_required');
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('fails closed when the token carries no readable auth time', async () => {
+    const noAmr = `${b64({ alg: 'HS256' })}.${b64({ iat: Math.floor(Date.now() / 1000) })}.sig`;
+    const run = vi.fn();
+    const res = createRes();
+    await gated(run)(reqWithToken(noAmr), res);
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error.code).toBe('reauth_required');
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('leaves handlers without the option ungated', async () => {
+    const run = vi.fn().mockResolvedValue(undefined);
+    const res = createRes();
+    await build(run)(reqWithToken(tokenAuthedAgo(30 * 24 * 3600)), res);
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+});
