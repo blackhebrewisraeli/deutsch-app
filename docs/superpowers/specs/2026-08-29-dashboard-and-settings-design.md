@@ -521,12 +521,12 @@ Co-located `*.test.jsx`, Vitest with `globals: false` (import `describe/it/expec
   taken" without clearing the field; success toasts. Both `LEAGUES_ENABLED` states via
   `describe.each` — the shipping flag combination is the one that historically had no test.
 - `AccountSection.test.jsx` — travels with the component; should pass unmoved.
-- `delete.test.js` — *written in PR #191 (open)*: the endpoint issues **exactly one** delete and touches no
+- `delete.test.js` — *done in PR #191*: the endpoint issues **exactly one** delete and touches no
   table directly (this is what pins §6.3's "cascade is the mechanism"), failures are logged with
   endpoint + user + cause, and a repeat caller is rate limited. Still owed by 7b:
   `reauth_required` on a stale session, and a wrong `confirm` string rejected.
 - **RLS suite** (`npm run test:rls`, Docker + `supabase start`, excluded from `npm test`) —
-  *written in PR #191 (open)* as `supabase/tests/rls/cascade.test.js`: post-delete zero rows across all six
+  *done in PR #191* as `supabase/tests/rls/cascade.test.js`: post-delete zero rows across all six
   user-owned tables, the shared `leagues` row surviving, and a pre-delete assertion that the
   fixture is actually populated — an empty table and a correctly cascaded one otherwise print
   identically.
@@ -551,13 +551,13 @@ Each row is one PR, branched from an up-to-date `main`, landing green through
 | 4 | `SettingsRoute` shell + `AccountChip` entry + focus trap | 5 files | none |
 | 5 | Move `AccountSection` → Settings sections; Stats keeps a pointer | ~8 files | none |
 | 6 | `PATCH /api/v1/account/profile` (generalise `league/handle`) + `ProfileSection` | ~5 files | none |
-| 7a | **PR #191, open** — the three §6.2 defects: cascade-only delete, account-lane origin + rate limits, bound error logging, RLS zero-rows suite | 7 files | none |
+| 7a | **Merged in PR #191** (`afa9a02`) — the three §6.2 defects: cascade-only delete, account-lane origin + rate limits, bound error logging, RLS zero-rows suite | 7 files | none |
 | 7b | Remaining §6.3 hardening: re-auth gate + typed `DELETE` confirmation (blocked on §11 Q1) | ~4 files | none |
 | — | *Optional Phase 2:* `user_missions` (§7.4) | — | **yes** |
 
 PRs 1–7 require **no migration at all**. Land 1→7 in order; 5 must land before 6 so the profile
-form has a home. 7a is independent of 1–6 and already open, so it can land at any point; the §6.2 defects it
-fixes are still live on `main` until it merges.
+form has a home. 7a was independent of 1–6 and has already merged, so the §6.2 defects it describes are fixed on
+`main` — read §6.2 as the record of what was wrong, not as a live bug report.
 
 Deliberately excluded from every PR above: any change to `lib/stats.js`'s `TABS`, any storage-key
 rename (Phase 4), any `card.de` rename, and any second language pack.
