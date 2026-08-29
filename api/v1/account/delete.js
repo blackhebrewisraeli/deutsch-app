@@ -1,34 +1,39 @@
-import { sendError } from '../../_lib/respond.js';
-import { serviceClient } from '../../_lib/supabase.js';
-import { requireAuth } from '../../_lib/auth-middleware.js';
+import { createAccountHandler } from '../../_lib/accountHandler.js';
 
-export default async function handler(req, res) {
-  if (req.method !== 'DELETE') {
-    return sendError(res, 'method_not_allowed', 'Method not allowed');
-  }
-
-  let auth;
-  try {
-    auth = await requireAuth(req);
-  } catch (err) {
-    return sendError(res, err.code ?? 'server_error', err.message ?? 'Unexpected error.');
-  }
-
-  const db = serviceClient();
-  if (!db) return sendError(res, 'server_error', 'Server is not configured.');
-
-  try {
-    // Delete data rows first. If any fail, bail before touching auth.
-    const tables = ['srs_state', 'stats_daily', 'settings'];
-    for (const table of tables) {
-      const { error } = await db.from(table).delete().eq('user_id', auth.userId);
-      if (error) throw error;
-    }
-    const { error: authErr } = await db.auth.admin.deleteUser(auth.userId);
-    if (authErr) throw authErr;
-
+// Permanent account deletion.
+//
+// This endpoint deletes the auth user and NOTHING ELSE, on purpose.
+//
+// Every user-owned table declares `references auth.users(id) on delete cascade`
+// — profiles, srs_state, stats_daily, decks, settings, league_members (see
+// supabase/migrations/20260611232000_user_tables.sql and ..._leagues.sql). So
+// removing the auth row already removes every row the user owns, in ONE
+// server-side transaction that cannot half-apply.
+//
+// It used to delete srs_state, stats_daily and settings explicitly first, and
+// only then call deleteUser. That was not merely redundant — it manufactured the
+// exact failure B3's design forbade ("no silent half-deletes"): if the loop
+// succeeded and deleteUser then failed, the user's learning data was destroyed
+// while their account stayed live and signable-into. The loop also omitted
+// `decks`, which was harmless precisely because the cascade — not the loop — is
+// what makes the deletion complete.
+//
+// The invariant is enforced in two places: delete.test.js asserts this handler
+// issues exactly one delete call and touches no table directly, and the RLS
+// suite (npm run test:rls) asserts zero surviving rows across all six tables
+// after a real deletion. If a future table is added without `on delete cascade`,
+// the RLS suite is what fails.
+export default createAccountHandler({
+  method: 'DELETE',
+  // Deleting is a once-ever action; the only legitimate repeat is a retry after
+  // a transient failure.
+  ipRate: { windowMs: 60 * 60 * 1000, max: 10 },
+  userRate: { windowMs: 60 * 60 * 1000, max: 5 },
+  name: 'account.delete',
+  failureMessage: 'Failed to delete account.',
+  run: async ({ res, auth, db }) => {
+    const { error } = await db.auth.admin.deleteUser(auth.userId);
+    if (error) throw error;
     return res.status(204).end();
-  } catch {
-    return sendError(res, 'server_error', 'Failed to delete account.');
-  }
-}
+  },
+});
