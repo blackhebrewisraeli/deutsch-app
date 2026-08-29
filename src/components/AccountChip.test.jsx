@@ -108,3 +108,24 @@ describe('AccountChip when auth is not configured', () => {
     vi.doUnmock('../lib/auth.js');
   });
 });
+
+// The chip defers full management to the Settings route rather than growing a
+// second copy of it — the same division Home's identity strip observes.
+describe('AccountChip → Settings', () => {
+  it('offers a Settings entry that opens the route and closes the sheet', async () => {
+    const onOpenSettings = vi.fn();
+    render(
+      <AccountChip
+        user={{ email: 'sam@example.com' }}
+        onSignIn={() => {}}
+        onSignOut={() => {}}
+        onOpenSettings={onOpenSettings}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /account/i }));
+    await userEvent.click(screen.getByRole('button', { name: /settings/i }));
+
+    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument();
+  });
+});

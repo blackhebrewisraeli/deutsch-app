@@ -32,6 +32,13 @@ import { activePack } from './packs';
 const { decks: PRESET_DECKS } = activePack.content;
 import { StatBlock } from './components/UI';
 import HomeTab from './components/HomeTab';
+import SettingsRoute from './components/settings/SettingsRoute';
+import { deriveMissions } from './lib/missions';
+
+// Settings is a route rather than a seventh nav tab, so the hash is what makes
+// it deep-linkable and reload-safe.
+const SETTINGS_HASH = '#/settings';
+import { fetchMyProfile } from './lib/profile';
 import ChatTab from './components/ChatTab';
 import AlphabetTab from './components/AlphabetTab';
 import VocabTab from './components/VocabTab';
@@ -370,6 +377,20 @@ export default function App() {
     }
   };
 
+  // Preferences write LOCAL state and let the existing reconcile push them.
+  // Writing Supabase directly here would bypass the LWW merge that PR #151
+  // added after a stale device clobbered a correct server-side value.
+  const handleGoalChange = (xp) => {
+    const current = loadState() ?? {};
+    const gamification = {
+      ...(current.gamification ?? { soundOn: false, achievements: {}, lastGoalMet: null }),
+      goal: xp,
+    };
+    saveState({ ...current, gamification });
+    stampSettings();
+    window.dispatchEvent(new CustomEvent('deutsch:progress'));
+  };
+
   const authOverlay = (
     <>
       <AuthCallbackLanding
@@ -485,6 +506,49 @@ export default function App() {
 
   // Onboarding + level
   const [level, setLevel] = useState(readLevel);
+
+  // Settings is a route, not a tab: six tabs already ship and the 320px header
+  // budget is a measured 10px. The hash makes it deep-linkable and reload-safe.
+  const [settingsOpen, setSettingsOpen] = useState(
+    () => typeof window !== 'undefined' && window.location.hash === SETTINGS_HASH
+  );
+  const openSettings = () => {
+    if (typeof window !== 'undefined') window.location.hash = SETTINGS_HASH;
+    setSettingsOpen(true);
+  };
+  const closeSettings = () => {
+    // Clear the hash without adding a history entry the Back button must undo.
+    if (typeof window !== 'undefined' && window.location.hash === SETTINGS_HASH) {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+    setSettingsOpen(false);
+  };
+  useEffect(() => {
+    const onHash = () => setSettingsOpen(window.location.hash === SETTINGS_HASH);
+    window.addEventListener('hashchange', onHash);
+    return () => window.removeEventListener('hashchange', onHash);
+  }, []);
+
+  // The learner's own profile row — an own-row select the existing RLS policy
+  // already permits, so no endpoint is involved. A failure is swallowed on
+  // purpose: Home greets with or without a profile, and the landing tab must
+  // not fall over because a name could not be read.
+  const [profile, setProfile] = useState(null);
+  useEffect(() => {
+    let cancelled = false;
+    if (!user?.id) {
+      setProfile(null);
+      return undefined;
+    }
+    fetchMyProfile(user.id)
+      .then((row) => {
+        if (!cancelled) setProfile(row);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.id]);
   const sessionGuard = useSessionGuardValue();
 
   // `level` is held here and prop-drilled into every tab, so any writer that
@@ -566,6 +630,48 @@ export default function App() {
     getReviewItems(liveState.items ?? {}).length +
     getDueCount(liveState.srs ?? {}, PRESET_DECKS, Date.now());
 
+  // Open missions for Home. Every input is already on hand here, and
+  // deriveMissions is pure — it decides WHICH missions are open and returns
+  // ids and counts, never copy, so no German reaches src/lib.
+  //
+  // `decks` and `league` are passed empty on purpose: their catalogue entries
+  // need per-deck progress and the caller's league standing, neither of which
+  // App holds today, and inventing them here would be worse than a mission
+  // that simply does not fire. Both are additive when that data arrives.
+  const missions = deriveMissions({
+    srsDue: getDueCount(liveState.srs ?? {}, PRESET_DECKS, Date.now()),
+    goal: game.goal,
+    streak: game.streak,
+    reviewItems: getReviewItems(liveState.items ?? {}),
+    decks: [],
+    league: null,
+    achievements: ACHIEVEMENTS,
+    achievementCtx: gamificationContext(liveState),
+    earned: earnedAchievements(gamificationContext(liveState)).map((a) => a.id),
+    now: new Date(),
+    lastTab: TABS.includes(tab) ? tab : 'chat',
+  });
+
+  const settingsOverlay = (
+    <SettingsRoute
+      open={settingsOpen}
+      onClose={closeSettings}
+      user={user}
+      profile={profile}
+      onProfileSaved={setProfile}
+      onToast={(title) => pushToasts([{ kind: 'info', title, sub: '', icon: '✅' }])}
+      level={level}
+      onLevelChange={setLevel}
+      goal={loadState()?.gamification?.goal ?? DEFAULT_GOAL}
+      onGoalChange={handleGoalChange}
+      onSignIn={requestSignIn}
+      onSignOut={handleSignOut}
+      onExport={handleExport}
+      onDelete={handleDelete}
+      lastSyncedAt={syncStatus.lastSyncedAt}
+    />
+  );
+
   // Streak at risk: user has a run going but today hasn't qualified yet.
   const goalNow = liveState.gamification?.goal ?? DEFAULT_GOAL;
   const streakPulsing =
@@ -611,6 +717,7 @@ export default function App() {
           googleBusy={googleBusy}
         />
         {authOverlay}
+        {settingsOverlay}
       </>
     );
   }
@@ -752,6 +859,7 @@ export default function App() {
               user={user}
               onSignIn={requestSignIn}
               onSignOut={handleSignOut}
+              onOpenSettings={openSettings}
               pending={syncStatus.pending}
             />
           </div>
@@ -894,6 +1002,12 @@ export default function App() {
               goalPct={game.goal.pct}
               goalMet={game.goal.met}
               streak={game.streak}
+              user={user}
+              profile={profile}
+              cefrLevel={level}
+              missions={missions}
+              onGoToTab={(target) => setTab(target)}
+              onOpenSettings={openSettings}
             />
           )}
           {/* The four practice tabs share one positioned wrapper so the trial
@@ -958,10 +1072,7 @@ export default function App() {
               onReview={handleReview}
               user={user}
               onSignIn={requestSignIn}
-              onSignOut={handleSignOut}
-              onExport={handleExport}
-              onDelete={handleDelete}
-              lastSyncedAt={syncStatus.lastSyncedAt}
+              onOpenSettings={openSettings}
               level={level}
               onLevelChange={setLevel}
               levelBoost={authStatus === 'authenticated'}
@@ -997,6 +1108,7 @@ export default function App() {
 
         <Analytics />
         {authOverlay}
+        {settingsOverlay}
       </div>
     </SessionGuardContext.Provider>
   );
