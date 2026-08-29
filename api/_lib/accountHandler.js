@@ -3,6 +3,7 @@ import { originAllowed, parseAllowedOrigins } from './origin.js';
 import { createRateLimiter, defaultStore } from './ratelimit.js';
 import { requireAuth } from './auth-middleware.js';
 import { serviceClient } from './supabase.js';
+import { isRecentAuth } from './authTime.js';
 
 // One factory builds every account-lane endpoint, the way createAiHandler builds
 // the AI lane. Before this existed, `delete` and `export` each hand-rolled their
@@ -11,7 +12,7 @@ import { serviceClient } from './supabase.js';
 // in a single response and could be called in a loop.
 //
 // Guard order is deliberate:
-//   method → origin → IP rate → auth → identity rate → db → run
+//   method → origin → IP rate → auth → identity rate → re-auth → db → run
 //
 // The IP limit runs BEFORE requireAuth because requireAuth is not free: it calls
 // Supabase getUser() on every request. Limiting only after auth would let an
@@ -25,6 +26,9 @@ export function createAccountHandler({
   run,
   name = 'account',
   failureMessage = 'Request failed.',
+  // Optional: demand that the caller authenticated within this many seconds.
+  // Omitted means ungated, which is every endpoint that is not destructive.
+  recentAuthMaxAgeSec,
   // Both injectable for tests only; production reads the env var and the
   // configured store, same as the AI lane.
   allowedOrigins,
@@ -60,6 +64,17 @@ export function createAccountHandler({
       return sendError(res, 'rate_limited', 'Too many requests — slow down.', {
         'Retry-After': String(userLimit.retryAfterSec),
       });
+    }
+
+    // A valid token is not the same question as "authenticated recently".
+    // Keyed on the token's amr claim, never iat — iat is reissued on every
+    // background refresh, so a session stolen weeks ago would present a
+    // minutes-old iat and sail through. See authTime.js. Fails closed.
+    if (recentAuthMaxAgeSec != null) {
+      const bearer = (req.headers?.authorization ?? '').replace(/^Bearer /, '');
+      if (!isRecentAuth(bearer, recentAuthMaxAgeSec)) {
+        return sendError(res, 'reauth_required', 'Please sign in again to confirm this action.');
+      }
     }
 
     const db = serviceClient();

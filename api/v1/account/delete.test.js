@@ -14,7 +14,14 @@ const USER = { userId: 'uid-1', email: 'a@b.com' };
 // The route is a module singleton and its quota counters live for the whole test
 // process, so every test gets a fresh IP and a fresh user id.
 let seq = 0;
-function makeReq(method = 'DELETE', token = 'tok') {
+// A token whose amr says the caller authenticated `sec` ago. The re-auth gate
+// reads amr, never iat — see api/_lib/authTime.js.
+const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+export function freshToken(sec = 30) {
+  const ts = Math.floor(Date.now() / 1000) - sec;
+  return `${b64({ alg: 'HS256' })}.${b64({ amr: [{ method: 'otp', timestamp: ts }] })}.sig`;
+}
+function makeReq(method = 'DELETE', token = freshToken(), body = { confirm: 'DELETE' }) {
   seq += 1;
   return {
     method,
@@ -22,6 +29,7 @@ function makeReq(method = 'DELETE', token = 'tok') {
       'x-forwarded-for': `172.16.0.${seq}`,
       ...(token ? { authorization: `Bearer ${token}` } : {}),
     },
+    body,
   };
 }
 const freshUser = () => ({ ...USER, userId: `uid-${++seq}` });
@@ -54,7 +62,7 @@ describe('DELETE /api/v1/account', () => {
       message: 'Missing authorization token.',
     });
     const res = createRes();
-    await handler(makeReq('DELETE', null), res);
+    await handler(makeReq('DELETE', null, { confirm: 'DELETE' }), res);
     expect(res.statusCode).toBe(401);
     expect(res.body.error.code).toBe('unauthorized');
   });
@@ -129,5 +137,63 @@ describe('DELETE /api/v1/account', () => {
     expect(limited).not.toBeNull();
     expect(limited.body.error.code).toBe('rate_limited');
     expect(limited.headers['Retry-After']).toBeDefined();
+  });
+
+  // ── §6.3 step 4: re-auth gate ───────────────────────────────────────────
+  it('refuses a stale session with reauth_required and deletes nothing', async () => {
+    const res = createRes();
+    await handler(makeReq('DELETE', freshToken(3600)), res);
+    expect(res.statusCode).toBe(401);
+    expect(res.body.error.code).toBe('reauth_required');
+    expect(deleteUser).not.toHaveBeenCalled();
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  // ── §6.3 step 5: typed confirmation ─────────────────────────────────────
+  // Not in the it.each below: passing `undefined` there would hit makeReq's
+  // DEFAULT parameter and quietly send a valid confirm body, so the case could
+  // never fail. Build the request without a `body` key at all.
+  it('refuses a request with no body at all and deletes nothing', async () => {
+    const res = createRes();
+    seq += 1;
+    await handler(
+      {
+        method: 'DELETE',
+        headers: {
+          'x-forwarded-for': `172.16.9.${seq}`,
+          authorization: `Bearer ${freshToken()}`,
+        },
+      },
+      res
+    );
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error.code).toBe('bad_request');
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['an empty body', {}],
+    ['the wrong phrase', { confirm: 'delete' }],
+    ['a near miss', { confirm: 'DELETE ' }],
+    ['a non-string', { confirm: true }],
+  ])('refuses %s and deletes nothing', async (_label, body) => {
+    const res = createRes();
+    await handler(makeReq('DELETE', freshToken(), body), res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error.code).toBe('bad_request');
+    expect(deleteUser).not.toHaveBeenCalled();
+  });
+
+  it('accepts the confirmation when the body arrives unparsed as a JSON string', async () => {
+    const res = createRes();
+    await handler(makeReq('DELETE', freshToken(), JSON.stringify({ confirm: 'DELETE' })), res);
+    expect(res.statusCode).toBe(204);
+    expect(deleteUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('checks the confirmation before touching the auth admin API', async () => {
+    const res = createRes();
+    await handler(makeReq('DELETE', freshToken(), { confirm: 'nope' }), res);
+    expect(deleteUser).not.toHaveBeenCalled();
   });
 });

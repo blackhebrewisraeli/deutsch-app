@@ -4,6 +4,10 @@
 export const ERROR_CODES = {
   bad_request: 400,
   unauthorized: 401,
+  // Distinct from `unauthorized`: the token IS valid, but the operation is
+  // destructive enough to demand a recent authentication. The client must
+  // re-authenticate and retry rather than treat the session as expired.
+  reauth_required: 401,
   forbidden: 403,
   method_not_allowed: 405,
   rate_limited: 429,

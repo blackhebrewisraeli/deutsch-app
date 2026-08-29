@@ -74,7 +74,7 @@ describe('AccountSection', () => {
     expect(screen.queryByText(/danger zone/i)).not.toBeInTheDocument();
   });
 
-  it('reveals inline confirmation when Delete account is clicked', async () => {
+  it('asks for a typed confirmation, not just a second click', async () => {
     render(
       <AccountSection
         user={signedIn}
@@ -84,25 +84,81 @@ describe('AccountSection', () => {
       />
     );
     await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
-    expect(screen.getByRole('button', { name: /yes, delete everything/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /type delete to confirm/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /cancel/i })).toBeInTheDocument();
-  });
-
-  it('hides confirmation when Cancel is clicked', async () => {
-    render(
-      <AccountSection
-        user={signedIn}
-        onSignIn={() => {}}
-        onSignOut={() => {}}
-        onDelete={() => {}}
-      />
-    );
-    await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
-    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    // The old two-step button was a mis-click guard, never an intent guard.
     expect(
       screen.queryByRole('button', { name: /yes, delete everything/i })
     ).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /delete account/i })).toBeInTheDocument();
+  });
+
+  it('keeps the destructive button disabled until the phrase matches exactly', async () => {
+    render(
+      <AccountSection
+        user={signedIn}
+        onSignIn={() => {}}
+        onSignOut={() => {}}
+        onDelete={() => {}}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    const field = screen.getByRole('textbox', { name: /type delete to confirm/i });
+    const confirm = screen.getByRole('button', { name: /permanently delete/i });
+
+    expect(confirm).toBeDisabled();
+    await userEvent.type(field, 'delete');
+    expect(confirm).toBeDisabled(); // case matters
+    await userEvent.clear(field);
+    await userEvent.type(field, 'DELETE ME');
+    expect(confirm).toBeDisabled();
+    await userEvent.clear(field);
+    await userEvent.type(field, 'DELETE');
+    expect(confirm).toBeEnabled();
+  });
+
+  it('tolerates stray whitespace, which phone keyboards add', async () => {
+    const onDelete = vi.fn().mockResolvedValue(undefined);
+    render(
+      <AccountSection
+        user={signedIn}
+        onSignIn={() => {}}
+        onSignOut={() => {}}
+        onDelete={onDelete}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /type delete to confirm/i }),
+      ' DELETE '
+    );
+    await userEvent.click(screen.getByRole('button', { name: /permanently delete/i }));
+    // Trimmed before it leaves the client, so the server sees the exact phrase.
+    expect(onDelete).toHaveBeenCalledWith('DELETE');
+  });
+
+  it('hides confirmation and forgets the typed phrase when Cancel is clicked', async () => {
+    render(
+      <AccountSection
+        user={signedIn}
+        onSignIn={() => {}}
+        onSignOut={() => {}}
+        onDelete={() => {}}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /type delete to confirm/i }),
+      'DELETE'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /cancel/i }));
+    expect(
+      screen.queryByRole('textbox', { name: /type delete to confirm/i })
+    ).not.toBeInTheDocument();
+
+    // Re-opening must not resurrect an armed confirmation.
+    await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    expect(screen.getByRole('textbox', { name: /type delete to confirm/i })).toHaveValue('');
+    expect(screen.getByRole('button', { name: /permanently delete/i })).toBeDisabled();
   });
 
   it('calls updateHandle with the typed handle when Save is clicked', async () => {
@@ -120,7 +176,7 @@ describe('AccountSection', () => {
     expect(updateHandle).toHaveBeenCalledWith(expect.objectContaining({ handle: 'MyHandle42' }));
   });
 
-  it('calls onDelete when Yes delete everything is clicked', async () => {
+  it('calls onDelete with the confirmation phrase', async () => {
     const onDelete = vi.fn().mockResolvedValue(undefined);
     render(
       <AccountSection
@@ -131,8 +187,35 @@ describe('AccountSection', () => {
       />
     );
     await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
-    await userEvent.click(screen.getByRole('button', { name: /yes, delete everything/i }));
-    expect(onDelete).toHaveBeenCalledTimes(1);
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /type delete to confirm/i }),
+      'DELETE'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /permanently delete/i }));
+    expect(onDelete).toHaveBeenCalledWith('DELETE');
+  });
+
+  // A failed delete (most often reauth_required) must leave the typed phrase in
+  // place, so retrying after re-authenticating is one click, not a re-type.
+  it('keeps the confirmation armed when onDelete rejects', async () => {
+    const onDelete = vi.fn().mockRejectedValue(new Error('reauth_required'));
+    render(
+      <AccountSection
+        user={signedIn}
+        onSignIn={() => {}}
+        onSignOut={() => {}}
+        onDelete={onDelete}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
+    await userEvent.type(
+      screen.getByRole('textbox', { name: /type delete to confirm/i }),
+      'DELETE'
+    );
+    await userEvent.click(screen.getByRole('button', { name: /permanently delete/i }));
+
+    expect(screen.getByRole('textbox', { name: /type delete to confirm/i })).toHaveValue('DELETE');
+    expect(screen.getByRole('button', { name: /permanently delete/i })).toBeEnabled();
   });
 });
 
