@@ -330,8 +330,19 @@ sharper of the two — it returns the user's whole dataset in one response and c
 loop.
 
 **(c) Errors are swallowed.** `catch { return sendError(res, 'server_error', …) }` binds no
-error, so a partial delete is undiagnosable — nothing reaches Sentry and nothing reaches the
-logs. Sentry is live on prod+preview; this path should report.
+error, so a partial delete is undiagnosable — nothing reaches the logs and nothing reaches a
+human.
+
+> **Correction (2026-08-29).** An earlier draft of this section said the failure "reaches no
+> Sentry" and that "Sentry is live on prod+preview, so this path should report". That is wrong,
+> and it matters because it made a fix sound available that is not. Sentry here is **client-only**:
+> `@sentry/react` ships in the browser bundle and `src/lib/observability.js` reads
+> `import.meta.env`, so neither can run inside a Vercel Node function. **There is no server-side
+> error reporting in this project at all.** The reporting channel that actually exists for
+> serverless code is `console.error`, which Vercel captures in function logs — the precedent set
+> by `api/_lib/handler.js:42` and `api/_lib/ratelimit.js:68`. Adding server-side Sentry
+> (`@sentry/node`, a second DSN, and env wiring — note `SENTRY_AUTH_TOKEN` is still dormant) is a
+> separate piece of work and is **not** part of this design.
 
 ### 6.3 Target architecture
 
@@ -352,7 +363,9 @@ DELETE /api/v1/account/delete
    ├─ 5. body: { confirm: "DELETE" } must match    ← new
    ├─ 6. auth.admin.deleteUser(userId)             ← exists; now the ONLY write
    │       └─ Postgres cascades all six tables
-   ├─ 7. on failure: Sentry.captureException       ← new
+   ├─ 7. on failure: console.error(endpoint,       ← new
+   │       userId, cause) — see the §6.2(c)
+   │       correction; there is NO server Sentry
    └─ 8. 204
    │
 client ─ 9. clearUserLocalState() + signOut + hard reload   ← exists
@@ -508,11 +521,15 @@ Co-located `*.test.jsx`, Vitest with `globals: false` (import `describe/it/expec
   taken" without clearing the field; success toasts. Both `LEAGUES_ENABLED` states via
   `describe.each` — the shipping flag combination is the one that historically had no test.
 - `AccountSection.test.jsx` — travels with the component; should pass unmoved.
-- `delete.test.js` — extend for: `reauth_required` on a stale session; wrong `confirm` string
-  rejected; rate limit; **and a test proving the endpoint issues exactly one delete call**, which
-  is what pins §6.3's "cascade is the mechanism".
+- `delete.test.js` — *written in PR #191 (open)*: the endpoint issues **exactly one** delete and touches no
+  table directly (this is what pins §6.3's "cascade is the mechanism"), failures are logged with
+  endpoint + user + cause, and a repeat caller is rate limited. Still owed by 7b:
+  `reauth_required` on a stale session, and a wrong `confirm` string rejected.
 - **RLS suite** (`npm run test:rls`, Docker + `supabase start`, excluded from `npm test`) —
-  post-delete zero-rows across all six tables.
+  *written in PR #191 (open)* as `supabase/tests/rls/cascade.test.js`: post-delete zero rows across all six
+  user-owned tables, the shared `leagues` row surviving, and a pre-delete assertion that the
+  fixture is actually populated — an empty table and a correctly cascaded one otherwise print
+  identically.
 
 **On fixtures.** Several of these assertions are only meaningful against a *populated* account.
 A fixture with no due cards, no streak and no league row cannot express a missions failure, and
@@ -534,11 +551,13 @@ Each row is one PR, branched from an up-to-date `main`, landing green through
 | 4 | `SettingsRoute` shell + `AccountChip` entry + focus trap | 5 files | none |
 | 5 | Move `AccountSection` → Settings sections; Stats keeps a pointer | ~8 files | none |
 | 6 | `PATCH /api/v1/account/profile` (generalise `league/handle`) + `ProfileSection` | ~5 files | none |
-| 7 | Delete-flow hardening (§6.3) + RLS zero-rows test | ~4 files | none |
+| 7a | **PR #191, open** — the three §6.2 defects: cascade-only delete, account-lane origin + rate limits, bound error logging, RLS zero-rows suite | 7 files | none |
+| 7b | Remaining §6.3 hardening: re-auth gate + typed `DELETE` confirmation (blocked on §11 Q1) | ~4 files | none |
 | — | *Optional Phase 2:* `user_missions` (§7.4) | — | **yes** |
 
 PRs 1–7 require **no migration at all**. Land 1→7 in order; 5 must land before 6 so the profile
-form has a home.
+form has a home. 7a is independent of 1–6 and already open, so it can land at any point; the §6.2 defects it
+fixes are still live on `main` until it merges.
 
 Deliberately excluded from every PR above: any change to `lib/stats.js`'s `TABS`, any storage-key
 rename (Phase 4), any `card.de` rename, and any second language pack.
