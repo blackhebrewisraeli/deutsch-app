@@ -2,17 +2,13 @@
 // extension is REQUIRED — this module is bundled into Vercel serverless
 // functions running native Node ESM; see src/lib/xpCore.js).
 import { zoneCounts, LEAGUE_SIZE } from '../../src/lib/leagueZones.js';
+// The league week now lives in src/lib too, because the client has to match a
+// membership row against the current period (rank is null until settle). Same
+// explicit .js extension requirement as above.
+import { currentPeriodStart } from '../../src/lib/leagueCountdown.js';
 
 export const TIERS = { MIN: 0, MAX: 4 };
-export { LEAGUE_SIZE, zoneCounts };
-
-export function currentPeriodStart(date = new Date()) {
-  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
-  const dow = d.getUTCDay(); // 0=Sun..6=Sat
-  const delta = dow === 0 ? -6 : 1 - dow; // back to Monday
-  d.setUTCDate(d.getUTCDate() + delta);
-  return d.toISOString().slice(0, 10);
-}
+export { LEAGUE_SIZE, zoneCounts, currentPeriodStart };
 
 export function nextTier(tier, result) {
   const step = result === 'promoted' ? 1 : result === 'demoted' ? -1 : 0;

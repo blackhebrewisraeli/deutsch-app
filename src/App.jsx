@@ -34,6 +34,8 @@ import { StatBlock } from './components/UI';
 import HomeTab from './components/HomeTab';
 import SettingsRoute from './components/settings/SettingsRoute';
 import { deriveMissions } from './lib/missions';
+import { deckProgressFor } from './lib/deckProgress';
+import { useLeagueStanding } from './lib/useLeagueStanding';
 
 // Settings is a route rather than a seventh nav tab, so the hash is what makes
 // it deep-linkable and reload-safe.
@@ -331,6 +333,11 @@ export default function App() {
       },
     ])
   );
+  // The caller's live league standing, for the league-position mission. Two
+  // reads and no writes — deliberately NOT the leaderboard's join+refresh path,
+  // which would write to the database on every app open. Null when leagues are
+  // off, when signed out, or when this week has no membership.
+  const leagueStanding = useLeagueStanding(user?.id);
   // Dismissal is component state, not storage: the gate is a property of "is
   // there a session", so it comes back on the next load for anyone without one.
   const [gateDismissed, setGateDismissed] = useState(false);
@@ -634,17 +641,18 @@ export default function App() {
   // deriveMissions is pure — it decides WHICH missions are open and returns
   // ids and counts, never copy, so no German reaches src/lib.
   //
-  // `decks` and `league` are passed empty on purpose: their catalogue entries
-  // need per-deck progress and the caller's league standing, neither of which
-  // App holds today, and inventing them here would be worse than a mission
-  // that simply does not fire. Both are additive when that data arrives.
+  // `decks` is a pure derivation over state App already holds (learnedWords is
+  // already synced inside settings.data.learnedWords), so it needs no query.
+  // `league` comes from two RLS-scoped reads; it stays null when leagues are
+  // off, when signed out, or when this week has no membership — in which case
+  // the mission simply does not fire.
   const missions = deriveMissions({
     srsDue: getDueCount(liveState.srs ?? {}, PRESET_DECKS, Date.now()),
     goal: game.goal,
     streak: game.streak,
     reviewItems: getReviewItems(liveState.items ?? {}),
-    decks: [],
-    league: null,
+    decks: deckProgressFor({ decks: PRESET_DECKS, learnedWords }),
+    league: leagueStanding,
     achievements: ACHIEVEMENTS,
     achievementCtx: gamificationContext(liveState),
     earned: earnedAchievements(gamificationContext(liveState)).map((a) => a.id),

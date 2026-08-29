@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('./auth.js', () => ({ getAccessToken: vi.fn().mockResolvedValue('tok') }));
 
-import { joinLeague, TIER_NAMES, fetchMyResults } from './leagues.js';
+import { joinLeague, TIER_NAMES, fetchMyResults, fetchMyMembership } from './leagues.js';
 
 afterEach(() => vi.clearAllMocks());
 
@@ -65,5 +65,39 @@ describe('fetchMyResults', () => {
     const supabase = { from: fromMock };
 
     await expect(fetchMyResults(supabase, 'me')).rejects.toThrow('db error');
+  });
+});
+
+describe('fetchMyMembership', () => {
+  const build = (row, error = null) => {
+    const maybeSingle = vi.fn().mockResolvedValue({ data: row, error });
+    const eq2 = vi.fn().mockReturnValue({ maybeSingle });
+    const eq1 = vi.fn().mockReturnValue({ eq: eq2 });
+    const select = vi.fn().mockReturnValue({ eq: eq1 });
+    const from = vi.fn().mockReturnValue({ select });
+    return { supabase: { from }, from, select, eq1, eq2 };
+  };
+
+  it('reads one own row scoped to the given period', async () => {
+    const row = { league_id: 'L1', weekly_xp: 120 };
+    const { supabase, from, select, eq1, eq2 } = build(row);
+
+    const out = await fetchMyMembership(supabase, 'me', '2026-06-22');
+
+    expect(from).toHaveBeenCalledWith('league_members');
+    expect(select).toHaveBeenCalledWith('league_id, weekly_xp');
+    expect(eq1).toHaveBeenCalledWith('user_id', 'me');
+    expect(eq2).toHaveBeenCalledWith('period_start', '2026-06-22');
+    expect(out).toEqual(row);
+  });
+
+  it('returns null when the caller has no membership for the period', async () => {
+    const { supabase } = build(null);
+    await expect(fetchMyMembership(supabase, 'me', '2026-06-22')).resolves.toBeNull();
+  });
+
+  it('throws when supabase returns an error', async () => {
+    const { supabase } = build(null, new Error('db error'));
+    await expect(fetchMyMembership(supabase, 'me', '2026-06-22')).rejects.toThrow('db error');
   });
 });
