@@ -7,6 +7,7 @@ import { isLevelBoostEnabled, setLevelBoostEnabled } from './lib/xpEntitlement';
 import { TUTORIAL_KEY } from './lib/tutorialPref';
 import { THEME_MODE_KEY } from './lib/themeMode';
 import { loadState, thawPersist } from './lib/storage';
+import { activePack } from './packs';
 
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 
@@ -51,6 +52,19 @@ vi.mock('./lib/auth', async (importOriginal) => ({
     user: authMock.status === 'authenticated' ? { id: 'u1', email: 'a@b.co' } : null,
     status: authMock.status,
   }),
+}));
+
+// The league standing is a network read, so App tests inject it directly. It is
+// mutable and hoisted for the same reason syncMock is: the interesting case is
+// the one that only happens in production (signed in, leagues on, at risk), and
+// a test that cannot reach it cannot fail when the wiring regresses.
+const leagueStandingMock = vi.hoisted(() => ({ value: null, calls: [] }));
+
+vi.mock('./lib/useLeagueStanding', () => ({
+  useLeagueStanding: (userId) => {
+    leagueStandingMock.calls.push(userId);
+    return leagueStandingMock.value;
+  },
 }));
 
 // VITE_SYNC_ENABLED is false on a developer's machine AND false in CI, but
@@ -1351,5 +1365,90 @@ describe('account deletion wiring', () => {
     await armDeletion();
 
     expect(screen.queryByRole('dialog', { name: /sign in/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('Home missions fed from real data', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    asReturningLearner();
+    localStorage.setItem('deutsch-level', 'a1');
+    leagueStandingMock.value = null;
+    leagueStandingMock.calls = [];
+  });
+  afterEach(() => {
+    leagueStandingMock.value = null;
+    leagueStandingMock.calls = [];
+    authMock.status = 'anonymous';
+  });
+
+  /** One card learned in the first curated deck: started, not finished. */
+  const seedStartedDeck = () => {
+    const [deckId, cards] = Object.entries(activePack.content.decks)[0];
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ learnedWords: { [cards[0].id]: true } })
+    );
+    return { deckId, remaining: cards.length - 1 };
+  };
+
+  it('opens deck-unfinished with the real remaining-card count', async () => {
+    const { remaining } = seedStartedDeck();
+    renderPastEntry(<App />);
+
+    expect(await screen.findByText(`${remaining} cards left in your deck`)).toBeInTheDocument();
+  });
+
+  it('opens no deck mission when nothing has been learned', async () => {
+    localStorage.setItem('deutsch-app-state-v1', JSON.stringify({ learnedWords: {} }));
+    renderPastEntry(<App />);
+
+    await waitFor(() => expect(screen.queryByText(/left in your deck/)).toBeNull());
+  });
+
+  it('opens league-position when the caller is in the demotion zone', async () => {
+    // The production-only combination: signed in, a standing, and at risk.
+    leagueStandingMock.value = { rank: 23, cohortSize: 25, inDemotionZone: true };
+    seedStartedDeck();
+    renderPastEntry(<App />);
+
+    expect(await screen.findByText(/drop zone/i)).toBeInTheDocument();
+  });
+
+  it('opens no league mission for a mid-table standing', async () => {
+    leagueStandingMock.value = { rank: 10, cohortSize: 25, inDemotionZone: false };
+    seedStartedDeck();
+    renderPastEntry(<App />);
+
+    await screen.findByText(/left in your deck/); // the board has rendered
+    expect(screen.queryByText(/drop zone/i)).toBeNull();
+  });
+
+  it('opens no league mission when there is no standing at all', async () => {
+    leagueStandingMock.value = null;
+    seedStartedDeck();
+    renderPastEntry(<App />);
+
+    await screen.findByText(/left in your deck/);
+    expect(screen.queryByText(/drop zone/i)).toBeNull();
+  });
+
+  it("asks for the signed-in caller's own standing", async () => {
+    authMock.status = 'authenticated';
+    seedStartedDeck();
+    renderPastEntry(<App />);
+
+    await screen.findByText(/left in your deck/);
+    expect(leagueStandingMock.calls).toContain('u1');
+  });
+
+  it('asks for no standing at all while signed out', async () => {
+    authMock.status = 'anonymous';
+    seedStartedDeck();
+    renderPastEntry(<App />);
+
+    await screen.findByText(/left in your deck/);
+    expect(leagueStandingMock.calls.every((id) => id === undefined)).toBe(true);
   });
 });

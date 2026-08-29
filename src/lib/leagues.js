@@ -52,6 +52,24 @@ export async function fetchMyResults(supabase, userId) {
   return data ?? [];
 }
 
+// The caller's membership for the CURRENT league week, or null if they have not
+// joined one. A single own-row read: period_start is denormalised onto
+// league_members and carries a unique (user_id, period_start) constraint, so no
+// join to `leagues` is needed.
+//
+// Deliberately a READ. Home is the landing tab and must never join or refresh a
+// league as a side effect of being opened — see useLeagueStanding.
+export async function fetchMyMembership(supabase, userId, periodStart) {
+  const { data, error } = await supabase
+    .from('league_members')
+    .select('league_id, weekly_xp')
+    .eq('user_id', userId)
+    .eq('period_start', periodStart)
+    .maybeSingle();
+  if (error) throw error;
+  return data ?? null;
+}
+
 // Standings via the RLS-scoped Supabase client (reads only the caller's league).
 export async function fetchStandings(supabase, leagueId) {
   const { data, error } = await supabase
