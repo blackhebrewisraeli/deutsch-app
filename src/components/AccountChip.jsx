@@ -18,7 +18,13 @@ import { isAuthConfigured } from '../lib/auth.js';
 // discovers header sheets by `aria-haspopup="dialog"`. Its interior — the
 // email line and the red "Sign out" — had never been contrast-audited,
 // because a sheet that never opens contributes no pairings.
-export default function AccountChip({ user, onSignIn, onSignOut, pending = false }) {
+export default function AccountChip({
+  user,
+  onSignIn,
+  onSignOut,
+  onOpenSettings,
+  pending = false,
+}) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
@@ -146,6 +152,31 @@ export default function AccountChip({ user, onSignIn, onSignOut, pending = false
           <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, marginBottom: 8 }}>
             {user.email}
           </div>
+          {/* The sheet stays the glance-and-escape it always was; full account
+              management lives in the Settings route it now points at. */}
+          <button
+            // Distinct from the identity strip's own "Settings →" link on Home:
+            // two controls with the same accessible name on one screen are
+            // ambiguous to a screen reader as well as to a test.
+            aria-label="Open settings"
+            onClick={() => {
+              setOpen(false);
+              onOpenSettings?.();
+            }}
+            style={{
+              display: 'block',
+              background: 'none',
+              border: 'none',
+              color: COLORS.ink,
+              fontFamily: FONTS.mono,
+              fontSize: FONT_SIZE.tag,
+              cursor: 'pointer',
+              padding: 0,
+              marginBottom: 8,
+            }}
+          >
+            Settings →
+          </button>
           <button
             onClick={onSignOut}
             style={{

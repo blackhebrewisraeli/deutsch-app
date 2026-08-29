@@ -573,12 +573,12 @@ Each row is one PR, branched from an up-to-date `main`, landing green through
 
 | # | PR | Touches | Migration |
 | --- | --- | --- | --- |
-| 1 | `lib/missions.js` + tests — pure, no UI | 2 files | none |
-| 2 | `MissionBoard` + wire into `HomeTab` | 4 files | none |
-| 3 | `IdentityStrip` + `HomeTab` negative-test extension | 4 files | none |
-| 4 | `SettingsRoute` shell + `AccountChip` entry + focus trap | 5 files | none |
-| 5 | Move `AccountSection` → Settings sections; Stats keeps a pointer | ~8 files | none |
-| 6 | `PATCH /api/v1/account/profile` (generalise `league/handle`) + `ProfileSection` | ~5 files | none |
+| 1 | **Done** — `lib/missions.js` + tests, pure, no UI | 2 files | none |
+| 2 | **Done** — `MissionBoard` + pack copy + wired into `HomeTab` | 5 files | none |
+| 3 | **Done** — `IdentityStrip` + the extended `HomeTab` negative assertion | 4 files | none |
+| 4 | **Done** — `SettingsRoute` + `AccountChip` entry + focus trap + `#/settings` | 5 files | none |
+| 5 | **Done** — `AccountSection` moved to `settings/` (tests travelled untouched); Stats keeps a pointer | 4 files | none |
+| 6 | **Done** — `PATCH /api/v1/account/profile` + `lib/profile.js` + `ProfileSection` | 6 files | none |
 | 7a | **Merged in PR #191** (`afa9a02`) — the three §6.2 defects: cascade-only delete, account-lane origin + rate limits, bound error logging, RLS zero-rows suite | 7 files | none |
 | 7b | **Done** — re-auth gate (amr-based) + typed `DELETE` confirmation + step 9 reset | 9 files | none |
 | — | *Optional Phase 2:* `user_missions` (§7.4) | — | **yes** |
@@ -603,7 +603,8 @@ rename (Phase 4), any `card.de` rename, and any second language pack.
 2. **Does `display_name` need a uniqueness or profanity rule?** `handle` is `UNIQUE` and public
    on the leaderboard. `display_name` is currently private to Settings and Home — but if it ever
    surfaces in leagues, it inherits the moderation question that `handle` already has.
-3. **Should export get the same re-auth gate as delete?** It returns the entire dataset in one
-   response. Still open — but now cheap: `createAccountHandler` takes `recentAuthMaxAgeSec`, so
-   export adopts the gate by adding one line. Deliberately not done unasked, because it makes a
-   non-destructive action materially more annoying.
+3. ~~**Should export get the same re-auth gate as delete?**~~ **Resolved 2026-08-30: no.**
+   Export is non-destructive, and a re-auth gate there is friction without a matching risk
+   reduction — the data is the caller's own, and the account lane's rate limits already bound
+   bulk pulls. `createAccountHandler` still takes `recentAuthMaxAgeSec`, so the decision is one
+   line to revisit if export ever grows a sharper edge.

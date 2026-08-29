@@ -827,9 +827,9 @@ describe('entry gate', () => {
       expect(gate()).toBeNull();
       expect(isLevelBoostEnabled()).toBe(true);
 
-      await user.click(
-        within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' })
-      );
+      // Sign out moved off Stats with the account section; the header chip is
+      // the shortest real path to it now.
+      await user.click(screen.getByRole('button', { name: /account/i }));
       await user.click(screen.getByRole('button', { name: 'Sign out' }));
       await waitFor(() => expect(authSignOutMock).toHaveBeenCalled());
       await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
@@ -879,9 +879,9 @@ describe('entry gate', () => {
       authMock.status = 'authenticated';
       authMock.mayHaveSession = true;
       rerender(<App />);
-      await user.click(
-        within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' })
-      );
+      // Sign out moved off Stats with the account section; the header chip is
+      // the shortest real path to it now.
+      await user.click(screen.getByRole('button', { name: /account/i }));
       await user.click(screen.getByRole('button', { name: 'Sign out' }));
       await waitFor(() => expect(reload).toHaveBeenCalledTimes(1));
       expect(window.location.href).toBe('/');
@@ -1276,6 +1276,10 @@ describe('account deletion wiring', () => {
   let fetchSpy;
 
   beforeEach(() => {
+    // The Settings route seeds itself from window.location.hash so it can be
+    // deep-linked. jsdom keeps that hash across tests in a file, so without
+    // this reset a later test opens with Settings already showing.
+    window.location.hash = '';
     // `configured` is deliberately reset here, not just status/token: earlier
     // blocks in this file leave it false, and requestSignIn() is a no-op when
     // auth is unconfigured — so without this the reauth assertion passes or
@@ -1288,6 +1292,7 @@ describe('account deletion wiring', () => {
 
   afterEach(() => {
     fetchSpy.mockRestore();
+    window.location.hash = '';
     authMock.status = 'anonymous';
     authMock.token = null;
   });
@@ -1304,9 +1309,10 @@ describe('account deletion wiring', () => {
   async function armDeletion() {
     setViewportWidth(1280);
     renderPastEntry(<App />);
-    await userEvent.click(
-      within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' })
-    );
+    // The danger zone lives in the Settings route now, opened from the header
+    // chip rather than sitting inside the Stats tab.
+    await userEvent.click(screen.getByRole('button', { name: /account/i }));
+    await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
     await userEvent.click(screen.getByRole('button', { name: /delete account/i }));
     await userEvent.type(
       screen.getByRole('textbox', { name: /type delete to confirm/i }),

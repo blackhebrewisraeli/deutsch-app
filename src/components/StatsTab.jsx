@@ -22,7 +22,7 @@ import LevelCard from './gamification/LevelCard';
 import GoalPicker from './gamification/GoalPicker';
 import LevelSwitcher from './ui/LevelSwitcher';
 import BadgeGrid from './gamification/BadgeGrid';
-import AccountSection from './stats/AccountSection';
+import Button from './ui/Button';
 import LeaderboardSection from './stats/LeaderboardSection';
 import ProfileCard from './stats/ProfileCard';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
@@ -38,10 +38,7 @@ export default function StatsTab({
   onReview,
   user,
   onSignIn,
-  onSignOut,
-  onExport,
-  onDelete,
-  lastSyncedAt = null,
+  onOpenSettings,
   level = 'a1',
   onLevelChange = () => {},
   levelBoost = false,
@@ -147,20 +144,22 @@ export default function StatsTab({
                 totalXp={totalXp(daily)}
                 learnedCount={stats.learnedCount ?? 0}
               />
-              {/* AccountSection renders null for a guest when no auth backend is
-                  configured; without this the "Account & sync" label would sit
-                  above an empty block. */}
+              {/* Account management moved to the Settings route. Stats keeps a
+                  pointer rather than a second copy of the same controls — the
+                  same reason Home carries identity but not administration. */}
               {(user || isAuthConfigured()) && (
                 <div style={{ marginTop: SPACE[5] }}>
                   <SectionLabel num="·" text="Account & sync" />
-                  <AccountSection
-                    user={user}
-                    onSignIn={onSignIn}
-                    onSignOut={onSignOut}
-                    onExport={onExport}
-                    onDelete={onDelete}
-                    lastSyncedAt={lastSyncedAt}
-                  />
+                  {/* A guest has no account to manage, so Stats keeps the
+                      conversion CTA rather than pointing them at a page about
+                      an account they do not have. */}
+                  {user ? (
+                    <Button variant="secondary" onClick={onOpenSettings}>
+                      Manage your account in Settings →
+                    </Button>
+                  ) : (
+                    <Button onClick={onSignIn}>Sign in to sync →</Button>
+                  )}
                 </div>
               )}
               <div style={{ marginTop: SPACE[5] }}>

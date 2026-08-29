@@ -11,6 +11,8 @@ import {
 } from './translate.js';
 import { LEXICON } from './lexicon.js';
 import { DECKS } from './decks.js';
+import { MISSIONS, MISSIONS_CHROME } from './missions.js';
+import { IDENTITY } from './identity.js';
 import { resolveDecks } from '../resolve.js';
 import { theme } from './theme.js';
 import { grammar } from './grammar.js';
@@ -49,6 +51,13 @@ export const dePack = {
       A2: TRANSLATE_SENTENCES_A2,
       B1: TRANSLATE_SENTENCES_B1,
     },
+    // Copy for the Home missions board. lib/missions.js returns ids and counts;
+    // this turns them into words, so no German reaches src/lib or src/components.
+    missions: MISSIONS,
+    missionsChrome: MISSIONS_CHROME,
+    // Copy for the Home identity strip — month names and greetings are
+    // language, not layout.
+    identity: IDENTITY,
   },
   validation: {
     // Keyboard substitutions German itself defines for keyboards lacking the
