@@ -45,6 +45,21 @@ The server fetches each table via the service-role client (bypasses RLS for
 a clean single-pass read). The client receives the JSON blob and triggers a
 `<a download>` click to save it.
 
+> **Payload amended 2026-08-30.** The shape above omitted `decks`, a user-owned
+> table holding custom decks the learner built. The cascade deleted it on account
+> deletion while the export left it out, so "export my data" returned less than
+> the account actually held — for two months, silently, because nothing compared
+> the exported set against the user-owned set. `data.decks` is now part of the
+> payload.
+>
+> `api/v1/account/export.js` now declares `EXPORTED_TABLES` and `EXCLUDED_TABLES`,
+> and `export.test.js` asserts their union equals every user-owned table. A table
+> must be classified as one or the other; being in neither is what happened here.
+>
+> `profiles` and `league_members` remain excluded **deliberately** rather than by
+> omission, each with a stated reason — both are payload-shape decisions still
+> open, not oversights.
+
 ### `DELETE /api/v1/account`
 
 Permanently removes all user data.
