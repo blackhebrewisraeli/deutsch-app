@@ -54,6 +54,18 @@ describe('Body', () => {
     );
     expect(screen.getByTestId('b')).toHaveStyle({ lineHeight: '2' });
   });
+
+  // Not an accent-as-foreground: c.error is already swept as a FOREGROUND
+  // against ground and surface-1/2/3 in both palettes (contrast.test.js),
+  // so this tone introduces no new contrast pair.
+  it('applies the error tone ink', () => {
+    render(
+      <Body tone="error" data-testid="e">
+        Kaputt.
+      </Body>
+    );
+    expect(screen.getByTestId('e')).toHaveStyle({ color: 'var(--c-error)' });
+  });
 });
 
 describe('Meta', () => {

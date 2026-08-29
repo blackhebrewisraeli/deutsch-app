@@ -175,20 +175,21 @@ function pairsFor(mode) {
     name: `${label} accentAlt.onFill on accent-alt-deep`,
   });
 
-  if (mode === 'dark') {
-    pairs.push({
-      fg: c.error,
-      bg: c.ground,
-      min: AA_NORMAL,
-      name: `${label} error on ground`,
-    });
-    pairs.push({
-      fg: c['fg-muted'],
-      bg: c.ground,
-      min: AA_NORMAL,
-      name: `${label} fg-muted on ground`,
-    });
-  }
+  // These pairs were dark-only with no stated reason. Both error and fg-muted
+  // inks are now used by the StatusNote primitive, which renders directly on
+  // the page ground. All four combinations (light/dark × error/fg-muted) pass.
+  pairs.push({
+    fg: c.error,
+    bg: c.ground,
+    min: AA_NORMAL,
+    name: `${label} error on ground`,
+  });
+  pairs.push({
+    fg: c['fg-muted'],
+    bg: c.ground,
+    min: AA_NORMAL,
+    name: `${label} fg-muted on ground`,
+  });
 
   return pairs;
 }

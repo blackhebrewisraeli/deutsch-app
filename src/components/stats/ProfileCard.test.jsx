@@ -31,6 +31,42 @@ it('renders fetched profile fields', async () => {
   expect(screen.getByText(/420/)).toBeTruthy();
 });
 
+it('announces a profile load failure and offers a way back', async () => {
+  fetchProfile.mockRejectedValue(new Error('boom'));
+  render(<ProfileCard userId="x" onClose={() => {}} />);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load profile.");
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+  expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
+});
+
+it('refetches when Retry is pressed', async () => {
+  const user = userEvent.setup();
+  fetchProfile.mockRejectedValueOnce(new Error('boom'));
+  fetchProfile.mockResolvedValue({
+    handle: 'Rival',
+    avatar_emoji: '🦊',
+    tier: 1,
+    total_xp: 420,
+    longest_streak: 9,
+    achievements: [],
+  });
+
+  render(<ProfileCard userId="x" onClose={() => {}} />);
+  await user.click(await screen.findByRole('button', { name: 'Retry' }));
+
+  // Assert on the recovered UI, not on a call count: the count is an
+  // implementation detail and would pass even if the retry re-rendered the
+  // same error. The positive assertion alone is not enough here, though:
+  // `error` and `profile` render on independent sibling expressions rather
+  // than a single mutually-exclusive state field, so a stale `error === true`
+  // left over from the failed attempt renders right alongside the freshly
+  // loaded profile instead of replacing it. The absence of the alert is what
+  // actually proves the effect reset `error` before refetching.
+  expect(await screen.findByText('Rival')).toBeInTheDocument();
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+});
+
 it('calls onClose when the close button is clicked', async () => {
   fetchProfile.mockResolvedValue({
     handle: 'R',

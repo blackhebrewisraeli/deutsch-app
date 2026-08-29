@@ -52,6 +52,7 @@ it('shows the sign-in teaser when signed out', () => {
   useAuth.mockReturnValue({ user: null });
   render(<LeaderboardSection onSelectUser={() => {}} />);
   expect(screen.getByText(/sign in to join/i)).toBeTruthy();
+  expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
 });
 
 it('renders standings, tier, a countdown, and the sparse note for a small league', async () => {
@@ -143,4 +144,68 @@ it('names each row for a screen reader from its rank, handle, and XP', async () 
   await waitFor(() => expect(screen.getByText('Rival A')).toBeTruthy());
 
   expect(screen.getByRole('button', { name: /2\.\s*Rival A\s*20 XP/ })).toBeTruthy();
+});
+
+// ── Error recovery ───────────────────────────────────────────────────────
+
+it('announces a league load failure and offers a way back', async () => {
+  useAuth.mockReturnValue({ user: { id: 'me' } });
+  joinLeague.mockRejectedValue(new Error('boom'));
+  render(<LeaderboardSection onSelectUser={() => {}} />);
+
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load your league.");
+  expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
+});
+
+it('refetches when Retry is pressed', async () => {
+  const user = userEvent.setup();
+  useAuth.mockReturnValue({ user: { id: 'me' } });
+  joinLeague.mockRejectedValueOnce(new Error('boom'));
+  joinLeague.mockResolvedValue({
+    league_id: 'L1',
+    tier: 0,
+    period_start: currentMonday(),
+    handle: 'Me',
+  });
+  refreshLeague.mockResolvedValue({ weekly_xp: 0 });
+  fetchStandings.mockResolvedValue([{ user_id: 'me', handle: 'Me', weekly_xp: 30, rank: null }]);
+
+  render(<LeaderboardSection onSelectUser={() => {}} />);
+  await user.click(await screen.findByRole('button', { name: 'Retry' }));
+
+  // Assert on the recovered UI, not on a call count: the count is an
+  // implementation detail and would pass even if the retry re-rendered the
+  // same error.
+  expect(await screen.findByRole('heading', { name: /League/ })).toBeInTheDocument();
+});
+
+it('shows loading feedback between two consecutive failures, not a frozen error', async () => {
+  const user = userEvent.setup();
+  useAuth.mockReturnValue({ user: { id: 'me' } });
+
+  // The second call's promise is held open deliberately (not
+  // mockRejectedValueOnce twice), so we can inspect the DOM at a moment we
+  // control: after Retry has fired but before the second failure lands.
+  const first = Promise.reject(new Error('boom'));
+  first.catch(() => {}); // already handled by the component's own catch below
+  let rejectSecond;
+  const second = new Promise((_resolve, reject) => {
+    rejectSecond = reject;
+  });
+  joinLeague.mockReturnValueOnce(first).mockReturnValueOnce(second);
+
+  render(<LeaderboardSection onSelectUser={() => {}} />);
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load your league.");
+
+  await user.click(screen.getByRole('button', { name: 'Retry' }));
+
+  // The second fetch is still pending — if the stale error state were never
+  // cleared, the same alert node would still be here with the same text, and
+  // a second failure would change nothing on screen. It must be gone in
+  // favour of the loading branch.
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(screen.getByText(/Loading league/)).toBeTruthy();
+
+  rejectSecond(new Error('boom again'));
+  expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't load your league.");
 });

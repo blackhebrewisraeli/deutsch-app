@@ -1,5 +1,7 @@
+import { BarChart3 } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, RADIUS } from '../../lib/theme';
 import { TABS } from '../../lib/stats';
+import StatusNote from '../ui/StatusNote';
 
 const TAB_LABELS = {
   chat: '01 Chat',
@@ -14,18 +16,7 @@ export default function PerTabBars({ breakdown }) {
   const total = Object.values(breakdown).reduce((a, b) => a + b, 0);
 
   if (total === 0) {
-    return (
-      <div
-        style={{
-          fontFamily: FONTS.body,
-          fontStyle: 'italic',
-          color: COLORS.mute,
-          fontSize: FONT_SIZE.base,
-        }}
-      >
-        No exercises recorded yet.
-      </div>
-    );
+    return <StatusNote icon={BarChart3}>No exercises recorded yet.</StatusNote>;
   }
 
   return (
