@@ -57,12 +57,16 @@ export function clientKey(req) {
   return `ip:${ip}`;
 }
 
+// `key` lets a caller limit by something other than the client IP. The account
+// lane passes `user:<id>` after authenticating, which is the per-identity
+// control origin.js calls the real abuse guard — an IP-only limit is trivially
+// sidestepped by moving IPs, and punishes everyone behind one NAT.
 export function createRateLimiter({ windowMs, max, store = new MemoryStore(), now = Date.now }) {
-  return async function check(req) {
+  return async function check(req, key = clientKey(req)) {
     const windowStart = Math.floor(now() / windowMs) * windowMs;
     let count;
     try {
-      count = await store.increment(clientKey(req), windowStart);
+      count = await store.increment(key, windowStart);
     } catch (err) {
       // Fail open: AI-lane availability outranks limiter strictness (B1 spec).
       console.error('rate-limit store failure (failing open):', err.message);
