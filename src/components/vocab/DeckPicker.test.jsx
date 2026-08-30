@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DeckPicker from './DeckPicker';
 import { AUTO_DECKS } from '../../packs/de/autoDecks';
+import { MAX_CUSTOM_DECKS } from '../../lib/customDecks';
 
 const props = {
   deckId: 'greetings',
@@ -115,7 +116,7 @@ describe('DeckPicker with a collection', () => {
   it('gives each deck its OWN remove control, carrying that deck id', async () => {
     const onDelete = vi.fn();
     render(<DeckPicker {...props} customDecks={two} onDelete={onDelete} />);
-    const removes = screen.getAllByRole('button', { name: 'Remove your custom deck' });
+    const removes = screen.getAllByRole('button', { name: /^Remove / });
     expect(removes).toHaveLength(2);
     await userEvent.click(removes[0]);
     expect(onDelete).toHaveBeenCalledWith('custom-a');
@@ -125,7 +126,7 @@ describe('DeckPicker with a collection', () => {
     // A <button> inside a <button> is invalid HTML and browsers un-nest it.
     render(<DeckPicker {...props} customDecks={two} onDelete={() => {}} />);
     const selects = screen.getAllByRole('button', { name: /Your Deck/ });
-    const removes = screen.getAllByRole('button', { name: 'Remove your custom deck' });
+    const removes = screen.getAllByRole('button', { name: /^Remove / });
     selects.forEach((sel, i) => expect(sel.contains(removes[i])).toBe(false));
   });
 
@@ -140,5 +141,68 @@ describe('DeckPicker with a collection', () => {
     render(<DeckPicker {...props} customDecks={{ custom: { name: 'x', cards: [{ id: 'a' }] } }} />);
     expect(screen.getAllByRole('button', { name: /Your Deck/ })).toHaveLength(1);
     expect(screen.getByText('1 cards')).toBeInTheDocument();
+  });
+});
+
+describe('DeckPicker names and the cap', () => {
+  const two = {
+    'custom-a': { name: 'weather', cards: [{ id: 'a' }, { id: 'b' }] },
+    'custom-b': { name: 'food', cards: [{ id: 'c' }] },
+  };
+
+  it('shows each deck by the topic it was made from', () => {
+    render(<DeckPicker {...props} customDecks={two} />);
+    expect(screen.getByText(/weather/)).toBeInTheDocument();
+    expect(screen.getByText(/food/)).toBeInTheDocument();
+  });
+
+  it('names the deck for a screen reader, since a sparkle says nothing', () => {
+    render(<DeckPicker {...props} customDecks={two} />);
+    expect(
+      screen.getByRole('button', { name: 'Your Deck: weather — 2 cards' })
+    ).toBeInTheDocument();
+  });
+
+  it('names the deck on its remove control too', () => {
+    render(<DeckPicker {...props} customDecks={two} onDelete={() => {}} />);
+    expect(screen.getByRole('button', { name: 'Remove weather' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove food' })).toBeInTheDocument();
+  });
+
+  it('falls back to a label when a deck somehow has no name', () => {
+    render(<DeckPicker {...props} customDecks={{ x: { name: '', cards: [{ id: 'a' }] } }} />);
+    expect(screen.getByText(/unnamed|Your Deck/)).toBeInTheDocument();
+  });
+
+  it('lets a learner generate while below the cap', () => {
+    render(<DeckPicker {...props} customTopic="weather" atCap={false} />);
+    expect(screen.getByRole('button', { name: /GENERATE 10 CARDS/ })).toBeEnabled();
+    expect(screen.getByRole('textbox', { name: 'Custom deck topic' })).toBeEnabled();
+  });
+
+  it('disables generation at the cap — control AND field', () => {
+    render(<DeckPicker {...props} customTopic="weather" atCap maxDecks={MAX_CUSTOM_DECKS} />);
+    expect(screen.getByRole('button', { name: /GENERATE 10 CARDS/ })).toBeDisabled();
+    expect(screen.getByRole('textbox', { name: 'Custom deck topic' })).toBeDisabled();
+  });
+
+  it('says WHY it is disabled — a dead control with no reason is a dead end', () => {
+    render(<DeckPicker {...props} atCap maxDecks={MAX_CUSTOM_DECKS} />);
+    const note = screen.getByRole('status');
+    expect(note).toHaveTextContent(String(MAX_CUSTOM_DECKS));
+    expect(note).toHaveTextContent(/remove one/i);
+  });
+
+  it('shows no cap note below the cap', () => {
+    render(<DeckPicker {...props} atCap={false} />);
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('does not generate on Enter once at the cap', async () => {
+    const onGenerate = vi.fn();
+    render(<DeckPicker {...props} customTopic="weather" atCap onGenerate={onGenerate} />);
+    const field = screen.getByRole('textbox', { name: 'Custom deck topic' });
+    await userEvent.type(field, '{Enter}');
+    expect(onGenerate).not.toHaveBeenCalled();
   });
 });

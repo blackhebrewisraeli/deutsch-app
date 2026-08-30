@@ -26,7 +26,8 @@ const PRESETS = [
  *
  * @param {{ deckId: string, onSelect: (id: string) => void, customCards: object[]|null,
  *           customTopic: string, onTopicChange: (t: string) => void,
- *           generating: boolean, onGenerate: () => void, onDelete?: () => void }} props
+ *           generating: boolean, onGenerate: () => void, onDelete?: (id: string) => void,
+ *           atCap?: boolean, maxDecks?: number }} props
  */
 export default function DeckPicker({
   deckId,
@@ -37,6 +38,8 @@ export default function DeckPicker({
   generating,
   onGenerate,
   onDelete,
+  atCap = false,
+  maxDecks,
 }) {
   return (
     <div>
@@ -97,6 +100,10 @@ export default function DeckPicker({
               type="button"
               onClick={() => onSelect(id)}
               aria-pressed={deckId === id}
+              // The visible row is "✦ weather · 2 cards". A screen reader needs
+              // to know what KIND of thing that is, which the sparkle cannot
+              // convey — so the accessible name states it explicitly.
+              aria-label={`Your Deck: ${deck.name || 'unnamed'} — ${deck.cards.length} cards`}
               style={{
                 flex: 1,
                 minWidth: 0,
@@ -115,10 +122,21 @@ export default function DeckPicker({
                 cursor: 'pointer',
               }}
             >
-              {/* Still the fixed label. Showing deck.name is a VISIBLE change
-                  and belongs to phase 3 with the rest of the collection UI —
-                  this phase must render exactly what it renders today. */}
-              <span>✦ Your Deck</span>
+              {/* The topic the learner typed. With several decks a fixed
+                  label would make them indistinguishable, which is the whole
+                  point of the collection. Truncated rather than wrapped: the
+                  row is a fixed-height control and a long topic must not
+                  reflow it. */}
+              <span
+                style={{
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  minWidth: 0,
+                }}
+              >
+                ✦ {deck.name || 'Your Deck'}
+              </span>
               <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.7 }}>
                 {deck.cards.length} cards
               </span>
@@ -129,7 +147,7 @@ export default function DeckPicker({
               <button
                 type="button"
                 onClick={() => onDelete(id)}
-                aria-label="Remove your custom deck"
+                aria-label={`Remove ${deck.name || 'your custom deck'}`}
                 style={{
                   padding: '14px 16px',
                   background: 'transparent',
@@ -189,9 +207,9 @@ export default function DeckPicker({
           aria-label="Custom deck topic"
           value={customTopic}
           onChange={(e) => onTopicChange(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && onGenerate()}
+          onKeyDown={(e) => e.key === 'Enter' && !atCap && onGenerate()}
           placeholder="e.g. weather, animals, sports"
-          disabled={generating}
+          disabled={generating || atCap}
           style={{
             width: '100%',
             boxSizing: 'border-box',
@@ -208,11 +226,11 @@ export default function DeckPicker({
         />
         <button
           onClick={onGenerate}
-          disabled={generating || !customTopic.trim()}
+          disabled={generating || atCap || !customTopic.trim()}
           style={{
             width: '100%',
             padding: 14,
-            background: generating ? COLORS.mute : COLORS.red,
+            background: generating || atCap ? COLORS.mute : COLORS.red,
             color: COLORS.card,
             border: 'none',
             fontFamily: FONTS.mono,
@@ -223,7 +241,7 @@ export default function DeckPicker({
             alignItems: 'center',
             justifyContent: 'center',
             gap: 8,
-            cursor: generating ? 'not-allowed' : 'pointer',
+            cursor: generating || atCap ? 'not-allowed' : 'pointer',
           }}
         >
           {generating ? (
@@ -234,6 +252,24 @@ export default function DeckPicker({
             </>
           )}
         </button>
+
+        {/* A disabled control with no reason is a dead end. Rendered as a live
+            region so the explanation reaches a screen reader at the moment the
+            cap is hit, not only on a fresh render. */}
+        {atCap && (
+          <div
+            role="status"
+            style={{
+              marginTop: 10,
+              fontFamily: FONTS.body,
+              fontSize: FONT_SIZE.ipa,
+              color: COLORS.mute,
+              textAlign: 'center',
+            }}
+          >
+            {maxDecks} decks is the limit — remove one to make another.
+          </div>
+        )}
       </div>
 
       <div
