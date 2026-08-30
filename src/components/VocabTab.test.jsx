@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VocabTab from './VocabTab';
-import { upsertDeck, cardsFor, CUSTOM_DECK_ID } from '../lib/customDecks.js';
+import { upsertDeck, liveDecks, CUSTOM_DECK_ID } from '../lib/customDecks.js';
 import { markLearnedIn } from '../lib/learnedWords.js';
 import { activePack } from '../packs';
 import { callClaude } from '../lib/claude';
@@ -43,7 +43,7 @@ function DeckHost({ children: _children, ...props }) {
       learnedWords={{}}
       markLearned={() => {}}
       mobile={false}
-      customCards={cardsFor(decks, CUSTOM_DECK_ID)}
+      customDecks={liveDecks(decks)}
       onDeckGenerated={({ name, cards }) =>
         setDecks((prev) => upsertDeck(prev, { deckId: CUSTOM_DECK_ID, name, cards }))
       }

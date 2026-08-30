@@ -35,3 +35,14 @@ export const MULTIPLIER_TIERS = [
 // answer. Account holders only (see lib/xpEntitlement.js); composes
 // multiplicatively with MULTIPLIER_TIERS above.
 export const LEVEL_MULTIPLIERS = { a1: 1, a2: 1.25, b1: 1.5 };
+
+// How many custom decks a learner may CREATE. A legibility limit, not a storage
+// one: a generated deck is ~600 bytes against a ~330 KB state blob, so twenty
+// would cost under 4%. The number is a product guess — nobody has been able to
+// make two decks before, so there is no usage data behind it.
+//
+// Enforced at CREATION only, never in the merge: two devices offline can each
+// fill their quota and legitimately union past this, and a merge that trimmed
+// the excess would delete decks a learner made — and would not even stick,
+// since removal from a union-merged map needs a tombstone.
+export const MAX_CUSTOM_DECKS = 8;

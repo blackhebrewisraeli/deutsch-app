@@ -8,6 +8,8 @@ import {
   deleteDeck,
   liveDecks,
   isTombstone,
+  newDeckId,
+  MAX_CUSTOM_DECKS,
 } from './customDecks.js';
 
 const card = (id) => ({ id, de: id, en: `${id}-en` });
@@ -264,5 +266,83 @@ describe('tombstones', () => {
 
   it('stamps deletedAt: null on a fresh deck so the pushed row clears the column', () => {
     expect(upsertDeck({}, { deckId: 'custom', cards: [card('A')] }, 1).custom.deletedAt).toBeNull();
+  });
+});
+
+describe('newDeckId', () => {
+  it('is unique across a population, not merely across two calls', () => {
+    // A weak generator passes a two-call test trivially. A shared id between
+    // devices means mergeDecks silently discards one deck, so this is a data
+    // safety property.
+    const ids = new Set(Array.from({ length: 2000 }, () => newDeckId()));
+    expect(ids.size).toBe(2000);
+  });
+
+  it('is namespaced so a custom deck can never shadow a curated one', () => {
+    expect(newDeckId().startsWith('custom-')).toBe(true);
+    expect(newDeckId()).not.toBe('greetings');
+  });
+
+  it('does NOT derive from content — two decks on one topic get different ids', () => {
+    expect(newDeckId()).not.toBe(newDeckId());
+  });
+
+  it('still produces unique ids without crypto.randomUUID', () => {
+    const real = globalThis.crypto?.randomUUID;
+    try {
+      if (globalThis.crypto) globalThis.crypto.randomUUID = undefined;
+      const ids = new Set(Array.from({ length: 500 }, () => newDeckId()));
+      expect(ids.size).toBe(500);
+    } finally {
+      if (globalThis.crypto) globalThis.crypto.randomUUID = real;
+    }
+  });
+});
+
+describe('the creation cap', () => {
+  const cards = [card('A')];
+  const fill = (n) => {
+    let decks = {};
+    for (let i = 0; i < n; i += 1) decks = upsertDeck(decks, { deckId: `d${i}`, cards }, i + 1);
+    return decks;
+  };
+
+  it('allows creation up to the cap', () => {
+    expect(Object.keys(fill(MAX_CUSTOM_DECKS))).toHaveLength(MAX_CUSTOM_DECKS);
+  });
+
+  it('refuses a NEW deck once the cap is reached', () => {
+    const full = fill(MAX_CUSTOM_DECKS);
+    expect(upsertDeck(full, { deckId: 'one-too-many', cards }, 99)).toBe(full);
+  });
+
+  it('still allows REPLACING a deck that is already live', () => {
+    // Regenerating a deck adds nothing, so the cap must not block it.
+    const full = fill(MAX_CUSTOM_DECKS);
+    const next = upsertDeck(full, { deckId: 'd0', name: 'replaced', cards }, 99);
+    expect(next.d0.name).toBe('replaced');
+    expect(Object.keys(next)).toHaveLength(MAX_CUSTOM_DECKS);
+  });
+
+  it('counts LIVE decks, so a tombstone does not fill the quota', () => {
+    // Otherwise a learner who deletes and regenerates enough times locks
+    // themselves out with their own history.
+    let decks = fill(MAX_CUSTOM_DECKS);
+    decks = deleteDeck(decks, 'd0', 500);
+    const next = upsertDeck(decks, { deckId: 'fresh', cards }, 600);
+    expect(next.fresh).toBeTruthy();
+    expect(isTombstone(next.d0)).toBe(true); // the tombstone survives
+  });
+
+  it('treats reviving a tombstoned deck as adding one', () => {
+    let decks = fill(MAX_CUSTOM_DECKS);
+    decks = deleteDeck(decks, 'd0', 500);
+    decks = upsertDeck(decks, { deckId: 'fresh', cards }, 600); // back at the cap
+    expect(upsertDeck(decks, { deckId: 'd0', cards }, 700)).toBe(decks);
+  });
+
+  it('honours an injected cap, so the limit is testable without the constant', () => {
+    const one = upsertDeck({}, { deckId: 'a', cards }, 1, 1);
+    expect(upsertDeck(one, { deckId: 'b', cards }, 2, 1)).toBe(one);
   });
 });

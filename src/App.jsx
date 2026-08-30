@@ -36,7 +36,7 @@ import SettingsRoute from './components/settings/SettingsRoute';
 import { deriveMissions } from './lib/missions';
 import { deriveQuests, questHistory } from './lib/quests';
 import { deckProgressFor } from './lib/deckProgress';
-import { readDecks, upsertDeck, deleteDeck, cardsFor, CUSTOM_DECK_ID } from './lib/customDecks';
+import { readDecks, upsertDeck, deleteDeck, liveDecks, CUSTOM_DECK_ID } from './lib/customDecks';
 import {
   readLearnedByDeck,
   markLearnedIn,
@@ -735,8 +735,11 @@ export default function App() {
   // the deck now outlives the component that made it. The write goes through
   // the persist effect above rather than saveState directly, so it keeps the
   // blob's single-writer discipline.
-  const handleDeckGenerated = ({ name, cards }) => {
-    setDecks((prev) => upsertDeck(prev, { deckId: CUSTOM_DECK_ID, name, cards }));
+  // deckId is a PARAMETER now, defaulted to the historic single slot so this
+  // refactor changes no behaviour. Phase 3 passes newDeckId() instead, which is
+  // the whole of "many decks" at this call site.
+  const handleDeckGenerated = ({ deckId = CUSTOM_DECK_ID, name, cards }) => {
+    setDecks((prev) => upsertDeck(prev, { deckId, name, cards }));
     // Tell the sync engine there is something to push. Every other write that
     // matters announces itself this way (handleGoalChange, recordEvent), and
     // markDirty listens for it — without this the deck would sit locally until
@@ -747,11 +750,11 @@ export default function App() {
   // Removing a deck writes a TOMBSTONE rather than dropping the entry. A plain
   // delete is invisible to an upsert-only sync engine, so the other device
   // would push its copy straight back on the next pull.
-  const handleDeckDeleted = () => {
-    setDecks((prev) => deleteDeck(prev, CUSTOM_DECK_ID));
+  const handleDeckDeleted = (deckId = CUSTOM_DECK_ID) => {
+    setDecks((prev) => deleteDeck(prev, deckId));
     // The deck is gone, so its scoped mastery is meaningless. The flat mirror
     // stays: it is union-merged and shared with every other deck.
-    setLearnedByDeck((prev) => forgetDeck(prev, CUSTOM_DECK_ID));
+    setLearnedByDeck((prev) => forgetDeck(prev, deckId));
     window.dispatchEvent(new CustomEvent('deutsch:progress'));
   };
 
@@ -1146,7 +1149,7 @@ export default function App() {
                   mobile={mobile}
                   reviewTarget={reviewTarget?.tab === 'vocab' ? reviewTarget : null}
                   onReviewConsumed={clearReviewTarget}
-                  customCards={cardsFor(decks, CUSTOM_DECK_ID)}
+                  customDecks={liveDecks(decks)}
                   onDeckGenerated={handleDeckGenerated}
                   onDeckDeleted={handleDeckDeleted}
                 />

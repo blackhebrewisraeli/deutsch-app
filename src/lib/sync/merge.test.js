@@ -8,6 +8,7 @@ import {
   mergeDecks,
   mergeLearnedByDeck,
 } from './merge.js';
+import { MAX_CUSTOM_DECKS } from '../gameConfig.js';
 import { trialStatus } from '../trial.js';
 import { TRIAL_ROUND_CAP } from '../gameConfig.js';
 
@@ -403,5 +404,53 @@ describe('mergeLearnedByDeck', () => {
     const before = [JSON.stringify(l), JSON.stringify(r)];
     mergeLearnedByDeck(l, r);
     expect([JSON.stringify(l), JSON.stringify(r)]).toEqual(before);
+  });
+});
+
+describe('mergeDecks and the deck cap', () => {
+  // THE staged-red test of this epic. Written against a merge that does NOT
+  // know about the cap, then verified to fail against one that does — see the
+  // PR. Without that check it asserts a rule that was never at risk.
+  const deckMap = (prefix, n, updatedAt) =>
+    Object.fromEntries(
+      Array.from({ length: n }, (_, i) => [
+        `${prefix}-${i}`,
+        {
+          deckId: `${prefix}-${i}`,
+          name: `${prefix} ${i}`,
+          cards: [{ id: 'a' }],
+          updatedAt,
+          deletedAt: null,
+        },
+      ])
+    );
+
+  it('unions two devices past the cap rather than dropping decks', () => {
+    // Both devices filled their quota offline. Sixteen is a legitimate state:
+    // the learner made every one of them, and the cap belongs to creation.
+    const local = deckMap('a', MAX_CUSTOM_DECKS, 100);
+    const remote = deckMap('b', MAX_CUSTOM_DECKS, 200);
+
+    const merged = mergeDecks(local, remote);
+
+    expect(Object.keys(merged)).toHaveLength(MAX_CUSTOM_DECKS * 2);
+    expect(Object.keys(merged).length).toBeGreaterThan(MAX_CUSTOM_DECKS);
+  });
+
+  it('loses nothing either device had', () => {
+    const local = deckMap('a', MAX_CUSTOM_DECKS, 100);
+    const remote = deckMap('b', MAX_CUSTOM_DECKS, 200);
+    const merged = mergeDecks(local, remote);
+
+    for (const id of [...Object.keys(local), ...Object.keys(remote)]) {
+      expect(merged[id]).toBeTruthy();
+    }
+  });
+
+  it('still resolves a SHARED id by last-write-wins, cap or no cap', () => {
+    // The cap must not change how a genuine conflict is settled.
+    const local = { x: { deckId: 'x', name: 'newer', cards: [{ id: 'a' }], updatedAt: 900 } };
+    const remote = { x: { deckId: 'x', name: 'older', cards: [{ id: 'b' }], updatedAt: 100 } };
+    expect(mergeDecks(local, remote).x.name).toBe('newer');
   });
 });

@@ -3,6 +3,7 @@ import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, BUTTON } from '../lib/
 import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
+import { CUSTOM_DECK_ID } from '../lib/customDecks';
 import { isLearned, learnedInDeck } from '../lib/learnedWords';
 const { decks: PRESET_DECKS } = activePack.content;
 const DEFAULT_DECK_ID = 'greetings';
@@ -41,7 +42,7 @@ export default function VocabTab({
   mobile = false,
   reviewTarget = null,
   onReviewConsumed,
-  customCards = null,
+  customDecks = {},
   onDeckGenerated,
   onDeckDeleted,
 }) {
@@ -69,20 +70,25 @@ export default function VocabTab({
   // card first in the queue instead of starting fresh.
   const pendingReviewRef = useRef(null);
 
-  const activeDeck =
-    deckId === 'custom' && customCards
-      ? customCards
-      : isAuto
-        ? asyncDeck || []
-        : PRESET_DECKS[deckId] || [];
+  // A membership test, not a literal: any id in the collection is a custom
+  // deck. With one deck in the map this is exactly the old behaviour.
+  const customCards = customDecks?.[deckId]?.cards ?? null;
+  const activeDeck = customCards
+    ? customCards
+    : isAuto
+      ? asyncDeck || []
+      : PRESET_DECKS[deckId] || [];
 
   // The custom deck can disappear while it is the SELECTED one — deleted here,
   // or tombstoned on another device and pulled in by a sync. There is no
   // PRESET_DECKS.custom to fall back on, so without this the learner is left
   // staring at an empty deck.
   useEffect(() => {
-    if (deckId === 'custom' && !customCards) setDeckId(DEFAULT_DECK_ID);
-  }, [deckId, customCards]);
+    // Covers a deck deleted here AND one tombstoned on another device and
+    // pulled in by a sync: either way the selected id stops resolving.
+    const isKnown = customDecks?.[deckId] || isAuto || Object.hasOwn(PRESET_DECKS, deckId ?? '');
+    if (!isKnown) setDeckId(DEFAULT_DECK_ID);
+  }, [deckId, customDecks, isAuto]);
 
   useEffect(() => {
     const target = pendingReviewRef.current;
@@ -236,11 +242,15 @@ export default function VocabTab({
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed) && parsed.length > 0) {
+        // Phase 2 keeps the historic single slot so behaviour is unchanged;
+        // phase 3 swaps this one expression for newDeckId().
+        const generatedId = CUSTOM_DECK_ID;
         onDeckGenerated?.({
+          deckId: generatedId,
           name: customTopic.trim(),
           cards: parsed.map((c) => ({ ...c, id: activePack.cardId(c) })),
         });
-        setDeckId('custom');
+        setDeckId(generatedId);
       }
     } catch (err) {
       alert('Could not generate deck — ' + err.message);
@@ -296,8 +306,8 @@ export default function VocabTab({
         <DeckPicker
           deckId={deckId}
           onSelect={setDeckId}
-          customCards={customCards}
-          onDelete={onDeckDeleted ? () => onDeckDeleted() : undefined}
+          customDecks={customDecks}
+          onDelete={onDeckDeleted}
           customTopic={customTopic}
           onTopicChange={setCustomTopic}
           generating={generating}
