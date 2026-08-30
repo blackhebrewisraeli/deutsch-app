@@ -35,6 +35,7 @@ import HomeTab from './components/HomeTab';
 import SettingsRoute from './components/settings/SettingsRoute';
 import { deriveMissions } from './lib/missions';
 import { deckProgressFor } from './lib/deckProgress';
+import { readDecks, upsertDeck, cardsFor, CUSTOM_DECK_ID } from './lib/customDecks';
 import { useLeagueStanding } from './lib/useLeagueStanding';
 
 // Settings is a route rather than a seventh nav tab, so the hash is what makes
@@ -79,6 +80,10 @@ export default function App() {
   const [tab, setTab] = useState('home');
   const [stats, setStats] = useState({ streak: 0, learnedCount: 0, lastVisit: null });
   const [learnedWords, setLearnedWords] = useState({});
+  // Generated decks live here rather than inside VocabTab, which unmounts on
+  // every tab switch. Hydrated from the blob below, so a deck survives a tab
+  // switch, a reload, and a signed-out session alike.
+  const [decks, setDecks] = useState({});
   const [reviewTarget, setReviewTarget] = useState(null);
   const [streakBurst, setStreakBurst] = useState(false);
 
@@ -576,6 +581,7 @@ export default function App() {
     const s = loadState();
     if (s) {
       setLearnedWords(s.learnedWords || {});
+      setDecks(readDecks(s));
       const today = todayKey();
       const goal = s.gamification?.goal ?? DEFAULT_GOAL;
       const streak = currentStreak(s.daily ?? {}, goal, today);
@@ -593,9 +599,9 @@ export default function App() {
       // `settingsUpdatedAt`. The `{ ...current }` spread preserves both, so
       // this must stay a merge (never a replacement) or settings LWW breaks.
       const current = loadState() ?? {};
-      saveState({ ...current, stats, learnedWords });
+      saveState({ ...current, stats, learnedWords, decks });
     }
-  }, [stats, learnedWords]);
+  }, [stats, learnedWords, decks]);
 
   // Review feed click handler — switches tab (and level for Translate),
   // then drops `reviewTarget` so the destination tab can pre-load the item.
@@ -659,6 +665,13 @@ export default function App() {
     now: new Date(),
     lastTab: TABS.includes(tab) ? tab : 'chat',
   });
+
+  // A generated deck replaces the single custom slot, matching today's UX —
+  // the deck now outlives the component that made it. The write goes through
+  // the persist effect above rather than saveState directly, so it keeps the
+  // blob's single-writer discipline.
+  const handleDeckGenerated = ({ name, cards }) =>
+    setDecks((prev) => upsertDeck(prev, { deckId: CUSTOM_DECK_ID, name, cards }));
 
   const settingsOverlay = (
     <SettingsRoute
@@ -1041,6 +1054,8 @@ export default function App() {
                   mobile={mobile}
                   reviewTarget={reviewTarget?.tab === 'vocab' ? reviewTarget : null}
                   onReviewConsumed={clearReviewTarget}
+                  customCards={cardsFor(decks, CUSTOM_DECK_ID)}
+                  onDeckGenerated={handleDeckGenerated}
                 />
               )}
               {tab === 'translate' && (

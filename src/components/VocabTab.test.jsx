@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VocabTab from './VocabTab';
+import { upsertDeck, cardsFor, CUSTOM_DECK_ID } from '../lib/customDecks.js';
 import { activePack } from '../packs';
 import { callClaude } from '../lib/claude';
 import { speak } from '../lib/speech';
@@ -29,10 +30,28 @@ const firstCard = (deckId = 'greetings') => DECKS[deckId][0];
 
 const readSrs = () => JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}').srs ?? {};
 
-const renderTab = (props = {}) =>
-  render(
-    <VocabTab level="a1" learnedWords={{}} markLearned={() => {}} mobile={false} {...props} />
+// VocabTab no longer owns the generated deck — App does, because this component
+// unmounts on every tab switch. This host plays that part using the REAL
+// customDecks helpers, so the generation tests exercise the shipping contract
+// rather than a stub that happens to agree with it.
+function DeckHost({ children: _children, ...props }) {
+  const [decks, setDecks] = useState({});
+  return (
+    <VocabTab
+      level="a1"
+      learnedWords={{}}
+      markLearned={() => {}}
+      mobile={false}
+      customCards={cardsFor(decks, CUSTOM_DECK_ID)}
+      onDeckGenerated={({ name, cards }) =>
+        setDecks((prev) => upsertDeck(prev, { deckId: CUSTOM_DECK_ID, name, cards }))
+      }
+      {...props}
+    />
   );
+}
+
+const renderTab = (props = {}) => render(<DeckHost {...props} />);
 
 // Simulates the App parent: markLearned feeds back into learnedWords, so the
 // "✓ LEARNED" badge can actually appear after a correct answer.

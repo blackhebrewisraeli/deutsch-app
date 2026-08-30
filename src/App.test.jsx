@@ -11,6 +11,10 @@ import { activePack } from './packs';
 
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 
+// Lets the App-level tests drive a real deck generation without a network call.
+const callClaude = vi.hoisted(() => vi.fn());
+vi.mock('./lib/claude', () => ({ callClaude }));
+
 /**
  * Mark the first-run walkthrough as already seen.
  *
@@ -1450,5 +1454,118 @@ describe('Home missions fed from real data', () => {
 
     await screen.findByText(/left in your deck/);
     expect(leagueStandingMock.calls.every((id) => id === undefined)).toBe(true);
+  });
+});
+
+describe('custom decks survive the component that made them', () => {
+  const generated = [
+    { de: 'die Sonne', en: 'the sun' },
+    { de: 'der Regen', en: 'the rain' },
+    { de: 'der Wind', en: 'the wind' },
+    { de: 'die Wolke', en: 'the cloud' },
+  ];
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    asReturningLearner();
+    localStorage.setItem('deutsch-level', 'a1');
+    callClaude.mockReset();
+    callClaude.mockResolvedValue(JSON.stringify(generated));
+    // syncMock.start is one shared spy for the whole file and an earlier block
+    // asserts it WAS called. Without this clear, the guest test below inherits
+    // that call and fails depending on execution order.
+    syncMock.enabled = false;
+    syncMock.start.mockClear();
+    authMock.status = 'anonymous';
+  });
+
+  afterEach(() => {
+    // Leave the shared mocks as this block found them.
+    syncMock.enabled = false;
+    syncMock.start.mockClear();
+    authMock.status = 'anonymous';
+  });
+
+  const goToTab = async (name) => userEvent.click(screen.getByRole('button', { name }));
+
+  const generateADeck = async () => {
+    await goToTab('Vocab');
+    await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
+    await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+    expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
+  };
+
+  it('writes the generated deck into the state blob', async () => {
+    renderPastEntry(<App />);
+    await generateADeck();
+
+    await waitFor(() => expect(loadState()?.decks?.custom).toBeTruthy());
+    const stored = loadState().decks.custom;
+    expect(stored.name).toBe('weather');
+    expect(stored.cards.map((c) => c.de)).toEqual(generated.map((g) => g.de));
+    expect(stored.updatedAt).toEqual(expect.any(Number));
+  });
+
+  it('keeps the deck across a tab switch — the bug this phase fixes', async () => {
+    renderPastEntry(<App />);
+    await generateADeck();
+
+    // VocabTab unmounts here. Before this change that destroyed the deck.
+    await goToTab('Chat');
+    expect(screen.queryByRole('button', { name: /Your Deck/ })).toBeNull();
+    await goToTab('Vocab');
+
+    expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
+  });
+
+  it('keeps the deck across a full remount — the reload case', async () => {
+    const first = renderPastEntry(<App />);
+    await generateADeck();
+    await waitFor(() => expect(loadState()?.decks?.custom).toBeTruthy());
+    first.unmount();
+
+    renderPastEntry(<App />);
+    await goToTab('Vocab');
+    expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
+  });
+
+  it('does all of that for a signed-out guest, with sync off and no writes', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+
+    const first = renderPastEntry(<App />);
+    await generateADeck();
+    await waitFor(() => expect(loadState()?.decks?.custom).toBeTruthy());
+    first.unmount();
+
+    renderPastEntry(<App />);
+    await goToTab('Vocab');
+    expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
+    expect(syncMock.start).not.toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it('does not lose learnedWords when it writes the deck', async () => {
+    // The persist effect is a MERGE. If decks ever replaced the blob instead of
+    // extending it, this is the assertion that would notice.
+    localStorage.setItem('deutsch-app-state-v1', JSON.stringify({ learnedWords: { Hallo: true } }));
+    renderPastEntry(<App />);
+    await generateADeck();
+
+    await waitFor(() => expect(loadState()?.decks?.custom).toBeTruthy());
+    expect(loadState().learnedWords).toEqual({ Hallo: true });
+  });
+
+  it('ignores a corrupted decks blob instead of failing to start', async () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ decks: { custom: { cards: 'not-an-array' } }, learnedWords: {} })
+    );
+    renderPastEntry(<App />);
+    await goToTab('Vocab');
+
+    expect(screen.queryByRole('button', { name: /Your Deck/ })).toBeNull();
+    expect(screen.getByRole('textbox', { name: 'Custom deck topic' })).toBeInTheDocument();
   });
 });

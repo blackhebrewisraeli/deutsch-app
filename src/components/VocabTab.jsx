@@ -38,9 +38,13 @@ export default function VocabTab({
   mobile = false,
   reviewTarget = null,
   onReviewConsumed,
+  customCards = null,
+  onDeckGenerated,
 }) {
   const [deckId, setDeckId] = useState('greetings');
-  const [customCards, setCustomCards] = useState(null);
+  // customCards is a PROP, not state: this component unmounts on every tab
+  // switch, which is what used to destroy a generated deck. It lives in the
+  // state blob now and App hands it down.
   const [customTopic, setCustomTopic] = useState('');
   const [generating, setGenerating] = useState(false);
   const [deckComplete, setDeckComplete] = useState(false);
@@ -220,7 +224,10 @@ export default function VocabTab({
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        setCustomCards(parsed.map((c) => ({ ...c, id: activePack.cardId(c) })));
+        onDeckGenerated?.({
+          name: customTopic.trim(),
+          cards: parsed.map((c) => ({ ...c, id: activePack.cardId(c) })),
+        });
         setDeckId('custom');
       }
     } catch (err) {
