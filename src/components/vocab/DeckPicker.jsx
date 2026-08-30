@@ -31,7 +31,7 @@ const PRESETS = [
 export default function DeckPicker({
   deckId,
   onSelect,
-  customCards,
+  customDecks = {},
   customTopic,
   onTopicChange,
   generating,
@@ -81,28 +81,28 @@ export default function DeckPicker({
             </button>
           );
         })}
-        {customCards && (
-          /* Select and Remove are SIBLINGS in a row, never nested: a <button>
-             inside a <button> is invalid HTML and browsers silently un-nest it,
-             changing the DOM out from under the tests. */
+        {/* One row per custom deck. With a single deck this renders exactly
+            what the single-slot version did. */}
+        {Object.entries(customDecks).map(([id, deck]) => (
           <div
+            key={id}
             style={{
               display: 'flex',
               alignItems: 'stretch',
               borderTop: `1px solid ${COLORS.inkA12}`,
-              background: deckId === 'custom' ? COLORS.red : COLORS.paperDeep,
+              background: deckId === id ? COLORS.red : COLORS.paperDeep,
             }}
           >
             <button
               type="button"
-              onClick={() => onSelect('custom')}
-              aria-pressed={deckId === 'custom'}
+              onClick={() => onSelect(id)}
+              aria-pressed={deckId === id}
               style={{
                 flex: 1,
                 minWidth: 0,
                 padding: '14px 16px',
                 background: 'transparent',
-                color: deckId === 'custom' ? COLORS.paper : COLORS.ink,
+                color: deckId === id ? COLORS.paper : COLORS.ink,
                 border: 'none',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -115,20 +115,25 @@ export default function DeckPicker({
                 cursor: 'pointer',
               }}
             >
+              {/* Still the fixed label. Showing deck.name is a VISIBLE change
+                  and belongs to phase 3 with the rest of the collection UI —
+                  this phase must render exactly what it renders today. */}
               <span>✦ Your Deck</span>
               <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.7 }}>
-                {customCards.length} cards
+                {deck.cards.length} cards
               </span>
             </button>
             {onDelete && (
+              /* Select and Remove are SIBLINGS, never nested: a <button> inside
+                 a <button> is invalid HTML and browsers silently un-nest it. */
               <button
                 type="button"
-                onClick={onDelete}
+                onClick={() => onDelete(id)}
                 aria-label="Remove your custom deck"
                 style={{
                   padding: '14px 16px',
                   background: 'transparent',
-                  color: deckId === 'custom' ? COLORS.paper : COLORS.mute,
+                  color: deckId === id ? COLORS.paper : COLORS.mute,
                   border: 'none',
                   borderLeft: `1px solid ${COLORS.inkA12}`,
                   fontFamily: FONTS.mono,
@@ -140,7 +145,7 @@ export default function DeckPicker({
               </button>
             )}
           </div>
-        )}
+        ))}
       </div>
 
       {DECK_GROUPS.filter((g) => g !== 'Curated').map((group) => (

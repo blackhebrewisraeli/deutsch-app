@@ -14,12 +14,45 @@
 // the per-deck LWW clock the sync merge will compare, and a deck written before
 // sync existed must not arrive with a null one.
 
+import { MAX_CUSTOM_DECKS } from './gameConfig.js';
+
 export const CUSTOM_DECK_ID = 'custom';
 
-// A generated deck is ~10 cards. This is not a product limit — it is a guard on
-// the blob: saveState() swallows quota failures, so one pathological response
-// would silently drop the ENTIRE write, taking learnedWords and stats with it.
+/**
+ * A fresh deck id.
+ *
+ * RANDOM, never derived from the topic. mergeDecks resolves a shared id by
+ * last-write-wins, so two devices minting the same id for DIFFERENT decks would
+ * silently discard one — identity here is data safety, not tidiness. A hash of
+ * the topic would make two "weather" decks collide by design and let a
+ * regeneration overwrite the earlier deck.
+ *
+ * Both paths use the Web Crypto RNG. The platform's non-cryptographic RNG was
+ * the first fallback and is gone: SonarCloud flags it as a security hotspot,
+ * and `crypto.getRandomValues` has been universally available
+ * for over a decade — far longer than `randomUUID`, which additionally needs a
+ * secure context. The counter is a last resort for an environment with no Web
+ * Crypto at all, where cross-device uniqueness cannot be guaranteed anyway.
+ */
+let idCounter = 0;
+
+export function newDeckId() {
+  const webCrypto = globalThis.crypto;
+  if (webCrypto?.randomUUID) return `custom-${webCrypto.randomUUID()}`;
+
+  if (webCrypto?.getRandomValues) {
+    const bytes = webCrypto.getRandomValues(new Uint8Array(10));
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    return `custom-${hex}`;
+  }
+
+  idCounter += 1;
+  return `custom-${Date.now().toString(36)}-${idCounter.toString(36)}`;
+}
+
 export const MAX_CARDS_PER_DECK = 100;
+
+export { MAX_CUSTOM_DECKS };
 
 const isUsableCard = (c) => c && typeof c.id === 'string' && c.id.length > 0;
 const tombstoneTime = (deck) => (Number.isFinite(deck?.deletedAt) ? deck.deletedAt : null);
@@ -127,13 +160,33 @@ export function deleteDeck(decks, deckId, now = Date.now()) {
  * Add or replace one deck. Returns a NEW map; the input is never mutated.
  * A deck with no usable cards is rejected outright — storing an empty deck
  * would put an entry in the picker that cannot be drilled.
+ *
+ * THE CAP LIVES HERE, and only here. This is the creation path: sync never
+ * calls it (it uses mergeDecks), so enforcing a limit here cannot delete a deck
+ * that arrived from another device. Two devices can each fill their quota
+ * offline and legitimately union past the cap; the merge must leave that alone.
+ *
+ * The count is of LIVE decks. Counting raw entries would let a learner's own
+ * tombstones fill the quota, locking them out after enough delete-and-retry.
+ *
+ * Replacing a deck that is already live is always allowed — it adds nothing.
+ * Reviving a TOMBSTONED id does add one, so it is capped like any new deck.
  */
-export function upsertDeck(decks, { deckId, name, cards } = {}, now = Date.now()) {
+export function upsertDeck(
+  decks,
+  { deckId, name, cards } = {},
+  now = Date.now(),
+  max = MAX_CUSTOM_DECKS
+) {
   const base = decks && typeof decks === 'object' ? decks : {};
   if (!deckId || !Array.isArray(cards)) return base;
 
   const usable = cards.filter(isUsableCard).slice(0, MAX_CARDS_PER_DECK);
   if (usable.length === 0) return base;
+
+  const live = liveDecks(base);
+  const addsADeck = !(deckId in live);
+  if (addsADeck && Object.keys(live).length >= max) return base;
 
   return {
     ...base,
