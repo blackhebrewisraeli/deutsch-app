@@ -361,11 +361,17 @@ the reason #201 established: the client would otherwise write a column that does
    A1 to count in Top 500 — they are views over one lexicon, not different material. That is a
    product question, and getting it wrong in either direction is invisible until someone complains.
 3. **When does the transition end (§6)?** Needs a support-window decision, not a technical one.
-4. **`markLearned` toggles, and a word can un-learn itself. Verified, not suspected.**
-   `markLearned` writes `!prev[word]`, and `advanceQueue` re-queues on AGAIN
-   (`wasCorrect ? rest : [...rest, prev[0]]`), so a card returns within the same session. The path
-   is: answer correctly → learned; press AGAIN → re-queued; answer correctly again → **un-learned**.
+4. ~~**Should `markLearned` stop toggling?**~~ **FIXED — see the correction below.**
 
-   This is a pre-existing bug, independent of deck-scoping, and it is the reason §3.1 stores
-   presence and deletes on unset rather than porting the toggle. Worth confirming against intent —
-   and worth its own small fix, which could ship before this epic rather than waiting for it.
+   The bug was real: `markLearned` wrote `!prev[word]`, so meeting a card a second time and
+   answering correctly *un*-learned it.
+
+   **The reproduction path first written here was wrong**, and is corrected for the record: a
+   CORRECT answer offers only HARD/GOOD/EASY — `VerdictPanel` shows AGAIN *only* for a wrong
+   answer — so "answer correctly → AGAIN → answer correctly again" is not reachable. A correct
+   answer always removes the card from the queue.
+
+   The real path is a **rebuilt** queue: answer correctly, leave the deck (or the session), come
+   back, and `getDueCards` offers the card again from SRS. Answering correctly then flipped it to
+   `false`. Fixed by setting rather than toggling, with an App-level regression test that fails
+   against the old implementation.

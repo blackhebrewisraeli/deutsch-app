@@ -616,9 +616,19 @@ export default function App() {
 
   const clearReviewTarget = () => setReviewTarget(null);
 
+  // Sets, never toggles. This flipped (`!prev[word]`) until 2026-08-30, and
+  // advanceQueue re-queues on AGAIN — so answering a card correctly, pressing
+  // AGAIN, and answering it correctly again UN-learned the word. Every VocabTab
+  // test missed it because the test host modelled the intended behaviour
+  // (`[id]: true`) rather than this one.
+  //
+  // Learning is monotonic here: nothing in the app is meant to un-learn a word,
+  // and `learnedWords` is union-merged across devices, so a `false` written on
+  // one device is discarded by the next sync anyway.
   const markLearned = (word) => {
     setLearnedWords((prev) => {
-      const next = { ...prev, [word]: !prev[word] };
+      if (prev[word]) return prev;
+      const next = { ...prev, [word]: true };
       const count = Object.values(next).filter(Boolean).length;
       setStats((s) => ({ ...s, learnedCount: count }));
       return next;

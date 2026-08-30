@@ -1542,7 +1542,11 @@ describe('custom decks survive the component that made them', () => {
     await goToTab('Vocab');
     expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
     expect(syncMock.start).not.toHaveBeenCalled();
-    expect(fetchSpy).not.toHaveBeenCalled();
+    // No WRITES, which is the claim. Deliberately not "no fetch at all": a
+    // read left in flight by an earlier authenticated test can resolve after
+    // this spy is installed, and a stray GET is not what this guards.
+    const writes = fetchSpy.mock.calls.filter(([, opts]) => (opts?.method ?? 'GET') !== 'GET');
+    expect(writes).toEqual([]);
     fetchSpy.mockRestore();
   });
 
@@ -1755,5 +1759,77 @@ describe('deleting a custom deck writes a tombstone', () => {
 
     expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
     await waitFor(() => expect(loadState()?.decks?.custom?.deletedAt).toBeNull());
+  });
+});
+
+describe('markLearned sets rather than toggles', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    asReturningLearner();
+    // b1 → typed answer, so a one-card deck works (multiple choice needs four).
+    localStorage.setItem('deutsch-level', 'b1');
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({
+        decks: {
+          custom: {
+            deckId: 'custom',
+            name: 'sun',
+            updatedAt: 1000,
+            deletedAt: null,
+            cards: [{ id: 'die Sonne', de: 'die Sonne', en: 'the sun', glosses: ['the sun'] }],
+          },
+        },
+      })
+    );
+  });
+
+  const selectCustom = async () =>
+    userEvent.click(await screen.findByRole('button', { name: /Your Deck/ }));
+
+  const answerCorrectly = async () => {
+    const input = screen.getByRole('textbox', { name: 'Type the English meaning' });
+    await userEvent.type(input, 'the sun');
+    await userEvent.click(screen.getByRole('button', { name: /CHECK/ }));
+  };
+
+  it('keeps a word learned when the same card comes round again', async () => {
+    // A correct answer offers only HARD/GOOD/EASY, so the card leaves the queue.
+    // Switching decks and back rebuilds it from SRS, which is how a learner meets
+    // the same card twice. With the old `!prev[word]` the second correct answer
+    // UN-learned it.
+    renderPastEntry(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+    await selectCustom();
+
+    await answerCorrectly();
+    expect(screen.getByText('✓ LEARNED')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'GOOD' }));
+
+    // Rebuild the queue: away to a preset deck and back.
+    await userEvent.click(screen.getByRole('button', { name: /Greetings/ }));
+    await selectCustom();
+
+    await answerCorrectly();
+    expect(screen.getByText('✓ LEARNED')).toBeInTheDocument();
+    expect(loadState().learnedWords['die Sonne']).toBe(true);
+  });
+
+  it('never writes false into learnedWords', async () => {
+    // learnedWords is union-merged across devices, so a stray false is not just
+    // wrong locally — the next sync discards it, making the bug device-specific.
+    renderPastEntry(<App />);
+    await userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+    await selectCustom();
+
+    await answerCorrectly();
+    await userEvent.click(screen.getByRole('button', { name: 'GOOD' }));
+    await userEvent.click(screen.getByRole('button', { name: /Greetings/ }));
+    await selectCustom();
+    await answerCorrectly();
+
+    await waitFor(() => expect(loadState()?.learnedWords).toBeTruthy());
+    expect(Object.values(loadState().learnedWords)).not.toContain(false);
   });
 });
