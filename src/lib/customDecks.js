@@ -27,18 +27,29 @@ export const CUSTOM_DECK_ID = 'custom';
  * the topic would make two "weather" decks collide by design and let a
  * regeneration overwrite the earlier deck.
  *
- * randomUUID needs a secure context; the fallback carries a timestamp plus ~40
- * bits of randomness, which is ample for one learner's own decks.
+ * Both paths use the Web Crypto RNG. The platform's non-cryptographic RNG was
+ * the first fallback and is gone: SonarCloud flags it as a security hotspot,
+ * and `crypto.getRandomValues` has been universally available
+ * for over a decade — far longer than `randomUUID`, which additionally needs a
+ * secure context. The counter is a last resort for an environment with no Web
+ * Crypto at all, where cross-device uniqueness cannot be guaranteed anyway.
  */
+let idCounter = 0;
+
 export function newDeckId() {
-  const uuid = globalThis.crypto?.randomUUID?.();
-  if (uuid) return `custom-${uuid}`;
-  return `custom-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+  const webCrypto = globalThis.crypto;
+  if (webCrypto?.randomUUID) return `custom-${webCrypto.randomUUID()}`;
+
+  if (webCrypto?.getRandomValues) {
+    const bytes = webCrypto.getRandomValues(new Uint8Array(10));
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+    return `custom-${hex}`;
+  }
+
+  idCounter += 1;
+  return `custom-${Date.now().toString(36)}-${idCounter.toString(36)}`;
 }
 
-// A generated deck is ~10 cards. This is not a product limit — it is a guard on
-// the blob: saveState() swallows quota failures, so one pathological response
-// would silently drop the ENTIRE write, taking learnedWords and stats with it.
 export const MAX_CARDS_PER_DECK = 100;
 
 export { MAX_CUSTOM_DECKS };

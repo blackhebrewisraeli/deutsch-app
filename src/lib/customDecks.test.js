@@ -287,14 +287,29 @@ describe('newDeckId', () => {
     expect(newDeckId()).not.toBe(newDeckId());
   });
 
-  it('still produces unique ids without crypto.randomUUID', () => {
+  it('falls back to crypto.getRandomValues when randomUUID is unavailable', () => {
+    // randomUUID needs a secure context; getRandomValues has been universally
+    // available far longer. Both are cryptographic — the platform's plain RNG
+    // is deliberately not used at all.
     const real = globalThis.crypto?.randomUUID;
     try {
       if (globalThis.crypto) globalThis.crypto.randomUUID = undefined;
       const ids = new Set(Array.from({ length: 500 }, () => newDeckId()));
       expect(ids.size).toBe(500);
+      expect([...ids][0]).toMatch(/^custom-[0-9a-f]{20}$/);
     } finally {
       if (globalThis.crypto) globalThis.crypto.randomUUID = real;
+    }
+  });
+
+  it('still yields distinct ids with no Web Crypto at all', () => {
+    const real = globalThis.crypto;
+    try {
+      Object.defineProperty(globalThis, 'crypto', { value: undefined, configurable: true });
+      const ids = new Set(Array.from({ length: 100 }, () => newDeckId()));
+      expect(ids.size).toBe(100); // the counter, not a timestamp collision
+    } finally {
+      Object.defineProperty(globalThis, 'crypto', { value: real, configurable: true });
     }
   });
 });

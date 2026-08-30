@@ -73,11 +73,7 @@ export default function VocabTab({
   // A membership test, not a literal: any id in the collection is a custom
   // deck. With one deck in the map this is exactly the old behaviour.
   const customCards = customDecks?.[deckId]?.cards ?? null;
-  const activeDeck = customCards
-    ? customCards
-    : isAuto
-      ? asyncDeck || []
-      : PRESET_DECKS[deckId] || [];
+  const activeDeck = customCards ?? (isAuto ? (asyncDeck ?? []) : (PRESET_DECKS[deckId] ?? []));
 
   // The custom deck can disappear while it is the SELECTED one — deleted here,
   // or tombstoned on another device and pulled in by a sync. There is no
