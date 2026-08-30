@@ -91,9 +91,9 @@ describe('achievements', () => {
     level: 1,
     ...o,
   });
-  it('has 12 with unique ids', () => {
-    expect(ACHIEVEMENTS).toHaveLength(12);
-    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(12);
+  it('has 15 with unique ids', () => {
+    expect(ACHIEVEMENTS).toHaveLength(15);
+    expect(new Set(ACHIEVEMENTS.map((a) => a.id)).size).toBe(15);
   });
   it('streak/volume/mastery rules fire at thresholds', () => {
     expect(earnedAchievements(ctx({ streak: 2 }))).not.toContain('streak3');
@@ -138,5 +138,55 @@ describe('context derivation', () => {
     expect(c.totalExercises).toBe(2);
     expect(c.decksMastered).toBe(0);
     expect(typeof c.level).toBe('number');
+  });
+});
+
+describe('quest badges', () => {
+  const ctxWith = (over) => ({
+    streak: 0,
+    totalExercises: 0,
+    masteredCount: 0,
+    decksMastered: 0,
+    level: 1,
+    leagueWins: 0,
+    questsCompleted: 0,
+    questPerfectDays: 0,
+    ...over,
+  });
+
+  it('awards quests10 at ten completions, not nine', () => {
+    expect(earnedAchievements(ctxWith({ questsCompleted: 9 }))).not.toContain('quests10');
+    expect(earnedAchievements(ctxWith({ questsCompleted: 10 }))).toContain('quests10');
+  });
+
+  it('awards quests50 at fifty', () => {
+    expect(earnedAchievements(ctxWith({ questsCompleted: 49 }))).not.toContain('quests50');
+    expect(earnedAchievements(ctxWith({ questsCompleted: 50 }))).toContain('quests50');
+  });
+
+  it('awards the perfect-day badge on the first clean sweep', () => {
+    expect(earnedAchievements(ctxWith({ questPerfectDays: 0 }))).not.toContain('questPerfectDay');
+    expect(earnedAchievements(ctxWith({ questPerfectDays: 1 }))).toContain('questPerfectDay');
+  });
+
+  it('does not move any NON-quest badge', () => {
+    // Quest progress must not leak into the streak/volume/mastery economy.
+    const before = earnedAchievements(ctxWith({}));
+    const after = earnedAchievements(ctxWith({ questsCompleted: 999, questPerfectDays: 99 }));
+    expect(after.filter((id) => !id.startsWith('quest'))).toEqual(before);
+  });
+});
+
+describe('gamificationContext quest injection', () => {
+  it('defaults quest counts to zero when nothing is injected', () => {
+    const ctx = gamificationContext({ daily: {}, srs: {} });
+    expect(ctx.questsCompleted).toBe(0);
+    expect(ctx.questPerfectDays).toBe(0);
+  });
+
+  it('carries injected quest counts through', () => {
+    const ctx = gamificationContext({ daily: {}, srs: {} }, { completed: 7, perfectDays: 2 });
+    expect(ctx.questsCompleted).toBe(7);
+    expect(ctx.questPerfectDays).toBe(2);
   });
 });
