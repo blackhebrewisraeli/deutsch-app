@@ -13,9 +13,9 @@
   &nbsp;
   <a href="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/blackhebrewisraeli/deutsch-app/actions/workflows/ci.yml/badge.svg"/></a>
   &nbsp;
-  <img alt="Tests" src="https://img.shields.io/badge/Vitest-1,625_passing-16110B?style=flat-square&logo=vitest"/>
+  <img alt="Tests" src="https://img.shields.io/badge/Vitest-2,259_passing-16110B?style=flat-square&logo=vitest"/>
   &nbsp;
-  <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-38_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
+  <img alt="RLS" src="https://img.shields.io/badge/RLS_suite-30_adversarial-3FA34D?style=flat-square&logo=supabase&logoColor=white"/>
   &nbsp;
   <img alt="Lexicon" src="https://img.shields.io/badge/Lexicon-4,288_words-D62828?style=flat-square"/>
   &nbsp;
@@ -64,36 +64,36 @@
 
 #### 🚀 Get going
 
-| | |
-|---|---|
-| 🎯 | [What is this?](#what-is-this) |
-| 📋 | [At a glance](#at-a-glance) |
-| ⚡ | [**Quick Start**](#-quick-start) |
-| 📊 | [Learning levels](#-learning-levels) |
+|     |                                      |
+| --- | ------------------------------------ |
+| 🎯  | [What is this?](#what-is-this)       |
+| 📋  | [At a glance](#at-a-glance)          |
+| ⚡  | [**Quick Start**](#-quick-start)     |
+| 📊  | [Learning levels](#-learning-levels) |
 
 </td><td width="33%" valign="top">
 
 #### 📚 Using the app
 
-| | |
-|---|---|
-| ✦ | [**Features**](#-features) — 6 tabs |
-| 🇩🇪 | [Grammar & vocabulary](#-german-grammar--vocabulary-coverage) |
-| 📖 | [Importing vocabulary](#-importing-vocabulary) |
-| 🌐 | [Browser support](#-browser-support) |
+|     |                                                               |
+| --- | ------------------------------------------------------------- |
+| ✦   | [**Features**](#-features) — 6 tabs                           |
+| 🇩🇪  | [Grammar & vocabulary](#-german-grammar--vocabulary-coverage) |
+| 📖  | [Importing vocabulary](#-importing-vocabulary)                |
+| 🌐  | [Browser support](#-browser-support)                          |
 
 </td><td width="33%" valign="top">
 
 #### 🔧 Under the hood
 
-| | |
-|---|---|
-| ⚙️ | [How it works](#-how-it-works) |
-| 🛠️ | [Tech stack](#-tech-stack) |
-| 🌍 | [Architecture](#-multi-language-architecture) |
-| 🛡️ | [Security & roles](#-security--role-architecture) |
-| 🚀 | [Deploy](#-deploy-to-production) |
-| 📁 | [Project structure](#-project-structure) |
+|     |                                                   |
+| --- | ------------------------------------------------- |
+| ⚙️  | [How it works](#-how-it-works)                    |
+| 🛠️  | [Tech stack](#-tech-stack)                        |
+| 🌍  | [Architecture](#-multi-language-architecture)     |
+| 🛡️  | [Security & roles](#-security--role-architecture) |
+| 🚀  | [Deploy](#-deploy-to-production)                  |
+| 📁  | [Project structure](#-project-structure)          |
 
 </td></tr>
 </table>
@@ -122,19 +122,167 @@ All AI features call **Claude Haiku 4.5** through a versioned server-side API (`
 
 ## At a glance
 
-|                      |                                                                                                                        |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| **Live**             | [deutsch-app-dusky.vercel.app](https://deutsch-app-dusky.vercel.app) — installable PWA, works offline after first load |
-| **Tabs**             | 6 — Home · Chat · Alphabet · Vocab · Translate · Stats (Chat/Alphabet/Vocab/Translate are the practice modules)          |
-| **Levels**           | A1 · A2 · B1, each with its own exercise mode                                                                          |
-| **Vocabulary**       | 4,288 words · 26 generated decks + 4 hand-written starter decks                                                        |
-| **Grammar drills**   | 7 deck groups — der/die/das, plurals, Perfekt, Präsens, Präteritum, opposites, listening                               |
-| **Scheduling**       | Leitner spaced repetition, 5 boxes (1d → 30d)                                                                          |
-| **Sign-in**          | Optional — email code or **Continue with Google**; anonymous progress merges in on first sign-in                       |
-| **Social**           | Weekly XP leagues, ~25-person cohorts, promotion / relegation                                                          |
-| **AI**               | Claude Haiku 4.5 behind `/api/v1/ai/*` — key stays server-side                                                         |
-| **Data**             | Local-first (`localStorage`), optional Supabase sync under row-level security                                          |
-| **Quality gates**    | 1,625 tests · 38 adversarial RLS tests · lint + format + full suite on every commit                                      |
+|                    |                                                                                                                        |
+| ------------------ | ---------------------------------------------------------------------------------------------------------------------- |
+| **Live**           | [deutsch-app-dusky.vercel.app](https://deutsch-app-dusky.vercel.app) — installable PWA, works offline after first load |
+| **Tabs**           | 6 — Home · Chat · Alphabet · Vocab · Translate · Stats (Chat/Alphabet/Vocab/Translate are the practice modules)        |
+| **Levels**         | A1 · A2 · B1, each with its own exercise mode                                                                          |
+| **Vocabulary**     | 4,288 words · 32 generated decks + 4 hand-written starter decks + your own AI decks                                    |
+| **Grammar drills** | 7 deck groups — der/die/das, plurals, Perfekt, Präsens, Präteritum, opposites, listening                               |
+| **Scheduling**     | Leitner spaced repetition, 5 boxes (1d → 30d)                                                                          |
+| **Sign-in**        | Optional — email code or **Continue with Google**; anonymous progress merges in on first sign-in                       |
+| **Social**         | Weekly XP leagues, ~25-person cohorts, promotion / relegation                                                          |
+| **Gamification**   | Streaks with freezes · 15 badges · 3 daily quests, derived not stored                                                  |
+| **Custom decks**   | Up to 8 AI-generated decks, named, synced, deletable across devices                                                    |
+| **AI**             | Claude Haiku 4.5 behind `/api/v1/ai/*` — key stays server-side                                                         |
+| **Data**           | Local-first (`localStorage`), optional Supabase sync under row-level security                                          |
+| **Quality gates**  | 2,259 tests · 30 adversarial RLS tests · lint + format + full suite on every commit                                    |
+
+---
+
+## 🦸 Superpowers
+
+> Four things this app does that a weekend project usually does not. Each one is a
+> deliberate architectural choice, and each has the scar tissue to prove it.
+
+<table>
+<tr>
+<td width="25%" align="center"><h3>🔌</h3><b>Offline-first</b><br/><sub>Conflict-free sync</sub></td>
+<td width="25%" align="center"><h3>🎮</h3><b>Deep gamification</b><br/><sub>Zero server cost</sub></td>
+<td width="25%" align="center"><h3>🤖</h3><b>AI-powered</b><br/><sub>Key never ships</sub></td>
+<td width="25%" align="center"><h3>♿</h3><b>Inclusive by gate</b><br/><sub>CI enforces it</sub></td>
+</tr>
+</table>
+
+<details open>
+<summary><h3>🔌 &nbsp;Offline-first, with a sync engine that actually resolves conflicts</h3></summary>
+
+<br/>
+
+`localStorage` is the source of truth. The network is an optimisation. Everything works
+on a plane; signing in adds a second device, not a dependency.
+
+The hard part is not _storing_ — it is what happens when two devices disagree. There is no
+server-side merge logic and no last-writer-wins-everything shortcut. **Each slice of state gets
+the merge strategy its data model actually deserves:**
+
+| Slice             | Strategy                                     | Why that one                                                                     |
+| ----------------- | -------------------------------------------- | -------------------------------------------------------------------------------- |
+| `stats_daily`     | **Additive delta** against a synced baseline | Counters only ever increase; a repeated sync must be a no-op, not a double-count |
+| `srs_state`       | **Per-card LWW** on `lastReviewed`           | Cards are independent records — one card's review says nothing about another's   |
+| `settings`        | **Whole-blob LWW**, with carve-outs          | One row, one clock — except where that is wrong (below)                          |
+| `learnedWords`    | **Union**                                    | A word learned on either device is learned. Nobody un-learns                     |
+| `learned_by_deck` | **Union, per deck**                          | Mastery belongs to the deck it was earned in                                     |
+| `decks`           | **Per-deck LWW** + **tombstones**            | A deck is an independent record — and the only thing here you can _delete_       |
+
+Three of those exist because the simple version broke something real:
+
+> **`level` has its own clock.** Whole-row LWW once dragged a learner's level from B1 back to
+> A1, because an _unrelated_ newer write on a stale device won the row. `level` now carries
+> `levelUpdatedAt`, independent of `settingsUpdatedAt`.
+
+> **Deletion needed tombstones.** Every other table is grow-only, so the engine had never had
+> to express "this is gone" — and an upsert-only merge silently resurrected any deck you
+> deleted offline. A tombstone is simply the record whose most recent write was a removal, so
+> per-deck LWW compares a deletion against an edit with no special case at all.
+
+> **You cannot delete from a union.** The corollary nobody expects: removing a key from a
+> union-merged map does not stick, because the other device pushes it straight back. That is
+> why the legacy mastery map is still there, mirrored rather than pruned, until every client
+> has updated.
+
+A **30-test adversarial RLS suite** attacks the database policies through real PostgREST —
+every cross-user read, write, update and delete, plus the ones you only think of after
+something goes wrong ("can A tombstone B's deck?").
+
+</details>
+
+<details>
+<summary><h3>🎮 &nbsp;Gamification that costs the server nothing</h3></summary>
+
+<br/>
+
+Streaks with earned freezes, XP multipliers, 15 badges, weekly leagues in ~25-person cohorts
+with promotion and relegation — and **three daily quests that are never stored anywhere.**
+
+Today's quests are a pure function of `hash(userId + todayKey)`. Same learner, same day, same
+three quests — on every device, offline, with nothing synced between them. Progress is read
+straight off counters the app already keeps.
+
+```js
+seed = hash(`${userId}:${todayKey}`); // same everywhere, shared with nobody
+quests = pick(CATALOGUE, seed, 3); // stable all day; cannot reshuffle mid-scroll
+progress = read(daily[todayKey]); // a counter that already exists
+```
+
+**The rule that keeps it honest:** a quest whose progress cannot be derived from an existing
+counter gets cut, not given storage. "Clear your due pile" did not survive it — progress would
+have been _(due at midnight − due now)_, and the starting figure is nowhere recorded.
+
+Targets scale to the learner. The typical day here is **four answers**, so a flat "answer 10
+cards" would be a wall of failure; the bar is a _median_ of the trailing week, excluding today
+(a mean lets one 22-answer binge set tomorrow's target, and including today makes the goal
+chase the progress).
+
+> **Quests grant no XP — deliberately.** XP feeds the weekly leagues through one shared
+> formula. The best week this league has on record is **206 XP**; three daily quests at ten XP
+> would be 210 a week without answering a single card. There is no "small" XP reward at this
+> scale, so the reward is badges. Game balance beat the feature.
+
+</details>
+
+<details>
+<summary><h3>🤖 &nbsp;AI where it helps, and nowhere it doesn't</h3></summary>
+
+<br/>
+
+**Claude Haiku 4.5** behind a versioned, validated, rate-limited server API. The key lives in
+Vercel and never reaches the browser — the client's only external call is to the app's own
+origin.
+
+| Feature                      | What it does                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------ |
+| **Custom decks**             | Type a topic, get ten cards with IPA and glosses — up to 8 decks, named, synced, deletable |
+| **Conversational scenarios** | Anna gives you a task in German; you answer; she responds in character                     |
+| **Free-typing grades (B1)**  | Your translation is graded on meaning, not string equality                                 |
+| **Corrections**              | What you wrote, what was wrong, and why — not just a red cross                             |
+
+Every call is contract-documented ([`docs/api/ai.md`](./docs/api/ai.md)), schema-validated at
+the edge, and quota-limited per IP through an atomic Postgres RPC — so a burst cannot be turned
+into a bill.
+
+The drills that AI _cannot_ improve do not use it. Gender, plural and participle answers are
+graded by exact match against the pack's rules, because a near-miss on `der`/`die` is a
+different word, not a close attempt.
+
+</details>
+
+<details>
+<summary><h3>♿ &nbsp;Accessibility as a build gate, not a good intention</h3></summary>
+
+<br/>
+
+Every interactive row is a real `<button>`. That sounds obvious until you find fourteen
+leaderboard rows shipped as `<li onClick>` — clickable with a mouse, invisible to Tab, and
+green through a 1,600-test suite the whole time.
+
+| Guard                    | What it enforces                                                                                         |
+| ------------------------ | -------------------------------------------------------------------------------------------------------- |
+| **Contrast gate in CI**  | Audits the _rendered DOM_ of every screen, including modals and drawers                                  |
+| **`useFocusTrap`**       | One hook, after three ad-hoc versions each leaked focus out of an open dialog                            |
+| **No nested buttons**    | A source-level test — a `<button>` inside a `<button>` is invalid and browsers silently un-nest it       |
+| **No hardcoded colours** | Every colour comes from a design token, so themes cannot drift                                           |
+| **Named icon controls**  | An icon-only control carries an explicit accessible name — a sparkle glyph tells a screen reader nothing |
+
+Copy lives in the language pack, never in `src/lib` or `src/components` — enforced by a test.
+The engine stays language-blind, which is what makes a second pack a content problem rather
+than a rewrite.
+
+> One of these gates was **green for weeks while auditing the wrong screen.** It passed because
+> CI lacked the Supabase environment a developer has, so it silently tested a signed-out view.
+> It now provisions its own signed-in account. A gate that cannot fail is not a gate.
+
+</details>
 
 ---
 
@@ -332,15 +480,15 @@ Answers within **Levenshtein distance ≤ 2** (one or two typos) are marked **AL
 lexicon, imported from open datasets and lazy-loaded in chunks (cached for offline
 use after first visit). Every entry carries far more than a translation:
 
-| Field                 | Example (`das Haus`)                                    |
-| --------------------- | ------------------------------------------------------- |
-| Article / gender      | `das`                                                   |
-| Plural                | `Häuser`                                                |
-| IPA                   | `[haʊ̯s]`                                                |
-| Example sentence      | _Auf dem Hügel steht ein Haus._                         |
-| Verb conjugation      | present tense, Präteritum, Partizip II, `haben`/`sein`  |
-| Opposites             | `Ende ↔ Anfang` (124 curated pairs)                     |
-| Frequency rank + CEFR | rank 456 · A1                                           |
+| Field                 | Example (`das Haus`)                                   |
+| --------------------- | ------------------------------------------------------ |
+| Article / gender      | `das`                                                  |
+| Plural                | `Häuser`                                               |
+| IPA                   | `[haʊ̯s]`                                               |
+| Example sentence      | _Auf dem Hügel steht ein Haus._                        |
+| Verb conjugation      | present tense, Präteritum, Partizip II, `haben`/`sein` |
+| Opposites             | `Ende ↔ Anfang` (124 curated pairs)                    |
+| Frequency rank + CEFR | rank 456 · A1                                          |
 
 Those entries are sliced into **26 decks** you can jump between:
 
@@ -355,15 +503,15 @@ Each reuses the same lexicon, hides whatever would give the answer away, and is
 scheduled by the same SRS. None of them mark a word "learned" — knowing a noun's
 gender is not knowing the noun.
 
-| Drill          | Asks for                     | Why it is worth drilling                                          |
-| -------------- | ---------------------------- | ------------------------------------------------------------------ |
-| **Artikel**    | der / die / das              | gender is not derivable — 2,863 nouns                             |
-| **Plural**     | the plural form              | German has no single plural rule                                   |
-| **Perfekt**    | `hat gemacht` / `ist gegangen` | auxiliary choice plus the participle                              |
-| **Präsens**    | the `du` form                | the least predictable person (irregular stem changes)              |
-| **Präteritum** | `sah`, `ging`, `war`         | the written past — strong verbs are pure memorisation             |
-| **Gegenteil**  | the opposite                 | `dunkel` cannot be derived from `hell` — 124 curated pairs        |
-| **Hören**      | type what you hear           | 51% of entries contain a grapheme you cannot infer from sound      |
+| Drill          | Asks for                       | Why it is worth drilling                                      |
+| -------------- | ------------------------------ | ------------------------------------------------------------- |
+| **Artikel**    | der / die / das                | gender is not derivable — 2,863 nouns                         |
+| **Plural**     | the plural form                | German has no single plural rule                              |
+| **Perfekt**    | `hat gemacht` / `ist gegangen` | auxiliary choice plus the participle                          |
+| **Präsens**    | the `du` form                  | the least predictable person (irregular stem changes)         |
+| **Präteritum** | `sah`, `ging`, `war`           | the written past — strong verbs are pure memorisation         |
+| **Gegenteil**  | the opposite                   | `dunkel` cannot be derived from `hell` — 124 curated pairs    |
+| **Hören**      | type what you hear             | 51% of entries contain a grapheme you cannot infer from sound |
 
 Word data comes from Wiktionary (via Wiktextract), example sentences from Tatoeba,
 and frequency ranking from the Leipzig Corpora Collection — see
@@ -540,7 +688,6 @@ Leagues run on the Supabase lane under the same row-level security as sync: you 
 <details>
 <summary>▸ <b>Grammar topics and vocabulary domains, level by level</b></summary>
 
-
 <details>
 <summary><b>Grammar drilled at each level</b> — A1 word order · A2 cases &amp; adjective endings · B1 Konjunktiv, Perfekt, relative clauses</summary>
 <br/>
@@ -603,7 +750,6 @@ AI-generated decks expand to any domain on demand.
 <details>
 <summary>▸ <b>What is done, what is in flight, what is deferred</b></summary>
 
-
 Everything described above is live at [deutsch-app-dusky.vercel.app](https://deutsch-app-dusky.vercel.app).
 
 | Area                          | State                                                                                                                |
@@ -614,6 +760,10 @@ Everything described above is live at [deutsch-app-dusky.vercel.app](https://deu
 | **Accounts, sync, leagues**   | ✅ live in production, all optional                                                                                  |
 | **Error monitoring**          | ✅ Sentry, errors-only, EU region                                                                                    |
 | **PWA**                       | ✅ installable; offline reload verified on-device                                                                    |
+| **Offline-first sync engine** | ✅ shipped — six slices, per-slice merge strategies, tombstoned deletes                                              |
+| **Custom deck collection**    | ✅ shipped — up to 8 AI decks, named, synced, deletable; random ids so two devices cannot collide                    |
+| **Deck-scoped mastery**       | ✅ shipped — mastery recorded in the deck it was earned in, migrated by attribution from existing SRS rows           |
+| **Daily quests + badges**     | ✅ shipped — derived from a seed, stored nowhere, granting no XP by design                                           |
 | **Second language pack**      | ⬜ the engine is language-blind and German is the reference pack — see [Architecture](#-multi-language-architecture) |
 
 <details>
@@ -622,15 +772,15 @@ Everything described above is live at [deutsch-app-dusky.vercel.app](https://deu
 
 A pre-demo readiness pass ([`docs/DEMO_READINESS.md`](./docs/DEMO_READINESS.md)) worked through every visible defect:
 
-| Fix                         | Detail                                                                                                                                                                       |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Deck progress indicator** | Rendered one DOM node per card — at 2,240 cards it pushed the page 54× wider than the viewport. Now a bounded bar above 12 cards.                                            |
-| **Mobile layout**           | Five separate overflows at 375px, four of them a bare `1fr` grid track refusing to shrink below its content. Every `gridTemplateColumns` now uses `minmax(0, …)`.            |
-| **Flashcard answers**       | Raw Wiktionary glosses ("ARCHAIC FORM OF STANDEN, FIRST/THIRD-PERSON PLURAL PRETERITE OF STEHEN") are cleaned at import; `alt-of` records no longer ship as their own cards. |
-| **Entry-id stability**      | Entry ids key saved progress, so the import derives them from the _raw_ gloss — cleaning display text never silently resets a learner's SRS state.                           |
+| Fix                         | Detail                                                                                                                                                                                                                                                                                                                                                       |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Deck progress indicator** | Rendered one DOM node per card — at 2,240 cards it pushed the page 54× wider than the viewport. Now a bounded bar above 12 cards.                                                                                                                                                                                                                            |
+| **Mobile layout**           | Five separate overflows at 375px, four of them a bare `1fr` grid track refusing to shrink below its content. Every `gridTemplateColumns` now uses `minmax(0, …)`.                                                                                                                                                                                            |
+| **Flashcard answers**       | Raw Wiktionary glosses ("ARCHAIC FORM OF STANDEN, FIRST/THIRD-PERSON PLURAL PRETERITE OF STEHEN") are cleaned at import; `alt-of` records no longer ship as their own cards.                                                                                                                                                                                 |
+| **Entry-id stability**      | Entry ids key saved progress, so the import derives them from the _raw_ gloss — cleaning display text never silently resets a learner's SRS state.                                                                                                                                                                                                           |
 | **Homograph cards**         | The same German word could appear on several cards with different correct answers — `in` as preposition _and_ adjective, so two multiple-choice options were both defensible. Merged at import into one card per rendered form (4,480 → 4,288 entries), keyed on the German the learner actually sees so gender pairs like `der Tor` / `das Tor` stay apart. |
-| **Cache freshness**         | Lexicon JSON was served `CacheFirst` from unhashed URLs, so a re-import reached new visitors only — returning ones kept the old lexicon for up to 30 days. Now `StaleWhileRevalidate`: still instant, still offline, but current on the next load.                                                                                                          |
-| **Uptime monitoring**       | The readiness check had confirmed features were live by watching the UI _render_, never by issuing a request — so a paused backend sat behind a working-looking demo. A 6-hourly workflow now exercises real round trips.                                                                                                                                   |
+| **Cache freshness**         | Lexicon JSON was served `CacheFirst` from unhashed URLs, so a re-import reached new visitors only — returning ones kept the old lexicon for up to 30 days. Now `StaleWhileRevalidate`: still instant, still offline, but current on the next load.                                                                                                           |
+| **Uptime monitoring**       | The readiness check had confirmed features were live by watching the UI _render_, never by issuing a request — so a paused backend sat behind a working-looking demo. A 6-hourly workflow now exercises real round trips.                                                                                                                                    |
 
 </details>
 
@@ -640,18 +790,18 @@ A pre-demo readiness pass ([`docs/DEMO_READINESS.md`](./docs/DEMO_READINESS.md))
 
 A second pass, started the same day the table above shipped, reworked how learners enter the app and closed a run of keyboard-accessibility gaps the test suite had been silently passing through:
 
-| Change                          | Detail                                                                                                                                                                                                                                                                       |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Entry gate on session**       | Onboarding now gates on an actual account session instead of a device flag, and level can be changed from Settings **without signing out**. Signed-in learners earn a per-level XP multiplier.                                                                            |
-| **One header status control**   | The header's XP badge and CEFR chip merged into a single `StatusChip`; a shared `LevelSwitcher` (used in the header and in Stats) replaced the Stats-only `LevelPicker`, and switching level mid-set now asks for confirmation before discarding progress.               |
-| **Keyboard focus traps**        | Consolidated three separate ad-hoc implementations into one `useFocusTrap` hook, then used it to fix real bugs: ProfileCard, AuthSheet, and AuthCallbackLanding all leaked keyboard focus out of an open modal. `AccountChip` was reclassified as the dialog it actually is. |
-| **A prod-only focus bug**       | AuthSheet's first fix passed every test but never worked in production: React runs `autoFocus` during commit, before effects run, so the effect meant to remember the modal's opener captured the wrong element. Fixed by capturing the opener before `autoFocus` can steal it. |
-| **League rows are real buttons**| 14 leaderboard rows were `<li onClick>` — clickable with a mouse, invisible to Tab. Rewritten as native `<button>` elements, reachable and operable by keyboard.                                                                                                            |
-| **Contrast gate, actually checking** | The CI contrast gate had been green for weeks while silently auditing the wrong screen. It now provisions its own signed-in target account, drives every header sheet (not just the one named in its selector), and covers modals/drawers generally, not just header sheets. |
-| **Uptime probe path**           | The lexicon uptime check was still probing a pre-namespacing URL and reporting a `total=0` false-positive outage on a healthy backend. Fixed to probe the pack-namespaced path.                                                                                            |
-| **Ivory light re-skin**         | New light palette, flag-colour accent tiers (task chrome moved to the red tier, the gold tier retired), and a charcoal header masthead. Remaining hardcoded colours/shadows folded onto design tokens; a dark-mode overlay scrim that was inverting is fixed.             |
-| **Sentry release tracking**     | Builds now stamp the deploy commit as the Sentry release and upload source maps on Vercel builds, so production stack traces resolve to real source lines instead of minified bundles.                                                                                    |
-| **Ops**                         | CI pins the Supabase CLI version instead of resolving latest; the weekly league-settle cron now accepts the GET request Vercel Cron actually sends.                                                                                                                        |
+| Change                               | Detail                                                                                                                                                                                                                                                                          |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Entry gate on session**            | Onboarding now gates on an actual account session instead of a device flag, and level can be changed from Settings **without signing out**. Signed-in learners earn a per-level XP multiplier.                                                                                  |
+| **One header status control**        | The header's XP badge and CEFR chip merged into a single `StatusChip`; a shared `LevelSwitcher` (used in the header and in Stats) replaced the Stats-only `LevelPicker`, and switching level mid-set now asks for confirmation before discarding progress.                      |
+| **Keyboard focus traps**             | Consolidated three separate ad-hoc implementations into one `useFocusTrap` hook, then used it to fix real bugs: ProfileCard, AuthSheet, and AuthCallbackLanding all leaked keyboard focus out of an open modal. `AccountChip` was reclassified as the dialog it actually is.    |
+| **A prod-only focus bug**            | AuthSheet's first fix passed every test but never worked in production: React runs `autoFocus` during commit, before effects run, so the effect meant to remember the modal's opener captured the wrong element. Fixed by capturing the opener before `autoFocus` can steal it. |
+| **League rows are real buttons**     | 14 leaderboard rows were `<li onClick>` — clickable with a mouse, invisible to Tab. Rewritten as native `<button>` elements, reachable and operable by keyboard.                                                                                                                |
+| **Contrast gate, actually checking** | The CI contrast gate had been green for weeks while silently auditing the wrong screen. It now provisions its own signed-in target account, drives every header sheet (not just the one named in its selector), and covers modals/drawers generally, not just header sheets.    |
+| **Uptime probe path**                | The lexicon uptime check was still probing a pre-namespacing URL and reporting a `total=0` false-positive outage on a healthy backend. Fixed to probe the pack-namespaced path.                                                                                                 |
+| **Ivory light re-skin**              | New light palette, flag-colour accent tiers (task chrome moved to the red tier, the gold tier retired), and a charcoal header masthead. Remaining hardcoded colours/shadows folded onto design tokens; a dark-mode overlay scrim that was inverting is fixed.                   |
+| **Sentry release tracking**          | Builds now stamp the deploy commit as the Sentry release and upload source maps on Vercel builds, so production stack traces resolve to real source lines instead of minified bundles.                                                                                          |
+| **Ops**                              | CI pins the Supabase CLI version instead of resolving latest; the weekly league-settle cron now accepts the GET request Vercel Cron actually sends.                                                                                                                             |
 
 </details>
 
@@ -664,32 +814,31 @@ A second pass, started the same day the table above shipped, reworked how learne
 <details>
 <summary>▸ <b>Every dependency and why it is there</b></summary>
 
-
-| Layer              | Technology                                                  | Purpose                                                                                                                                                                                                                                                                                                                                                                      |
-| ------------------ | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Framework          | **React 18**                                                | Component model, hooks, concurrent state                                                                                                                                                                                                                                                                                                                                     |
-| Build tool         | **Vite 5**                                                  | Dev server, fast HMR, PWA build (`npm run dev:full` adds the API via vercel dev)                                                                                                                                                                                                                                                                                             |
-| AI                 | **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`)          | Tutor, grading, deck generation, translation                                                                                                                                                                                                                                                                                                                                 |
-| Speech synthesis   | **SpeechSynthesis API**                                     | Native German TTS — no external service                                                                                                                                                                                                                                                                                                                                      |
-| Speech recognition | **Web Speech API**                                          | Microphone input in Chat — Chrome/Edge only                                                                                                                                                                                                                                                                                                                                  |
-| Icons              | **lucide-react**                                            | Consistent SVG icon set                                                                                                                                                                                                                                                                                                                                                      |
-| Typography         | **Fraunces** (display) + **JetBrains Mono** (labels)        | Editorial serif + technical mono                                                                                                                                                                                                                                                                                                                                             |
-| Design tokens      | `src/lib/theme.js`                                          | Centralised colours, type scale, spacing, component composites                                                                                                                                                                                                                                                                                                               |
-| Persistence        | **localStorage** (local-first)                              | Streak, learned words, SRS + stats, gamification — kept in `deutsch-app-state-v1`                                                                                                                                                                                                                                                                                            |
-| Sync               | **localStorage ↔ Supabase** engine                          | Built + merged (B2.2): folds local state into per-user rows via LWW / additive-delta / union merges, behind the `VITE_SYNC_ENABLED` build flag — **live in production**                                                                                                                                                                                                      |
-| Auth               | **Supabase Auth** (magic-link + OTP)                        | Passwordless, anonymous-first sign-in UI; gates the sync engine                                                                                                                                                                                                                                                                                                              |
-| Backend data       | **Supabase** (Postgres + RLS)                               | Live: durable per-IP rate quotas via an atomic RPC; five user-owned tables under adversarially-tested row-level security (revoked-by-default Data API grants) backing the sync engine                                                                                                                                                                                        |
-| Error monitoring   | **Sentry** (errors-only)                                    | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay; each build stamps the deploy commit as the release and uploads source maps                                                                                                                                                                                                             |
-| Linting            | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars                                                                                                                                                                                                                                                                                                                            |
-| Formatting         | **Prettier 3**                                              | Consistent code style, enforced on every commit                                                                                                                                                                                                                                                                                                                              |
-| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **1,625 tests** — engine (`src/lib/*`) incl. the sync-engine merges, packs, content invariants, the API middleware and per-route quota contracts (`api/`), the dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **38-test adversarial RLS suite** (`npm run test:rls`) that attacks the database policies through real PostgREST |
-| CI                 | **GitHub Actions**                                          | `ci.yml` runs lint + test + build on every push to `main` and every PR, plus the RLS suite against a local Supabase                                                                                                                                                                                                                                                           |
-| Uptime             | **GitHub Actions** (`uptime.yml`)                           | Every 6h, exercises real round trips — demo root, lexicon manifest, GoTrue `/health` and `/settings`, PostgREST — and fails loudly if any hop is down. Read-only; never sends mail                                                                                                                                                                                            |
-| Pre-commit         | **Husky + lint-staged**                                     | Runs ESLint + Prettier + the full test suite before every `git commit`                                                                                                                                                                                                                                                                                                       |
-| PWA                | **vite-plugin-pwa** + Workbox                               | Installable on iOS/Android. App shell precached; lexicon chunks cached `StaleWhileRevalidate` so a full reload works with no network and still picks up a re-import on the next load                                                                                                                                                                                          |
-| Responsive         | `useWindowWidth` hook                                       | Live viewport width → inline style breakpoints (mobile < 640px)                                                                                                                                                                                                                                                                                                              |
-| Accessibility      | Semantic HTML + ARIA                                        | Labeled icon controls, keyboard-operable widgets, visible focus states                                                                                                                                                                                                                                                                                                       |
-| Deployment         | **Vercel**                                                  | Static SPA + versioned `/api/v1/*` serverless functions (+ legacy `/api/chat` alias)                                                                                                                                                                                                                                                                                         |
+| Layer              | Technology                                                  | Purpose                                                                                                                                                                                                                                                                                                                                                                                                             |
+| ------------------ | ----------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Framework          | **React 18**                                                | Component model, hooks, concurrent state                                                                                                                                                                                                                                                                                                                                                                            |
+| Build tool         | **Vite 5**                                                  | Dev server, fast HMR, PWA build (`npm run dev:full` adds the API via vercel dev)                                                                                                                                                                                                                                                                                                                                    |
+| AI                 | **Claude Haiku 4.5** (`claude-haiku-4-5-20251001`)          | Tutor, grading, deck generation, translation                                                                                                                                                                                                                                                                                                                                                                        |
+| Speech synthesis   | **SpeechSynthesis API**                                     | Native German TTS — no external service                                                                                                                                                                                                                                                                                                                                                                             |
+| Speech recognition | **Web Speech API**                                          | Microphone input in Chat — Chrome/Edge only                                                                                                                                                                                                                                                                                                                                                                         |
+| Icons              | **lucide-react**                                            | Consistent SVG icon set                                                                                                                                                                                                                                                                                                                                                                                             |
+| Typography         | **Fraunces** (display) + **JetBrains Mono** (labels)        | Editorial serif + technical mono                                                                                                                                                                                                                                                                                                                                                                                    |
+| Design tokens      | `src/lib/theme.js`                                          | Centralised colours, type scale, spacing, component composites                                                                                                                                                                                                                                                                                                                                                      |
+| Persistence        | **localStorage** (local-first)                              | Streak, learned words, SRS + stats, gamification — kept in `deutsch-app-state-v1`                                                                                                                                                                                                                                                                                                                                   |
+| Sync               | **localStorage ↔ Supabase** engine                          | Folds local state into per-user rows across six slices, each with the merge its data model deserves — additive delta, per-record LWW, union, and **tombstones** for the one thing you can delete. No server-side merge logic. Behind `VITE_SYNC_ENABLED` — **live in production** (see [Superpowers](#-superpowers))                                                                                                |
+| Auth               | **Supabase Auth** (magic-link + OTP)                        | Passwordless, anonymous-first sign-in UI; gates the sync engine                                                                                                                                                                                                                                                                                                                                                     |
+| Backend data       | **Supabase** (Postgres + RLS)                               | Live: durable per-IP rate quotas via an atomic RPC; five user-owned tables under adversarially-tested row-level security (revoked-by-default Data API grants) backing the sync engine                                                                                                                                                                                                                               |
+| Error monitoring   | **Sentry** (errors-only)                                    | Live in prod + Preview (EU region) — runtime error capture, no PII or session replay; each build stamps the deploy commit as the release and uploads source maps                                                                                                                                                                                                                                                    |
+| Linting            | **ESLint 10** (flat config) + `react-hooks/exhaustive-deps` | Catches stale closures, missing deps, unused vars                                                                                                                                                                                                                                                                                                                                                                   |
+| Formatting         | **Prettier 3**                                              | Consistent code style, enforced on every commit                                                                                                                                                                                                                                                                                                                                                                     |
+| Testing            | **Vitest 2** + **jsdom** + **React Testing Library**        | **2,259 tests** across 188 files — engine (`src/lib/*`) incl. the sync merges, quest derivation and deck collection, packs, content invariants, API middleware and per-route quota contracts (`api/`), dev-toolkit graph helpers (`scripts/`), and component tests across every tab — plus a separate **30-test adversarial RLS suite** (`npm run test:rls`) attacking the database policies through real PostgREST |
+| CI                 | **GitHub Actions**                                          | `ci.yml` runs lint + test + build on every push to `main` and every PR, plus the RLS suite against a local Supabase                                                                                                                                                                                                                                                                                                 |
+| Uptime             | **GitHub Actions** (`uptime.yml`)                           | Every 6h, exercises real round trips — demo root, lexicon manifest, GoTrue `/health` and `/settings`, PostgREST — and fails loudly if any hop is down. Read-only; never sends mail                                                                                                                                                                                                                                  |
+| Pre-commit         | **Husky + lint-staged**                                     | Runs ESLint + Prettier + the full test suite before every `git commit`                                                                                                                                                                                                                                                                                                                                              |
+| PWA                | **vite-plugin-pwa** + Workbox                               | Installable on iOS/Android. App shell precached; lexicon chunks cached `StaleWhileRevalidate` so a full reload works with no network and still picks up a re-import on the next load                                                                                                                                                                                                                                |
+| Responsive         | `useWindowWidth` hook                                       | Live viewport width → inline style breakpoints (mobile < 640px)                                                                                                                                                                                                                                                                                                                                                     |
+| Accessibility      | Semantic HTML + ARIA                                        | Labeled icon controls, keyboard-operable widgets, visible focus states                                                                                                                                                                                                                                                                                                                                              |
+| Deployment         | **Vercel**                                                  | Static SPA + versioned `/api/v1/*` serverless functions (+ legacy `/api/chat` alias)                                                                                                                                                                                                                                                                                                                                |
 
 **No CSS framework. Accounts are optional — anonymous-first by design.** The browser's only external call is to the app's own API. Server-side, the backend has two lanes: the **AI service** (`/api/v1/ai/*` → Anthropic) and the **Supabase data lane** (live) carrying durable rate limiting plus the schema + row-level security behind the localStorage↔Supabase **sync engine** (live in production) — see the [backend architecture spec](./docs/superpowers/specs/2026-06-10-backend-architecture-design.md) and the [B1 design](./docs/superpowers/specs/2026-06-12-backend-b1-data-lane-design.md).
 
@@ -701,7 +850,6 @@ A second pass, started the same day the table above shipped, reworked how learne
 
 <details>
 <summary>▸ <b>System shape, the API proxy, and how a Claude call is built</b></summary>
-
 
 ### The shape of the system
 
@@ -829,7 +977,6 @@ All JSON responses strip markdown fences (` ```json ... ``` `) before `JSON.pars
 <details>
 <summary>▸ <b>Environment isolation, roles, and the RLS seal — the standard and where reality sits against it</b></summary>
 
-
 This section is a **standard**, not a changelog. It states the boundaries the project commits to as it matures, and marks honestly which are enforced today (✅), partially enforced (🚧), or still planned (⬜). Where reality diverges from the standard, that gap is written down here rather than left implicit.
 
 The governing principle throughout is **least privilege**: every actor — a browser, a serverless function, a developer, a CI job — gets the narrowest access that lets it do its job, and nothing wider. Access is granted by role, never by identity, and never "temporarily".
@@ -838,15 +985,15 @@ The governing principle throughout is **least privilege**: every actor — a bro
 
 Development and Production are **separate blast radii**. A developer running the app locally must never be able to read, mutate, or destroy production learner data — not by accident, not by a misdirected migration, not by a stray `delete` in a REPL.
 
-| Boundary                       | Rule                                                                                                                                                                   | State |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :---: |
-| **Secrets never scope down**   | A production secret is never created in a Development-scope environment variable. Server-side keys are Production + Preview only, marked Sensitive, and are not `env pull`-able. | ✅ |
-| **The browser holds no secret**| `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and every other server credential live only in Vercel functions. The bundle ships publishable values only (`VITE_SUPABASE_ANON_KEY`, the Sentry DSN), which are safe precisely because RLS is the guard. | ✅ |
-| **Local schema work is local** | Schema changes and the adversarial RLS suite (`npm run test:rls`) run against a **local Supabase** in Docker, never against the cloud project. CI does the same. | ✅ |
-| **Separate data planes**       | Local development runs against the **local Supabase stack** (`supabase start`, Docker) with its own synthetic learners — `.env.example` ships the published local defaults, and Vercel deliberately holds **no** Development-scope Supabase entry, so `vercel dev` cannot inject a cloud URL. No local session can reach a production row. | ✅ |
-| **No production data locally** | Production rows are never copied to a developer machine. Reproducing a bug uses a synthetic fixture or an anonymised extract — never a `pg_dump` of live learners. | ⬜ |
-| **Each plane owns its own secrets** | A credential issued by one project is never used against another. Preview's server lane holds **Preview's own** service-role key, issued by `Sprachschule Preview` — never Production's, which a service-role JWT's per-project signature would reject anyway. Durable rate limiting is live on Preview against its own database. | ✅ |
-| **Preview is production-shaped, not production-fed** | Preview deployments exercise the production code path against their **own Supabase project** (`Sprachschule Preview`, eu-central-1, same 11 migrations, same revoked-by-default grants). No Preview build holds a production credential of any kind. A Preview learner account is a Preview learner account. | ✅ |
+| Boundary                                             | Rule                                                                                                                                                                                                                                                                                                                                       | State |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | :---: |
+| **Secrets never scope down**                         | A production secret is never created in a Development-scope environment variable. Server-side keys are Production + Preview only, marked Sensitive, and are not `env pull`-able.                                                                                                                                                           |  ✅   |
+| **The browser holds no secret**                      | `ANTHROPIC_API_KEY`, `SUPABASE_SERVICE_ROLE_KEY` and every other server credential live only in Vercel functions. The bundle ships publishable values only (`VITE_SUPABASE_ANON_KEY`, the Sentry DSN), which are safe precisely because RLS is the guard.                                                                                  |  ✅   |
+| **Local schema work is local**                       | Schema changes and the adversarial RLS suite (`npm run test:rls`) run against a **local Supabase** in Docker, never against the cloud project. CI does the same.                                                                                                                                                                           |  ✅   |
+| **Separate data planes**                             | Local development runs against the **local Supabase stack** (`supabase start`, Docker) with its own synthetic learners — `.env.example` ships the published local defaults, and Vercel deliberately holds **no** Development-scope Supabase entry, so `vercel dev` cannot inject a cloud URL. No local session can reach a production row. |  ✅   |
+| **No production data locally**                       | Production rows are never copied to a developer machine. Reproducing a bug uses a synthetic fixture or an anonymised extract — never a `pg_dump` of live learners.                                                                                                                                                                         |  ⬜   |
+| **Each plane owns its own secrets**                  | A credential issued by one project is never used against another. Preview's server lane holds **Preview's own** service-role key, issued by `Sprachschule Preview` — never Production's, which a service-role JWT's per-project signature would reject anyway. Durable rate limiting is live on Preview against its own database.          |  ✅   |
+| **Preview is production-shaped, not production-fed** | Preview deployments exercise the production code path against their **own Supabase project** (`Sprachschule Preview`, eu-central-1, same 11 migrations, same revoked-by-default grants). No Preview build holds a production credential of any kind. A Preview learner account is a Preview learner account.                               |  ✅   |
 
 > **Why writing the standard down first mattered.** The service-role key sat readable-back in a Development-scope variable for 75 days before [#155](https://github.com/blackhebrewisraeli/deutsch-app/pull/155) removed it. Nothing failed, no test went red, and no reviewer noticed — the boundary had never been written down, so nothing could contradict it. The row above was published as ⬜ for exactly that reason, and closed days later: `.env.example` had been handing every new developer the **production** project ref as its default, and local `.env` still carried a real service-role key — which bypasses RLS, so local development held unrestricted **write** access to live learner data, not merely read. Naming the gap in the table is what turned it into a task.
 
@@ -854,19 +1001,19 @@ Development and Production are **separate blast radii**. A developer running the
 
 Three roles, defined by what they may reach rather than by who holds them. Roles are additive in privilege but **not** in data access: `Admin` is not a super-`Learner`, and no role grants the ability to read an individual learner's content.
 
-| Role          | Who it is                                            | May reach                                                                                                                            | May never reach                                                                                     | State |
-| ------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- | :---: |
-| **`Learner`** | The end user of the app — signed in or anonymous     | **Own rows only**: their SRS state, stats, decks, settings, profile. League standings only as the aggregated, display-safe projection the leaderboard already exposes. | Any other learner's rows; any server credential; any table not in the five user-owned tables.        | ✅ |
-| **`Developer`**| Anyone with repository write access                  | Source, specs, CI, and the **Development** data plane in full. Production **telemetry** — Sentry issues, Vercel logs, uptime results — which carry no PII by configuration. | Production learner rows, production secrets in readable form, and the production service-role key.   | 🚧 |
-| **`Admin`**   | The project owner / on-call operator                 | System-wide: production secrets rotation, migrations, Vercel and Supabase dashboards, account deletion, league settlement.            | Nothing is technically out of reach — which is exactly why the role is held by the fewest people possible and every use is deliberate. | 🚧 |
+| Role            | Who it is                                        | May reach                                                                                                                                                                   | May never reach                                                                                                                        | State |
+| --------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | :---: |
+| **`Learner`**   | The end user of the app — signed in or anonymous | **Own rows only**: their SRS state, stats, decks, settings, profile. League standings only as the aggregated, display-safe projection the leaderboard already exposes.      | Any other learner's rows; any server credential; any table not in the five user-owned tables.                                          |  ✅   |
+| **`Developer`** | Anyone with repository write access              | Source, specs, CI, and the **Development** data plane in full. Production **telemetry** — Sentry issues, Vercel logs, uptime results — which carry no PII by configuration. | Production learner rows, production secrets in readable form, and the production service-role key.                                     |  🚧   |
+| **`Admin`**     | The project owner / on-call operator             | System-wide: production secrets rotation, migrations, Vercel and Supabase dashboards, account deletion, league settlement.                                                  | Nothing is technically out of reach — which is exactly why the role is held by the fewest people possible and every use is deliberate. |  🚧   |
 
-**Mapping onto what enforces it.** The three roles above are the *organisational* contract; underneath, Postgres enforces its own, and the two are deliberately not the same set:
+**Mapping onto what enforces it.** The three roles above are the _organisational_ contract; underneath, Postgres enforces its own, and the two are deliberately not the same set:
 
-| Postgres role   | Privileges                                                                              | Held by                          |
-| --------------- | ----------------------------------------------------------------------------------------- | -------------------------------- |
-| `anon`          | **Nothing.** Denied at the privilege layer, before RLS is even consulted.                | Unauthenticated Data API callers |
+| Postgres role   | Privileges                                                                                                                     | Held by                          |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------ | -------------------------------- |
+| `anon`          | **Nothing.** Denied at the privilege layer, before RLS is even consulted.                                                      | Unauthenticated Data API callers |
 | `authenticated` | Own-row CRUD on the five user tables, bounded by RLS. No `delete` on `profiles` — account deletion is a server-side operation. | A signed-in `Learner`            |
-| `service_role`  | Full access to every table. The key never leaves a Vercel function.                     | The server lane only             |
+| `service_role`  | Full access to every table. The key never leaves a Vercel function.                                                            | The server lane only             |
 
 A `Developer` or an `Admin` acting through the app is a `Learner` — they receive `authenticated`, not `service_role`. Elevation is a separate, deliberate act through an operator surface, never an implicit property of being on the team.
 
@@ -877,7 +1024,7 @@ A `Developer` or an `Admin` acting through the app is a `Learner` — they recei
 The posture that makes this hold:
 
 - **Revoked by default.** Data API privileges are granted explicitly per table and per role ([`20260612201311_data_api_explicit_grants.sql`](./supabase/migrations/20260612201311_data_api_explicit_grants.sql)); nothing is auto-exposed. A new table is unreachable until someone grants it deliberately.
-- **Two independent gates.** A request must clear the *privilege* layer (does this role hold `select` on this table at all?) and then the *policy* layer (does this row belong to this caller?). `anon` never reaches the second gate.
+- **Two independent gates.** A request must clear the _privilege_ layer (does this role hold `select` on this table at all?) and then the _policy_ layer (does this row belong to this caller?). `anon` never reaches the second gate.
 - **Adversarially tested.** A **38-test RLS suite** (`npm run test:rls`) attacks the policies through real PostgREST — as `anon`, as a signed-in learner reaching for another learner's rows, as a caller forging a `user_id` — and runs in CI against a local Supabase on every push and PR. A policy regression fails the build.
 - **Least privilege in the grants themselves.** `authenticated` holds `delete` on the four data tables but not on `profiles`, mirroring the deliberate absence of a delete policy: removing an account is an operator path, not something a client can do by sending a `DELETE`.
 - **Every `SECURITY DEFINER` function is least-privileged.** Postgres grants `EXECUTE` to PUBLIC on each new function, which quietly puts a definer function on the REST RPC surface. All four carry explicit revokes ([league functions](./supabase/migrations/20260627000200_league_fn_grants.sql), [`rls_auto_enable`](./supabase/migrations/20260827000000_ensure_rls_event_trigger.sql), [`handle_new_user`](./supabase/migrations/20260827001000_handle_new_user_fn_grants.sql)). The one deliberate exception is `is_league_member`, which `authenticated` **must** keep — the league RLS policies call it, so revoking it would fail the leaderboard closed. Revoking `EXECUTE` never disturbs a trigger: the privilege is checked when the trigger is created, not on each firing, which is verified against a real signup rather than assumed.
@@ -929,7 +1076,6 @@ The posture that makes this hold:
 <details>
 <summary>▸ <b>How the engine stays language-blind</b></summary>
 
-
 Deutsch is being evolved from a single-language app into a **language-agnostic learning platform**: the engine — spaced repetition, exercises, answer-matching, progress, gamification — knows nothing about any specific language, and each language is a **content pack** that plugs into one interface. German is the reference "finished product" that proves the engine end-to-end.
 
 **Three swappable layers:**
@@ -977,7 +1123,22 @@ npm run dev:full     # UI-only work: npm run dev (AI calls disabled)
 
 Open **[http://localhost:5173](http://localhost:5173)**.
 
-**Working on accounts, sync or leagues?** Start the local database first — `supabase start` (needs Docker), then copy `.env.example` to `.env` as-is. Those defaults point at the local stack on purpose: local development never talks to the cloud project that serves production ([why](#-security--role-architecture)). Without it the app simply runs guest-only, which is fine for everything that does not need an account.
+**Working on accounts, sync or leagues?** Start the local database first:
+
+```bash
+supabase start                     # needs Docker
+cp .env.example .env
+supabase status -o env             # copy SERVICE_ROLE_KEY into .env
+```
+
+`.env.example` ships a **placeholder** for `SUPABASE_SERVICE_ROLE_KEY` rather than the literal
+value — GitHub's secret scanner flags the `sb_secret_` prefix on sight, and an alert nobody can
+action is an alert everyone learns to ignore. The real local key is fixed, published, and only
+ever authenticates against your own `127.0.0.1` container; `supabase status` prints it.
+
+Every other default points at the local stack on purpose: local development never talks to the
+cloud project that serves production ([why](#-security--role-architecture)). Skip all of this
+and the app runs guest-only — fine for everything that does not need an account.
 
 **Available scripts:**
 
@@ -1003,7 +1164,6 @@ npm run clean        # Dev toolkit — wipe stale build/dev caches
 
 <details>
 <summary>▸ <b>Rebuilding the lexicon from Wiktionary, Tatoeba and Leipzig</b></summary>
-
 
 The vocabulary lexicon (`public/lexicon/`) is built from three open datasets.
 Run the import **locally**, then commit the regenerated `public/lexicon/` — the artifacts are versioned so the app ships a fixed, reviewable snapshot.
@@ -1056,7 +1216,6 @@ the Leipzig Corpora Collection (CC BY).
 <details>
 <summary>▸ <b>Tested browsers, PWA install, and known gaps</b></summary>
 
-
 | Feature                         | Chrome / Edge / Arc | Firefox |         Safari          |
 | ------------------------------- | :-----------------: | :-----: | :---------------------: |
 | All exercises + AI              |         ✅          |   ✅    |           ✅            |
@@ -1080,7 +1239,6 @@ the Leipzig Corpora Collection (CC BY).
 
 <details>
 <summary>▸ <b>Vercel setup, environment variables, and the deploy flow</b></summary>
-
 
 **Vercel (recommended — zero config):**
 
@@ -1110,7 +1268,6 @@ The `vercel.json` at the root configures the Vite framework preset and registers
 
 <details>
 <summary>▸ <b>The full directory tree, annotated</b></summary>
-
 
 <details>
 <summary><b>Annotated directory tree</b> — where the API, the import pipeline, the packs and the components live</summary>
