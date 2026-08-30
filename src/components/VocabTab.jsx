@@ -4,6 +4,7 @@ import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
 const { decks: PRESET_DECKS } = activePack.content;
+const DEFAULT_DECK_ID = 'greetings';
 import { Volume2, AlertTriangle } from 'lucide-react';
 import StatusNote from './ui/StatusNote';
 import { Hero } from './UI';
@@ -40,8 +41,9 @@ export default function VocabTab({
   onReviewConsumed,
   customCards = null,
   onDeckGenerated,
+  onDeckDeleted,
 }) {
-  const [deckId, setDeckId] = useState('greetings');
+  const [deckId, setDeckId] = useState(DEFAULT_DECK_ID);
   // customCards is a PROP, not state: this component unmounts on every tab
   // switch, which is what used to destroy a generated deck. It lives in the
   // state blob now and App hands it down.
@@ -71,6 +73,14 @@ export default function VocabTab({
       : isAuto
         ? asyncDeck || []
         : PRESET_DECKS[deckId] || [];
+
+  // The custom deck can disappear while it is the SELECTED one — deleted here,
+  // or tombstoned on another device and pulled in by a sync. There is no
+  // PRESET_DECKS.custom to fall back on, so without this the learner is left
+  // staring at an empty deck.
+  useEffect(() => {
+    if (deckId === 'custom' && !customCards) setDeckId(DEFAULT_DECK_ID);
+  }, [deckId, customCards]);
 
   useEffect(() => {
     const target = pendingReviewRef.current;
@@ -285,6 +295,7 @@ export default function VocabTab({
           deckId={deckId}
           onSelect={setDeckId}
           customCards={customCards}
+          onDelete={onDeckDeleted ? () => onDeckDeleted() : undefined}
           customTopic={customTopic}
           onTopicChange={setCustomTopic}
           generating={generating}

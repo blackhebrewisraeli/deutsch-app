@@ -5,6 +5,9 @@ import {
   cardsFor,
   CUSTOM_DECK_ID,
   MAX_CARDS_PER_DECK,
+  deleteDeck,
+  liveDecks,
+  isTombstone,
 } from './customDecks.js';
 
 const card = (id) => ({ id, de: id, en: `${id}-en` });
@@ -28,6 +31,7 @@ describe('readDecks', () => {
       name: 'Weather',
       cards: [card('Regen'), card('Sonne')],
       updatedAt: 5,
+      deletedAt: null,
     });
   });
 
@@ -106,6 +110,7 @@ describe('upsertDeck', () => {
       name: 'Weather',
       cards: [card('A')],
       updatedAt: 42,
+      deletedAt: null,
     });
   });
 
@@ -116,6 +121,7 @@ describe('upsertDeck', () => {
       name: 'Food',
       cards: [card('Brot')],
       updatedAt: 99,
+      deletedAt: null,
     });
   });
 
@@ -174,5 +180,89 @@ describe('round trip', () => {
     const written = upsertDeck({}, { deckId: 'custom', name: 'Weather', cards: [card('A')] }, 11);
     const reread = readDecks(JSON.parse(JSON.stringify({ decks: written })));
     expect(reread).toEqual(written);
+  });
+});
+
+describe('tombstones', () => {
+  const live = { custom: { deckId: 'custom', name: 'Weather', cards: [card('A')], updatedAt: 5 } };
+
+  it('marks a deleted deck with deletedAt and drops its cards', () => {
+    const next = deleteDeck(live, 'custom', 100);
+    expect(next.custom).toEqual({
+      deckId: 'custom',
+      name: 'Weather',
+      cards: [],
+      updatedAt: 100,
+      deletedAt: 100,
+    });
+  });
+
+  it('advances updatedAt to the delete time, which is what makes the merge need no special case', () => {
+    expect(deleteDeck(live, 'custom', 100).custom.updatedAt).toBe(100);
+  });
+
+  it('recognises a tombstone and does not mistake a live deck for one', () => {
+    expect(isTombstone(deleteDeck(live, 'custom', 100).custom)).toBe(true);
+    expect(isTombstone(live.custom)).toBe(false);
+    expect(isTombstone(undefined)).toBe(false);
+  });
+
+  it('does not mutate the map it was given', () => {
+    const before = JSON.stringify(live);
+    deleteDeck(live, 'custom', 100);
+    expect(JSON.stringify(live)).toBe(before);
+  });
+
+  it.each([
+    ['a deck that is not there', 'nope'],
+    ['no deck id', undefined],
+  ])('is a no-op for %s, so a stray click invents nothing to sync', (_l, id) => {
+    expect(deleteDeck(live, id, 100)).toEqual(live);
+  });
+
+  it('does not re-tombstone an already deleted deck, which would move its clock', () => {
+    const once = deleteDeck(live, 'custom', 100);
+    expect(deleteDeck(once, 'custom', 999)).toEqual(once);
+  });
+
+  it('KEEPS tombstones through readDecks — a dropped one is a deck that comes back', () => {
+    const stored = deleteDeck(live, 'custom', 100);
+    const reread = readDecks(JSON.parse(JSON.stringify({ decks: stored })));
+    expect(reread.custom).toEqual(stored.custom);
+  });
+
+  it('reads a tombstone even though it carries no cards', () => {
+    // The usable-card filter would otherwise drop exactly the records whose
+    // whole job is to outlive the deck.
+    const reread = readDecks({ decks: { custom: { cards: [], deletedAt: 100, updatedAt: 100 } } });
+    expect(isTombstone(reread.custom)).toBe(true);
+  });
+
+  it('falls back to the delete time when a tombstone has no updatedAt', () => {
+    expect(readDecks({ decks: { custom: { deletedAt: 100 } } }).custom.updatedAt).toBe(100);
+  });
+
+  it('hides tombstones from liveDecks, which is what the UI reads', () => {
+    const stored = deleteDeck(
+      { ...live, other: { deckId: 'other', cards: [card('B')], updatedAt: 1 } },
+      'custom',
+      100
+    );
+    expect(Object.keys(liveDecks(stored))).toEqual(['other']);
+  });
+
+  it('returns no cards for a tombstoned deck', () => {
+    expect(cardsFor(deleteDeck(live, 'custom', 100), 'custom')).toBeNull();
+  });
+
+  it('clears the tombstone when a deck is regenerated into the slot', () => {
+    const deleted = deleteDeck(live, 'custom', 100);
+    const revived = upsertDeck(deleted, { deckId: 'custom', name: 'New', cards: [card('Z')] }, 200);
+    expect(revived.custom.deletedAt).toBeNull();
+    expect(isTombstone(revived.custom)).toBe(false);
+  });
+
+  it('stamps deletedAt: null on a fresh deck so the pushed row clears the column', () => {
+    expect(upsertDeck({}, { deckId: 'custom', cards: [card('A')] }, 1).custom.deletedAt).toBeNull();
   });
 });

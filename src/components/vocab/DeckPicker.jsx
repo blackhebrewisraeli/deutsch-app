@@ -1,4 +1,4 @@
-import { Sparkles } from 'lucide-react';
+import { Sparkles, Trash2 } from 'lucide-react';
 import {
   COLORS,
   FONTS,
@@ -26,7 +26,7 @@ const PRESETS = [
  *
  * @param {{ deckId: string, onSelect: (id: string) => void, customCards: object[]|null,
  *           customTopic: string, onTopicChange: (t: string) => void,
- *           generating: boolean, onGenerate: () => void }} props
+ *           generating: boolean, onGenerate: () => void, onDelete?: () => void }} props
  */
 export default function DeckPicker({
   deckId,
@@ -36,6 +36,7 @@ export default function DeckPicker({
   onTopicChange,
   generating,
   onGenerate,
+  onDelete,
 }) {
   return (
     <div>
@@ -81,32 +82,64 @@ export default function DeckPicker({
           );
         })}
         {customCards && (
-          <button
-            type="button"
-            onClick={() => onSelect('custom')}
-            aria-pressed={deckId === 'custom'}
+          /* Select and Remove are SIBLINGS in a row, never nested: a <button>
+             inside a <button> is invalid HTML and browsers silently un-nest it,
+             changing the DOM out from under the tests. */
+          <div
             style={{
-              width: '100%',
-              padding: '14px 16px',
-              background: deckId === 'custom' ? COLORS.red : COLORS.paperDeep,
-              color: deckId === 'custom' ? COLORS.paper : COLORS.ink,
-              border: 'none',
-              borderTop: `1px solid ${COLORS.inkA12}`,
               display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              fontFamily: FONTS.display,
-              fontSize: FONT_SIZE.lg,
-              fontWeight: FONT_WEIGHT.semibold,
-              textAlign: 'left',
-              cursor: 'pointer',
+              alignItems: 'stretch',
+              borderTop: `1px solid ${COLORS.inkA12}`,
+              background: deckId === 'custom' ? COLORS.red : COLORS.paperDeep,
             }}
           >
-            <span>✦ Your Deck</span>
-            <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.7 }}>
-              {customCards.length} cards
-            </span>
-          </button>
+            <button
+              type="button"
+              onClick={() => onSelect('custom')}
+              aria-pressed={deckId === 'custom'}
+              style={{
+                flex: 1,
+                minWidth: 0,
+                padding: '14px 16px',
+                background: 'transparent',
+                color: deckId === 'custom' ? COLORS.paper : COLORS.ink,
+                border: 'none',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 8,
+                fontFamily: FONTS.display,
+                fontSize: FONT_SIZE.lg,
+                fontWeight: FONT_WEIGHT.semibold,
+                textAlign: 'left',
+                cursor: 'pointer',
+              }}
+            >
+              <span>✦ Your Deck</span>
+              <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.7 }}>
+                {customCards.length} cards
+              </span>
+            </button>
+            {onDelete && (
+              <button
+                type="button"
+                onClick={onDelete}
+                aria-label="Remove your custom deck"
+                style={{
+                  padding: '14px 16px',
+                  background: 'transparent',
+                  color: deckId === 'custom' ? COLORS.paper : COLORS.mute,
+                  border: 'none',
+                  borderLeft: `1px solid ${COLORS.inkA12}`,
+                  fontFamily: FONTS.mono,
+                  fontSize: FONT_SIZE.ipa,
+                  cursor: 'pointer',
+                }}
+              >
+                <Trash2 size={16} aria-hidden="true" />
+              </button>
+            )}
+          </div>
         )}
       </div>
 

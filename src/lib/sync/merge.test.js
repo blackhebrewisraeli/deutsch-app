@@ -330,3 +330,35 @@ describe('mergeDecks', () => {
     expect([JSON.stringify(local), JSON.stringify(remote)]).toEqual(before);
   });
 });
+
+describe('mergeDecks with tombstones', () => {
+  const live = (name, ms) => ({
+    deckId: 'a',
+    name,
+    cards: [{ id: 'x' }],
+    updatedAt: ms,
+    deletedAt: null,
+  });
+  const tomb = (ms) => ({ deckId: 'a', name: 'a', cards: [], updatedAt: ms, deletedAt: ms });
+
+  it('needs no special case — a tombstone is just the newer write', () => {
+    expect(mergeDecks({ a: tomb(500) }, { a: live('server', 100) }).a.deletedAt).toBe(500);
+  });
+
+  it('lets a newer edit legitimately revive a tombstone', () => {
+    expect(mergeDecks({ a: live('local', 900) }, { a: tomb(500) }).a.deletedAt).toBeNull();
+  });
+
+  it('adopts a server tombstone over an older local deck', () => {
+    expect(mergeDecks({ a: live('local', 100) }, { a: tomb(500) }).a.deletedAt).toBe(500);
+  });
+
+  it('resolves a tombstone/edit tie to remote like any other tie', () => {
+    expect(mergeDecks({ a: tomb(400) }, { a: live('server', 400) }).a.deletedAt).toBeNull();
+  });
+
+  it('keeps a tombstone that exists only on one side', () => {
+    expect(mergeDecks({ a: tomb(1) }, {}).a.deletedAt).toBe(1);
+    expect(mergeDecks({}, { a: tomb(1) }).a.deletedAt).toBe(1);
+  });
+});

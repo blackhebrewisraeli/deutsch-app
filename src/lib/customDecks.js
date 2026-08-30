@@ -22,6 +22,12 @@ export const CUSTOM_DECK_ID = 'custom';
 export const MAX_CARDS_PER_DECK = 100;
 
 const isUsableCard = (c) => c && typeof c.id === 'string' && c.id.length > 0;
+const tombstoneTime = (deck) => (Number.isFinite(deck?.deletedAt) ? deck.deletedAt : null);
+
+/** True when this entry records a deletion rather than a deck. */
+export function isTombstone(deck) {
+  return tombstoneTime(deck) !== null;
+}
 
 /**
  * Read the decks slice out of a state blob, defensively.
@@ -30,6 +36,12 @@ const isUsableCard = (c) => c && typeof c.id === 'string' && c.id.length > 0;
  * build (no `decks` key at all) or a corrupted one. Anything unusable is
  * dropped rather than thrown, because a bad deck must never stop the app from
  * loading the rest of the learner's progress.
+ *
+ * Tombstones are KEPT, cards and all-usable-cards rules waived. They carry no
+ * cards by design, so the usable-card filter would drop exactly the records
+ * whose whole job is to outlive the deck — and a dropped tombstone is a deck
+ * that comes back on the next pull. Use liveDecks() for anything the learner
+ * should see.
  *
  * @param {object|null|undefined} state
  * @returns {Record<string, {deckId: string, name: string, cards: object[], updatedAt: number|null}>}
@@ -40,7 +52,21 @@ export function readDecks(state) {
 
   const out = {};
   for (const [deckId, deck] of Object.entries(raw)) {
-    if (!deckId || !deck || typeof deck !== 'object' || !Array.isArray(deck.cards)) continue;
+    if (!deckId || !deck || typeof deck !== 'object') continue;
+
+    const deletedAt = tombstoneTime(deck);
+    if (deletedAt !== null) {
+      out[deckId] = {
+        deckId,
+        name: typeof deck.name === 'string' && deck.name ? deck.name : deckId,
+        cards: [],
+        updatedAt: Number.isFinite(deck.updatedAt) ? deck.updatedAt : deletedAt,
+        deletedAt,
+      };
+      continue;
+    }
+
+    if (!Array.isArray(deck.cards)) continue;
     // A card with no id cannot be tracked: learnedWords and srsKey are both
     // keyed by it, so it would be undrillable rather than merely odd.
     const cards = deck.cards.filter(isUsableCard).slice(0, MAX_CARDS_PER_DECK);
@@ -53,9 +79,48 @@ export function readDecks(state) {
       name: typeof deck.name === 'string' && deck.name ? deck.name : deckId,
       cards,
       updatedAt: Number.isFinite(deck.updatedAt) ? deck.updatedAt : null,
+      deletedAt: null,
     };
   }
   return out;
+}
+
+/** Only the decks a learner can actually see and drill. */
+export function liveDecks(decks) {
+  const out = {};
+  for (const [deckId, deck] of Object.entries(decks ?? {})) {
+    if (!isTombstone(deck)) out[deckId] = deck;
+  }
+  return out;
+}
+
+/**
+ * Replace a deck with a tombstone. Returns a NEW map.
+ *
+ * `updatedAt` is advanced to the deletion time on purpose: that is what makes
+ * the merge need no special case at all. A tombstone is just the record whose
+ * most recent write was a removal, so per-deck LWW compares it against an edit
+ * the same way it compares two edits. Cards are dropped — a tombstone must not
+ * keep carrying the payload it exists to retire.
+ *
+ * Deleting a deck that is not there is a no-op rather than a bare tombstone,
+ * so a stray click cannot invent a record to sync.
+ */
+export function deleteDeck(decks, deckId, now = Date.now()) {
+  const base = decks && typeof decks === 'object' ? decks : {};
+  const existing = base[deckId];
+  if (!deckId || !existing || isTombstone(existing)) return base;
+
+  return {
+    ...base,
+    [deckId]: {
+      deckId,
+      name: existing.name ?? deckId,
+      cards: [],
+      updatedAt: now,
+      deletedAt: now,
+    },
+  };
 }
 
 /**
@@ -77,12 +142,21 @@ export function upsertDeck(decks, { deckId, name, cards } = {}, now = Date.now()
       name: typeof name === 'string' && name ? name : deckId,
       cards: usable,
       updatedAt: now,
+      // Regenerating into a tombstoned slot revives it. Explicitly null rather
+      // than absent so the pushed row CLEARS deleted_at on the server instead
+      // of leaving a live deck married to an old tombstone.
+      deletedAt: null,
     },
   };
 }
 
-/** The cards for one deck, or null when it is absent — VocabTab's shape. */
+/**
+ * The cards for one deck, or null when it is absent or tombstoned — VocabTab's
+ * shape. A tombstone carries no cards, so this returns null for it either way;
+ * the explicit check states the intent rather than relying on that.
+ */
 export function cardsFor(decks, deckId) {
-  const cards = decks?.[deckId]?.cards;
-  return Array.isArray(cards) && cards.length > 0 ? cards : null;
+  const deck = decks?.[deckId];
+  if (!deck || isTombstone(deck)) return null;
+  return Array.isArray(deck.cards) && deck.cards.length > 0 ? deck.cards : null;
 }
