@@ -1621,3 +1621,139 @@ describe('a generated deck tells the sync engine there is something to push', ()
     expect(syncMock.markDirty).not.toHaveBeenCalled();
   });
 });
+
+describe('deleting a custom deck writes a tombstone', () => {
+  const generated = [
+    { de: 'die Sonne', en: 'the sun' },
+    { de: 'der Regen', en: 'the rain' },
+  ];
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    asReturningLearner();
+    localStorage.setItem('deutsch-level', 'a1');
+    callClaude.mockReset();
+    callClaude.mockResolvedValue(JSON.stringify(generated));
+    syncMock.enabled = false;
+    syncMock.start.mockClear();
+    syncMock.markDirty.mockClear();
+    authMock.status = 'anonymous';
+  });
+
+  afterEach(() => {
+    syncMock.enabled = false;
+    syncMock.start.mockClear();
+    syncMock.markDirty.mockClear();
+    authMock.status = 'anonymous';
+  });
+
+  const seedDeck = () =>
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({
+        decks: {
+          custom: {
+            deckId: 'custom',
+            name: 'weather',
+            cards: [{ id: 'die Sonne', de: 'die Sonne', en: 'the sun' }],
+            updatedAt: 1000,
+            deletedAt: null,
+          },
+        },
+      })
+    );
+
+  const openVocab = async () => userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+  const removeDeck = async () =>
+    userEvent.click(screen.getByRole('button', { name: 'Remove your custom deck' }));
+
+  it('offers a Remove control beside the deck, not nested inside it', async () => {
+    seedDeck();
+    renderPastEntry(<App />);
+    await openVocab();
+
+    const remove = await screen.findByRole('button', { name: 'Remove your custom deck' });
+    const select = screen.getByRole('button', { name: /Your Deck/ });
+    // A <button> inside a <button> is invalid HTML and gets silently un-nested.
+    expect(select.contains(remove)).toBe(false);
+  });
+
+  it('takes the deck out of the picker', async () => {
+    seedDeck();
+    renderPastEntry(<App />);
+    await openVocab();
+    await removeDeck();
+
+    await waitFor(() => expect(screen.queryByRole('button', { name: /Your Deck/ })).toBeNull());
+  });
+
+  it('records a TOMBSTONE rather than dropping the entry', async () => {
+    // A plain delete is invisible to an upsert-only sync engine: the other
+    // device would push its copy straight back on the next pull.
+    seedDeck();
+    renderPastEntry(<App />);
+    await openVocab();
+    await removeDeck();
+
+    await waitFor(() => expect(loadState()?.decks?.custom?.deletedAt).toEqual(expect.any(Number)));
+    const stored = loadState().decks.custom;
+    expect(stored.cards).toEqual([]);
+    expect(stored.updatedAt).toBe(stored.deletedAt);
+  });
+
+  it('keeps the tombstone across a remount, so the deck stays gone', async () => {
+    seedDeck();
+    const first = renderPastEntry(<App />);
+    await openVocab();
+    await removeDeck();
+    await waitFor(() => expect(loadState()?.decks?.custom?.deletedAt).toBeTruthy());
+    first.unmount();
+
+    renderPastEntry(<App />);
+    await openVocab();
+    expect(screen.queryByRole('button', { name: /Your Deck/ })).toBeNull();
+  });
+
+  it('falls back off the custom deck when the selected one is removed', async () => {
+    // There is no PRESET_DECKS.custom to land on, so without the fallback the
+    // learner is left staring at an empty deck.
+    seedDeck();
+    renderPastEntry(<App />);
+    await openVocab();
+    await userEvent.click(screen.getByRole('button', { name: /Your Deck/ }));
+    await removeDeck();
+
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /Greetings/ })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      )
+    );
+  });
+
+  it('tells the sync engine, so the tombstone reaches the other device', async () => {
+    syncMock.enabled = true;
+    authMock.status = 'authenticated';
+    seedDeck();
+    renderPastEntry(<App />);
+    await openVocab();
+    await removeDeck();
+
+    await waitFor(() => expect(syncMock.markDirty).toHaveBeenCalled());
+  });
+
+  it('lets a regenerated deck clear the tombstone', async () => {
+    seedDeck();
+    renderPastEntry(<App />);
+    await openVocab();
+    await removeDeck();
+    await waitFor(() => expect(loadState()?.decks?.custom?.deletedAt).toBeTruthy());
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
+    await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+
+    expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
+    await waitFor(() => expect(loadState()?.decks?.custom?.deletedAt).toBeNull());
+  });
+});

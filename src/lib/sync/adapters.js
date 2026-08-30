@@ -88,7 +88,16 @@ export function settingsFromRow(row) {
 // that would win LWW forever.
 export function decksToRows(decks) {
   return Object.entries(decks ?? {}).map(([deckId, d]) => {
-    const row = { deck_id: deckId, name: d?.name ?? deckId, cards: d?.cards ?? [] };
+    const row = {
+      deck_id: deckId,
+      name: d?.name ?? deckId,
+      cards: d?.cards ?? [],
+      // ALWAYS sent, null included: regenerating into a tombstoned slot has to
+      // CLEAR deleted_at on the server. Omitting it on the live case would
+      // leave the old tombstone standing and the deck would vanish again on
+      // the next pull.
+      deleted_at: toIso(d?.deletedAt),
+    };
     const updated = toIso(d?.updatedAt);
     if (updated !== null) row.updated_at = updated;
     return row;
@@ -99,11 +108,16 @@ export function decksFromRows(rows) {
   const out = {};
   for (const r of rows ?? []) {
     if (!r?.deck_id) continue;
+    // Tombstoned rows are KEPT, not filtered. A deletion only wins the merge
+    // if the merge can see it; dropping it here would make the server look like
+    // it simply has no deck, and the local copy would be pushed straight back.
+    const deletedAt = toMs(r.deleted_at);
     out[r.deck_id] = {
       deckId: r.deck_id,
       name: r.name ?? r.deck_id,
-      cards: Array.isArray(r.cards) ? r.cards : [],
+      cards: deletedAt === null && Array.isArray(r.cards) ? r.cards : [],
       updatedAt: toMs(r.updated_at),
+      deletedAt,
     };
   }
   return out;

@@ -37,12 +37,21 @@ function persistUpsert(tables, table, rows) {
       const idx = tables.decks.findIndex((r) => r.deck_id === row.deck_id);
       // Mirrors the column default: a row arriving without updated_at is
       // stamped by the server, not stored as null.
+      // Models ON CONFLICT DO UPDATE SET <provided columns>: a key the client
+      // OMITS is left at its existing value, it is NOT nulled. Defaulting an
+      // omitted deleted_at to null here made the fixture incapable of failing
+      // when the writer stopped sending it — a tombstone would silently never
+      // be cleared in production while the test stayed green.
+      const existing = idx >= 0 ? tables.decks[idx] : {};
       const stored = {
+        ...existing,
         deck_id: row.deck_id,
         name: row.name,
         cards: row.cards,
-        updated_at: row.updated_at ?? new Date().toISOString(),
+        updated_at: row.updated_at ?? existing.updated_at ?? new Date().toISOString(),
+        ...('deleted_at' in row ? { deleted_at: row.deleted_at } : {}),
       };
+      if (!('deleted_at' in stored)) stored.deleted_at = null;
       if (idx >= 0) tables.decks[idx] = stored;
       else tables.decks.push(stored);
     }
@@ -407,5 +416,163 @@ describe('custom decks sync', () => {
     expect(tables).toEqual(['decks', 'settings', 'srs_state', 'stats_daily']);
     expect(seeded._tables.stats_daily[0].counters.total).toBe(3);
     expect(seeded._tables.srs_state[0].srs_key).toBe('g:h');
+  });
+});
+
+describe('deck tombstones survive a pull (no resurrection)', () => {
+  const iso = (ms) => new Date(ms).toISOString();
+  const blob = (decks) => localStorage.setItem('deutsch-app-state-v1', JSON.stringify({ decks }));
+  const localDeck = () =>
+    JSON.parse(localStorage.getItem('deutsch-app-state-v1') ?? '{}').decks?.custom;
+  const liveRow = (name, ms) => ({
+    deck_id: 'custom',
+    name,
+    cards: [{ id: `${name}-card`, de: name, en: name }],
+    updated_at: iso(ms),
+    deleted_at: null,
+  });
+  const tombstone = (ms) => ({
+    deckId: 'custom',
+    name: 'Weather',
+    cards: [],
+    updatedAt: ms,
+    deletedAt: ms,
+  });
+  const liveLocal = (name, ms) => ({
+    deckId: 'custom',
+    name,
+    cards: [{ id: `${name}-card`, de: name, en: name }],
+    updatedAt: ms,
+    deletedAt: null,
+  });
+
+  beforeEach(() => {
+    localStorage.clear();
+    __setClientForTest(null);
+  });
+
+  it('THE BUG: a deck deleted offline is not resurrected by the other device copy', async () => {
+    // Device A deleted the deck at t=5000 while offline. Device B never knew,
+    // so the server still holds the live row from t=1000. Under an upsert-only
+    // engine the pull re-adds it and the deletion is silently undone.
+    blob({ custom: tombstone(5000) });
+    const seeded = makeFakeClient({ decks: [liveRow('Weather', 1000)] }, { persist: true });
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    expect(localDeck().deletedAt).toBe(5000);
+    expect(seeded._tables.decks[0].deleted_at).toBe(iso(5000));
+  });
+
+  it('propagates the tombstone to the server so the other device learns of it', async () => {
+    blob({ custom: tombstone(5000) });
+    const seeded = makeFakeClient({ decks: [liveRow('Weather', 1000)] }, { persist: true });
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    const pushed = seeded._calls.upserts.find((u) => u.table === 'decks');
+    expect(pushed.rows[0]).toMatchObject({ deck_id: 'custom', deleted_at: iso(5000) });
+    expect(pushed.rows[0].user_id).toBe('user-1');
+  });
+
+  it('adopts a server tombstone, removing a deck this device still thinks is live', async () => {
+    // The mirror image: device B deleted it, this device pulls.
+    blob({ custom: liveLocal('Weather', 1000) });
+    const seeded = makeFakeClient(
+      {
+        decks: [
+          {
+            deck_id: 'custom',
+            name: 'Weather',
+            cards: [],
+            updated_at: iso(9000),
+            deleted_at: iso(9000),
+          },
+        ],
+      },
+      { persist: true }
+    );
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    expect(localDeck().deletedAt).toBe(9000);
+  });
+
+  it('lets a LATER regeneration legitimately revive a tombstoned slot', async () => {
+    // Not every resurrection is a bug: generating a new deck after the delete
+    // is a newer write and must win, clearing the tombstone on the server.
+    blob({ custom: liveLocal('Regenerated', 9000) });
+    const seeded = makeFakeClient(
+      {
+        decks: [
+          {
+            deck_id: 'custom',
+            name: 'Weather',
+            cards: [],
+            updated_at: iso(5000),
+            deleted_at: iso(5000),
+          },
+        ],
+      },
+      { persist: true }
+    );
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    expect(localDeck().deletedAt).toBeNull();
+    expect(localDeck().name).toBe('Regenerated');
+    expect(seeded._tables.decks[0].deleted_at).toBeNull();
+  });
+
+  it('keeps the deck when the server edit is NEWER than the local delete', async () => {
+    blob({ custom: tombstone(1000) });
+    const seeded = makeFakeClient({ decks: [liveRow('Newer server', 8000)] }, { persist: true });
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    expect(localDeck().deletedAt).toBeNull();
+    expect(localDeck().name).toBe('Newer server');
+  });
+
+  it('is idempotent — reconciling twice leaves the tombstone exactly once', async () => {
+    blob({ custom: tombstone(5000) });
+    const seeded = makeFakeClient({ decks: [liveRow('Weather', 1000)] }, { persist: true });
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+    const first = JSON.stringify(seeded._tables.decks);
+    await pullAndMerge('user-1');
+
+    expect(JSON.stringify(seeded._tables.decks)).toBe(first);
+    expect(seeded._tables.decks).toHaveLength(1);
+  });
+
+  it('a tombstone on both sides stays deleted and stays quiet', async () => {
+    blob({ custom: tombstone(5000) });
+    const seeded = makeFakeClient(
+      {
+        decks: [
+          {
+            deck_id: 'custom',
+            name: 'Weather',
+            cards: [],
+            updated_at: iso(5000),
+            deleted_at: iso(5000),
+          },
+        ],
+      },
+      { persist: true }
+    );
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    expect(localDeck().deletedAt).toBe(5000);
+    expect(seeded._tables.decks[0].deleted_at).toBe(iso(5000));
   });
 });

@@ -113,6 +113,7 @@ describe('deck adapters', () => {
       name: 'Weather',
       cards: [{ id: 'die Sonne', de: 'die Sonne', en: 'the sun' }],
       updatedAt: Date.parse('2026-08-30T10:00:00.000Z'),
+      deletedAt: null,
     },
   };
 
@@ -123,6 +124,7 @@ describe('deck adapters', () => {
         name: 'Weather',
         cards: [{ id: 'die Sonne', de: 'die Sonne', en: 'the sun' }],
         updated_at: '2026-08-30T10:00:00.000Z',
+        deleted_at: null,
       },
     ]);
   });
@@ -137,7 +139,7 @@ describe('deck adapters', () => {
     // fabricating `now()` locally would win LWW forever.
     const rows = decksToRows({ custom: { name: 'n', cards: [{ id: 'a' }], updatedAt: null } });
     expect(rows[0]).not.toHaveProperty('updated_at');
-    expect(Object.keys(rows[0]).sort()).toEqual(['cards', 'deck_id', 'name']);
+    expect(Object.keys(rows[0]).sort()).toEqual(['cards', 'deck_id', 'deleted_at', 'name']);
   });
 
   it('falls back to the deck id for a missing name — the column is NOT NULL', () => {
@@ -168,6 +170,7 @@ describe('deck adapters', () => {
         name: 'Weather',
         cards: [{ id: 'die Sonne' }],
         updatedAt: Date.parse('2026-08-30T10:00:00.000Z'),
+        deletedAt: null,
       },
     });
   });
@@ -194,5 +197,59 @@ describe('deck adapters', () => {
     ['null', null],
   ])('maps %s to an empty map', (_label, rows) => {
     expect(decksFromRows(rows)).toEqual({});
+  });
+});
+
+describe('deck adapters — tombstones', () => {
+  it('sends deleted_at for a tombstone', () => {
+    const rows = decksToRows({
+      custom: { name: 'Weather', cards: [], updatedAt: 100, deletedAt: 100 },
+    });
+    expect(rows[0].deleted_at).toBe(new Date(100).toISOString());
+  });
+
+  it('sends deleted_at: null for a live deck, so regenerating CLEARS the column', () => {
+    // Omitting it would leave an old tombstone standing on the server and the
+    // revived deck would vanish again on the next pull.
+    const rows = decksToRows({ custom: { name: 'W', cards: [{ id: 'a' }], updatedAt: 1 } });
+    expect(rows[0]).toHaveProperty('deleted_at', null);
+  });
+
+  it('KEEPS a tombstoned row rather than filtering it out', () => {
+    // A deletion only wins the merge if the merge can see it.
+    const decks = decksFromRows([
+      {
+        deck_id: 'custom',
+        name: 'W',
+        cards: [],
+        updated_at: new Date(100).toISOString(),
+        deleted_at: new Date(100).toISOString(),
+      },
+    ]);
+    expect(decks.custom).toMatchObject({ deckId: 'custom', deletedAt: 100 });
+  });
+
+  it('drops any cards that came back on a tombstoned row', () => {
+    const decks = decksFromRows([
+      {
+        deck_id: 'custom',
+        cards: [{ id: 'stale' }],
+        updated_at: null,
+        deleted_at: new Date(5).toISOString(),
+      },
+    ]);
+    expect(decks.custom.cards).toEqual([]);
+  });
+
+  it('reads a live row as deletedAt null', () => {
+    const decks = decksFromRows([{ deck_id: 'custom', cards: [{ id: 'a' }], deleted_at: null }]);
+    expect(decks.custom.deletedAt).toBeNull();
+  });
+
+  it('round-trips a tombstone through rows and back', () => {
+    const tomb = {
+      custom: { deckId: 'custom', name: 'W', cards: [], updatedAt: 100, deletedAt: 100 },
+    };
+    expect(decksFromRows(decksToRows(tomb))).toEqual(tomb);
   });
 });

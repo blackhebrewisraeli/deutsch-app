@@ -35,7 +35,7 @@ import HomeTab from './components/HomeTab';
 import SettingsRoute from './components/settings/SettingsRoute';
 import { deriveMissions } from './lib/missions';
 import { deckProgressFor } from './lib/deckProgress';
-import { readDecks, upsertDeck, cardsFor, CUSTOM_DECK_ID } from './lib/customDecks';
+import { readDecks, upsertDeck, deleteDeck, cardsFor, CUSTOM_DECK_ID } from './lib/customDecks';
 import { useLeagueStanding } from './lib/useLeagueStanding';
 
 // Settings is a route rather than a seventh nav tab, so the hash is what makes
@@ -679,6 +679,14 @@ export default function App() {
     window.dispatchEvent(new CustomEvent('deutsch:progress'));
   };
 
+  // Removing a deck writes a TOMBSTONE rather than dropping the entry. A plain
+  // delete is invisible to an upsert-only sync engine, so the other device
+  // would push its copy straight back on the next pull.
+  const handleDeckDeleted = () => {
+    setDecks((prev) => deleteDeck(prev, CUSTOM_DECK_ID));
+    window.dispatchEvent(new CustomEvent('deutsch:progress'));
+  };
+
   const settingsOverlay = (
     <SettingsRoute
       open={settingsOpen}
@@ -1062,6 +1070,7 @@ export default function App() {
                   onReviewConsumed={clearReviewTarget}
                   customCards={cardsFor(decks, CUSTOM_DECK_ID)}
                   onDeckGenerated={handleDeckGenerated}
+                  onDeckDeleted={handleDeckDeleted}
                 />
               )}
               {tab === 'translate' && (

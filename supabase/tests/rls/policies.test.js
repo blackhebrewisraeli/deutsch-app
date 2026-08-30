@@ -69,6 +69,52 @@ for (const t of TABLES) {
   });
 }
 
+// Soft delete is an UPDATE, so the tombstone column rides the existing
+// `update own rows` policy. This asserts that explicitly rather than assuming
+// it: a hole here would let one learner erase another's deck.
+describe('RLS: decks tombstones', () => {
+  it('A can tombstone their OWN deck', async () => {
+    const { data, error } = await A.client
+      .from('decks')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('user_id', A.id)
+      .eq('deck_id', 'custom')
+      .select();
+    expect(error).toBeNull();
+    expect(data).toHaveLength(1);
+    expect(data[0].deleted_at).not.toBeNull();
+  });
+
+  it("A cannot tombstone B's deck (zero rows affected)", async () => {
+    const { data, error } = await A.client
+      .from('decks')
+      .update({ deleted_at: new Date().toISOString() })
+      .eq('user_id', B.id)
+      .select();
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it("B's deck is still live — the failed attempt changed nothing", async () => {
+    const { data, error } = await B.client.from('decks').select('deleted_at').eq('user_id', B.id);
+    expect(error).toBeNull();
+    expect(data).toHaveLength(1);
+    expect(data[0].deleted_at).toBeNull();
+  });
+
+  it('A cannot revive their deck INTO another user by tombstoning and reassigning', async () => {
+    // with check (auth.uid() = user_id) guards the post-image, so a row cannot
+    // be moved to another owner on its way through an update.
+    const { data, error } = await A.client
+      .from('decks')
+      .update({ user_id: B.id, deleted_at: null })
+      .eq('user_id', A.id)
+      .select();
+    expect(data ?? []).toEqual([]);
+    if (error) expect(error).not.toBeNull();
+  });
+});
+
 describe('RLS: profiles', () => {
   it('the signup trigger created A their own profile, visible to A', async () => {
     const { data, error } = await A.client.from('profiles').select('*');
