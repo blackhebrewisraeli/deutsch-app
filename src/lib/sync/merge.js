@@ -121,3 +121,33 @@ export function mergeSettings(local, remote) {
 
   return out;
 }
+
+// Decks: union of deck ids; per deck, the one with the more recent updatedAt
+// wins. A real timestamp beats null/undefined; an exact tie resolves to remote
+// (server), matching mergeSrs.
+//
+// PER-DECK, deliberately not whole-slice LWW. A deck is an independent record
+// with its own primary key — (user_id, pack_id, deck_id) — so it gets its own
+// clock. Whole-object LWW is what let an unrelated newer write on one device
+// clobber a field it never touched (see mergeSettings' level carve-out, and the
+// 2026-08-24 regression it exists for). One shared clock over independent
+// records reproduces exactly that bug.
+//
+// The deck object is carried across WHOLE. Cards are an opaque jsonb payload to
+// the engine: there is no per-card merge, because two devices editing the same
+// generated deck is not a thing the app can produce — a generation replaces the
+// slot outright.
+export function mergeDecks(local, remote) {
+  const out = { ...(remote ?? {}) };
+  for (const [deckId, l] of Object.entries(local ?? {})) {
+    const r = out[deckId];
+    if (!r) {
+      out[deckId] = l;
+      continue;
+    }
+    const lt = l?.updatedAt ?? -Infinity;
+    const rt = r?.updatedAt ?? -Infinity;
+    out[deckId] = lt > rt ? l : r; // strict > → ties keep remote
+  }
+  return out;
+}
