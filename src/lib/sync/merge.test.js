@@ -6,6 +6,7 @@ import {
   mergeDailyAdditive,
   mergeSettings,
   mergeDecks,
+  mergeLearnedByDeck,
 } from './merge.js';
 import { trialStatus } from '../trial.js';
 import { TRIAL_ROUND_CAP } from '../gameConfig.js';
@@ -360,5 +361,47 @@ describe('mergeDecks with tombstones', () => {
   it('keeps a tombstone that exists only on one side', () => {
     expect(mergeDecks({ a: tomb(1) }, {}).a.deletedAt).toBe(1);
     expect(mergeDecks({}, { a: tomb(1) }).a.deletedAt).toBe(1);
+  });
+});
+
+describe('mergeLearnedByDeck', () => {
+  it('unions decks from both devices', () => {
+    expect(mergeLearnedByDeck({ numbers: { zwei: true } }, { greetings: { Hallo: true } })).toEqual(
+      { numbers: { zwei: true }, greetings: { Hallo: true } }
+    );
+  });
+
+  it('unions cards WITHIN a deck rather than letting one side win', () => {
+    expect(mergeLearnedByDeck({ n: { eins: true } }, { n: { zwei: true } })).toEqual({
+      n: { eins: true, zwei: true },
+    });
+  });
+
+  it('keeps a deck present on only one side', () => {
+    expect(mergeLearnedByDeck({ a: { x: true } }, {})).toEqual({ a: { x: true } });
+    expect(mergeLearnedByDeck({}, { b: { y: true } })).toEqual({ b: { y: true } });
+  });
+
+  it('never un-learns: no path in the app writes false, and none is honoured', () => {
+    expect(mergeLearnedByDeck({ a: { x: false } }, { a: { x: true } })).toEqual({ a: { x: true } });
+  });
+
+  it('drops a deck whose cards all resolve to nothing', () => {
+    expect(mergeLearnedByDeck({ a: { x: false } }, { a: { x: false } })).toEqual({});
+  });
+
+  it.each([
+    ['both empty', {}, {}],
+    ['both null', null, null],
+  ])('returns {} for %s', (_l, a, b) => {
+    expect(mergeLearnedByDeck(a, b)).toEqual({});
+  });
+
+  it('does not mutate either input', () => {
+    const l = { a: { x: true } };
+    const r = { a: { y: true } };
+    const before = [JSON.stringify(l), JSON.stringify(r)];
+    mergeLearnedByDeck(l, r);
+    expect([JSON.stringify(l), JSON.stringify(r)]).toEqual(before);
   });
 });

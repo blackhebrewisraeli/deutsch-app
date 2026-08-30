@@ -1,4 +1,5 @@
 import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, RADIUS } from '../../lib/theme';
+import { isLearned, learnedInDeck } from '../../lib/learnedWords';
 
 // Above this many cards the per-card dot strip stops fitting: it is the only
 // unbounded child of the progress row, so at 2,212 cards (the B1 deck) it
@@ -8,11 +9,11 @@ const DOT_THRESHOLD = 12;
 
 // Per-card progress for the active deck: dots for small decks, a bounded bar
 // plus a count for lexicon-sized ones. Bounded DOM either way.
-export default function DeckProgress({ cards, learnedWords }) {
+export default function DeckProgress({ cards, learnedWords, learnedByDeck = null, deckId }) {
   if (!cards?.length) return null;
 
   const total = cards.length;
-  const learned = cards.filter((c) => learnedWords[c.id]).length;
+  const learned = learnedInDeck({ learnedByDeck, learnedWords, deckId, cards });
 
   if (total <= DOT_THRESHOLD) {
     return (
@@ -26,7 +27,9 @@ export default function DeckProgress({ cards, learnedWords }) {
               width: 26,
               height: 8,
               borderRadius: RADIUS.pill,
-              background: learnedWords[c.id] ? COLORS.green : COLORS.track,
+              background: isLearned({ learnedByDeck, learnedWords, deckId, cardId: c.id })
+                ? COLORS.green
+                : COLORS.track,
             }}
           />
         ))}

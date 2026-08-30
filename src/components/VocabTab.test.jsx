@@ -4,6 +4,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VocabTab from './VocabTab';
 import { upsertDeck, cardsFor, CUSTOM_DECK_ID } from '../lib/customDecks.js';
+import { markLearnedIn } from '../lib/learnedWords.js';
 import { activePack } from '../packs';
 import { callClaude } from '../lib/claude';
 import { speak } from '../lib/speech';
@@ -53,15 +54,26 @@ function DeckHost({ children: _children, ...props }) {
 
 const renderTab = (props = {}) => render(<DeckHost {...props} />);
 
-// Simulates the App parent: markLearned feeds back into learnedWords, so the
-// "✓ LEARNED" badge can actually appear after a correct answer.
+// Simulates the App parent so the "✓ LEARNED" badge can appear after a correct
+// answer. It runs the REAL markLearnedIn and writes BOTH maps exactly as App
+// does — scoped record plus the legacy flat mirror.
+//
+// Deliberately not a simplification. The previous version modelled the intended
+// behaviour (`{...prev, [id]: true}`) while App actually toggled, so it agreed
+// with production in the safe direction and hid the un-learning bug fixed in
+// #203 from every test in this file.
 function StatefulHost({ level = 'a1' }) {
-  const [learned, setLearned] = useState({});
+  const [byDeck, setByDeck] = useState({});
+  const [flat, setFlat] = useState({});
   return (
     <VocabTab
       level={level}
-      learnedWords={learned}
-      markLearned={(id) => setLearned((prev) => ({ ...prev, [id]: true }))}
+      learnedWords={flat}
+      learnedByDeck={byDeck}
+      markLearned={(deckId, id) => {
+        setByDeck((prev) => markLearnedIn(prev, deckId, id));
+        setFlat((prev) => (prev[id] ? prev : { ...prev, [id]: true }));
+      }}
       mobile={false}
     />
   );
@@ -173,7 +185,8 @@ describe('VocabTab', () => {
       renderTab({ markLearned });
       const card = firstCard();
       await userEvent.click(choiceButtons().find((b) => b.textContent === card.en));
-      expect(markLearned).toHaveBeenCalledWith(card.id);
+      // The deck is the point of the epic: mastery is recorded WHERE it happened.
+      expect(markLearned).toHaveBeenCalledWith('greetings', card.id);
 
       await userEvent.click(screen.getByRole('button', { name: 'GOOD' }));
       const entry = readSrs()[srsKey('greetings', card.id)];

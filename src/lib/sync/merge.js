@@ -151,3 +151,29 @@ export function mergeDecks(local, remote) {
   }
   return out;
 }
+
+// Deck-scoped mastery: union of deck ids; per deck, union of card ids.
+//
+// Union for the same reason learnedWords is union-merged (#41): a word learned
+// on either device is learned, and no path in the app un-learns one. There is
+// therefore nothing here that needs a tombstone — the one genuine deletion, a
+// removed custom deck, drops that deck's entry locally and is carried by the
+// deck tombstone that already exists.
+//
+// Deliberately NOT last-write-wins. Whole-object LWW over independent records
+// is what let an unrelated newer write drag `level` backwards (2026-08-24), and
+// two devices practising different decks are exactly independent records.
+export function mergeLearnedByDeck(local, remote) {
+  const out = {};
+  const decks = new Set([...Object.keys(local ?? {}), ...Object.keys(remote ?? {})]);
+  for (const deckId of decks) {
+    const l = local?.[deckId] ?? {};
+    const r = remote?.[deckId] ?? {};
+    const cards = {};
+    for (const cardId of new Set([...Object.keys(l), ...Object.keys(r)])) {
+      if (l[cardId] === true || r[cardId] === true) cards[cardId] = true;
+    }
+    if (Object.keys(cards).length > 0) out[deckId] = cards;
+  }
+  return out;
+}
