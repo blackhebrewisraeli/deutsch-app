@@ -12,6 +12,7 @@ import {
 import { LEXICON } from './lexicon.js';
 import { DECKS } from './decks.js';
 import { MISSIONS, MISSIONS_CHROME } from './missions.js';
+import { QUESTS, QUESTS_CHROME } from './quests.js';
 import { IDENTITY } from './identity.js';
 import { resolveDecks } from '../resolve.js';
 import { theme } from './theme.js';
@@ -55,6 +56,10 @@ export const dePack = {
     // this turns them into words, so no German reaches src/lib or src/components.
     missions: MISSIONS,
     missionsChrome: MISSIONS_CHROME,
+    // Copy for the Home daily-quest board. lib/quests.js returns ids, targets
+    // and progress; this turns them into words.
+    quests: QUESTS,
+    questsChrome: QUESTS_CHROME,
     // Copy for the Home identity strip — month names and greetings are
     // language, not layout.
     identity: IDENTITY,

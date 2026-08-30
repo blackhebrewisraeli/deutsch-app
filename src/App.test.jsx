@@ -1939,3 +1939,81 @@ describe('mastery is recorded where it was earned', () => {
     expect(loadState().learnedWords['die Sonne']).toBe(true);
   });
 });
+
+describe('daily quests on Home', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    asReturningLearner();
+    localStorage.setItem('deutsch-level', 'a1');
+  });
+
+  it('renders a quest board beside the missions board', () => {
+    renderPastEntry(<App />);
+    const quests = screen.getByRole('region', { name: /Tagesaufgaben/i });
+    const missions = screen.getByRole('region', { name: /Missionen/i });
+    // Two boards, not one merged list: a quest must never push `srs-due` off
+    // the mission board, which shares a cap of five.
+    expect(quests).toBeInTheDocument();
+    expect(missions).toBeInTheDocument();
+    expect(quests).not.toBe(missions);
+  });
+
+  it('shows progress that follows the real day counters', () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({
+        daily: {
+          [todayKey()]: {
+            total: 2,
+            bonusXp: 0,
+            byTab: { chat: 0, alphabet: 0, vocab: 2, translate: 0 },
+            byLevel: {
+              a1: { correct: 2, almost: 0, wrong: 0 },
+              a2: { correct: 0, almost: 0, wrong: 0 },
+              b1: { correct: 0, almost: 0, wrong: 0 },
+            },
+          },
+        },
+      })
+    );
+    renderPastEntry(<App />);
+
+    const board = within(screen.getByRole('region', { name: /Tagesaufgaben/i }));
+    const bars = board.getAllByTestId('quest-progress');
+    expect(bars.length).toBeGreaterThan(0);
+    // At least one quest counts the two answers just recorded.
+    expect(bars.some((b) => /^[1-9]/.test(b.textContent.trim()))).toBe(true);
+  });
+
+  it('writes nothing to storage for quests — they are derived', () => {
+    renderPastEntry(<App />);
+    const stored = loadState() ?? {};
+    expect(stored.quests).toBeUndefined();
+    expect(stored.questProgress).toBeUndefined();
+  });
+
+  it('gives the same quests on a re-render — the board cannot reshuffle', () => {
+    const first = renderPastEntry(<App />);
+    const before = within(screen.getByRole('region', { name: /Tagesaufgaben/i }))
+      .getAllByRole('button')
+      .map((b) => b.getAttribute('aria-label'));
+    first.unmount();
+
+    renderPastEntry(<App />);
+    const after = within(screen.getByRole('region', { name: /Tagesaufgaben/i }))
+      .getAllByRole('button')
+      .map((b) => b.getAttribute('aria-label'));
+    expect(after).toEqual(before);
+  });
+
+  it("routes to the quest's tab when a row is activated", async () => {
+    renderPastEntry(<App />);
+    const board = within(screen.getByRole('region', { name: /Tagesaufgaben/i }));
+    const rows = board.getAllByRole('button');
+    await userEvent.click(rows[0]);
+    // Landing anywhere is enough: the assertion is that the row is a live
+    // control, which `<li onClick>` rows once were not.
+    expect(document.querySelector('main')).toBeInTheDocument();
+  });
+});

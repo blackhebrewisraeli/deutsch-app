@@ -81,7 +81,12 @@ export function recentBaseline(daily, todayKey, days = BASELINE_DAYS) {
     .slice(0, days)
     .map(([, d]) => d?.total ?? 0);
 
-  if (totals.length === 0) return MIN_TARGET;
+  return baselineFrom(totals);
+}
+
+/** Median of a set of day totals, floored — the shared rule for every target. */
+function baselineFrom(totals) {
+  if (!totals || totals.length === 0) return MIN_TARGET;
   const sorted = [...totals].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
   const median =
@@ -191,4 +196,50 @@ export function deriveQuests({ userId, todayKey, daily = null, count = QUEST_COU
 /** How many of today's quests are complete — the input a badge would test. */
 export function questsCompleted(quests) {
   return (quests ?? []).filter((q) => q?.done).length;
+}
+
+/**
+ * Quest completions across the learner's whole history — still derived.
+ *
+ * A badge like "complete 10 daily quests" needs a cumulative figure, and the
+ * obvious way to get one is to store a counter. It is not necessary: for any
+ * past day, the quest set is `seedFor(userId, day)` and the progress is that
+ * day's counters, both of which are already in the synced `daily` map. So the
+ * whole history reconstructs from data we hold.
+ *
+ * Deliberately ONE pass. Calling deriveQuests in a loop would re-scan and
+ * re-sort the entire day map per day — O(n²) — and this runs inside
+ * gamificationContext, which App evaluates during render.
+ *
+ * A consequence worth naming: changing QUEST_CATALOGUE retroactively changes
+ * what past days would have asked for, so this count can move. It cannot take a
+ * badge away — App only ever ADDS to gamification.achievements, never removes —
+ * but two learners with identical histories can differ if the catalogue changed
+ * between them.
+ *
+ * @returns {{ completed: number, perfectDays: number, days: number }}
+ */
+export function questHistory({ daily = null, userId, count = QUEST_COUNT } = {}) {
+  const entries = Object.entries(daily ?? {}).sort(([a], [b]) => (a < b ? -1 : 1));
+
+  let completed = 0;
+  let perfectDays = 0;
+
+  for (let i = 0; i < entries.length; i += 1) {
+    const [day, dayCounters] = entries[i];
+    // The same trailing window recentBaseline uses: the most recent recorded
+    // days BEFORE this one, never this one.
+    const window = entries.slice(Math.max(0, i - BASELINE_DAYS), i).map(([, d]) => d?.total ?? 0);
+    const base = baselineFrom(window);
+
+    const picked = pickQuests(QUEST_CATALOGUE, seedFor(userId, day), count);
+    let doneToday = 0;
+    for (const q of picked) {
+      if (q.progress(dayCounters) >= q.target(base)) doneToday += 1;
+    }
+    completed += doneToday;
+    if (picked.length > 0 && doneToday === picked.length) perfectDays += 1;
+  }
+
+  return { completed, perfectDays, days: entries.length };
 }

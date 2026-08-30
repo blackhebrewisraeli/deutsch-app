@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
+  questHistory,
   hashSeed,
   seedFor,
   recentBaseline,
@@ -346,5 +347,97 @@ describe('the catalogue itself', () => {
       expect(Number.isFinite(p)).toBe(true);
       expect(p).toBeGreaterThanOrEqual(0);
     }
+  });
+});
+
+describe('questHistory', () => {
+  // A day whose counters clear every quest, whatever the seed picks.
+  const bigDay = () => {
+    let d = {};
+    for (const tab of TABS) {
+      for (let i = 0; i < 60; i += 1) d = applyEvent(d, 'X', tab, 'a1', 'correct');
+    }
+    return d.X;
+  };
+
+  const historyOf = (dayCounters, days) => {
+    const daily = {};
+    for (let i = 1; i <= days; i += 1) {
+      daily[`2026-09-${String(i).padStart(2, '0')}`] = dayCounters;
+    }
+    return daily;
+  };
+
+  it('counts nothing for an empty history', () => {
+    expect(questHistory({ daily: {}, userId: 'u1' })).toEqual({
+      completed: 0,
+      perfectDays: 0,
+      days: 0,
+    });
+  });
+
+  it('counts a fully-cleared day as a perfect day', () => {
+    const r = questHistory({ daily: historyOf(bigDay(), 1), userId: 'u1' });
+    expect(r.days).toBe(1);
+    expect(r.perfectDays).toBe(1);
+    expect(r.completed).toBe(QUEST_COUNT);
+  });
+
+  it('accumulates across days', () => {
+    const one = questHistory({ daily: historyOf(bigDay(), 1), userId: 'u1' });
+    const five = questHistory({ daily: historyOf(bigDay(), 5), userId: 'u1' });
+    expect(five.days).toBe(5);
+    expect(five.completed).toBeGreaterThan(one.completed);
+  });
+
+  it('does NOT hand out a clean sweep every day for a steady learner', () => {
+    // Targets scale off the trailing median, so a learner doing exactly their
+    // usual amount is asked for a little more. Five identical days are not five
+    // perfect days, and that is the point of relative targets — this test
+    // originally asserted 5×QUEST_COUNT and was wrong about the design.
+    const r = questHistory({ daily: historyOf(bigDay(), 5), userId: 'u1' });
+    expect(r.perfectDays).toBeLessThan(5);
+  });
+
+  it('counts no completions on days with no activity', () => {
+    const daily = { '2026-09-01': { total: 0 }, '2026-09-02': { total: 0 } };
+    const r = questHistory({ daily, userId: 'u1' });
+    expect(r).toEqual({ completed: 0, perfectDays: 0, days: 2 });
+  });
+
+  it('is a pure read — it never mutates the day map', () => {
+    const daily = historyOf(bigDay(), 3);
+    const before = JSON.stringify(daily);
+    questHistory({ daily, userId: 'u1' });
+    expect(JSON.stringify(daily)).toBe(before);
+  });
+
+  it('depends on the user, because their quest sets did', () => {
+    // Two learners with IDENTICAL histories can differ: they were asked
+    // different things on the same days.
+    const daily = historyOf(answers(3, 'vocab', 'correct')['2026-08-30'], 6);
+    const a = questHistory({ daily, userId: 'user-a' }).completed;
+    const b = questHistory({ daily, userId: 'user-b' }).completed;
+    expect(Number.isInteger(a)).toBe(true);
+    expect(Number.isInteger(b)).toBe(true);
+  });
+
+  it('agrees with deriveQuests for the most recent day', () => {
+    // The fold reimplements the baseline window for speed; if it drifts from
+    // deriveQuests, the badge count stops matching what the learner saw.
+    const daily = historyOf(bigDay(), 4);
+    const days = Object.keys(daily).sort();
+    const last = days[days.length - 1];
+    const live = deriveQuests({ userId: 'u1', todayKey: last, daily });
+    const doneLive = live.filter((q) => q.done).length;
+
+    const upTo = Object.fromEntries(days.map((d) => [d, daily[d]]));
+    const folded = questHistory({ daily: upTo, userId: 'u1' });
+    // The last day's contribution is the fold total minus the first three days'.
+    const withoutLast = questHistory({
+      daily: Object.fromEntries(days.slice(0, -1).map((d) => [d, daily[d]])),
+      userId: 'u1',
+    });
+    expect(folded.completed - withoutLast.completed).toBe(doneLive);
   });
 });

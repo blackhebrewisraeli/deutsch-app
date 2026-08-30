@@ -145,6 +145,27 @@ export const ACHIEVEMENTS = [
     test: (c) => c.decksMastered >= 4,
   },
   {
+    id: 'quests10',
+    category: 'quests',
+    name: 'Aufgabenjäger',
+    icon: '🗂️',
+    test: (c) => c.questsCompleted >= 10,
+  },
+  {
+    id: 'quests50',
+    category: 'quests',
+    name: 'Aufgabenmeister',
+    icon: '🏅',
+    test: (c) => c.questsCompleted >= 50,
+  },
+  {
+    id: 'questPerfectDay',
+    category: 'quests',
+    name: 'Tagwerk',
+    icon: '🌟',
+    test: (c) => c.questPerfectDays >= 1,
+  },
+  {
     id: 'leagueChampion',
     category: 'mastery',
     name: 'Liga-Meister',
@@ -170,9 +191,18 @@ export function decksMastered(srs) {
   return n;
 }
 
-export function gamificationContext(state) {
+/**
+ * @param {object} state
+ * @param {{completed?: number, perfectDays?: number}} [questCtx] quest history,
+ *   INJECTED rather than imported. lib/quests.js reads TABS from lib/stats.js,
+ *   and importing it here closed a cycle that left TABS undefined at module
+ *   load — 15 test files failed to collect. Injection also matches how
+ *   deriveMissions and deckProgressFor take their inputs.
+ */
+export function gamificationContext(state, questCtx = {}) {
   const daily = state.daily ?? {};
   const srs = state.srs ?? {};
+  const { completed = 0, perfectDays = 0 } = questCtx ?? {};
   return {
     streak: state.stats?.streak ?? 0,
     totalExercises: totalExercises(daily),
@@ -180,5 +210,7 @@ export function gamificationContext(state) {
     decksMastered: decksMastered(srs),
     level: levelFromXp(totalXp(daily)).level,
     leagueWins: state.stats?.leagueWins ?? 0,
+    questsCompleted: completed,
+    questPerfectDays: perfectDays,
   };
 }

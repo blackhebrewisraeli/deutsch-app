@@ -34,6 +34,7 @@ import { StatBlock } from './components/UI';
 import HomeTab from './components/HomeTab';
 import SettingsRoute from './components/settings/SettingsRoute';
 import { deriveMissions } from './lib/missions';
+import { deriveQuests, questHistory } from './lib/quests';
 import { deckProgressFor } from './lib/deckProgress';
 import { readDecks, upsertDeck, deleteDeck, cardsFor, CUSTOM_DECK_ID } from './lib/customDecks';
 import {
@@ -166,7 +167,10 @@ export default function App() {
         lastGoalMet: null,
         bestStreak: 0,
       };
-      const ctx = gamificationContext(s);
+      const ctx = gamificationContext(
+        s,
+        questHistory({ daily: s.daily, userId: userIdRef.current })
+      );
       const lvlInfo = levelFromXp(totalXp(s.daily ?? {}));
       const earned = earnedAchievements(ctx);
       const tKey = todayKey();
@@ -336,6 +340,12 @@ export default function App() {
 
   // Auth
   const { user, status: authStatus } = useAuth();
+  // applyProgress is registered once (empty deps) but needs the CURRENT user to
+  // reconstruct quest history — a stale closure would evaluate quest badges
+  // against the guest seed while the board shows the signed-in one. A ref keeps
+  // them agreeing without re-subscribing the listener on every auth change.
+  const userIdRef = useRef(null);
+  userIdRef.current = user?.id ?? null;
   const syncStatus = useSyncStatus();
   // Claim any league-winner rewards on load (not just when the Leagues tab
   // opens), and celebrate a fresh win with a toast.
@@ -695,6 +705,9 @@ export default function App() {
     getReviewItems(liveState.items ?? {}).length +
     getDueCount(liveState.srs ?? {}, PRESET_DECKS, Date.now());
 
+  // One pass over history, shared by both context calls below.
+  const questCtx = questHistory({ daily: liveState.daily, userId: user?.id });
+
   // Open missions for Home. Every input is already on hand here, and
   // deriveMissions is pure — it decides WHICH missions are open and returns
   // ids and counts, never copy, so no German reaches src/lib.
@@ -712,8 +725,8 @@ export default function App() {
     decks: deckProgressFor({ decks: PRESET_DECKS, learnedWords, learnedByDeck }),
     league: leagueStanding,
     achievements: ACHIEVEMENTS,
-    achievementCtx: gamificationContext(liveState),
-    earned: earnedAchievements(gamificationContext(liveState)).map((a) => a.id),
+    achievementCtx: gamificationContext(liveState, questCtx),
+    earned: earnedAchievements(gamificationContext(liveState, questCtx)).map((a) => a.id),
     now: new Date(),
     lastTab: TABS.includes(tab) ? tab : 'chat',
   });
@@ -741,6 +754,14 @@ export default function App() {
     setLearnedByDeck((prev) => forgetDeck(prev, CUSTOM_DECK_ID));
     window.dispatchEvent(new CustomEvent('deutsch:progress'));
   };
+
+  // Today's quests. Pure: the set is a function of (user, day) and the progress
+  // a read over `daily`, so nothing is stored and nothing syncs.
+  const quests = deriveQuests({
+    userId: user?.id,
+    todayKey: todayKey(),
+    daily: liveState.daily,
+  });
 
   const settingsOverlay = (
     <SettingsRoute
@@ -1096,6 +1117,7 @@ export default function App() {
               profile={profile}
               cefrLevel={level}
               missions={missions}
+              quests={quests}
               onGoToTab={(target) => setTab(target)}
               onOpenSettings={openSettings}
             />

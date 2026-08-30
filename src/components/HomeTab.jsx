@@ -5,6 +5,7 @@ import LevelCard from './gamification/LevelCard';
 import GoalRing from './gamification/GoalRing';
 import IdentityStrip from './IdentityStrip';
 import MissionBoard from './MissionBoard';
+import QuestBoard from './QuestBoard';
 import ErrorBoundary from './ErrorBoundary';
 
 // Landing surface for every app open, guest or signed-in — a quick glance at
@@ -26,6 +27,7 @@ export default function HomeTab({
   profile = null,
   cefrLevel,
   missions = [],
+  quests = [],
   onGoToTab,
   onOpenSettings,
 }) {
@@ -56,6 +58,14 @@ export default function HomeTab({
       <div style={{ marginTop: SPACE[8] }}>
         <ErrorBoundary>
           <MissionBoard missions={missions} onGo={onGoToTab} />
+        </ErrorBoundary>
+      </div>
+
+      {/* Its own boundary: quests derive from a different pipeline, and a throw
+          there must not take the missions board down with it. */}
+      <div style={{ marginTop: SPACE[8] }}>
+        <ErrorBoundary>
+          <QuestBoard quests={quests} onGo={onGoToTab} />
         </ErrorBoundary>
       </div>
     </div>
