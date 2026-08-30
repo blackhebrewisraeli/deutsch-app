@@ -1833,3 +1833,109 @@ describe('markLearned sets rather than toggles', () => {
     expect(Object.values(loadState().learnedWords)).not.toContain(false);
   });
 });
+
+describe('mastery is recorded where it was earned', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    asReturningLearner();
+    localStorage.setItem('deutsch-level', 'b1');
+  });
+
+  const seedOneCardDeck = (id, en) =>
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({
+        decks: {
+          custom: {
+            deckId: 'custom',
+            name: 'x',
+            updatedAt: 1,
+            deletedAt: null,
+            cards: [{ id, de: id, en, glosses: [en] }],
+          },
+        },
+      })
+    );
+
+  const openCustomDeck = async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+    await userEvent.click(await screen.findByRole('button', { name: /Your Deck/ }));
+  };
+
+  const answer = async (text) => {
+    await userEvent.type(screen.getByRole('textbox', { name: 'Type the English meaning' }), text);
+    await userEvent.click(screen.getByRole('button', { name: /CHECK/ }));
+  };
+
+  it('scopes a newly learned word to the deck it was answered in', async () => {
+    seedOneCardDeck('die Sonne', 'the sun');
+    renderPastEntry(<App />);
+    await openCustomDeck();
+    await answer('the sun');
+
+    await waitFor(() => expect(loadState()?.learnedByDeck?.custom).toBeTruthy());
+    expect(loadState().learnedByDeck).toEqual({ custom: { 'die Sonne': true } });
+  });
+
+  it('still MIRRORS into the flat map, so an older client keeps working', async () => {
+    // The mirror is the transition's cost: a device on the previous version
+    // reads only learnedWords, and must not see the word vanish.
+    seedOneCardDeck('die Sonne', 'the sun');
+    renderPastEntry(<App />);
+    await openCustomDeck();
+    await answer('the sun');
+
+    await waitFor(() => expect(loadState()?.learnedWords?.['die Sonne']).toBe(true));
+  });
+
+  it('counts a word once even though it lands in both maps', async () => {
+    seedOneCardDeck('die Sonne', 'the sun');
+    renderPastEntry(<App />);
+    await openCustomDeck();
+    await answer('the sun');
+
+    await waitFor(() => expect(loadState()?.learnedByDeck?.custom).toBeTruthy());
+    expect(loadState().stats.learnedCount).toBe(1);
+  });
+
+  it('backfills a legacy flat key onto the deck its SRS names, on load', async () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({
+        learnedWords: { Hallo: true },
+        srs: { 'greetings:Hallo': { box: 2, lastReviewed: 1, nextDue: 2, reps: 1 } },
+      })
+    );
+    renderPastEntry(<App />);
+
+    await waitFor(() => expect(loadState()?.learnedByDeck?.greetings).toEqual({ Hallo: true }));
+    // and the flat map is untouched — it is union-merged, so pruning would not stick
+    expect(loadState().learnedWords.Hallo).toBe(true);
+  });
+
+  it('leaves a legacy word with no SRS row in the flat map alone', async () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ learnedWords: { Unbekannt: true }, srs: {} })
+    );
+    renderPastEntry(<App />);
+
+    await waitFor(() => expect(loadState()?.stats).toBeTruthy());
+    expect(loadState().learnedByDeck).toEqual({});
+    expect(loadState().learnedWords.Unbekannt).toBe(true);
+  });
+
+  it("drops a deleted deck's scoped mastery but keeps the shared flat mirror", async () => {
+    seedOneCardDeck('die Sonne', 'the sun');
+    renderPastEntry(<App />);
+    await openCustomDeck();
+    await answer('the sun');
+    await waitFor(() => expect(loadState()?.learnedByDeck?.custom).toBeTruthy());
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove your custom deck' }));
+
+    await waitFor(() => expect(loadState().learnedByDeck.custom).toBeUndefined());
+    expect(loadState().learnedWords['die Sonne']).toBe(true);
+  });
+});

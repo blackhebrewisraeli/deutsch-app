@@ -12,21 +12,23 @@
 // both. The four curated decks are disjoint and deckProgress.test.js pins that,
 // so the assumption is enforced rather than hoped for.
 
+import { learnedInDeck } from './learnedWords.js';
+
 /**
  * @param {object} args
  * @param {Record<string, Array<{id: string}>>} args.decks deckId → cards
- * @param {Record<string, unknown>} args.learnedWords card id → truthy when learned
+ * @param {Record<string, unknown>} args.learnedWords legacy flat map, card id → truthy
+ * @param {Record<string, Record<string, true>>} [args.learnedByDeck] deck-scoped mastery
  * @returns {Array<{deckId: string, done: number, total: number}>}
  */
-export function deckProgressFor({ decks = null, learnedWords = null } = {}) {
+export function deckProgressFor({ decks = null, learnedWords = null, learnedByDeck = null } = {}) {
   if (!decks || typeof decks !== 'object') return [];
-  const learned = learnedWords && typeof learnedWords === 'object' ? learnedWords : {};
 
   return Object.entries(decks)
     .filter(([, cards]) => Array.isArray(cards) && cards.length > 0)
     .map(([deckId, cards]) => ({
       deckId,
-      done: cards.filter((c) => c && learned[c.id]).length,
+      done: learnedInDeck({ learnedByDeck, learnedWords, deckId, cards }),
       total: cards.length,
     }));
 }

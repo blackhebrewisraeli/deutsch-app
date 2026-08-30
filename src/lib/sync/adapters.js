@@ -122,3 +122,26 @@ export function decksFromRows(rows) {
   }
   return out;
 }
+
+// learnedByDeck rides its OWN COLUMN on settings, never a key inside `data`.
+// settingsToRow above is an explicit allowlist, so an older client serialises
+// only the fields it knows and would erase any unknown key inside `data` on its
+// next push. A column it never names survives, because PostgREST's
+// ON CONFLICT DO UPDATE SET touches only the columns the payload carries.
+export function learnedByDeckToColumn(learnedByDeck) {
+  return learnedByDeck && Object.keys(learnedByDeck).length > 0 ? learnedByDeck : {};
+}
+
+export function learnedByDeckFromRow(row) {
+  const raw = row?.learned_by_deck;
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out = {};
+  for (const [deckId, cards] of Object.entries(raw)) {
+    if (!deckId || !cards || typeof cards !== 'object' || Array.isArray(cards)) continue;
+    const kept = {};
+    for (const [cardId, on] of Object.entries(cards))
+      if (on === true && cardId) kept[cardId] = true;
+    if (Object.keys(kept).length > 0) out[deckId] = kept;
+  }
+  return out;
+}

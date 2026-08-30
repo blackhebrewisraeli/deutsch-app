@@ -56,7 +56,17 @@ function persistUpsert(tables, table, rows) {
       else tables.decks.push(stored);
     }
   } else if (table === 'settings') {
-    tables.settings = rows.map((r) => ({ data: r.data, user_id: r.user_id }));
+    // Models ON CONFLICT DO UPDATE SET <provided columns>: a column the client
+    // OMITS keeps its existing value. That is the entire reason learned_by_deck
+    // is a column and not a key inside `data` — an older client names only
+    // (user_id, data), so it cannot erase what it never mentions.
+    const prev = tables.settings[0] ?? {};
+    tables.settings = rows.map((r) => ({
+      ...prev,
+      data: r.data,
+      user_id: r.user_id,
+      ...('learned_by_deck' in r ? { learned_by_deck: r.learned_by_deck } : {}),
+    }));
   }
 }
 
@@ -574,5 +584,126 @@ describe('deck tombstones survive a pull (no resurrection)', () => {
 
     expect(localDeck().deletedAt).toBe(5000);
     expect(seeded._tables.decks[0].deleted_at).toBe(iso(5000));
+  });
+});
+
+describe('deck-scoped mastery syncs in its own column', () => {
+  const blob = (o) => localStorage.setItem('deutsch-app-state-v1', JSON.stringify(o));
+  const stored = () => JSON.parse(localStorage.getItem('deutsch-app-state-v1') ?? '{}');
+
+  beforeEach(() => {
+    localStorage.clear();
+    __setClientForTest(null);
+  });
+
+  it('pushes the scoped map into learned_by_deck, not into data', async () => {
+    blob({ learnedByDeck: { greetings: { Hallo: true } }, settingsUpdatedAt: 5 });
+    const seeded = makeFakeClient({}, { persist: true });
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    const row = seeded._tables.settings[0];
+    expect(row.learned_by_deck).toEqual({ greetings: { Hallo: true } });
+    expect(row.data).not.toHaveProperty('learnedByDeck');
+  });
+
+  it('adopts a server scoped map this device has never seen', async () => {
+    blob({ settingsUpdatedAt: 1 });
+    const seeded = makeFakeClient(
+      { settings: [{ data: {}, learned_by_deck: { food: { Brot: true } } }] },
+      { persist: true }
+    );
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    expect(stored().learnedByDeck).toEqual({ food: { Brot: true } });
+  });
+
+  it('UNIONS two devices rather than letting one win', async () => {
+    blob({ learnedByDeck: { greetings: { Hallo: true } }, settingsUpdatedAt: 9 });
+    const seeded = makeFakeClient(
+      { settings: [{ data: { settingsUpdatedAt: 1 }, learned_by_deck: { food: { Brot: true } } }] },
+      { persist: true }
+    );
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    // The local blob is NEWER, so whole-row LWW would have dropped the server's
+    // deck entirely. Union keeps both.
+    expect(stored().learnedByDeck).toEqual({
+      greetings: { Hallo: true },
+      food: { Brot: true },
+    });
+  });
+
+  it('SURVIVES an old client push that names only (user_id, data)', async () => {
+    // THE test for this epic. settingsToRow is an explicit allowlist, so an old
+    // client serialises only the fields it knows. A key inside `data` would be
+    // erased; a column it never names cannot be.
+    const seeded = makeFakeClient({}, { persist: true });
+    blob({ learnedByDeck: { greetings: { Hallo: true } }, settingsUpdatedAt: 5 });
+    __setClientForTest(seeded);
+    await pullAndMerge('user-1');
+    expect(seeded._tables.settings[0].learned_by_deck).toBeTruthy();
+
+    // Now an OLD client pushes: settings row with `data` only.
+    seeded
+      .from('settings')
+      .upsert([{ user_id: 'user-1', data: { goal: 30, settingsUpdatedAt: 99 } }]);
+
+    expect(seeded._tables.settings[0].learned_by_deck).toEqual({ greetings: { Hallo: true } });
+  });
+
+  it('backfills flat keys an old client wrote, using the deck their SRS names', async () => {
+    // The old device knows only the flat map. This device attributes those keys
+    // on the next reconcile — that is what makes the transition converge.
+    blob({ srs: { 'greetings:Hallo': { box: 2, lastReviewed: 1, nextDue: 2, reps: 1 } } });
+    const seeded = makeFakeClient(
+      { settings: [{ data: { learnedWords: { Hallo: true }, settingsUpdatedAt: 50 } }] },
+      { persist: true }
+    );
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    expect(stored().learnedByDeck).toEqual({ greetings: { Hallo: true } });
+    // The flat map is NOT pruned — it is union-merged, so a delete would be
+    // resurrected by the next push from any device that still holds it.
+    expect(stored().learnedWords.Hallo).toBe(true);
+    expect(seeded._tables.settings[0].data.learnedWords.Hallo).toBe(true);
+  });
+
+  it('leaves an unattributable flat key alone rather than guessing a deck', async () => {
+    blob({ srs: {} });
+    const seeded = makeFakeClient(
+      { settings: [{ data: { learnedWords: { Unbekannt: true }, settingsUpdatedAt: 50 } }] },
+      { persist: true }
+    );
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+
+    expect(stored().learnedByDeck).toEqual({});
+    expect(stored().learnedWords.Unbekannt).toBe(true);
+  });
+
+  it('is idempotent — a second reconcile changes nothing', async () => {
+    blob({
+      learnedByDeck: { greetings: { Hallo: true } },
+      srs: { 'greetings:Hallo': { box: 2, lastReviewed: 1, nextDue: 2, reps: 1 } },
+      learnedWords: { Hallo: true },
+      settingsUpdatedAt: 5,
+    });
+    const seeded = makeFakeClient({}, { persist: true });
+    __setClientForTest(seeded);
+
+    await pullAndMerge('user-1');
+    const first = JSON.stringify(seeded._tables.settings[0].learned_by_deck);
+    await pullAndMerge('user-1');
+
+    expect(JSON.stringify(seeded._tables.settings[0].learned_by_deck)).toBe(first);
   });
 });

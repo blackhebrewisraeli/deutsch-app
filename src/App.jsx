@@ -36,6 +36,13 @@ import SettingsRoute from './components/settings/SettingsRoute';
 import { deriveMissions } from './lib/missions';
 import { deckProgressFor } from './lib/deckProgress';
 import { readDecks, upsertDeck, deleteDeck, cardsFor, CUSTOM_DECK_ID } from './lib/customDecks';
+import {
+  readLearnedByDeck,
+  markLearnedIn,
+  forgetDeck,
+  learnedCountOf,
+  backfillFromSrs,
+} from './lib/learnedWords';
 import { useLeagueStanding } from './lib/useLeagueStanding';
 
 // Settings is a route rather than a seventh nav tab, so the hash is what makes
@@ -84,6 +91,10 @@ export default function App() {
   // every tab switch. Hydrated from the blob below, so a deck survives a tab
   // switch, a reload, and a signed-out session alike.
   const [decks, setDecks] = useState({});
+  // Deck-scoped mastery. `learnedWords` stays alongside it as the legacy flat
+  // map: reads fall back to it, and writes still mirror into it so a device on
+  // an older app version keeps working. See lib/learnedWords.js.
+  const [learnedByDeck, setLearnedByDeck] = useState({});
   const [reviewTarget, setReviewTarget] = useState(null);
   const [streakBurst, setStreakBurst] = useState(false);
 
@@ -582,15 +593,42 @@ export default function App() {
     if (s) {
       setLearnedWords(s.learnedWords || {});
       setDecks(readDecks(s));
+      // Attribute existing flat keys to the decks their SRS rows name. Additive
+      // and idempotent, so running it on every load is safe and picks up keys
+      // that arrived from an older device since the last one.
+      setLearnedByDeck(
+        backfillFromSrs({
+          learnedWords: s.learnedWords,
+          srs: s.srs,
+          learnedByDeck: readLearnedByDeck(s),
+        }).learnedByDeck
+      );
       const today = todayKey();
       const goal = s.gamification?.goal ?? DEFAULT_GOAL;
       const streak = currentStreak(s.daily ?? {}, goal, today);
-      const learnedCount = Object.values(s.learnedWords || {}).filter(Boolean).length;
+      const learnedCount = learnedCountOf(
+        backfillFromSrs({
+          learnedWords: s.learnedWords,
+          srs: s.srs,
+          learnedByDeck: readLearnedByDeck(s),
+        }).learnedByDeck,
+        s.learnedWords
+      );
       setStats({ streak, learnedCount, lastVisit: today });
     } else {
       setStats({ streak: 0, learnedCount: 0, lastVisit: todayKey() });
     }
   }, []);
+
+  // The learned count is DERIVED, not incremented. During the transition the
+  // same word can sit in the flat map and under one or more decks, so counting
+  // keys would report it two or three times; learnedCountOf counts distinct
+  // words. Returning the same object when the count is unchanged keeps this
+  // from retriggering the persist effect below on every render.
+  useEffect(() => {
+    const count = learnedCountOf(learnedByDeck, learnedWords);
+    setStats((s) => (s.learnedCount === count ? s : { ...s, learnedCount: count }));
+  }, [learnedByDeck, learnedWords]);
 
   useEffect(() => {
     if (stats.lastVisit) {
@@ -599,9 +637,9 @@ export default function App() {
       // `settingsUpdatedAt`. The `{ ...current }` spread preserves both, so
       // this must stay a merge (never a replacement) or settings LWW breaks.
       const current = loadState() ?? {};
-      saveState({ ...current, stats, learnedWords, decks });
+      saveState({ ...current, stats, learnedWords, decks, learnedByDeck });
     }
-  }, [stats, learnedWords, decks]);
+  }, [stats, learnedWords, decks, learnedByDeck]);
 
   // Review feed click handler — switches tab (and level for Translate),
   // then drops `reviewTarget` so the destination tab can pre-load the item.
@@ -625,14 +663,18 @@ export default function App() {
   // Learning is monotonic here: nothing in the app is meant to un-learn a word,
   // and `learnedWords` is union-merged across devices, so a `false` written on
   // one device is discarded by the next sync anyway.
-  const markLearned = (word) => {
-    setLearnedWords((prev) => {
-      if (prev[word]) return prev;
-      const next = { ...prev, [word]: true };
-      const count = Object.values(next).filter(Boolean).length;
-      setStats((s) => ({ ...s, learnedCount: count }));
-      return next;
-    });
+  // Sets, never toggles. This flipped (`!prev[word]`) until 2026-08-30, and a
+  // rebuilt queue brings a card round again — so answering it correctly twice
+  // UN-learned the word.
+  //
+  // Writes BOTH maps on purpose. The scoped one is the real record; the flat
+  // mirror is what keeps a device on an older app version working, since it
+  // reads only `learnedWords`. The mirror is what a later epic removes once no
+  // old clients remain.
+  const markLearned = (deckId, word) => {
+    if (!word) return;
+    setLearnedByDeck((prev) => markLearnedIn(prev, deckId, word));
+    setLearnedWords((prev) => (prev[word] ? prev : { ...prev, [word]: true }));
     stampSettings();
   };
 
@@ -667,7 +709,7 @@ export default function App() {
     goal: game.goal,
     streak: game.streak,
     reviewItems: getReviewItems(liveState.items ?? {}),
-    decks: deckProgressFor({ decks: PRESET_DECKS, learnedWords }),
+    decks: deckProgressFor({ decks: PRESET_DECKS, learnedWords, learnedByDeck }),
     league: leagueStanding,
     achievements: ACHIEVEMENTS,
     achievementCtx: gamificationContext(liveState),
@@ -694,6 +736,9 @@ export default function App() {
   // would push its copy straight back on the next pull.
   const handleDeckDeleted = () => {
     setDecks((prev) => deleteDeck(prev, CUSTOM_DECK_ID));
+    // The deck is gone, so its scoped mastery is meaningless. The flat mirror
+    // stays: it is union-merged and shared with every other deck.
+    setLearnedByDeck((prev) => forgetDeck(prev, CUSTOM_DECK_ID));
     window.dispatchEvent(new CustomEvent('deutsch:progress'));
   };
 
@@ -1073,6 +1118,7 @@ export default function App() {
               {tab === 'vocab' && (
                 <VocabTab
                   learnedWords={learnedWords}
+                  learnedByDeck={learnedByDeck}
                   markLearned={markLearned}
                   level={level}
                   mobile={mobile}

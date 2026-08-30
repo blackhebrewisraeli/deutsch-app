@@ -12,17 +12,21 @@ import {
   settingsFromRow,
   decksToRows,
   decksFromRows,
+  learnedByDeckToColumn,
+  learnedByDeckFromRow,
 } from './sync/adapters.js';
 import {
   mergeSrs,
   mergeSettings,
   mergeDailyAdditive,
   mergeDecks,
+  mergeLearnedByDeck,
   addCounters,
   subCounters,
   clampCounters,
 } from './sync/merge.js';
 import { readDecks } from './customDecks.js';
+import { readLearnedByDeck, backfillFromSrs } from './learnedWords.js';
 import { LEVEL_KEY } from './levelPref.js';
 
 export const SYNC_ENABLED = import.meta.env.VITE_SYNC_ENABLED === 'true';
@@ -56,9 +60,12 @@ export async function pullAndMerge(userId) {
   const decksRemote = decksFromRows((await c.from('decks').select()).data ?? []);
   const decksMerged = mergeDecks(readDecks(s), decksRemote);
 
-  const setRemote = settingsFromRow(
-    ((await c.from('settings').select()).data ?? [])[0] ?? { data: {} }
-  );
+  const settingsRow = ((await c.from('settings').select()).data ?? [])[0] ?? { data: {} };
+  const setRemote = settingsFromRow(settingsRow);
+
+  // Deck-scoped mastery rides its own column, so it is merged separately from
+  // the settings blob's LWW — union, like the flat map it replaces.
+  const learnedRemote = learnedByDeckFromRow(settingsRow);
   const setMerged = mergeSettings(
     {
       gamification: s.gamification,
@@ -69,6 +76,19 @@ export async function pullAndMerge(userId) {
     },
     setRemote.settingsUpdatedAt == null ? null : setRemote
   );
+
+  // Attribute any flat keys that arrived from an older device, using the merged
+  // SRS. Re-runnable on purpose: an old client keeps writing flat keys, and each
+  // reconcile folds the new ones into their decks.
+  const learnedMerged = mergeLearnedByDeck(readLearnedByDeck(s), learnedRemote);
+  const { learnedByDeck: learnedBackfilled } = backfillFromSrs({
+    learnedWords: mergeSettings(
+      { learnedWords: s.learnedWords },
+      { learnedWords: setRemote.learnedWords }
+    ).learnedWords,
+    srs: srsMerged,
+    learnedByDeck: learnedMerged,
+  });
 
   const dailyRemote = dailyFromRows((await c.from('stats_daily').select()).data ?? []);
   const local = s.daily ?? {};
@@ -117,11 +137,15 @@ export async function pullAndMerge(userId) {
   // saw, so it wins on its own timestamp and is pushed by the next reconcile —
   // the same treatment srs gets.
   const adoptedDecks = mergeDecks(readDecks(cur), decksMerged);
+  // A word learned during the awaits above is newer than anything the merge
+  // saw; union keeps it and the next reconcile pushes it.
+  const adoptedLearnedByDeck = mergeLearnedByDeck(readLearnedByDeck(cur), learnedBackfilled);
   saveState({
     ...cur,
     srs: mergeSrs(cur.srs ?? {}, srsMerged),
     daily: adoptedDaily,
     decks: adoptedDecks,
+    learnedByDeck: adoptedLearnedByDeck,
     gamification: adoptedSettings.gamification ?? cur.gamification,
     learnedWords: adoptedSettings.learnedWords ?? cur.learnedWords,
     levelUpdatedAt: adoptedSettings.levelUpdatedAt ?? cur.levelUpdatedAt,
@@ -147,6 +171,7 @@ export async function pullAndMerge(userId) {
         setMerged.level,
         setMerged.levelUpdatedAt
       ),
+      learned_by_deck: learnedByDeckToColumn(learnedBackfilled),
       user_id: userId,
     },
   ]);

@@ -3,6 +3,7 @@ import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, BUTTON } from '../lib/
 import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
+import { isLearned, learnedInDeck } from '../lib/learnedWords';
 const { decks: PRESET_DECKS } = activePack.content;
 const DEFAULT_DECK_ID = 'greetings';
 import { Volume2, AlertTriangle } from 'lucide-react';
@@ -35,6 +36,7 @@ const glossList = (card) => (card.glosses?.length ? card.glosses.join(' · ') : 
 export default function VocabTab({
   level,
   learnedWords,
+  learnedByDeck = null,
   markLearned,
   mobile = false,
   reviewTarget = null,
@@ -184,7 +186,7 @@ export default function VocabTab({
     const res = dist === 0 ? 'correct' : dist <= 2 ? 'almost' : 'wrong';
     setAnswered(true);
     setResult(res);
-    if (res === 'correct' || res === 'almost') markLearned(card.id);
+    if (res === 'correct' || res === 'almost') markLearned(deckId, card.id);
     recordEvent('vocab', level, res);
     recordItem('vocab', deckId, card.id, card.en, res);
   };
@@ -195,7 +197,7 @@ export default function VocabTab({
     const verdict = correct ? 'correct' : 'wrong';
     setAnswered(true);
     setResult(verdict);
-    if (correct) markLearned(card.id);
+    if (correct) markLearned(deckId, card.id);
     recordEvent('vocab', level, verdict);
     recordItem('vocab', deckId, card.id, card.en, verdict);
   };
@@ -381,12 +383,22 @@ export default function VocabTab({
                     }}
                   />
                 </div>
-                <DeckProgress cards={activeDeck} learnedWords={learnedWords} />
+                <DeckProgress
+                  cards={activeDeck}
+                  learnedWords={learnedWords}
+                  learnedByDeck={learnedByDeck}
+                  deckId={deckId}
+                />
               </div>
 
               {deckComplete && (
                 <DeckCompleteBanner
-                  learnedCount={activeDeck.filter((c) => learnedWords[c.id]).length}
+                  learnedCount={learnedInDeck({
+                    learnedByDeck,
+                    learnedWords,
+                    deckId,
+                    cards: activeDeck,
+                  })}
                   onDismiss={() => setDeckComplete(false)}
                 />
               )}
@@ -395,7 +407,7 @@ export default function VocabTab({
                 card={card}
                 display={drill?.display?.(card)}
                 conceal={drill?.conceal}
-                learned={!!learnedWords[card.id]}
+                learned={isLearned({ learnedByDeck, learnedWords, deckId, cardId: card.id })}
                 mobile={mobile}
               />
 
