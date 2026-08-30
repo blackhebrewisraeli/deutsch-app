@@ -4,13 +4,10 @@
 - **Status:** design, ready for a plan
 - **Author:** Claude Code
 - **Scope:** planning only. No application code for this epic.
-- **Predecessor:** `superpowers/specs/2026-08-30-data-integration-epic-design.md` (#195/#196),
-  whose §2.2 flagged this as the largest live gap found: a generated deck does not survive a
-  reload, and #194's export now has a `decks` key that will stay empty until something writes it.
-
-> **Filing note.** Every other spec in this repo lives at
-> `docs/superpowers/specs/YYYY-MM-DD-*.md`. This one sits at the path named in the request. Happy
-> to move it to the convention on merge — say the word.
+- **Predecessor:** `2026-08-30-data-integration-epic-design.md` (#195/#196), whose §2.2 flagged
+  this as the largest live gap found: a generated deck does not survive a reload, and #194's
+  export now has a `decks` key that will stay empty until something writes it.
+- **Successor:** deck-scoping `learnedWords` — approved as the next epic on the strength of §6.
 
 ---
 
@@ -301,8 +298,8 @@ Three options:
 3. **Do nothing** — the count silently double-marks. Rejected.
 
 **Decision D2: option 2 for this epic**, plus widening the existing disjoint-ids guard to assert
-that a *persisted custom* deck cannot affect curated counts. Option 1 is recorded as its own future
-epic in §9 — it is the real fix, and it is not this epic's fight.
+that a *persisted custom* deck cannot affect curated counts. Option 1 is the real fix and has been
+**approved as the next epic** — it is not this epic's fight, but it is no longer indefinite.
 
 ---
 
@@ -343,8 +340,10 @@ actually reported**; if the epic stalls after it, the reported bug is still fixe
 
 ## 9 · Open questions
 
-1. **Should `learnedWords` become deck-scoped?** §6 defers it; it is the correct fix and a
-   migration of a live synced blob. Its own epic, and arguably the next one after this.
+1. ~~**Should `learnedWords` become deck-scoped?**~~ **Settled: yes, as the next epic.** §6
+   defers it out of *this* one; it is the correct fix and a migration of a live synced blob, so it
+   gets its own design. Until it lands, D2's containment is what stops custom decks corrupting
+   curated progress.
 2. **Tombstone retention.** How long does a `deleted_at` row live before a hard delete, and what
    deletes it — a cron, or the next reconcile from the deleting device? Needed before phase 3.
 3. **A cap on the collection** (phase 4). Cards are unbounded `jsonb` and `authenticated` can write
