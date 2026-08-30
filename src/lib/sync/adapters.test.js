@@ -6,6 +6,8 @@ import {
   dailyFromRows,
   settingsToRow,
   settingsFromRow,
+  decksToRows,
+  decksFromRows,
 } from './adapters.js';
 
 describe('srs adapter', () => {
@@ -101,5 +103,96 @@ describe('settings adapter', () => {
     expect(back.gamification.frozenDays).toEqual({ '2026-06-08': true });
     expect(back.gamification.bestStreak).toBe(9);
     expect(back.gamification.lastReconcileDay).toBe('2026-06-10');
+  });
+});
+
+describe('deck adapters', () => {
+  const localDeck = {
+    custom: {
+      deckId: 'custom',
+      name: 'Weather',
+      cards: [{ id: 'die Sonne', de: 'die Sonne', en: 'the sun' }],
+      updatedAt: Date.parse('2026-08-30T10:00:00.000Z'),
+    },
+  };
+
+  it('maps a local deck to its row shape, carrying cards whole', () => {
+    expect(decksToRows(localDeck)).toEqual([
+      {
+        deck_id: 'custom',
+        name: 'Weather',
+        cards: [{ id: 'die Sonne', de: 'die Sonne', en: 'the sun' }],
+        updated_at: '2026-08-30T10:00:00.000Z',
+      },
+    ]);
+  });
+
+  it('keys the row off the map key, not the stored deckId field', () => {
+    const rows = decksToRows({ custom: { deckId: 'wrong', name: 'n', cards: [], updatedAt: 1 } });
+    expect(rows[0].deck_id).toBe('custom');
+  });
+
+  it('OMITS updated_at when there is no local timestamp, so the column default stamps it', () => {
+    // decks.updated_at is NOT NULL: sending null would fail the write, and
+    // fabricating `now()` locally would win LWW forever.
+    const rows = decksToRows({ custom: { name: 'n', cards: [{ id: 'a' }], updatedAt: null } });
+    expect(rows[0]).not.toHaveProperty('updated_at');
+    expect(Object.keys(rows[0]).sort()).toEqual(['cards', 'deck_id', 'name']);
+  });
+
+  it('falls back to the deck id for a missing name — the column is NOT NULL', () => {
+    expect(decksToRows({ custom: { cards: [], updatedAt: 1 } })[0].name).toBe('custom');
+  });
+
+  it.each([
+    ['an empty map', {}],
+    ['null', null],
+    ['undefined', undefined],
+  ])('maps %s to no rows', (_label, decks) => {
+    expect(decksToRows(decks)).toEqual([]);
+  });
+
+  it('maps server rows back to the local shape', () => {
+    expect(
+      decksFromRows([
+        {
+          deck_id: 'custom',
+          name: 'Weather',
+          cards: [{ id: 'die Sonne' }],
+          updated_at: '2026-08-30T10:00:00.000Z',
+        },
+      ])
+    ).toEqual({
+      custom: {
+        deckId: 'custom',
+        name: 'Weather',
+        cards: [{ id: 'die Sonne' }],
+        updatedAt: Date.parse('2026-08-30T10:00:00.000Z'),
+      },
+    });
+  });
+
+  it('round-trips a deck through rows and back unchanged', () => {
+    expect(decksFromRows(decksToRows(localDeck))).toEqual(localDeck);
+  });
+
+  it('normalises an unparseable or absent updated_at to null', () => {
+    expect(decksFromRows([{ deck_id: 'a', cards: [] }]).a.updatedAt).toBeNull();
+    expect(decksFromRows([{ deck_id: 'a', cards: [], updated_at: 'soon' }]).a.updatedAt).toBeNull();
+  });
+
+  it('defends against a row with non-array cards', () => {
+    expect(decksFromRows([{ deck_id: 'a', cards: null }]).a.cards).toEqual([]);
+  });
+
+  it('skips a row with no deck_id rather than keying a deck on undefined', () => {
+    expect(decksFromRows([{ name: 'orphan', cards: [] }])).toEqual({});
+  });
+
+  it.each([
+    ['no rows', []],
+    ['null', null],
+  ])('maps %s to an empty map', (_label, rows) => {
+    expect(decksFromRows(rows)).toEqual({});
   });
 });

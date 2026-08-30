@@ -10,15 +10,19 @@ import {
   dailyFromRows,
   settingsToRow,
   settingsFromRow,
+  decksToRows,
+  decksFromRows,
 } from './sync/adapters.js';
 import {
   mergeSrs,
   mergeSettings,
   mergeDailyAdditive,
+  mergeDecks,
   addCounters,
   subCounters,
   clampCounters,
 } from './sync/merge.js';
+import { readDecks } from './customDecks.js';
 import { LEVEL_KEY } from './levelPref.js';
 
 export const SYNC_ENABLED = import.meta.env.VITE_SYNC_ENABLED === 'true';
@@ -46,6 +50,11 @@ export async function pullAndMerge(userId) {
 
   const srsRemote = srsFromRows((await c.from('srs_state').select()).data ?? []);
   const srsMerged = mergeSrs(s.srs ?? {}, srsRemote);
+
+  // Decks: per-deck LWW on updatedAt. readDecks normalises the local slice, so
+  // a corrupt blob cannot push a malformed row to the server.
+  const decksRemote = decksFromRows((await c.from('decks').select()).data ?? []);
+  const decksMerged = mergeDecks(readDecks(s), decksRemote);
 
   const setRemote = settingsFromRow(
     ((await c.from('settings').select()).data ?? [])[0] ?? { data: {} }
@@ -104,10 +113,15 @@ export async function pullAndMerge(userId) {
     curSettings,
     setMerged.settingsUpdatedAt == null ? null : setMerged
   );
+  // A deck generated during the awaits above is newer than anything the merge
+  // saw, so it wins on its own timestamp and is pushed by the next reconcile —
+  // the same treatment srs gets.
+  const adoptedDecks = mergeDecks(readDecks(cur), decksMerged);
   saveState({
     ...cur,
     srs: mergeSrs(cur.srs ?? {}, srsMerged),
     daily: adoptedDaily,
+    decks: adoptedDecks,
     gamification: adoptedSettings.gamification ?? cur.gamification,
     learnedWords: adoptedSettings.learnedWords ?? cur.learnedWords,
     levelUpdatedAt: adoptedSettings.levelUpdatedAt ?? cur.levelUpdatedAt,
@@ -118,6 +132,9 @@ export async function pullAndMerge(userId) {
 
   if (Object.keys(srsMerged).length) {
     await c.from('srs_state').upsert(withUser(srsToRows(srsMerged), userId));
+  }
+  if (Object.keys(decksMerged).length) {
+    await c.from('decks').upsert(withUser(decksToRows(decksMerged), userId));
   }
   await c.from('settings').upsert([
     {

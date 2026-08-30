@@ -78,3 +78,33 @@ export function settingsFromRow(row) {
     settingsUpdatedAt: d.settingsUpdatedAt,
   };
 }
+
+// Decks ↔ rows. `cards` is an opaque jsonb payload, carried whole.
+//
+// A deck whose updatedAt is null (only reachable from a hand-corrupted blob —
+// upsertDeck always stamps one) OMITS the column rather than sending null:
+// decks.updated_at is NOT NULL with a `now()` default, so omitting it lets the
+// server stamp the row instead of failing the write or fabricating a timestamp
+// that would win LWW forever.
+export function decksToRows(decks) {
+  return Object.entries(decks ?? {}).map(([deckId, d]) => {
+    const row = { deck_id: deckId, name: d?.name ?? deckId, cards: d?.cards ?? [] };
+    const updated = toIso(d?.updatedAt);
+    if (updated !== null) row.updated_at = updated;
+    return row;
+  });
+}
+
+export function decksFromRows(rows) {
+  const out = {};
+  for (const r of rows ?? []) {
+    if (!r?.deck_id) continue;
+    out[r.deck_id] = {
+      deckId: r.deck_id,
+      name: r.name ?? r.deck_id,
+      cards: Array.isArray(r.cards) ? r.cards : [],
+      updatedAt: toMs(r.updated_at),
+    };
+  }
+  return out;
+}

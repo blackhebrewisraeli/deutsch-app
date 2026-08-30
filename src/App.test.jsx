@@ -1569,3 +1569,55 @@ describe('custom decks survive the component that made them', () => {
     expect(screen.getByRole('textbox', { name: 'Custom deck topic' })).toBeInTheDocument();
   });
 });
+
+describe('a generated deck tells the sync engine there is something to push', () => {
+  const generated = [
+    { de: 'die Sonne', en: 'the sun' },
+    { de: 'der Regen', en: 'the rain' },
+  ];
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    asReturningLearner();
+    localStorage.setItem('deutsch-level', 'a1');
+    callClaude.mockReset();
+    callClaude.mockResolvedValue(JSON.stringify(generated));
+    syncMock.markDirty.mockClear();
+    syncMock.start.mockClear();
+  });
+
+  afterEach(() => {
+    syncMock.enabled = false;
+    syncMock.markDirty.mockClear();
+    syncMock.start.mockClear();
+    authMock.status = 'anonymous';
+  });
+
+  const generateADeck = async () => {
+    await userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+    await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
+    await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+    expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
+  };
+
+  it('marks the state dirty for a signed-in user with sync on', async () => {
+    // Without this the deck sits locally until some UNRELATED progress event or
+    // a tab refocus happens to flush it.
+    syncMock.enabled = true;
+    authMock.status = 'authenticated';
+    renderPastEntry(<App />);
+    await generateADeck();
+
+    await waitFor(() => expect(syncMock.markDirty).toHaveBeenCalled());
+  });
+
+  it('still marks nothing dirty for a guest — sync stays off', async () => {
+    syncMock.enabled = false;
+    authMock.status = 'anonymous';
+    renderPastEntry(<App />);
+    await generateADeck();
+
+    expect(syncMock.markDirty).not.toHaveBeenCalled();
+  });
+});

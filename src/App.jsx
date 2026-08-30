@@ -670,8 +670,14 @@ export default function App() {
   // the deck now outlives the component that made it. The write goes through
   // the persist effect above rather than saveState directly, so it keeps the
   // blob's single-writer discipline.
-  const handleDeckGenerated = ({ name, cards }) =>
+  const handleDeckGenerated = ({ name, cards }) => {
     setDecks((prev) => upsertDeck(prev, { deckId: CUSTOM_DECK_ID, name, cards }));
+    // Tell the sync engine there is something to push. Every other write that
+    // matters announces itself this way (handleGoalChange, recordEvent), and
+    // markDirty listens for it — without this the deck would sit locally until
+    // some UNRELATED progress event or a tab refocus happened to flush it.
+    window.dispatchEvent(new CustomEvent('deutsch:progress'));
+  };
 
   const settingsOverlay = (
     <SettingsRoute

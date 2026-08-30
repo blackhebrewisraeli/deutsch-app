@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { mergeSrs, addCounters, subCounters, mergeDailyAdditive, mergeSettings } from './merge.js';
+import {
+  mergeSrs,
+  addCounters,
+  subCounters,
+  mergeDailyAdditive,
+  mergeSettings,
+  mergeDecks,
+} from './merge.js';
 import { trialStatus } from '../trial.js';
 import { TRIAL_ROUND_CAP } from '../gameConfig.js';
 
@@ -235,5 +242,91 @@ describe('guest trial data survives sign-in', () => {
     expect(merged.total).toBe(guestDaily[key].total + existing.total);
     expect(merged.byTab.chat).toBe(12);
     expect(merged.byTab.vocab).toBe(30);
+  });
+});
+
+describe('mergeDecks', () => {
+  const deck = (deckId, updatedAt, name = deckId) => ({
+    deckId,
+    name,
+    cards: [{ id: `${deckId}-card`, de: deckId }],
+    updatedAt,
+  });
+
+  it('keeps a deck that exists only locally', () => {
+    expect(mergeDecks({ a: deck('a', 10) }, {})).toEqual({ a: deck('a', 10) });
+  });
+
+  it('adopts a deck that exists only on the server', () => {
+    expect(mergeDecks({}, { b: deck('b', 10) })).toEqual({ b: deck('b', 10) });
+  });
+
+  it('takes the union rather than one side wholesale', () => {
+    const merged = mergeDecks({ a: deck('a', 1) }, { b: deck('b', 2) });
+    expect(Object.keys(merged).sort()).toEqual(['a', 'b']);
+  });
+
+  it('keeps the local deck when its updatedAt is newer', () => {
+    const merged = mergeDecks({ a: deck('a', 200, 'local') }, { a: deck('a', 100, 'server') });
+    expect(merged.a.name).toBe('local');
+  });
+
+  it('takes the server deck when its updatedAt is newer', () => {
+    const merged = mergeDecks({ a: deck('a', 100, 'local') }, { a: deck('a', 200, 'server') });
+    expect(merged.a.name).toBe('server');
+  });
+
+  it('resolves an exact tie to remote, matching mergeSrs', () => {
+    const merged = mergeDecks({ a: deck('a', 100, 'local') }, { a: deck('a', 100, 'server') });
+    expect(merged.a.name).toBe('server');
+  });
+
+  it('lets a real timestamp beat a missing one, in both directions', () => {
+    expect(mergeDecks({ a: deck('a', 1, 'local') }, { a: deck('a', null, 'server') }).a.name).toBe(
+      'local'
+    );
+    expect(mergeDecks({ a: deck('a', null, 'local') }, { a: deck('a', 1, 'server') }).a.name).toBe(
+      'server'
+    );
+  });
+
+  it('resolves two missing timestamps to remote rather than throwing', () => {
+    const merged = mergeDecks({ a: deck('a', null, 'local') }, { a: deck('a', null, 'server') });
+    expect(merged.a.name).toBe('server');
+  });
+
+  it('carries the winning deck across whole — cards are never merged per card', () => {
+    const local = {
+      a: { deckId: 'a', name: 'local', cards: [{ id: 'x' }, { id: 'y' }], updatedAt: 9 },
+    };
+    const remote = { a: { deckId: 'a', name: 'server', cards: [{ id: 'z' }], updatedAt: 1 } };
+    expect(mergeDecks(local, remote).a.cards).toEqual([{ id: 'x' }, { id: 'y' }]);
+  });
+
+  it('decides each deck on its OWN clock, not one clock for the slice', () => {
+    // The whole point of per-deck LWW: a newer local deck must not drag an
+    // older local one over a fresher server copy.
+    const local = { a: deck('a', 500, 'local'), b: deck('b', 1, 'local') };
+    const remote = { a: deck('a', 100, 'server'), b: deck('b', 400, 'server') };
+    const merged = mergeDecks(local, remote);
+    expect(merged.a.name).toBe('local');
+    expect(merged.b.name).toBe('server');
+  });
+
+  it.each([
+    ['both sides empty', {}, {}],
+    ['null local', null, {}],
+    ['null remote', {}, null],
+    ['both null', null, null],
+  ])('returns {} for %s', (_label, local, remote) => {
+    expect(mergeDecks(local, remote)).toEqual({});
+  });
+
+  it('does not mutate either input', () => {
+    const local = { a: deck('a', 200) };
+    const remote = { a: deck('a', 100) };
+    const before = [JSON.stringify(local), JSON.stringify(remote)];
+    mergeDecks(local, remote);
+    expect([JSON.stringify(local), JSON.stringify(remote)]).toEqual(before);
   });
 });
