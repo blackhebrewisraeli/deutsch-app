@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VocabTab from './VocabTab';
-import { upsertDeck, liveDecks, CUSTOM_DECK_ID } from '../lib/customDecks.js';
+import { upsertDeck, deleteDeck, liveDecks } from '../lib/customDecks.js';
 import { markLearnedIn } from '../lib/learnedWords.js';
 import { activePack } from '../packs';
 import { callClaude } from '../lib/claude';
@@ -44,9 +44,14 @@ function DeckHost({ children: _children, ...props }) {
       markLearned={() => {}}
       mobile={false}
       customDecks={liveDecks(decks)}
-      onDeckGenerated={({ name, cards }) =>
-        setDecks((prev) => upsertDeck(prev, { deckId: CUSTOM_DECK_ID, name, cards }))
+      // Honours the deckId VocabTab supplies, exactly as App does. Pinning it
+      // to a literal here would store the deck under one id while VocabTab
+      // selected another — the host disagreeing with production, which is how
+      // the markLearned toggle stayed hidden for so long.
+      onDeckGenerated={({ deckId, name, cards }) =>
+        setDecks((prev) => upsertDeck(prev, { deckId, name, cards }))
       }
+      onDeckDeleted={(deckId) => setDecks((prev) => deleteDeck(prev, deckId))}
       {...props}
     />
   );

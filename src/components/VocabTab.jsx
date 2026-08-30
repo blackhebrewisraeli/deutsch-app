@@ -3,7 +3,7 @@ import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, BUTTON } from '../lib/
 import { callClaude } from '../lib/claude';
 import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
-import { CUSTOM_DECK_ID } from '../lib/customDecks';
+import { newDeckId, MAX_CUSTOM_DECKS } from '../lib/customDecks';
 import { isLearned, learnedInDeck } from '../lib/learnedWords';
 const { decks: PRESET_DECKS } = activePack.content;
 const DEFAULT_DECK_ID = 'greetings';
@@ -238,9 +238,11 @@ export default function VocabTab({
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed) && parsed.length > 0) {
-        // Phase 2 keeps the historic single slot so behaviour is unchanged;
-        // phase 3 swaps this one expression for newDeckId().
-        const generatedId = CUSTOM_DECK_ID;
+        // A fresh id per generation — this one expression is the whole of
+        // "many decks" at the call site. Random, never derived from the topic:
+        // mergeDecks settles a shared id by LWW, so a content hash would make
+        // two decks on one topic silently discard each other.
+        const generatedId = newDeckId();
         onDeckGenerated?.({
           deckId: generatedId,
           name: customTopic.trim(),
@@ -304,6 +306,8 @@ export default function VocabTab({
           onSelect={setDeckId}
           customDecks={customDecks}
           onDelete={onDeckDeleted}
+          atCap={Object.keys(customDecks ?? {}).length >= MAX_CUSTOM_DECKS}
+          maxDecks={MAX_CUSTOM_DECKS}
           customTopic={customTopic}
           onTopicChange={setCustomTopic}
           generating={generating}

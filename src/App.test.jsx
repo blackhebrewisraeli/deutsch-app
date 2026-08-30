@@ -8,6 +8,7 @@ import { TUTORIAL_KEY } from './lib/tutorialPref';
 import { THEME_MODE_KEY } from './lib/themeMode';
 import { loadState, thawPersist } from './lib/storage';
 import { activePack } from './packs';
+import { MAX_CUSTOM_DECKS } from './lib/customDecks';
 
 vi.mock('@vercel/analytics/react', () => ({ Analytics: () => null }));
 
@@ -115,6 +116,12 @@ const setViewportWidth = (width) => {
 // delay-based interactions `userEvent` schedules internally. A no-op when the
 // gate never appeared (e.g. an
 // authenticated or auth-unconfigured mock).
+
+/** The one live custom deck in stored state — generated ids are random now. */
+const liveCustomDeck = () => Object.values(loadState()?.decks ?? {}).find((d) => d && !d.deletedAt);
+/** Every tombstoned deck in stored state. */
+const tombstones = () => Object.values(loadState()?.decks ?? {}).filter((d) => d?.deletedAt);
+
 const renderPastEntry = (ui) => {
   const result = render(ui);
   const guestBtn = screen.queryByRole('button', { name: 'Try it first — free →' });
@@ -1500,8 +1507,8 @@ describe('custom decks survive the component that made them', () => {
     renderPastEntry(<App />);
     await generateADeck();
 
-    await waitFor(() => expect(loadState()?.decks?.custom).toBeTruthy());
-    const stored = loadState().decks.custom;
+    await waitFor(() => expect(liveCustomDeck()).toBeTruthy());
+    const stored = liveCustomDeck();
     expect(stored.name).toBe('weather');
     expect(stored.cards.map((c) => c.de)).toEqual(generated.map((g) => g.de));
     expect(stored.updatedAt).toEqual(expect.any(Number));
@@ -1522,7 +1529,7 @@ describe('custom decks survive the component that made them', () => {
   it('keeps the deck across a full remount — the reload case', async () => {
     const first = renderPastEntry(<App />);
     await generateADeck();
-    await waitFor(() => expect(loadState()?.decks?.custom).toBeTruthy());
+    await waitFor(() => expect(liveCustomDeck()).toBeTruthy());
     first.unmount();
 
     renderPastEntry(<App />);
@@ -1535,7 +1542,7 @@ describe('custom decks survive the component that made them', () => {
 
     const first = renderPastEntry(<App />);
     await generateADeck();
-    await waitFor(() => expect(loadState()?.decks?.custom).toBeTruthy());
+    await waitFor(() => expect(liveCustomDeck()).toBeTruthy());
     first.unmount();
 
     renderPastEntry(<App />);
@@ -1557,7 +1564,7 @@ describe('custom decks survive the component that made them', () => {
     renderPastEntry(<App />);
     await generateADeck();
 
-    await waitFor(() => expect(loadState()?.decks?.custom).toBeTruthy());
+    await waitFor(() => expect(liveCustomDeck()).toBeTruthy());
     expect(loadState().learnedWords).toEqual({ Hallo: true });
   });
 
@@ -1669,15 +1676,14 @@ describe('deleting a custom deck writes a tombstone', () => {
     );
 
   const openVocab = async () => userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
-  const removeDeck = async () =>
-    userEvent.click(screen.getByRole('button', { name: 'Remove your custom deck' }));
+  const removeDeck = async () => userEvent.click(screen.getByRole('button', { name: /^Remove / }));
 
   it('offers a Remove control beside the deck, not nested inside it', async () => {
     seedDeck();
     renderPastEntry(<App />);
     await openVocab();
 
-    const remove = await screen.findByRole('button', { name: 'Remove your custom deck' });
+    const remove = await screen.findByRole('button', { name: /^Remove / });
     const select = screen.getByRole('button', { name: /Your Deck/ });
     // A <button> inside a <button> is invalid HTML and gets silently un-nested.
     expect(select.contains(remove)).toBe(false);
@@ -1700,8 +1706,8 @@ describe('deleting a custom deck writes a tombstone', () => {
     await openVocab();
     await removeDeck();
 
-    await waitFor(() => expect(loadState()?.decks?.custom?.deletedAt).toEqual(expect.any(Number)));
-    const stored = loadState().decks.custom;
+    await waitFor(() => expect(tombstones()).toHaveLength(1));
+    const stored = tombstones()[0];
     expect(stored.cards).toEqual([]);
     expect(stored.updatedAt).toBe(stored.deletedAt);
   });
@@ -1711,7 +1717,7 @@ describe('deleting a custom deck writes a tombstone', () => {
     const first = renderPastEntry(<App />);
     await openVocab();
     await removeDeck();
-    await waitFor(() => expect(loadState()?.decks?.custom?.deletedAt).toBeTruthy());
+    await waitFor(() => expect(tombstones()).toHaveLength(1));
     first.unmount();
 
     renderPastEntry(<App />);
@@ -1752,13 +1758,18 @@ describe('deleting a custom deck writes a tombstone', () => {
     renderPastEntry(<App />);
     await openVocab();
     await removeDeck();
-    await waitFor(() => expect(loadState()?.decks?.custom?.deletedAt).toBeTruthy());
+    await waitFor(() => expect(tombstones()).toHaveLength(1));
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
     await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
 
     expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
-    await waitFor(() => expect(loadState()?.decks?.custom?.deletedAt).toBeNull());
+    // A regeneration is a DIFFERENT deck now, not a revival of the deleted one.
+    // The tombstone must stand, or deleting then generating would resurrect the
+    // removed deck's identity on every other device.
+    await waitFor(() => expect(liveCustomDeck()).toBeTruthy());
+    expect(tombstones()).toHaveLength(1);
+    expect(liveCustomDeck().deckId).not.toBe(tombstones()[0].deckId);
   });
 });
 
@@ -1933,7 +1944,7 @@ describe('mastery is recorded where it was earned', () => {
     await answer('the sun');
     await waitFor(() => expect(loadState()?.learnedByDeck?.custom).toBeTruthy());
 
-    await userEvent.click(screen.getByRole('button', { name: 'Remove your custom deck' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Remove / }));
 
     await waitFor(() => expect(loadState().learnedByDeck.custom).toBeUndefined());
     expect(loadState().learnedWords['die Sonne']).toBe(true);
@@ -2015,5 +2026,117 @@ describe('daily quests on Home', () => {
     // Landing anywhere is enough: the assertion is that the row is a live
     // control, which `<li onClick>` rows once were not.
     expect(document.querySelector('main')).toBeInTheDocument();
+  });
+});
+
+describe('a collection of custom decks', () => {
+  const generated = [
+    { de: 'die Sonne', en: 'the sun' },
+    { de: 'der Regen', en: 'the rain' },
+  ];
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    asReturningLearner();
+    localStorage.setItem('deutsch-level', 'a1');
+    callClaude.mockReset();
+    callClaude.mockResolvedValue(JSON.stringify(generated));
+  });
+
+  const seedDecks = (n) => {
+    const decks = {};
+    for (let i = 0; i < n; i += 1) {
+      decks[`custom-${i}`] = {
+        deckId: `custom-${i}`,
+        name: `topic ${i}`,
+        updatedAt: i + 1,
+        deletedAt: null,
+        cards: [{ id: `w${i}`, de: `Wort${i}`, en: `word${i}` }],
+      };
+    }
+    localStorage.setItem('deutsch-app-state-v1', JSON.stringify({ decks }));
+  };
+
+  const openVocab = () => userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+
+  it('lists every deck by name', async () => {
+    seedDecks(3);
+    renderPastEntry(<App />);
+    await openVocab();
+
+    for (const name of ['topic 0', 'topic 1', 'topic 2']) {
+      expect(await screen.findByText(new RegExp(name))).toBeInTheDocument();
+    }
+  });
+
+  it('generating ADDS a deck rather than replacing the existing one', async () => {
+    seedDecks(1);
+    renderPastEntry(<App />);
+    await openVocab();
+
+    await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
+    await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+
+    await waitFor(() => expect(Object.keys(loadState().decks)).toHaveLength(2));
+    const names = Object.values(loadState().decks).map((d) => d.name);
+    expect(names).toContain('topic 0');
+    expect(names).toContain('weather');
+  });
+
+  it('gives each generated deck its own id', async () => {
+    seedDecks(0);
+    renderPastEntry(<App />);
+    await openVocab();
+
+    for (const topic of ['one', 'two']) {
+      const field = screen.getByRole('textbox', { name: 'Custom deck topic' });
+      // The field is NOT cleared after a generation — pre-existing behaviour,
+      // unchanged by this epic, but a papercut now that generating repeatedly
+      // is the normal case. Cleared here so the second deck gets its own topic.
+      await userEvent.clear(field);
+      await userEvent.type(field, topic);
+      await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+      await waitFor(() =>
+        expect(Object.values(loadState().decks).some((d) => d.name === topic)).toBe(true)
+      );
+    }
+    const ids = Object.keys(loadState().decks);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect(ids).toHaveLength(2);
+  });
+
+  it('stops generation at the cap and says why', async () => {
+    seedDecks(MAX_CUSTOM_DECKS);
+    renderPastEntry(<App />);
+    await openVocab();
+
+    expect(await screen.findByRole('status')).toHaveTextContent(String(MAX_CUSTOM_DECKS));
+    expect(screen.getByRole('button', { name: /GENERATE 10 CARDS/ })).toBeDisabled();
+  });
+
+  it('lets a learner generate again after removing one', async () => {
+    seedDecks(MAX_CUSTOM_DECKS);
+    renderPastEntry(<App />);
+    await openVocab();
+    expect(await screen.findByRole('status')).toBeInTheDocument();
+
+    await userEvent.click(screen.getAllByRole('button', { name: /^Remove / })[0]);
+
+    await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
+    expect(screen.getByRole('textbox', { name: 'Custom deck topic' })).toBeEnabled();
+  });
+
+  it('removes only the deck whose control was pressed', async () => {
+    seedDecks(3);
+    renderPastEntry(<App />);
+    await openVocab();
+    await screen.findByText(/topic 1/);
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove topic 1' }));
+
+    await waitFor(() => expect(screen.queryByText(/topic 1/)).toBeNull());
+    expect(screen.getByText(/topic 0/)).toBeInTheDocument();
+    expect(screen.getByText(/topic 2/)).toBeInTheDocument();
   });
 });
