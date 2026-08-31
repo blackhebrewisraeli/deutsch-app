@@ -2091,10 +2091,8 @@ describe('a collection of custom decks', () => {
 
     for (const topic of ['one', 'two']) {
       const field = screen.getByRole('textbox', { name: 'Custom deck topic' });
-      // The field is NOT cleared after a generation — pre-existing behaviour,
-      // unchanged by this epic, but a papercut now that generating repeatedly
-      // is the normal case. Cleared here so the second deck gets its own topic.
-      await userEvent.clear(field);
+      // No clear() any more: the app empties the field itself on success, which
+      // is what this loop used to have to do by hand.
       await userEvent.type(field, topic);
       await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
       await waitFor(() =>
@@ -2138,5 +2136,93 @@ describe('a collection of custom decks', () => {
     await waitFor(() => expect(screen.queryByText(/topic 1/)).toBeNull());
     expect(screen.getByText(/topic 0/)).toBeInTheDocument();
     expect(screen.getByText(/topic 2/)).toBeInTheDocument();
+  });
+});
+
+describe('deck papercuts', () => {
+  const generated = [
+    { de: 'die Sonne', en: 'the sun' },
+    { de: 'der Regen', en: 'the rain' },
+  ];
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    asReturningLearner();
+    localStorage.setItem('deutsch-level', 'a1');
+    callClaude.mockReset();
+    callClaude.mockResolvedValue(JSON.stringify(generated));
+  });
+
+  const openVocab = () => userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+  const field = () => screen.getByRole('textbox', { name: 'Custom deck topic' });
+  const generate = () => userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+
+  it('empties the topic field after a successful generation', async () => {
+    renderPastEntry(<App />);
+    await openVocab();
+    await userEvent.type(field(), 'weather');
+    await generate();
+
+    await waitFor(() => expect(liveCustomDeck()).toBeTruthy());
+    expect(field()).toHaveValue('');
+  });
+
+  it('so a second topic is not typed onto the end of the first', async () => {
+    // The actual symptom: "weather" then "food" produced a deck named
+    // "weatherfood".
+    renderPastEntry(<App />);
+    await openVocab();
+    await userEvent.type(field(), 'weather');
+    await generate();
+    await waitFor(() => expect(field()).toHaveValue(''));
+
+    await userEvent.type(field(), 'food');
+    await generate();
+
+    await waitFor(() => expect(Object.keys(loadState().decks)).toHaveLength(2));
+    expect(
+      Object.values(loadState().decks)
+        .map((d) => d.name)
+        .sort()
+    ).toEqual(['food', 'weather']);
+  });
+
+  it('KEEPS the topic when generation fails, so a retry needs no retyping', async () => {
+    const alertSpy = vi.fn();
+    vi.stubGlobal('alert', alertSpy);
+    callClaude.mockRejectedValue(new Error('upstream down'));
+
+    renderPastEntry(<App />);
+    await openVocab();
+    await userEvent.type(field(), 'weather');
+    await generate();
+
+    await waitFor(() => expect(alertSpy).toHaveBeenCalled());
+    expect(field()).toHaveValue('weather');
+    vi.unstubAllGlobals();
+  });
+
+  it('says "1 card" for a one-card deck, not "1 cards"', async () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({
+        decks: {
+          'custom-a': {
+            deckId: 'custom-a',
+            name: 'solo',
+            updatedAt: 1,
+            deletedAt: null,
+            cards: [{ id: 'Eins', de: 'Eins', en: 'one' }],
+          },
+        },
+      })
+    );
+    renderPastEntry(<App />);
+    await openVocab();
+
+    expect(await screen.findByText('1 card')).toBeInTheDocument();
+    expect(screen.queryByText('1 cards')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Your Deck: solo — 1 card' })).toBeInTheDocument();
   });
 });

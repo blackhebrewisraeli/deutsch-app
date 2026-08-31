@@ -11,6 +11,12 @@ import {
 import { SectionLabel } from '../UI';
 import { AUTO_DECKS, DECK_GROUPS } from '../../packs/de/autoDecks';
 
+// English pluralisation for the counts this picker renders. Local, exactly as
+// packs/de/missions.js and quests.js each keep their own: the RULE is part of a
+// language, so it belongs beside the words rather than in a shared util that
+// would quietly impose "one vs many" on a language that does not work that way.
+const plural = (n, one, many) => (n === 1 ? one : many);
+
 // The four curated decks. Counts are fixed because these decks are authored,
 // not derived from the lexicon like AUTO_DECKS are.
 const PRESETS = [
@@ -79,7 +85,7 @@ export default function DeckPicker({
             >
               <span>{d.name}</span>
               <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.6 }}>
-                {d.count} cards
+                {d.count} {plural(d.count, 'card', 'cards')}
               </span>
             </button>
           );
@@ -103,7 +109,7 @@ export default function DeckPicker({
               // The visible row is "✦ weather · 2 cards". A screen reader needs
               // to know what KIND of thing that is, which the sparkle cannot
               // convey — so the accessible name states it explicitly.
-              aria-label={`Your Deck: ${deck.name || 'unnamed'} — ${deck.cards.length} cards`}
+              aria-label={`Your Deck: ${deck.name || 'unnamed'} — ${deck.cards.length} ${plural(deck.cards.length, 'card', 'cards')}`}
               style={{
                 flex: 1,
                 minWidth: 0,
@@ -138,7 +144,7 @@ export default function DeckPicker({
                 ✦ {deck.name || 'Your Deck'}
               </span>
               <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.7 }}>
-                {deck.cards.length} cards
+                {deck.cards.length} {plural(deck.cards.length, 'card', 'cards')}
               </span>
             </button>
             {onDelete && (
