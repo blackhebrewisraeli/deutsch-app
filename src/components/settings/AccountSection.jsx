@@ -9,7 +9,6 @@ import {
   RADIUS,
 } from '../../lib/theme';
 import Button from '../ui/Button';
-import { LEAGUES_ENABLED, updateHandle } from '../../lib/leagues';
 import { isAuthConfigured } from '../../lib/auth.js';
 
 // Mirrors CONFIRM_PHRASE in api/v1/account/delete.js. The server is the
@@ -27,9 +26,14 @@ function formatRelativeSync(ms) {
   return `${Math.floor(hr / 24)}d ago`;
 }
 
-// Stats-tab account management.
-// Guest: CTA to sign in for sync.
-// Signed-in: email + sign out + last-synced + export + danger zone.
+// Account management: sign out, last-synced, export, danger zone.
+//
+// Identity (email, handle, avatar) deliberately does NOT live here. It used to
+// carry its own Handle and Avatar inputs alongside ProfileSection's, so one
+// server row had two editors and two local states. Worse, these two started
+// EMPTY rather than loading the stored values, so saving without retyping sent
+// blank strings — and the endpoint treats an empty string as "clear this
+// field", which quietly wiped the learner's handle. One writer per field.
 export default function AccountSection({
   user,
   onSignIn,
@@ -41,9 +45,6 @@ export default function AccountSection({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [typed, setTyped] = useState('');
   const [exporting, setExporting] = useState(false);
-  const [handle, setHandle] = useState('');
-  const [avatar, setAvatar] = useState('');
-  const [handleMsg, setHandleMsg] = useState(null); // { ok: bool, text: string }
 
   // See AccountChip: with no auth backend configured there is nothing to sign in
   // to, so don't advertise it. A signed-in user still gets the full section.
@@ -76,9 +77,6 @@ export default function AccountSection({
 
   return (
     <div style={{ fontFamily: FONTS.body }}>
-      <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.md, marginBottom: SPACE[2] }}>
-        {user.email}
-      </div>
       {lastSyncedAt != null && (
         <div
           style={{
@@ -105,81 +103,6 @@ export default function AccountSection({
           {exporting ? 'Exporting…' : 'Export my data'}
         </Button>
       </div>
-
-      {/* Handle / avatar editing */}
-      {LEAGUES_ENABLED && (
-        <div style={{ marginBottom: SPACE[4] }}>
-          <div
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              fontWeight: FONT_WEIGHT.bold,
-              letterSpacing: LETTER_SPACING.caps,
-              color: COLORS.mute,
-              marginBottom: SPACE[2],
-            }}
-          >
-            PROFILE
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[2] }}>
-            <input
-              aria-label="Handle"
-              placeholder="Handle"
-              value={handle}
-              onChange={(e) => setHandle(e.target.value)}
-              style={{
-                fontFamily: FONTS.mono,
-                fontSize: FONT_SIZE.base,
-                padding: `${SPACE[1]}px ${SPACE[2]}px`,
-                borderRadius: RADIUS.sm,
-                border: `1px solid ${COLORS.mute}`,
-                background: 'transparent',
-                color: COLORS.ink,
-              }}
-            />
-            <input
-              aria-label="Avatar emoji"
-              placeholder="Avatar emoji"
-              value={avatar}
-              onChange={(e) => setAvatar(e.target.value)}
-              style={{
-                fontFamily: FONTS.mono,
-                fontSize: FONT_SIZE.base,
-                padding: `${SPACE[1]}px ${SPACE[2]}px`,
-                borderRadius: RADIUS.sm,
-                border: `1px solid ${COLORS.mute}`,
-                background: 'transparent',
-                color: COLORS.ink,
-              }}
-            />
-            <Button
-              variant="secondary"
-              onClick={async () => {
-                setHandleMsg(null);
-                try {
-                  await updateHandle({ handle, avatar_emoji: avatar });
-                  setHandleMsg({ ok: true, text: 'Saved!' });
-                } catch (err) {
-                  setHandleMsg({ ok: false, text: err.message ?? 'Failed to save.' });
-                }
-              }}
-            >
-              Save
-            </Button>
-            {handleMsg && (
-              <div
-                style={{
-                  fontFamily: FONTS.mono,
-                  fontSize: FONT_SIZE.tag,
-                  color: handleMsg.ok ? COLORS.green : COLORS.red,
-                }}
-              >
-                {handleMsg.text}
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* Danger Zone */}
       <div

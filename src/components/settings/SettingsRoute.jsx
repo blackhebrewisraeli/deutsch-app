@@ -9,6 +9,7 @@ import LevelSwitcher from '../ui/LevelSwitcher';
 import GoalPicker from '../gamification/GoalPicker';
 import AppearancePicker from '../AppearancePicker';
 import AccountSection from './AccountSection';
+import EmailSection from './EmailSection';
 import ProfileSection from './ProfileSection';
 import useFocusTrap from '../../lib/useFocusTrap';
 import { getThemeModeForUI, setThemePreference } from '../../lib/themeMode';
@@ -142,15 +143,21 @@ export default function SettingsRoute({
 
           {/* Sync, export and the danger zone, moved here wholesale from Stats
               rather than re-authored. */}
+          {/* Konto holds the ACCOUNT: which address it is reachable at, sync,
+              export and the danger zone. Identity — handle and avatar — stays
+              in Profil, so each field has exactly one editor. */}
           <Section label="Konto">
-            <AccountSection
-              user={user}
-              onSignIn={onSignIn}
-              onSignOut={onSignOut}
-              onExport={onExport}
-              onDelete={onDelete}
-              lastSyncedAt={lastSyncedAt}
-            />
+            <Stack gap={5}>
+              <EmailSection user={user} onToast={onToast} onReauth={onSignIn} />
+              <AccountSection
+                user={user}
+                onSignIn={onSignIn}
+                onSignOut={onSignOut}
+                onExport={onExport}
+                onDelete={onDelete}
+                lastSyncedAt={lastSyncedAt}
+              />
+            </Stack>
           </Section>
         </Stack>
       </div>

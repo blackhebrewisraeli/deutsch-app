@@ -14,13 +14,18 @@ import { sendError } from '../../_lib/respond.js';
 // profile` to authenticated), but handle uniqueness and the denormalisation
 // both need the server, so every profile write goes through here.
 //
-// Deliberately NOT re-auth gated: editing a display name is not destructive,
-// and gating it would make an ordinary edit demand a fresh sign-in.
+// Deliberately NOT re-auth gated: renaming yourself is not destructive, and
+// gating it would make an ordinary edit demand a fresh sign-in. Changing the
+// account's EMAIL is a different matter and is gated — see EmailSection.
+//
+// display_name was dropped from EDITABLE_FIELDS: it was writable here and
+// populated on no account. The column remains, so an old client that still
+// sends the field simply has it ignored by the allowlist rather than erroring.
 
-/** Only these three columns are writable. Anything else in the body is ignored. */
-export const EDITABLE_FIELDS = ['display_name', 'handle', 'avatar_emoji'];
+/** Only these two columns are writable. Anything else in the body is ignored. */
+export const EDITABLE_FIELDS = ['handle', 'avatar_emoji'];
 
-const MAX_LEN = { display_name: 40, handle: 24, avatar_emoji: 8 };
+const MAX_LEN = { handle: 24, avatar_emoji: 8 };
 
 export function buildPatch(body) {
   const source = typeof body === 'string' ? safeParse(body) : body;
@@ -80,7 +85,7 @@ export default createAccountHandler({
     // optimistic value survived, because a handle can be rejected as taken.
     const { data } = await db
       .from('profiles')
-      .select('display_name, handle, avatar_emoji, created_at')
+      .select('handle, avatar_emoji, created_at')
       .eq('user_id', auth.userId)
       .maybeSingle();
 

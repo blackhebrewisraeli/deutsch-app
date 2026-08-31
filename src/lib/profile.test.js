@@ -8,7 +8,7 @@ vi.mock('./auth.js', () => ({
 
 import { fetchMyProfile, updateProfile, PROFILE_COLUMNS } from './profile';
 
-const row = { display_name: 'Sam', handle: 'sam', avatar_emoji: '🦊', created_at: 'x' };
+const row = { handle: 'sam', avatar_emoji: '🦊', created_at: 'x' };
 
 /** Minimal PostgREST chain: from().select().eq().maybeSingle(). */
 function supabaseReturning(result) {
@@ -37,6 +37,9 @@ describe('fetchMyProfile', () => {
   it('never asks for columns it has no business reading', () => {
     expect(PROFILE_COLUMNS).not.toMatch(/user_id/);
     expect(PROFILE_COLUMNS).not.toMatch(/\*/);
+    // display_name was dropped: selecting a column nothing reads is dead weight
+    // on every profile fetch.
+    expect(PROFILE_COLUMNS).not.toMatch(/display_name/);
   });
 
   // Home is the landing tab and renders a greeting either way; an absent
@@ -69,13 +72,13 @@ describe('updateProfile', () => {
 
   it('PATCHes the account endpoint with the token and the patch', async () => {
     fetchSpy.mockResolvedValue({ ok: true, json: () => Promise.resolve(row) });
-    await expect(updateProfile({ display_name: 'Sam' })).resolves.toEqual(row);
+    await expect(updateProfile({ handle: 'sam' })).resolves.toEqual(row);
 
     const [url, init] = fetchSpy.mock.calls[0];
     expect(url).toBe('/api/v1/account/profile');
     expect(init.method).toBe('PATCH');
     expect(init.headers.authorization).toBe('Bearer tok');
-    expect(JSON.parse(init.body)).toEqual({ display_name: 'Sam' });
+    expect(JSON.parse(init.body)).toEqual({ handle: 'sam' });
   });
 
   it('resolves the STORED row, so a rejected handle is never assumed accepted', async () => {

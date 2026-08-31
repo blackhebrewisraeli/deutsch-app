@@ -39,17 +39,17 @@ const mockDb = () => ({
 
 describe('buildPatch', () => {
   it('takes only the editable fields', () => {
-    const patch = buildPatch({ display_name: 'Sam', user_id: 'someone-else', created_at: 'nope' });
-    expect(Object.keys(patch)).toEqual(['display_name']);
+    const patch = buildPatch({ handle: 'sam', user_id: 'someone-else', created_at: 'nope' });
+    expect(Object.keys(patch)).toEqual(['handle']);
   });
 
   it('trims, and treats an emptied field as a deliberate clear', () => {
-    expect(buildPatch({ display_name: '  Sam  ' }).display_name).toBe('Sam');
-    expect(buildPatch({ display_name: '   ' }).display_name).toBeNull();
+    expect(buildPatch({ handle: '  sam  ' }).handle).toBe('sam');
+    expect(buildPatch({ handle: '   ' }).handle).toBeNull();
   });
 
   it('ignores non-strings rather than writing them', () => {
-    expect(buildPatch({ display_name: 42, handle: null, avatar_emoji: {} })).toEqual({});
+    expect(buildPatch({ handle: 42, avatar_emoji: {} })).toEqual({});
   });
 
   it('accepts a body that arrived unparsed', () => {
@@ -57,8 +57,12 @@ describe('buildPatch', () => {
     expect(buildPatch('not json')).toEqual({});
   });
 
-  it('covers exactly the three columns Settings edits', () => {
-    expect(EDITABLE_FIELDS).toEqual(['display_name', 'handle', 'avatar_emoji']);
+  it('covers exactly the two columns Settings edits, and display_name is not one', () => {
+    expect(EDITABLE_FIELDS).toEqual(['handle', 'avatar_emoji']);
+    // The column still exists; it is simply no longer writable from the client.
+    expect(EDITABLE_FIELDS).not.toContain('display_name');
+    // An old client that still sends it is IGNORED by the allowlist, never an error.
+    expect(buildPatch({ display_name: 'Sam', handle: 'sam' })).toEqual({ handle: 'sam' });
   });
 });
 
@@ -66,7 +70,7 @@ describe('PATCH /api/v1/account/profile', () => {
   beforeEach(() => {
     updates = [];
     updateError = null;
-    profileRow = { display_name: 'Sam', handle: 'sam', avatar_emoji: '🦊', created_at: 'x' };
+    profileRow = { handle: 'sam', avatar_emoji: '🦊', created_at: 'x' };
     requireAuth.mockResolvedValue(USER);
     serviceClient.mockReturnValue(mockDb());
   });
@@ -80,19 +84,21 @@ describe('PATCH /api/v1/account/profile', () => {
 
   it('updates the profile and answers with the stored row', async () => {
     const res = createRes();
-    await handler(req({ display_name: 'Sam' }), res);
+    await handler(req({ handle: 'sam' }), res);
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual(profileRow);
-    expect(updates).toContainEqual({ table: 'profiles', patch: { display_name: 'Sam' } });
+    expect(updates).toContainEqual({ table: 'profiles', patch: { handle: 'sam' } });
+    // handle is denormalised onto league_members; a rename must reach the standings.
+    expect(updates).toContainEqual({ table: 'league_members', patch: { handle: 'sam' } });
   });
 
   it('answers with the STORED row, not the submitted one', async () => {
     // The server owns handle uniqueness, so an optimistic client value must not
     // be echoed back as though it had been accepted.
-    profileRow = { display_name: 'Stored', handle: 'stored', avatar_emoji: null, created_at: 'x' };
+    profileRow = { handle: 'stored', avatar_emoji: null, created_at: 'x' };
     const res = createRes();
-    await handler(req({ display_name: 'Submitted' }), res);
-    expect(res.body.display_name).toBe('Stored');
+    await handler(req({ handle: 'submitted' }), res);
+    expect(res.body.handle).toBe('stored');
   });
 
   it('rejects an empty patch instead of writing nothing', async () => {
@@ -122,13 +128,13 @@ describe('PATCH /api/v1/account/profile', () => {
 
   it('leaves league_members alone when the handle is not part of the edit', async () => {
     const res = createRes();
-    await handler(req({ display_name: 'Only the name' }), res);
+    await handler(req({ avatar_emoji: '🦊' }), res);
     expect(updates.map((u) => u.table)).not.toContain('league_members');
   });
 
   it('refuses an over-long value rather than letting the database do it', async () => {
     const res = createRes();
-    await handler(req({ display_name: 'x'.repeat(41) }), res);
+    await handler(req({ handle: 'x'.repeat(25) }), res);
     expect(res.statusCode).toBe(400);
     expect(updates).toHaveLength(0);
   });
@@ -137,7 +143,7 @@ describe('PATCH /api/v1/account/profile', () => {
   // edit demand a fresh sign-in, which is the friction we deliberately avoided.
   it('is NOT re-auth gated', async () => {
     const res = createRes();
-    await handler(req({ display_name: 'Sam' }), res);
+    await handler(req({ handle: 'sam' }), res);
     expect(res.statusCode).toBe(200);
     expect(res.body.error).toBeUndefined();
   });

@@ -19,12 +19,15 @@ import { isAuthConfigured } from '../lib/auth.js';
 export default function IdentityStrip({ user, profile, lvl, onOpenSettings }) {
   const copy = activePack.content.identity ?? {};
 
-  // display_name first, then the league handle, then the email's local part.
-  // A guest has none of these and is greeted without a name rather than with
-  // a placeholder that implies an account.
-  const name = user
-    ? (profile?.display_name ?? profile?.handle ?? user.email?.split('@')[0] ?? null)
-    : null;
+  // The league handle, then the email's local part. `display_name` used to sit
+  // at the front of this chain; it was written by a form nobody filled in and
+  // was null for every account, so the chain always fell through it. `handle`
+  // is the one name: it is unique, it is denormalised onto league_members, and
+  // it is what other learners already see on the leaderboard.
+  //
+  // A guest has neither and is greeted without a name rather than with a
+  // placeholder that implies an account.
+  const name = user ? (profile?.handle ?? user.email?.split('@')[0] ?? null) : null;
 
   const createdAt = profile?.created_at ? new Date(profile.created_at) : null;
   const showsAccountLine = Boolean(user);

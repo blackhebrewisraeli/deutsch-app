@@ -2,15 +2,16 @@ import { createAccountHandler } from '../../_lib/accountHandler.js';
 import { sendError } from '../../_lib/respond.js';
 
 // How recently the caller must have actually authenticated. Not how old their
-// token is — see api/_lib/authTime.js for why those differ.
+// token is — see src/lib/authClaims.js for why those differ, and for the
+// reasoning behind the 15 minutes.
 //
-// In practice almost every deletion will hit the re-auth prompt, because amr
-// only advances on a real sign-in and sessions here survive for weeks on
-// refresh tokens. So this is less "was your session fresh?" and more "you have
-// this long, after proving who you are, to finish confirming" — 15 minutes is
-// forgiving for someone interrupted mid-flow while barely widening the one
-// exposure it leaves: a device grabbed within 15 minutes of a real sign-in.
-export const REAUTH_MAX_AGE_SEC = 15 * 60;
+// Re-exported rather than redefined: the email-change flow gates on the SAME
+// window, and two copies of a security constant is one of them going stale.
+// In practice almost every deletion hits the re-auth prompt, because amr only
+// advances on a real sign-in and sessions here survive for weeks on refresh
+// tokens.
+export { REAUTH_MAX_AGE_SEC } from '../../_lib/authTime.js';
+import { REAUTH_MAX_AGE_SEC } from '../../_lib/authTime.js';
 
 // Typed rather than clicked. The two-step button it replaces guarded against a
 // mis-click; it never established intent.

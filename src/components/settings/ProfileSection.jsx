@@ -6,12 +6,14 @@ import StatusNote from '../ui/StatusNote';
 import { updateProfile } from '../../lib/profile';
 import { AlertTriangle } from 'lucide-react';
 
-// Personal details: display name, league handle, avatar emoji.
+// Personal details: league handle and avatar emoji.
 //
-// display_name is a column that has existed since the first user_tables
-// migration and was, until now, written by nothing and read by nothing.
-// Settings adopts it rather than adding one — which is why Feature 2 needs no
-// migration at all.
+// display_name is gone. It shipped as a third field here and was populated on
+// zero accounts, which made it a question the learner had to answer twice —
+// "name" and "handle" — for one identity. `handle` wins because it is unique,
+// already denormalised onto league_members, and already what other learners
+// see. The COLUMN is left in place; dropping it is irreversible and it costs
+// nothing empty.
 //
 // Handle and avatar are PROFILE fields here, not league fields, so they are not
 // gated behind LEAGUES_ENABLED the way the old Stats editor gated them. Only
@@ -21,13 +23,11 @@ import { AlertTriangle } from 'lucide-react';
 // value the form already shows. The stored row it returns is the source of
 // truth, and it is what the fields are reset to on success.
 const FIELDS = [
-  { key: 'display_name', label: 'Display name', placeholder: 'Semion' },
   { key: 'handle', label: 'Handle', placeholder: 'semion' },
   { key: 'avatar_emoji', label: 'Avatar emoji', placeholder: '🦊' },
 ];
 
 const asForm = (profile) => ({
-  display_name: profile?.display_name ?? '',
   handle: profile?.handle ?? '',
   avatar_emoji: profile?.avatar_emoji ?? '',
 });
@@ -49,7 +49,6 @@ export default function ProfileSection({ profile, onSaved, onToast, save = updat
     setError(null);
     try {
       const stored = await save({
-        display_name: form.display_name,
         handle: form.handle,
         avatar_emoji: form.avatar_emoji,
       });
