@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import PassportBody from './PassportBody';
 import { ACHIEVEMENTS } from '../../lib/gamification';
@@ -19,6 +19,15 @@ const profile = (over = {}) => ({
 
 const show = (over = {}, props = {}) =>
   render(<PassportBody profile={profile(over)} userId="u1" {...props} />);
+
+// avatarFor composes an uploaded avatar's URL from VITE_SUPABASE_URL, and with
+// no base it deliberately falls through to the next tier rather than rendering
+// a broken image. That makes any test touching avatar_path depend on whether a
+// .env happens to exist — it passed locally and failed in CI for exactly that
+// reason. Stubbed here so the ENVIRONMENT is part of the fixture, not ambient.
+afterEach(() => vi.unstubAllEnvs());
+const withStorage = () => vi.stubEnv('VITE_SUPABASE_URL', 'https://proj.supabase.co');
+const withoutStorage = () => vi.stubEnv('VITE_SUPABASE_URL', '');
 
 describe('PassportBody — identity', () => {
   it('names the player and their tier', () => {
@@ -50,9 +59,21 @@ describe('PassportBody — identity', () => {
   });
 
   it('prefers an uploaded picture over the emoji', () => {
+    withStorage();
     show({ avatar_path: 'u1/a.webp', avatar_emoji: '🦊' });
     // Only asserts which TIER won; the URL itself is avatar.js's contract.
     expect(document.querySelector('[data-avatar="emoji"]')).toBeNull();
+    expect(document.querySelector('[data-avatar="image"]')).toBeTruthy();
+  });
+
+  // The other half of the same rule, and the branch CI was actually running:
+  // with no storage base an avatar_path cannot be turned into a URL, so the
+  // card shows the emoji instead of an image that would never load.
+  it('falls back to the emoji when no storage base is configured', () => {
+    withoutStorage();
+    show({ avatar_path: 'u1/a.webp', avatar_emoji: '🦊' });
+    expect(document.querySelector('[data-avatar="emoji"]')).toHaveTextContent('🦊');
+    expect(document.querySelector('[data-avatar="image"]')).toBeNull();
   });
 });
 
