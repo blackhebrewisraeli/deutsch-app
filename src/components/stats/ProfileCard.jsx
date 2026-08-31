@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { AlertTriangle } from 'lucide-react';
-import { fetchProfile, TIER_NAMES } from '../../lib/leagues.js';
+import { fetchProfile } from '../../lib/leagues.js';
 import { COLORS, SPACE, RADIUS, Z } from '../../lib/theme.js';
 import useFocusTrap from '../../lib/useFocusTrap.js';
 import StatusNote from '../ui/StatusNote';
-import Avatar from '../ui/Avatar';
+import PassportBody from './PassportBody';
 
-export default function ProfileCard({ userId, onClose }) {
+export default function ProfileCard({ userId, selfId = null, onClose }) {
   const [profile, setProfile] = useState(null);
   const [error, setError] = useState(false);
   const [nonce, setNonce] = useState(0);
@@ -107,7 +107,7 @@ export default function ProfileCard({ userId, onClose }) {
         ref={cardRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Player profile"
+        aria-label="Learning passport"
         // Not naturally focusable, so it needs -1 to be a programmatic target.
         // -1 keeps it out of the Tab order, which is what we want: it is the
         // entry point, not a stop.
@@ -153,17 +153,11 @@ export default function ProfileCard({ userId, onClose }) {
         )}
         {!error && !profile && <p style={{ color: COLORS.mute }}>Loading…</p>}
         {profile && (
-          <div>
-            <Avatar profile={profile} userId={userId} size={48} />
-            {/* Handles are user-supplied and can be one long unbroken token,
-                which normal wrapping refuses to break. */}
-            <h3 style={{ margin: `${SPACE[2]}px 0`, overflowWrap: 'anywhere' }}>
-              {profile.handle}
-            </h3>
-            <p style={{ margin: 0 }}>{TIER_NAMES[profile.tier]}</p>
-            <p style={{ margin: 0 }}>{profile.total_xp} total XP</p>
-            <p style={{ margin: 0 }}>Longest streak: {profile.longest_streak} days</p>
-          </div>
+          <PassportBody
+            profile={profile}
+            userId={userId}
+            isSelf={Boolean(selfId) && selfId === userId}
+          />
         )}
       </div>
     </div>

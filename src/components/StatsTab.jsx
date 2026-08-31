@@ -112,7 +112,11 @@ export default function StatsTab({
       )}
 
       {LEAGUES_ENABLED && selectedUser && (
-        <ProfileCard userId={selectedUser} onClose={() => setSelectedUser(null)} />
+        <ProfileCard
+          userId={selectedUser}
+          selfId={user?.id ?? null}
+          onClose={() => setSelectedUser(null)}
+        />
       )}
 
       {LEAGUES_ENABLED && activeView === 'leagues' ? (
