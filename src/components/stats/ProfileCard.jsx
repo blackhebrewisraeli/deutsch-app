@@ -4,6 +4,7 @@ import { fetchProfile, TIER_NAMES } from '../../lib/leagues.js';
 import { COLORS, SPACE, RADIUS, Z } from '../../lib/theme.js';
 import useFocusTrap from '../../lib/useFocusTrap.js';
 import StatusNote from '../ui/StatusNote';
+import Avatar from '../ui/Avatar';
 
 export default function ProfileCard({ userId, onClose }) {
   const [profile, setProfile] = useState(null);
@@ -153,7 +154,7 @@ export default function ProfileCard({ userId, onClose }) {
         {!error && !profile && <p style={{ color: COLORS.mute }}>Loading…</p>}
         {profile && (
           <div>
-            <div style={{ fontSize: 40 }}>{profile.avatar_emoji ?? '🙂'}</div>
+            <Avatar profile={profile} userId={userId} size={48} />
             {/* Handles are user-supplied and can be one long unbroken token,
                 which normal wrapping refuses to break. */}
             <h3 style={{ margin: `${SPACE[2]}px 0`, overflowWrap: 'anywhere' }}>

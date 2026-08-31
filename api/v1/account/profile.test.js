@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../../_lib/supabase.js', () => ({ serviceClient: vi.fn() }));
 vi.mock('../../_lib/auth-middleware.js', () => ({ requireAuth: vi.fn() }));
 
-import handler, { buildPatch, EDITABLE_FIELDS } from './profile.js';
+import handler, { buildPatch, EDITABLE_FIELDS, ownsAvatarPath } from './profile.js';
 import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
 import { createRes } from '../../_lib/test-helpers.js';
@@ -57,8 +57,8 @@ describe('buildPatch', () => {
     expect(buildPatch('not json')).toEqual({});
   });
 
-  it('covers exactly the two columns Settings edits, and display_name is not one', () => {
-    expect(EDITABLE_FIELDS).toEqual(['handle', 'avatar_emoji']);
+  it('covers exactly the columns Settings edits, and display_name is not one', () => {
+    expect(EDITABLE_FIELDS).toEqual(['handle', 'avatar_emoji', 'avatar_path']);
     // The column still exists; it is simply no longer writable from the client.
     expect(EDITABLE_FIELDS).not.toContain('display_name');
     // An old client that still sends it is IGNORED by the allowlist, never an error.
@@ -146,5 +146,52 @@ describe('PATCH /api/v1/account/profile', () => {
     await handler(req({ handle: 'sam' }), res);
     expect(res.statusCode).toBe(200);
     expect(res.body.error).toBeUndefined();
+  });
+});
+
+// avatar_path names something OUTSIDE this row. Storage RLS stops a learner
+// WRITING an object into another user's folder, but this column is ordinary
+// text — nothing in the database stops them SAYING their avatar lives at
+// someone else's path and wearing that person's picture.
+describe('ownsAvatarPath', () => {
+  it('accepts a path inside your own folder', () => {
+    expect(ownsAvatarPath('u1/abc.webp', 'u1')).toBe(true);
+  });
+
+  it("rejects another user's folder", () => {
+    expect(ownsAvatarPath('u2/abc.webp', 'u1')).toBe(false);
+  });
+
+  it('rejects a prefix that only LOOKS like yours', () => {
+    // 'u1' must not authorise 'u10/…' — the separator is part of the check.
+    expect(ownsAvatarPath('u10/abc.webp', 'u1')).toBe(false);
+  });
+
+  it('rejects traversal', () => {
+    expect(ownsAvatarPath('u1/../u2/abc.webp', 'u1')).toBe(false);
+  });
+
+  it('allows clearing the avatar', () => {
+    expect(ownsAvatarPath(null, 'u1')).toBe(true);
+    expect(ownsAvatarPath(undefined, 'u1')).toBe(true);
+  });
+
+  it('rejects a non-string', () => {
+    expect(ownsAvatarPath(42, 'u1')).toBe(false);
+  });
+});
+
+describe('PATCH rejects an avatar path that is not yours', () => {
+  it("refuses to point a profile at another user's object", async () => {
+    const res = createRes();
+    await handler(req({ avatar_path: 'someone-else/pic.webp' }), res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body?.error?.message).toMatch(/not yours/i);
+  });
+
+  it('accepts your own', async () => {
+    const res = createRes();
+    await handler(req({ avatar_path: `${USER.userId}/pic.webp` }), res);
+    expect(res.statusCode).toBe(200);
   });
 });

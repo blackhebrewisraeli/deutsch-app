@@ -54,6 +54,26 @@ function readConfirm(body) {
 // suite (npm run test:rls) asserts zero surviving rows across all six tables
 // after a real deletion. If a future table is added without `on delete cascade`,
 // the RLS suite is what fails.
+/**
+ * Delete everything under `avatars/<userId>/`. Best-effort; never throws.
+ *
+ * Listed rather than derived from profiles.avatar_path: the column names only
+ * the CURRENT avatar, and a learner who changed theirs several times may have
+ * left orphans behind when a `removeAvatar` call failed. The folder is the
+ * complete answer; the column is not.
+ */
+export async function removeAvatarObjects(db, userId) {
+  try {
+    const { data, error } = await db.storage.from('avatars').list(userId);
+    if (error || !data?.length) return 0;
+    const paths = data.map((o) => `${userId}/${o.name}`);
+    const { error: rmErr } = await db.storage.from('avatars').remove(paths);
+    return rmErr ? 0 : paths.length;
+  } catch {
+    return 0;
+  }
+}
+
 export default createAccountHandler({
   method: 'DELETE',
   // Deleting is a once-ever action; the only legitimate repeat is a retry after
@@ -67,6 +87,18 @@ export default createAccountHandler({
     if (readConfirm(req.body) !== CONFIRM_PHRASE) {
       return sendError(res, 'bad_request', `Type ${CONFIRM_PHRASE} to confirm.`);
     }
+
+    // STORAGE IS NOT IN THE CASCADE. Every user-owned TABLE goes when the auth
+    // row goes, but storage.objects is not in that foreign-key graph, so a
+    // deleted account's avatar would stay in a PUBLIC bucket indefinitely —
+    // still fetchable by anyone holding the URL, long after the person asked to
+    // be forgotten. Nothing else in this handler would notice.
+    //
+    // Done BEFORE deleteUser, because afterwards there is no row left to tell
+    // us which objects were theirs. Failures are swallowed on purpose: an
+    // orphaned image must never block the deletion the person actually asked
+    // for, and a half-delete is the one outcome this endpoint's design forbids.
+    await removeAvatarObjects(db, auth.userId);
 
     const { error } = await db.auth.admin.deleteUser(auth.userId);
     if (error) throw error;

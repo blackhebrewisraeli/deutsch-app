@@ -40,7 +40,31 @@ const from = vi.fn(() => ({
   delete: vi.fn().mockReturnThis(),
   eq: vi.fn().mockResolvedValue({ error: null }),
 }));
-const mockDb = () => ({ from, auth: { admin: { deleteUser } } });
+
+// Storage is NOT in the auth.users cascade, so the handler must clear the
+// user's avatar folder itself. These record what it asked for.
+let storageOps;
+let storageList;
+const storageFrom = vi.fn((bucket) => ({
+  list: vi.fn((prefix) => {
+    storageOps.push({ op: 'list', bucket, prefix });
+    return Promise.resolve(storageList);
+  }),
+  remove: vi.fn((paths) => {
+    storageOps.push({ op: 'remove', bucket, paths });
+    return Promise.resolve({ error: null });
+  }),
+}));
+const mockDb = () => ({
+  from,
+  storage: { from: storageFrom },
+  auth: { admin: { deleteUser } },
+});
+
+beforeEach(() => {
+  storageOps = [];
+  storageList = { data: [{ name: 'a.webp' }, { name: 'b.webp' }], error: null };
+});
 
 describe('DELETE /api/v1/account', () => {
   beforeEach(() => {
@@ -195,5 +219,70 @@ describe('DELETE /api/v1/account', () => {
     const res = createRes();
     await handler(makeReq('DELETE', freshToken(), { confirm: 'nope' }), res);
     expect(deleteUser).not.toHaveBeenCalled();
+  });
+});
+
+// A public bucket outlives the account otherwise: every user-owned TABLE goes
+// with the auth row, but storage.objects is not in that foreign-key graph, so
+// a deleted learner's photo would stay fetchable by anyone holding the URL.
+describe('account deletion clears the avatar folder', () => {
+  it("lists and removes the user's objects", async () => {
+    const user = freshUser();
+    requireAuth.mockResolvedValue(user);
+    serviceClient.mockReturnValue(mockDb());
+    const res = createRes();
+    await handler(makeReq(), res);
+
+    expect(res.statusCode).toBe(204);
+    expect(storageOps).toContainEqual({ op: 'list', bucket: 'avatars', prefix: user.userId });
+    expect(storageOps).toContainEqual({
+      op: 'remove',
+      bucket: 'avatars',
+      paths: [`${user.userId}/a.webp`, `${user.userId}/b.webp`],
+    });
+  });
+
+  // Afterwards there is no row left to say which objects were theirs.
+  it('clears storage BEFORE deleting the auth user', async () => {
+    const user = freshUser();
+    let deletedAt = null;
+    requireAuth.mockResolvedValue(user);
+    deleteUser.mockImplementation(() => {
+      deletedAt = storageOps.length;
+      return Promise.resolve({ error: null });
+    });
+    serviceClient.mockReturnValue(mockDb());
+    await handler(makeReq(), createRes());
+
+    expect(deletedAt).toBeGreaterThan(0);
+    expect(storageOps.some((o) => o.op === 'remove')).toBe(true);
+  });
+
+  it('removes nothing when the folder is empty', async () => {
+    storageList = { data: [], error: null };
+    requireAuth.mockResolvedValue(freshUser());
+    serviceClient.mockReturnValue(mockDb());
+    await handler(makeReq(), createRes());
+    expect(storageOps.filter((o) => o.op === 'remove')).toHaveLength(0);
+  });
+
+  // An orphaned image must never block the deletion the person asked for —
+  // a half-delete is the one outcome this endpoint's design forbids.
+  it('still deletes the account when storage cleanup fails', async () => {
+    requireAuth.mockResolvedValue(freshUser());
+    serviceClient.mockReturnValue({
+      from,
+      storage: {
+        from: () => ({
+          list: () => Promise.reject(new Error('storage down')),
+          remove: vi.fn(),
+        }),
+      },
+      auth: { admin: { deleteUser } },
+    });
+    const res = createRes();
+    await handler(makeReq(), res);
+    expect(res.statusCode).toBe(204);
+    expect(deleteUser).toHaveBeenCalled();
   });
 });

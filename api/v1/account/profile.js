@@ -22,10 +22,28 @@ import { sendError } from '../../_lib/respond.js';
 // populated on no account. The column remains, so an old client that still
 // sends the field simply has it ignored by the allowlist rather than erroring.
 
-/** Only these two columns are writable. Anything else in the body is ignored. */
-export const EDITABLE_FIELDS = ['handle', 'avatar_emoji'];
+/** Only these columns are writable. Anything else in the body is ignored. */
+export const EDITABLE_FIELDS = ['handle', 'avatar_emoji', 'avatar_path'];
 
-const MAX_LEN = { handle: 24, avatar_emoji: 8 };
+const MAX_LEN = { handle: 24, avatar_emoji: 8, avatar_path: 200 };
+
+/**
+ * `avatar_path` is the one editable field that names something OUTSIDE this
+ * row, so it needs a check the others do not.
+ *
+ * Storage RLS stops a learner writing an object into someone else's folder, but
+ * this column is ordinary text: nothing in the database stops them SAYING their
+ * avatar lives at another user's path and wearing that person's picture. The
+ * path must therefore start with their own id — the same first-segment rule the
+ * bucket policies enforce, applied to the pointer rather than the object.
+ *
+ * Clearing it (null) is always allowed: that is "remove my avatar".
+ */
+export function ownsAvatarPath(path, userId) {
+  if (path === null || path === undefined) return true;
+  if (typeof path !== 'string') return false;
+  return path.startsWith(`${userId}/`) && !path.includes('..');
+}
 
 export function buildPatch(body) {
   const source = typeof body === 'string' ? safeParse(body) : body;
@@ -68,6 +86,9 @@ export default createAccountHandler({
     if (over) {
       return sendError(res, 'bad_request', `That ${over.replace('_', ' ')} is too long.`);
     }
+    if ('avatar_path' in patch && !ownsAvatarPath(patch.avatar_path, auth.userId)) {
+      return sendError(res, 'bad_request', 'That avatar path is not yours.');
+    }
 
     const { error } = await db.from('profiles').update(patch).eq('user_id', auth.userId);
     if (error) {
@@ -85,7 +106,7 @@ export default createAccountHandler({
     // optimistic value survived, because a handle can be rejected as taken.
     const { data } = await db
       .from('profiles')
-      .select('handle, avatar_emoji, created_at')
+      .select('handle, avatar_emoji, avatar_path, created_at')
       .eq('user_id', auth.userId)
       .maybeSingle();
 
