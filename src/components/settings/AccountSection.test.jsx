@@ -46,12 +46,18 @@ describe('AccountSection', () => {
     expect(onSignIn).toHaveBeenCalled();
   });
 
-  it('shows the email and a sign-out for signed-in users', async () => {
+  it('offers a sign-out for signed-in users', async () => {
     const onSignOut = vi.fn();
     renderAccount({ onSignOut });
-    expect(screen.getByText('sam@example.com')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /sign out/i }));
     expect(onSignOut).toHaveBeenCalled();
+  });
+
+  // The address itself is EmailSection's, which owns changing it. Rendering it
+  // here too would put one value in two places again.
+  it('does not render the email address — EmailSection owns it', () => {
+    renderAccount();
+    expect(screen.queryByText('sam@example.com')).not.toBeInTheDocument();
   });
 
   it('shows last synced when a timestamp is provided', () => {
@@ -119,12 +125,14 @@ describe('AccountSection', () => {
     expect(confirmButton()).toBeDisabled();
   });
 
-  it('calls updateHandle with the typed handle when Save is clicked', async () => {
-    const { updateHandle } = await import('../../lib/leagues');
+  // ONE WRITER PER FIELD. This section used to carry its own Handle and Avatar
+  // inputs beside ProfileSection's, over the same server row — and they started
+  // EMPTY, so saving without retyping sent blank strings, which the endpoint
+  // treats as "clear this field" and which silently wiped the handle.
+  it('has no identity editor of its own — that lives in ProfileSection', () => {
     renderAccount();
-    await userEvent.type(screen.getByRole('textbox', { name: /handle/i }), 'MyHandle42');
-    await userEvent.click(screen.getByRole('button', { name: /save/i }));
-    expect(updateHandle).toHaveBeenCalledWith(expect.objectContaining({ handle: 'MyHandle42' }));
+    expect(screen.queryByRole('textbox', { name: /handle/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /avatar/i })).not.toBeInTheDocument();
   });
 
   it('calls onDelete with the confirmation phrase', async () => {

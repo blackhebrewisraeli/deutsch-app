@@ -198,6 +198,40 @@ export async function verifyCode(email, token) {
   return c.auth.verifyOtp({ email, token, type: 'email' });
 }
 
+/**
+ * Ask Supabase to move this account to `email`.
+ *
+ * Nothing changes yet. Supabase mails a confirmation, and under "Secure email
+ * change" — the default — it mails BOTH the current address and the new one,
+ * and the change lands only once both are confirmed. That dual confirmation is
+ * the real control on this flow: an attacker holding a stolen session still
+ * cannot move the account without reaching the ORIGINAL mailbox.
+ *
+ * Deliberately NOT proxied through our own API. `auth.admin.updateUserById`
+ * would let the server do it with the service-role key, but that skips the
+ * confirmation emails entirely — trading the strongest control here for the
+ * ability to run a server-side gate. The client call is the safer one.
+ */
+export async function requestEmailChange(email) {
+  const c = await getClient();
+  if (!c) return NOT_CONFIGURED;
+  return c.auth.updateUser({ email }, { emailRedirectTo: window.location.origin });
+}
+
+/**
+ * Confirm ONE side of an email change with the code from that inbox.
+ *
+ * `type: 'email_change'`, not `'email'` — the sign-in verifier's type would be
+ * rejected for these codes. Which address the code came from decides what to
+ * pass as `email`: the old address confirms the release, the new one confirms
+ * the claim, and under secure email change both are required in either order.
+ */
+export async function verifyEmailChange(email, token) {
+  const c = await getClient();
+  if (!c) return NOT_CONFIGURED;
+  return c.auth.verifyOtp({ email, token, type: 'email_change' });
+}
+
 export async function signOut() {
   const c = await getClient();
   // No client → already effectively signed out; report success, not an error

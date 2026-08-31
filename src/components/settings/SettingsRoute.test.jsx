@@ -4,7 +4,14 @@ import userEvent from '@testing-library/user-event';
 import SettingsRoute from './SettingsRoute';
 
 // AccountSection branches on this, and it differs between a dev box and CI.
-vi.mock('../../lib/auth.js', () => ({ isAuthConfigured: () => true }));
+vi.mock('../../lib/auth.js', () => ({
+  isAuthConfigured: () => true,
+  // EmailSection reaches for these; the flow itself is tested in
+  // EmailSection.test.jsx, so here they only need to exist.
+  getAccessToken: vi.fn().mockResolvedValue(null),
+  requestEmailChange: vi.fn(),
+  verifyEmailChange: vi.fn(),
+}));
 vi.mock('../../lib/leagues', async (importOriginal) => {
   const actual = await importOriginal();
   return { ...actual, LEAGUES_ENABLED: true, updateHandle: vi.fn().mockResolvedValue({}) };
@@ -12,7 +19,7 @@ vi.mock('../../lib/leagues', async (importOriginal) => {
 vi.mock('../../lib/profile', () => ({ updateProfile: vi.fn().mockResolvedValue({}) }));
 
 const user = { id: 'u1', email: 'sam@example.com' };
-const profile = { display_name: 'Sam', handle: 'sam', avatar_emoji: '🦊' };
+const profile = { handle: 'sam', avatar_emoji: '🦊' };
 
 const renderRoute = (props = {}) =>
   render(
@@ -47,12 +54,15 @@ describe('SettingsRoute', () => {
   it('carries all five sections the spec lists', () => {
     renderRoute();
     const dialog = screen.getByRole('dialog', { name: /settings/i });
-    // Profile
-    expect(within(dialog).getByRole('textbox', { name: /display name/i })).toBeInTheDocument();
+    // Profile — the handle is the one name now; display_name is gone.
+    expect(within(dialog).getByRole('textbox', { name: /handle/i })).toBeInTheDocument();
     // Learning — the SAME level control the header uses, not a second one
     expect(within(dialog).getByRole('radiogroup', { name: /level/i })).toBeInTheDocument();
     // Appearance
     expect(within(dialog).getByLabelText(/appearance/i)).toBeInTheDocument();
+    // Account: the email lives here now, with the control that changes it.
+    expect(within(dialog).getByText('sam@example.com')).toBeInTheDocument();
+    expect(within(dialog).getByRole('button', { name: /change email/i })).toBeInTheDocument();
     // Sync + danger zone, moved wholesale from Stats
     expect(within(dialog).getByRole('button', { name: /export my data/i })).toBeInTheDocument();
     expect(within(dialog).getByText(/danger zone/i)).toBeInTheDocument();

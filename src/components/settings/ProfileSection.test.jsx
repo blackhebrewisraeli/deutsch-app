@@ -3,51 +3,58 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ProfileSection from './ProfileSection';
 
-const profile = { display_name: 'Sam', handle: 'sam', avatar_emoji: '🦊' };
+const profile = { handle: 'sam', avatar_emoji: '🦊' };
 
-const nameField = () => screen.getByRole('textbox', { name: /display name/i });
 const handleField = () => screen.getByRole('textbox', { name: /handle/i });
+const avatarField = () => screen.getByRole('textbox', { name: /avatar/i });
 const saveButton = () => screen.getByRole('button', { name: /save profile/i });
 
 describe('ProfileSection', () => {
   it('shows the current profile in the fields', () => {
     render(<ProfileSection profile={profile} save={vi.fn()} />);
-    expect(nameField()).toHaveValue('Sam');
     expect(handleField()).toHaveValue('sam');
+    expect(avatarField()).toHaveValue('🦊');
+  });
+
+  // display_name was a second name field that nothing ever populated. One
+  // identity, one name — and this fails if it is ever added back.
+  it('offers no Display name field', () => {
+    render(<ProfileSection profile={profile} save={vi.fn()} />);
+    expect(screen.queryByRole('textbox', { name: /display name/i })).not.toBeInTheDocument();
   });
 
   it('starts with an empty form when there is no profile row yet', () => {
     render(<ProfileSection profile={null} save={vi.fn()} />);
-    expect(nameField()).toHaveValue('');
+    expect(handleField()).toHaveValue('');
   });
 
   // A UNIQUE column makes a pointless round trip worse than merely wasteful.
   it('keeps Save disabled until something actually changes', async () => {
     render(<ProfileSection profile={profile} save={vi.fn()} />);
     expect(saveButton()).toBeDisabled();
-    await userEvent.type(nameField(), '!');
+    await userEvent.type(handleField(), '!');
     expect(saveButton()).toBeEnabled();
   });
 
   it('disables Save again once the value is typed back to what it was', async () => {
     render(<ProfileSection profile={profile} save={vi.fn()} />);
-    await userEvent.type(nameField(), '!');
+    await userEvent.type(handleField(), '!');
     expect(saveButton()).toBeEnabled();
     await userEvent.keyboard('{Backspace}');
     expect(saveButton()).toBeDisabled();
   });
 
-  it('sends all three fields and reports success', async () => {
+  it('sends both fields and reports success', async () => {
     const save = vi.fn().mockResolvedValue(profile);
     const onToast = vi.fn();
     render(<ProfileSection profile={profile} save={save} onToast={onToast} />);
-    await userEvent.clear(nameField());
-    await userEvent.type(nameField(), 'Semion');
+    await userEvent.clear(handleField());
+    await userEvent.type(handleField(), 'semion');
     await userEvent.click(saveButton());
 
+    // display_name is gone from the payload entirely — not sent as null.
     expect(save).toHaveBeenCalledWith({
-      display_name: 'Semion',
-      handle: 'sam',
+      handle: 'semion',
       avatar_emoji: '🦊',
     });
     expect(onToast).toHaveBeenCalledWith(expect.stringMatching(/saved/i));
@@ -79,7 +86,7 @@ describe('ProfileSection', () => {
   });
 
   it('reports the saved row upward so the rest of the app can follow', async () => {
-    const stored = { ...profile, display_name: 'Stored' };
+    const stored = { ...profile, handle: 'stored' };
     const onSaved = vi.fn();
     render(
       <ProfileSection
@@ -88,7 +95,7 @@ describe('ProfileSection', () => {
         onSaved={onSaved}
       />
     );
-    await userEvent.type(nameField(), '!');
+    await userEvent.type(handleField(), '!');
     await userEvent.click(saveButton());
     expect(onSaved).toHaveBeenCalledWith(stored);
   });
