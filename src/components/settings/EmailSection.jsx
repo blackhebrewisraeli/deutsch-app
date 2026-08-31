@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Check } from 'lucide-react';
+import { AlertTriangle, Check, Mail } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, RADIUS, SPACE } from '../../lib/theme';
 import { Stack } from '../ui/Layout';
 import Button from '../ui/Button';
@@ -202,7 +202,7 @@ export default function EmailSection({
 
       {stage === 'confirming' && (
         <>
-          <StatusNote>
+          <StatusNote icon={Mail}>
             {`We sent a code to ${user.email} and to ${pending}. Enter both to finish — the change
               needs confirming from your current address as well as the new one.`}
           </StatusNote>
