@@ -118,7 +118,12 @@ export default function SettingsRoute({
 
         <Stack gap={8}>
           <Section label="Profil">
-            <ProfileSection profile={profile} onSaved={onProfileSaved} onToast={onToast} />
+            <ProfileSection
+              profile={profile}
+              userId={user?.id}
+              onSaved={onProfileSaved}
+              onToast={onToast}
+            />
           </Section>
 
           {/* Level reuses the SAME control the header uses. A second level UI

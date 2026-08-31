@@ -1,6 +1,7 @@
 import { getAccessToken, getSupabase } from './auth.js';
 
-// The learner's own profile row: league handle, avatar, join date.
+// The learner's own profile row: league handle, avatar (emoji + uploaded
+// path), join date.
 //
 // Reads go straight to PostgREST — it is an own-row select and the existing
 // "select own profile" RLS policy already permits exactly that, so no endpoint
@@ -8,7 +9,7 @@ import { getAccessToken, getSupabase } from './auth.js';
 // league_members, and both of those need the server, so they go through
 // PATCH /api/v1/account/profile.
 
-export const PROFILE_COLUMNS = 'handle, avatar_emoji, created_at';
+export const PROFILE_COLUMNS = 'handle, avatar_emoji, avatar_path, created_at';
 
 /**
  * @returns the caller's profile row, or null when there is no backend, no

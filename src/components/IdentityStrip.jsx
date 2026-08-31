@@ -5,6 +5,7 @@ import Heading from './ui/Heading';
 import { Meta } from './ui/Text';
 import { activePack } from '../packs';
 import { isAuthConfigured } from '../lib/auth.js';
+import Avatar from './ui/Avatar';
 
 // Who you are, at the top of Home.
 //
@@ -35,16 +36,7 @@ export default function IdentityStrip({ user, profile, lvl, onOpenSettings }) {
   return (
     <Surface elevation={1} padding={4}>
       <Row align="center" gap={4}>
-        <span
-          aria-hidden="true"
-          style={{
-            fontSize: FONT_SIZE.xl,
-            lineHeight: 1,
-            flexShrink: 0,
-          }}
-        >
-          {profile?.avatar_emoji || '🦊'}
-        </span>
+        <Avatar profile={profile} userId={user?.id} size={40} />
 
         {/* minmax(0, 1fr) semantics: this column must be allowed to shrink, or
             a long display name pushes the chip off a 320px screen. */}

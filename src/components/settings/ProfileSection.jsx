@@ -4,6 +4,7 @@ import { Stack } from '../ui/Layout';
 import Button from '../ui/Button';
 import StatusNote from '../ui/StatusNote';
 import { updateProfile } from '../../lib/profile';
+import AvatarPicker from './AvatarPicker';
 import { AlertTriangle } from 'lucide-react';
 
 // Personal details: league handle and avatar emoji.
@@ -32,7 +33,13 @@ const asForm = (profile) => ({
   avatar_emoji: profile?.avatar_emoji ?? '',
 });
 
-export default function ProfileSection({ profile, onSaved, onToast, save = updateProfile }) {
+export default function ProfileSection({
+  profile,
+  userId,
+  onSaved,
+  onToast,
+  save = updateProfile,
+}) {
   const [form, setForm] = useState(() => asForm(profile));
   const [saved, setSaved] = useState(() => asForm(profile));
   const [saving, setSaving] = useState(false);
@@ -67,6 +74,17 @@ export default function ProfileSection({ profile, onSaved, onToast, save = updat
 
   return (
     <Stack gap={3}>
+      {/* The picker writes avatar_path on its own — it does not share this
+          form's dirty-tracking, because an upload is a completed act rather
+          than an edit waiting on Save. */}
+      <AvatarPicker
+        userId={userId}
+        profile={profile}
+        onSaved={onSaved}
+        onToast={onToast}
+        save={save}
+      />
+
       {FIELDS.map((field) => (
         <label key={field.key} style={{ display: 'block' }}>
           <span
