@@ -130,17 +130,18 @@ describe('DeckPicker with a collection', () => {
     selects.forEach((sel, i) => expect(sel.contains(removes[i])).toBe(false));
   });
 
-  it('shows each deck its own card count', () => {
+  it('shows each deck its own card count, singular where it should be', () => {
     render(<DeckPicker {...props} customDecks={two} />);
     expect(screen.getByText('2 cards')).toBeInTheDocument();
-    expect(screen.getByText('1 cards')).toBeInTheDocument();
+    expect(screen.getByText('1 card')).toBeInTheDocument();
+    expect(screen.queryByText('1 cards')).toBeNull();
   });
 
   it('renders exactly what the single-slot version did for ONE deck', () => {
     // The pure-refactor guarantee.
     render(<DeckPicker {...props} customDecks={{ custom: { name: 'x', cards: [{ id: 'a' }] } }} />);
     expect(screen.getAllByRole('button', { name: /Your Deck/ })).toHaveLength(1);
-    expect(screen.getByText('1 cards')).toBeInTheDocument();
+    expect(screen.getByText('1 card')).toBeInTheDocument();
   });
 });
 
@@ -161,6 +162,8 @@ describe('DeckPicker names and the cap', () => {
     expect(
       screen.getByRole('button', { name: 'Your Deck: weather — 2 cards' })
     ).toBeInTheDocument();
+    // …and the singular reaches a screen reader too, not just the visible row.
+    expect(screen.getByRole('button', { name: 'Your Deck: food — 1 card' })).toBeInTheDocument();
   });
 
   it('names the deck on its remove control too', () => {
@@ -204,5 +207,27 @@ describe('DeckPicker names and the cap', () => {
     const field = screen.getByRole('textbox', { name: 'Custom deck topic' });
     await userEvent.type(field, '{Enter}');
     expect(onGenerate).not.toHaveBeenCalled();
+  });
+});
+
+describe('DeckPicker pluralisation', () => {
+  it.each([
+    [1, '1 card'],
+    [2, '2 cards'],
+    [10, '10 cards'],
+    [0, '0 cards'],
+  ])('renders %i as "%s"', (n, expected) => {
+    const cards = Array.from({ length: n }, (_, i) => ({ id: `c${i}` }));
+    render(<DeckPicker {...props} customDecks={{ x: { name: 'deck', cards } }} />);
+    // getAllBy, not getBy: the four curated rows also read "10 cards", so the
+    // n=10 case would collide with them.
+    expect(screen.getAllByText(expected).length).toBeGreaterThan(0);
+  });
+
+  it('pluralises the preset rows on the same rule', () => {
+    render(<DeckPicker {...props} />);
+    // The curated decks are ten cards each — the rule still has to be applied,
+    // or the next authored deck of one card reintroduces the bug.
+    expect(screen.getAllByText('10 cards').length).toBeGreaterThan(0);
   });
 });

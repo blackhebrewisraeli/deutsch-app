@@ -249,6 +249,12 @@ export default function VocabTab({
           cards: parsed.map((c) => ({ ...c, id: activePack.cardId(c) })),
         });
         setDeckId(generatedId);
+        // Cleared on SUCCESS only. Generating repeatedly is the normal case now
+        // that decks are a collection, and a stale topic meant the next one was
+        // typed onto the end of the last ("weather" + "food" = "weatherfood").
+        // A FAILED attempt deliberately keeps the text, so a retry does not make
+        // the learner type it again.
+        setCustomTopic('');
       }
     } catch (err) {
       alert('Could not generate deck — ' + err.message);
