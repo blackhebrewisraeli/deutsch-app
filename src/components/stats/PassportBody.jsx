@@ -181,6 +181,11 @@ export default function PassportBody({ profile, userId, isSelf = false }) {
                 // button's hover: no pointer cursor and no colour change,
                 // because a chip that looks pressable and does nothing when
                 // pressed is a worse bargain than one that never invited it.
+                //
+                // The rule only moves and shadows the chip. `border` below is
+                // an inline shorthand and would beat any border declaration
+                // the sheet tried to make, so the hover deliberately does not
+                // reach for one.
                 className="badge-chip"
                 style={{
                   display: 'flex',

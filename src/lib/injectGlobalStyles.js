@@ -1,4 +1,4 @@
-import { COLORS, FOCUS, SHADOW } from './theme';
+import { COLORS, FOCUS } from './theme';
 
 /**
  * App-wide base styles + keyframes formerly injected by App.jsx <style>.
@@ -36,10 +36,26 @@ export function injectGlobalStyles() {
       /* Earned badges lift under the cursor. The chip is not a control — there
          is nothing to click — so this stops short of a button's affordance: no
          cursor change, no colour change, just a hair of elevation, which reads
-         as "this object is real" rather than "press me". The border firming up
-         is what carries it in dark mode, where SHADOW.card's light-mode rgba is
-         nearly invisible (the same reason BORDER.panel exists). */
-      .badge-chip:hover { transform: translateY(-1px) scale(1.04); box-shadow: ${SHADOW.card}; border-color: ${COLORS.borderStrong}; }
+         as "this object is real" rather than "press me".
+
+         The shadow is mixed from the FOREGROUND ink, not SHADOW.card. Two
+         reasons, and the second is why this is not a style preference:
+         SHADOW.card is a fixed light-mode rgba that is all but invisible on a
+         dark surface (the same fact BORDER.panel exists for), and a lift with
+         no visible shadow is just a chip that changed size. Deriving from
+         var(--c-fg) inverts with the palette — a shadow under the chip in
+         light mode, a soft halo in dark — so one declaration covers both.
+
+         An earlier draft firmed up border-color here instead. It did nothing:
+         the chip carries border as an INLINE shorthand, which outranks any
+         stylesheet rule, so the declaration was silently dropped in both
+         themes — visible only in a browser, since jsdom resolves no cascade.
+         Anything this rule wants to change must be a property the component
+         does not also set inline.
+
+         (No backticks in this comment: it lives inside a template literal, so
+         one would end the string. That mistake is what wrote this paragraph.) */
+      .badge-chip:hover { transform: translateY(-1px) scale(1.04); box-shadow: 0 3px 10px ${COLORS.inkA20}; }
     }
     /* Full-height entry screens (welcome gate, level splash). 100vh on iOS
        Safari means the viewport WITHOUT the URL bar, so a 100vh element is
@@ -116,7 +132,7 @@ export function injectGlobalStyles() {
       50%      { box-shadow: 0 0 12px 2px color-mix(in srgb, var(--c-accent) 62%, transparent); }
     }
     .self-glow  { animation: self-glow 3.2s ease-in-out infinite; }
-    .badge-chip { transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease; }
+    .badge-chip { transition: transform 0.18s ease, box-shadow 0.18s ease; }
     @media (prefers-reduced-motion: reduce) {
       .pop, .wiggle, .slide-up { animation: none !important; }
       /* The card must still ARRIVE — the keyframes start at opacity 0, so
@@ -129,7 +145,8 @@ export function injectGlobalStyles() {
          that ends at the first indented closing brace, so a multi-line rule
          here truncates the block and blinds the assertions below it. */
       .self-glow { animation: none !important; box-shadow: 0 0 4px 0 color-mix(in srgb, var(--c-accent) 22%, transparent); }
-      /* Hover keeps the shadow and the border, loses the travel. */
+      /* Hover keeps its shadow and loses its travel: the shadow is feedback,
+         the 1px rise is the only part that is actually motion. */
       .badge-chip { transition: none !important; }
       .badge-chip:hover { transform: none !important; }
       /* Stops turning, stays visible: aria-busy alone is not a visible

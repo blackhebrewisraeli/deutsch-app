@@ -139,6 +139,27 @@ describe('injectGlobalStyles — passport motion', () => {
     expect(gated).toMatch(/\.badge-chip:hover\s*\{[^}]*box-shadow:/);
   });
 
+  // Caught in a real browser, never in jsdom. The lift is only legible if the
+  // shadow is: SHADOW.card is a fixed light-mode rgba that vanishes on a dark
+  // surface, leaving dark mode with a chip that changes size and nothing else.
+  // Deriving the shadow from var(--c-fg) is what makes one rule serve both.
+  it('draws the badge shadow from the ink, so it survives dark mode', () => {
+    injectGlobalStyles();
+    const hover = sheet().match(/\.badge-chip:hover\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(hover).toMatch(/box-shadow:[^;]*var\(--c-fg-a\d+\)/);
+    expect(hover).not.toMatch(/box-shadow:[^;]*rgba?\(/);
+  });
+
+  // The chip sets `border` as an inline shorthand, which outranks this sheet.
+  // A hover declaration for a property the component also sets inline is dead
+  // on arrival — it was, for border-color, in both themes and silently.
+  it('changes only properties the chip does not set inline', () => {
+    injectGlobalStyles();
+    const hover = sheet().match(/\.badge-chip:hover\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(hover).not.toContain('border');
+    expect(hover).not.toContain('background');
+  });
+
   it('gives badge chips something to transition, or the hover would snap', () => {
     injectGlobalStyles();
     expect(sheet()).toMatch(/\.badge-chip\s*\{[^}]*transition:[^}]*transform/);
