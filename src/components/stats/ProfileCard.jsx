@@ -91,6 +91,13 @@ export default function ProfileCard({ userId, selfId = null, onClose }) {
 
   return (
     <div
+      // Scrim and card carry SEPARATE entrance animations, both defined in
+      // injectGlobalStyles: the scrim fades in fast because it is the context
+      // switch, the card rises slower because it is the thing being handed
+      // over. One shared animation on this wrapper would drag the whole
+      // backdrop up with the card. Both are cancelled under
+      // prefers-reduced-motion, where the card simply appears.
+      className="modal-scrim-in"
       style={{
         position: 'fixed',
         inset: 0,
@@ -105,6 +112,7 @@ export default function ProfileCard({ userId, selfId = null, onClose }) {
     >
       <div
         ref={cardRef}
+        className="modal-card-in"
         role="dialog"
         aria-modal="true"
         aria-label="Learning passport"

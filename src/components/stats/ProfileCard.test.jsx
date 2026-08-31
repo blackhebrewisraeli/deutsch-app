@@ -272,3 +272,34 @@ it('breaks a long handle rather than letting it escape the card', async () => {
   const handle = screen.getByRole('heading', { name: 'Maximiliane_Schwarzenberger' });
   expect(handle.style.overflowWrap).toBe('anywhere');
 });
+
+// ── Entrance ─────────────────────────────────────────────────
+// jsdom runs no animation, so what is testable is the WIRING: the two classes
+// the global sheet defines have to actually be on the two elements, and on the
+// right two. The scrim's fast fade and the card's slower rise are separate on
+// purpose — one animation on the wrapper drags the backdrop up with the card —
+// and that split only exists if these are on different nodes.
+it('fades the scrim and rises the card as two separate animations', async () => {
+  fetchProfile.mockResolvedValue(PROFILE);
+  render(<ProfileCard userId="x" onClose={() => {}} />);
+  const dialog = await screen.findByRole('dialog');
+
+  expect(dialog).toHaveClass('modal-card-in');
+  expect(dialog.parentElement).toHaveClass('modal-scrim-in');
+  // Not the same node: the split IS the effect.
+  expect(dialog).not.toHaveClass('modal-scrim-in');
+});
+
+// The entrance is decoration. It runs on the element that carries role=dialog
+// and takes focus, so a className that displaced either of those would trade a
+// working modal for a nice fade — and the focus tests above all pass against a
+// card that never announces itself.
+it('does not let the entrance class cost the dialog its role or its focus', async () => {
+  fetchProfile.mockResolvedValue(PROFILE);
+  render(<ProfileCard userId="x" onClose={() => {}} />);
+  const dialog = await screen.findByRole('dialog');
+
+  expect(dialog).toHaveAttribute('aria-modal', 'true');
+  expect(dialog).toHaveAccessibleName('Learning passport');
+  await waitFor(() => expect(document.activeElement).toBe(dialog));
+});

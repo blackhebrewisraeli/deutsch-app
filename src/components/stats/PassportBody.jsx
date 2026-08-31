@@ -85,6 +85,14 @@ export default function PassportBody({ profile, userId, isSelf = false }) {
           </div>
           {isSelf && (
             <div
+              // A slow accent glow, defined in injectGlobalStyles. It is the
+              // one element on the card that is about WHO is reading rather
+              // than what the numbers say, so it earns a treatment nothing
+              // else here has — and it is decoration over text that is already
+              // legible without it, which is why it can be a glow and not a
+              // colour change. Reduced motion holds it at its dimmest frame
+              // rather than removing it: the marker still has to mark.
+              className="self-glow"
               style={{
                 marginTop: SPACE[1],
                 display: 'inline-block',
@@ -166,6 +174,14 @@ export default function PassportBody({ profile, userId, isSelf = false }) {
                 data-badge={b.id}
                 // The name is the accessible text; the emoji is decoration
                 // beside it, so it must not be announced twice.
+                //
+                // badge-chip is a hover lift, gated on a fine pointer by the
+                // global sheet — a phone would otherwise latch the lifted
+                // state on tap and keep it. Deliberately quieter than a
+                // button's hover: no pointer cursor and no colour change,
+                // because a chip that looks pressable and does nothing when
+                // pressed is a worse bargain than one that never invited it.
+                className="badge-chip"
                 style={{
                   display: 'flex',
                   alignItems: 'center',
