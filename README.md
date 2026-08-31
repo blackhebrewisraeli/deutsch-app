@@ -20,6 +20,7 @@ gamification, secure cross-device sync, and AI where it genuinely helps.**
 [See the architecture](#-system-at-a-glance)
 
 <!-- Screenshot placeholder: add docs/images/hero-dashboard.png -->
+
 ![Deutsch· dashboard — screenshot coming soon](docs/images/hero-dashboard.png)
 
 <sub>One app, six learning surfaces, and considerably more thought about merge semantics than a language app has any right to contain.</sub>
@@ -33,18 +34,19 @@ gamification, secure cross-device sync, and AI where it genuinely helps.**
 
 ## ✨ What learners get
 
-| Experience | What it does |
-| --- | --- |
-| 💬 **Guided conversation** | An AI tutor sets level-aware scenarios, responds in character, and explains corrections. |
-| 🔤 **Alphabet & listening** | German speech synthesis, confusable-letter quizzes, and a browsable pronunciation grid. |
-| 🧠 **Vocabulary & SRS** | Active recall over preset, lexicon, grammar, and custom decks using Leitner scheduling. |
-| ✍️ **Adaptive translation** | A1 word tiles, A2 fill-in-the-blank drills, and meaning-aware B1 grading. |
-| 🎮 **Motivation that respects the learner** | XP, streak freezes, achievements, daily quests, and optional weekly leagues. |
-| 🛂 **Learning Passport** | A portable identity with handle, level, progress, league profile, and a secure custom avatar. |
+| Experience                                  | What it does                                                                                  |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 💬 **Guided conversation**                  | An AI tutor sets level-aware scenarios, responds in character, and explains corrections.      |
+| 🔤 **Alphabet & listening**                 | German speech synthesis, confusable-letter quizzes, and a browsable pronunciation grid.       |
+| 🧠 **Vocabulary & SRS**                     | Active recall over preset, lexicon, grammar, and custom decks using Leitner scheduling.       |
+| ✍️ **Adaptive translation**                 | A1 word tiles, A2 fill-in-the-blank drills, and meaning-aware B1 grading.                     |
+| 🎮 **Motivation that respects the learner** | XP, streak freezes, achievements, daily quests, and optional weekly leagues.                  |
+| 🛂 **Learning Passport**                    | A portable identity with handle, level, progress, league profile, and a secure custom avatar. |
 
 <!-- Screenshot placeholders: replace these files as product captures become available. -->
-| Practice | Learning Passport |
-| :---: | :---: |
+
+|                                    Practice                                     |                                Learning Passport                                 |
+| :-----------------------------------------------------------------------------: | :------------------------------------------------------------------------------: |
 | ![Vocabulary practice — screenshot coming soon](docs/images/vocab-practice.png) | ![Learning Passport — screenshot coming soon](docs/images/learning-passport.png) |
 
 ## 🦸 Engineering superpowers
@@ -57,14 +59,14 @@ cross-device layer. Reconciliation happens client-side before PostgREST upserts,
 so each state slice gets semantics that fit its data instead of one risky
 "newest blob wins" rule.
 
-| State slice | Merge strategy | Why |
-| --- | --- | --- |
-| Daily stats | **Additive delta** from a synced baseline | Repeated syncs stay idempotent without losing offline activity. |
-| SRS cards | **Per-card LWW** on `lastReviewed` | Reviewing one card should not overwrite another card's state. |
-| Settings | **Whole-record LWW**, with explicit carve-outs | Ordinary preferences share a clock; special data does not. |
-| CEFR level | **Independent LWW clock** | A newer unrelated setting cannot roll B1 back to A1. |
-| Learned words & deck mastery | **Union merge** | Learning on either device remains learned. |
-| Custom decks | **Per-deck LWW + tombstones** | Offline deletion competes with edits by timestamp instead of resurrecting removed decks. |
+| State slice                  | Merge strategy                                 | Why                                                                                      |
+| ---------------------------- | ---------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| Daily stats                  | **Additive delta** from a synced baseline      | Repeated syncs stay idempotent without losing offline activity.                          |
+| SRS cards                    | **Per-card LWW** on `lastReviewed`             | Reviewing one card should not overwrite another card's state.                            |
+| Settings                     | **Whole-record LWW**, with explicit carve-outs | Ordinary preferences share a clock; special data does not.                               |
+| CEFR level                   | **Independent LWW clock**                      | A newer unrelated setting cannot roll B1 back to A1.                                     |
+| Learned words & deck mastery | **Union merge**                                | Learning on either device remains learned.                                               |
+| Custom decks                 | **Per-deck LWW + tombstones**                  | Offline deletion competes with edits by timestamp instead of resurrecting removed decks. |
 
 Deck deletion is the interesting edge case. An upsert-only system cannot express
 absence, so a stale device would recreate a deleted deck. Deutsch· keeps a
@@ -84,9 +86,9 @@ and avatar-object ownership.
 Three daily quests are derived—not stored—from a stable seed:
 
 ```js
-seed = hash(`${userId ?? 'guest'}:${todayKey}`)
-quests = pickQuestGroups(seed, 3)
-progress = readExistingDailyCounters(todayKey)
+seed = hash(`${userId ?? 'guest'}:${todayKey}`);
+quests = pickQuestGroups(seed, 3);
+progress = readExistingDailyCounters(todayKey);
 ```
 
 The same learner gets the same quests all day, on every device, even offline.
@@ -198,16 +200,16 @@ flowchart LR
 
 ## 🛠️ Tech stack
 
-| Layer | Technology | Role |
-| --- | --- | --- |
-| UI | **React 18**, Vite 5 | Component architecture, fast local development, production bundling |
-| Offline | **PWA / Workbox**, `localStorage` | App-shell caching and local-first learner state |
-| Data | **Supabase Postgres** | Durable account data, rate limits, leagues, and sync tables |
-| Data API | **PostgREST** via Supabase | RLS-protected browser reads and writes |
-| Identity & media | **Supabase Auth + Storage** | Optional accounts and user-owned avatars |
-| Server | **Vercel Functions** | Versioned AI and account endpoints; secrets stay server-side |
-| AI | **Anthropic Claude** | Conversation, deck generation, and B1 grading |
-| Quality | **Vitest, React Testing Library, Playwright, ESLint, Prettier** | Unit, integration, policy, contrast, lint, and format checks |
+| Layer            | Technology                                                      | Role                                                                |
+| ---------------- | --------------------------------------------------------------- | ------------------------------------------------------------------- |
+| UI               | **React 18**, Vite 5                                            | Component architecture, fast local development, production bundling |
+| Offline          | **PWA / Workbox**, `localStorage`                               | App-shell caching and local-first learner state                     |
+| Data             | **Supabase Postgres**                                           | Durable account data, rate limits, leagues, and sync tables         |
+| Data API         | **PostgREST** via Supabase                                      | RLS-protected browser reads and writes                              |
+| Identity & media | **Supabase Auth + Storage**                                     | Optional accounts and user-owned avatars                            |
+| Server           | **Vercel Functions**                                            | Versioned AI and account endpoints; secrets stay server-side        |
+| AI               | **Anthropic Claude**                                            | Conversation, deck generation, and B1 grading                       |
+| Quality          | **Vitest, React Testing Library, Playwright, ESLint, Prettier** | Unit, integration, policy, contrast, lint, and format checks        |
 
 ## ⚡ Quick start
 
@@ -270,16 +272,16 @@ npm run dev:full
 <details>
 <summary><strong>Useful commands</strong></summary>
 
-| Command | Purpose |
-| --- | --- |
-| `npm run dev` | Start the Vite UI |
-| `npm run dev:full` | Start Vite plus Vercel functions |
-| `npm run build` | Create the production PWA |
-| `npm test` | Run the main Vitest suite |
-| `npm run test:rls` | Run PostgREST/RLS adversarial tests; requires local Supabase |
-| `npm run lint` | Run ESLint |
-| `npm run format:check` | Check formatting |
-| `npm run audit:contrast` | Audit rendered contrast with Playwright |
+| Command                  | Purpose                                                      |
+| ------------------------ | ------------------------------------------------------------ |
+| `npm run dev`            | Start the Vite UI                                            |
+| `npm run dev:full`       | Start Vite plus Vercel functions                             |
+| `npm run build`          | Create the production PWA                                    |
+| `npm test`               | Run the main Vitest suite                                    |
+| `npm run test:rls`       | Run PostgREST/RLS adversarial tests; requires local Supabase |
+| `npm run lint`           | Run ESLint                                                   |
+| `npm run format:check`   | Check formatting                                             |
+| `npm run audit:contrast` | Audit rendered contrast with Playwright                      |
 
 </details>
 
