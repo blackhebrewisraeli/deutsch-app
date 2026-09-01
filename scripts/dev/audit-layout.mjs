@@ -31,7 +31,7 @@ if (!BASE) {
   process.exit(2);
 }
 
-const TABS = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
+const TABS = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Profile'];
 
 // 1600, not 1400: `max-width: 1400` never constrains at a 1400px viewport, so
 // the measure — the property this whole sub-project turns on — would be the one

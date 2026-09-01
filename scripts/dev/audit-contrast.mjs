@@ -169,8 +169,8 @@ const MODALS = [
     // Playwright polls, so a longer bound costs only the wait actually needed.
     timeout: 10000,
     open: async (page) => {
-      // Must be on a PRACTICE tab: the wall deliberately never covers Stats,
-      // which is the escape hatch to sign in from. The tab walk ends on Stats,
+      // Must be on a PRACTICE tab: the wall deliberately never covers Home or
+      // Profile, which are the escape hatches. The tab walk ends on Profile,
       // so without this the wall can never appear and the audit reports it as
       // unreachable — which is what it did on the first run.
       await openTab(page, 'Vocab');
@@ -333,7 +333,7 @@ async function provisionTarget() {
 
 const MODES = ['light', 'dark'];
 const TONES = ['day', 'night'];
-const TABS = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
+const TABS = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Profile'];
 // The signed-in pass sweeps mode x tone at one viewport. Contrast is a function
 // of the palette, not the width; width only moves things around, and the guest
 // walk already covers all three widths for the shared chrome.
@@ -731,8 +731,8 @@ async function stubAccountNetwork(page) {
 
 /**
  * Contrast-audit the chrome only a signed-in account ever renders: the header
- * AccountChip, the Stats account section, the league table, and the profile
- * card. The guest walk cannot reach any of it — before this pass those
+ * AccountChip, the Profile SETTINGS account section, the league table, and the
+ * profile card. The guest walk cannot reach any of it — before this pass those
  * surfaces had never been measured in any mode.
  */
 async function auditSignedIn(page, mode, tone) {
@@ -772,14 +772,31 @@ async function auditSignedIn(page, mode, tone) {
   out.push(...signedInSheets.contrast);
   sheetLayout.push(...signedInSheets.layout);
 
-  // Stats' default view — this is where AccountSection renders for a signed-in
-  // user (email, export, handle field). The header AccountChip rides along.
-  await openTab(page, 'Stats');
+  // Profile's default view is the stats dashboard. AccountSection (email,
+  // export, delete) lives in SETTINGS now — measuring STATS alone would miss
+  // it the same way opening the tab used to miss the league table.
+  await openTab(page, 'Profile');
   await page.waitForTimeout(700);
-  out.push(...(await page.evaluate(collectFindings, 'Stats/signed-in')));
+  out.push(...(await page.evaluate(collectFindings, 'Profile/signed-in')));
+
+  const onSettings = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')].find(
+      (x) => (x.getAttribute('aria-label') || '') === 'settings'
+    );
+    if (!b) return false;
+    b.click();
+    return true;
+  });
+  if (!onSettings) {
+    throw new Error(
+      `audit-contrast: no SETTINGS toggle on Profile (${mode}.${tone}) — the segment moved.`
+    );
+  }
+  await page.waitForTimeout(400);
+  out.push(...(await page.evaluate(collectFindings, 'Settings/signed-in')));
 
   // The league table sits behind a view toggle, not behind the tab. Opening
-  // Stats alone leaves it unrendered — which is exactly how it stayed
+  // Profile alone leaves it unrendered — which is exactly how it stayed
   // unaudited while the job reported clean.
   const onLeagues = await page.evaluate(() => {
     const b = [...document.querySelectorAll('button')].find(
@@ -791,7 +808,7 @@ async function auditSignedIn(page, mode, tone) {
   });
   if (!onLeagues) {
     throw new Error(
-      `audit-contrast: no LEAGUES toggle on Stats (${mode}.${tone}) — either the ` +
+      `audit-contrast: no LEAGUES toggle on Profile (${mode}.${tone}) — either the ` +
         'build lacks VITE_LEAGUES_ENABLED=true or the toggle moved.'
     );
   }
