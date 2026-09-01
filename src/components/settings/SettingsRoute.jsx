@@ -132,6 +132,7 @@ export default function SettingsRoute({
             <GoalPicker goal={goal} onPick={onGoalChange} />
             <button
               type="button"
+              aria-pressed={soundOn}
               onClick={onSoundChange}
               style={{
                 border: 'none',
