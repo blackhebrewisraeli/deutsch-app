@@ -268,6 +268,25 @@ describe('deriveQuests', () => {
     expect(completed).toBe(offered);
   });
 
+  it('lets a steady learner clear the whole board, which two dead groups prevented', () => {
+    // The board draws 3 of 4 groups a day. With volume AND breadth both
+    // unreachable, a steady learner needed the draw to drop one dead group and
+    // was still left holding the other — a perfect day was arithmetically
+    // impossible. Measured across these 200 seeds: 0% before this epic, 16%
+    // with the volume fix alone, 48% with both.
+    //
+    // Deterministic, not statistical: the same 200 userIds on the same day
+    // always draw the same boards, so this threshold cannot flake. It sits with
+    // ~15 points of margin on either side of the two outcomes it separates.
+    const daily = steadyHistory(14);
+    let perfect = 0;
+    for (let u = 0; u < 200; u += 1) {
+      const board = deriveQuests({ userId: `u${u}`, todayKey: '2026-07-14', daily });
+      if (board.length > 0 && board.every((q) => q.done)) perfect += 1;
+    }
+    expect(perfect).toBeGreaterThan(60);
+  });
+
   it('never sets a target below 1, whatever the history', () => {
     const quests = deriveQuests({ userId: 'u1', todayKey, daily: { '2026-08-29': { total: 0 } } });
     for (const q of quests) expect(q.target).toBeGreaterThanOrEqual(1);
@@ -351,6 +370,21 @@ describe('questsCompleted', () => {
 });
 
 describe('the catalogue itself', () => {
+  it('clears breadth on two tabs, and still fails on one', () => {
+    // Breadth is about the shape of a day, not its size. Two tabs rules out a
+    // single-surface day; three demanded the learner scatter across
+    // three quarters of the app daily, which a focused habit never does.
+    const breadth = QUEST_CATALOGUE.find((q) => q.id === 'practise-tabs');
+    const twoTabs = dayWith([
+      ['vocab', 'a1', 'correct'],
+      ['translate', 'a1', 'correct'],
+    ])['2026-08-30'];
+    const oneTab = dayWith([['vocab', 'a1', 'correct']])['2026-08-30'];
+
+    expect(breadth.progress(twoTabs)).toBeGreaterThanOrEqual(breadth.target());
+    expect(breadth.progress(oneTab)).toBeLessThan(breadth.target());
+  });
+
   it('has unique ids', () => {
     const ids = QUEST_CATALOGUE.map((q) => q.id);
     expect(new Set(ids).size).toBe(ids.length);

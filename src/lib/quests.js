@@ -123,7 +123,7 @@ export const QUEST_CATALOGUE = [
     tab: 'home',
     // Breadth is about the shape of the day, not its size, so this one is
     // deliberately absolute — and capped at what the app actually offers.
-    target: () => Math.min(3, TABS.length),
+    target: () => Math.min(2, TABS.length),
     progress: (day) => tabsTouched(day),
   },
   // ONE shared group across all four. Giving each its own group made the
