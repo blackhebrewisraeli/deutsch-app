@@ -3,7 +3,7 @@
 //
 //     uploaded image  →  avatar_emoji  →  generated identicon
 //
-// ONE RESOLVER. Before this, "no avatar" rendered as 🦊 in IdentityStrip and 🙂
+// ONE RESOLVER. Before this, "no avatar" rendered as 🦊 on Home and 🙂
 // in ProfileCard — the same absence, drawn two different ways, because each
 // call site invented its own fallback inline. Everything now goes through
 // avatarFor(), and a guard test fails if a second hard-coded glyph appears.

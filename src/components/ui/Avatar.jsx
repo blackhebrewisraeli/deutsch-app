@@ -3,7 +3,7 @@ import { avatarFor } from '../../lib/avatar.js';
 // The ONE place an avatar is drawn.
 //
 // Every call site used to inline its own fallback, and they disagreed: 🦊 in
-// IdentityStrip, 🙂 in ProfileCard. Same absence, two different pictures,
+// the Home identity row, 🙂 in ProfileCard. Same absence, two different pictures,
 // because "what does no avatar look like" was answered separately each time.
 // avatarFor() decides the tier; this decides how to paint it.
 //

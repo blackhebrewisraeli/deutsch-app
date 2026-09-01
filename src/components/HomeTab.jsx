@@ -1,24 +1,26 @@
 import { Flame } from 'lucide-react';
-import { SPACE } from '../lib/theme';
-import { Hero, StatBlock } from './UI';
-import LevelCard from './gamification/LevelCard';
+import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE } from '../lib/theme';
+import { StatBlock } from './UI';
 import GoalRing from './gamification/GoalRing';
-import IdentityStrip from './IdentityStrip';
+import PersonalHub from './PersonalHub';
+import RecommendedActions from './RecommendedActions';
+import { resolveRecommended } from './resolveRecommended';
 import MissionBoard from './MissionBoard';
 import QuestBoard from './QuestBoard';
 import ErrorBoundary from './ErrorBoundary';
+import { activePack } from '../packs';
 
-// Landing surface for every app open, guest or signed-in — a quick glance at
-// standing progress, who you are, and what is open.
+// Landing surface for every app open, guest or signed-in — who you are, what
+// to do next, and what is still open today.
 //
-// Deliberately NOT a second Stats tab: no accuracy breakdown, heatmap,
-// leaderboard, or account MANAGEMENT here. Those stay exclusive to Stats and
-// Settings. See docs/superpowers/specs/2026-08-24-entry-flow-and-home-dashboard-design.md §7
+// Deliberately NOT a second Stats tab and NOT a Settings page: no accuracy
+// breakdown, heatmap, leaderboard, or account MANAGEMENT here. Those stay
+// exclusive to the Profile tab. See
+// docs/superpowers/specs/2026-08-24-entry-flow-and-home-dashboard-design.md §7
 // for the original exclusion (E5), and the 2026-08-29 design §4.1 for the
-// identity strip that narrows it — identity, not administration.
+// identity that narrows it — identity, not administration.
 export default function HomeTab({
-  lvl,
-  totalXp,
+  score,
   learnedCount,
   goalPct,
   goalMet,
@@ -31,21 +33,24 @@ export default function HomeTab({
   onGoToTab,
   onOpenSettings,
 }) {
+  const chrome = activePack.content.homeChrome ?? {};
+  const { remaining } = resolveRecommended(missions);
+
   return (
     <div>
-      <Hero kicker="Section 01" title="Willkommen" sub="Your standing progress, at a glance." />
+      <PersonalHub
+        user={user}
+        profile={profile}
+        cefrLevel={cefrLevel}
+        score={score}
+        learnedCount={learnedCount}
+        onOpenSettings={onOpenSettings}
+      />
 
       <div style={{ marginTop: SPACE[6] }}>
-        <IdentityStrip
-          user={user}
-          profile={profile}
-          lvl={cefrLevel}
-          onOpenSettings={onOpenSettings}
-        />
-      </div>
-
-      <div style={{ marginTop: SPACE[8] }}>
-        <LevelCard lvl={lvl} totalXp={totalXp} learnedCount={learnedCount} />
+        <ErrorBoundary>
+          <RecommendedActions missions={missions} onGo={onGoToTab} />
+        </ErrorBoundary>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[5], marginTop: SPACE[6] }}>
@@ -53,21 +58,54 @@ export default function HomeTab({
         <StatBlock label="STREAK" value={streak} icon={<Flame size={16} />} accent />
       </div>
 
-      {/* Home is the default tab, so a throw while deriving missions would be a
-          crash on app open. Contained here, the rest of the glance survives. */}
-      <div style={{ marginTop: SPACE[8] }}>
-        <ErrorBoundary>
-          <MissionBoard missions={missions} onGo={onGoToTab} />
-        </ErrorBoundary>
-      </div>
+      {/* Remaining Missionen and Tagesaufgaben share a day-scoped heading, but
+          keep their own labelled regions — a screen reader that jumps by
+          heading still finds each board, and the tests that pin those names
+          would otherwise go blind. */}
+      <section aria-labelledby="heute-heading" style={{ marginTop: SPACE[8] }}>
+        <div
+          id="heute-heading"
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: FONT_SIZE.tag,
+            fontWeight: FONT_WEIGHT.bold,
+            letterSpacing: LETTER_SPACING.caps,
+            textTransform: 'uppercase',
+            color: COLORS.mute,
+          }}
+        >
+          {chrome.todayHeading}
+        </div>
+        {chrome.todaySub && (
+          <div
+            style={{
+              fontFamily: FONTS.body,
+              fontSize: FONT_SIZE.base,
+              color: COLORS.inkSoft,
+              marginTop: SPACE[1],
+            }}
+          >
+            {chrome.todaySub}
+          </div>
+        )}
+        <div
+          style={{
+            borderTop: `1px solid ${COLORS.border}`,
+            marginTop: SPACE[4],
+            paddingTop: SPACE[5],
+          }}
+        />
 
-      {/* Its own boundary: quests derive from a different pipeline, and a throw
-          there must not take the missions board down with it. */}
-      <div style={{ marginTop: SPACE[8] }}>
         <ErrorBoundary>
-          <QuestBoard quests={quests} onGo={onGoToTab} />
+          <MissionBoard missions={remaining} onGo={onGoToTab} />
         </ErrorBoundary>
-      </div>
+
+        <div style={{ marginTop: SPACE[8] }}>
+          <ErrorBoundary>
+            <QuestBoard quests={quests} onGo={onGoToTab} />
+          </ErrorBoundary>
+        </div>
+      </section>
     </div>
   );
 }

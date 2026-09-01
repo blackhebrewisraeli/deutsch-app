@@ -1,6 +1,6 @@
-// Copy for the Home identity strip.
+// Copy for the Home personal hub.
 //
-// Lives in the pack for the same reason the mission copy does: IdentityStrip
+// Lives in the pack for the same reason the mission copy does: PersonalHub
 // knows fields, not phrases, so no German reaches src/components.
 
 export const IDENTITY = {

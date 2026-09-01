@@ -27,7 +27,10 @@ vi.mock('./lib/claude', () => ({ callClaude }));
  */
 const asReturningLearner = () => localStorage.setItem(TUTORIAL_KEY, 'true');
 
-beforeEach(asReturningLearner);
+beforeEach(() => {
+  asReturningLearner();
+  window.location.hash = '';
+});
 
 const authMock = vi.hoisted(() => ({
   configured: true,
@@ -95,7 +98,7 @@ vi.mock('./lib/sync', async (importOriginal) => ({
   markDirty: syncMock.markDirty,
 }));
 
-const TAB_NAMES = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'];
+const TAB_NAMES = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Profile'];
 
 const setViewportWidth = (width) => {
   Object.defineProperty(window, 'innerWidth', {
@@ -183,13 +186,35 @@ describe('App navigation a11y', () => {
     const nav = within(screen.getByRole('navigation'));
     expect(nav.getByRole('button', { name: 'Home' })).toHaveAttribute('aria-current', 'page');
     expect(nav.getByRole('button', { name: 'Chat' })).not.toHaveAttribute('aria-current');
-    expect(nav.getByRole('button', { name: 'Stats' })).not.toHaveAttribute('aria-current');
+    expect(nav.getByRole('button', { name: 'Profile' })).not.toHaveAttribute('aria-current');
   });
 
   it('renders HomeTab content on the default landing tab', () => {
     setViewportWidth(1280);
     renderPastEntry(<App />);
-    expect(screen.getByRole('heading', { name: 'Willkommen' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /guten tag/i })).toBeInTheDocument();
+  });
+
+  it('deep-links #/settings onto the Profile tab Settings view', () => {
+    setViewportWidth(1280);
+    window.location.hash = '#/settings';
+    renderPastEntry(<App />);
+    const nav = within(screen.getByRole('navigation'));
+    expect(nav.getByRole('button', { name: 'Profile' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('heading', { name: /einstellungen/i })).toBeInTheDocument();
+    window.location.hash = '';
+  });
+
+  it('clears the settings hash when leaving the Profile tab', async () => {
+    setViewportWidth(1280);
+    window.location.hash = '#/settings';
+    renderPastEntry(<App />);
+    expect(window.location.hash).toBe('#/settings');
+    await userEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Home' })
+    );
+    expect(window.location.hash).toBe('');
+    expect(screen.getByRole('heading', { name: /guten tag/i })).toBeInTheDocument();
   });
 
   // The labelled nav needs 809px (measured: six labels + the 01-06 prefixes +
@@ -290,7 +315,7 @@ describe('header at mobile width', () => {
   // Home is deliberately excluded here — it shows its own GoalRing/streak
   // widgets instead of GoalStrip, on every viewport, covered by
   // 'renders HomeTab content on the default landing tab' below.
-  it.each(['Chat', 'Alphabet', 'Vocab', 'Translate', 'Stats'])(
+  it.each(['Chat', 'Alphabet', 'Vocab', 'Translate', 'Profile'])(
     'shows daily-goal progress on the %s tab on mobile',
     async (tabName) => {
       setViewportWidth(375);
@@ -410,7 +435,9 @@ describe('header at mobile width', () => {
     setViewportWidth(1280);
     const user = userEvent.setup();
     renderPastEntry(<App />);
-    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
+    );
     expect(screen.queryByText(/^Appearance$/i)).not.toBeInTheDocument();
   });
 });
@@ -446,7 +473,9 @@ describe('in-app AuthSheet', () => {
     const user = userEvent.setup();
     renderPastEntry(<AppWithAuth />);
 
-    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
+    );
     await user.click(screen.getByRole('button', { name: /sign in to sync/i }));
 
     expect(screen.getByRole('dialog', { name: /sign in/i })).toBeInTheDocument();
@@ -559,7 +588,7 @@ describe('guest trial wall', () => {
   it('never walls the Stats tab — it is the escape hatch', async () => {
     const user = userEvent.setup();
     await renderApp();
-    await goToTab(user, 'Stats');
+    await goToTab(user, 'Profile');
     expect(wall()).not.toBeInTheDocument();
   });
 
@@ -578,7 +607,7 @@ describe('guest trial wall', () => {
     expect(wall()).toBeInTheDocument();
     // Reaching Stats from behind the wall is the whole point of scrimming the
     // practice surface instead of the viewport.
-    await goToTab(user, 'Stats');
+    await goToTab(user, 'Profile');
     expect(wall()).not.toBeInTheDocument();
     expect(
       within(screen.getByRole('banner')).getByRole('button', { name: /^appearance$/i })
@@ -928,12 +957,14 @@ describe('entry gate', () => {
     render(<App />);
     const nav = within(screen.getByRole('navigation'));
 
-    await userEvent.click(nav.getByRole('button', { name: 'Stats' }));
+    await userEvent.click(nav.getByRole('button', { name: 'Profile' }));
+    await userEvent.click(screen.getByRole('button', { name: 'settings' }));
     await userEvent.click(screen.getByRole('radio', { name: /A1/ }));
     await userEvent.click(nav.getByRole('button', { name: 'Vocab' }));
-    await userEvent.click(nav.getByRole('button', { name: 'Stats' }));
+    await userEvent.click(nav.getByRole('button', { name: 'Profile' }));
+    await userEvent.click(screen.getByRole('button', { name: 'settings' }));
 
-    // If App had dropped onLevelChange, StatsTab would re-mount from the stale
+    // If App had dropped onLevelChange, Settings would re-mount from the stale
     // `level` prop and B1 would be checked again.
     expect(screen.getByRole('radio', { name: /A1/ })).toBeChecked();
   });
@@ -1074,11 +1105,11 @@ describe('level coordination', () => {
     const nav = () => within(screen.getByRole('navigation'));
     await user.click(nav().getByRole('button', { name: 'Translate' }));
     await user.click(screen.getByRole('button', { name: /skip/i }));
-    await user.click(nav().getByRole('button', { name: 'Stats' }));
+    await user.click(nav().getByRole('button', { name: 'Profile' }));
 
     await user.click(chip());
-    // Scoped to the sheet: the Stats tab renders a full switcher of its own,
-    // so an unscoped /B1/ radio query matches two controls here.
+    // Scoped to the sheet: Settings also renders the shared switcher, so an
+    // unscoped /B1/ radio query can match two controls if that view is open.
     const sheet = within(screen.getByRole('dialog', { name: 'Status' }));
     await user.click(sheet.getByRole('radio', { name: /B1/ }));
     expect(screen.queryByRole('button', { name: /switch to B1/i })).toBeNull();
@@ -1095,12 +1126,15 @@ describe('level coordination', () => {
     expect(chip()).toHaveTextContent('B1');
   });
 
-  it('keeps the Stats switcher and the header control on the same level', async () => {
+  it('keeps the Settings switcher and the header control on the same level', async () => {
     const user = userEvent.setup();
     renderPastEntry(<App />);
     await user.click(chip());
     await user.click(screen.getByRole('radio', { name: /A2/ }));
-    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Stats' }));
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
+    );
+    await user.click(screen.getByRole('button', { name: 'settings' }));
     expect(screen.getByRole('radio', { name: /A2/ })).toBeChecked();
   });
 });
@@ -1247,7 +1281,7 @@ describe('first-run walkthrough', () => {
     // cannot coincidentally land in the right place.
     statusAnchor().getBoundingClientRect = asRect(900, 10, 52, 52);
     navButton('Chat').getBoundingClientRect = asRect(200, 90, 120, 48);
-    navButton('Stats').getBoundingClientRect = asRect(600, 90, 120, 48);
+    navButton('Profile').getBoundingClientRect = asRect(600, 90, 120, 48);
     act(() => {
       window.dispatchEvent(new Event('resize'));
     });
@@ -1277,7 +1311,7 @@ describe('first-run walkthrough', () => {
     // Icon-only nav at bp.tiny: six buttons across 320px, the last flush right.
     statusAnchor().getBoundingClientRect = asRect(262, 8, 42, 42);
     navButton('Chat').getBoundingClientRect = asRect(55, 60, 45, 44);
-    navButton('Stats').getBoundingClientRect = asRect(265, 60, 45, 44);
+    navButton('Profile').getBoundingClientRect = asRect(265, 60, 45, 44);
     act(() => {
       window.dispatchEvent(new Event('resize'));
     });

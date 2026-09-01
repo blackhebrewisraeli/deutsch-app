@@ -20,7 +20,7 @@ export const TUTORIAL_STEPS = Object.freeze([
   },
   {
     id: 'stats',
-    title: 'Stats',
-    body: 'Everything you got wrong, plus the cards due for review today. Start here when you are unsure what to practise.',
+    title: 'Profile',
+    body: 'Your standing, the weekly leagues, and Settings. Start here when you want a picture of your practice — or to change how you learn.',
   },
 ]);

@@ -2,17 +2,22 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import HomeTab from './HomeTab';
 
-// See IdentityStrip.test.jsx: isAuthConfigured() differs between a dev box and
-// CI, and IdentityStrip branches on it.
+// See PersonalHub.test.jsx: isAuthConfigured() differs between a dev box and
+// CI, and PersonalHub branches on it.
 vi.mock('../lib/auth.js', () => ({ isAuthConfigured: () => true }));
 
-const lvl = { level: 3, rankName: 'Anfänger', progress: 0.4, xpIntoLevel: 60, xpToNext: 150 };
+const score = {
+  level: 3,
+  rankName: 'Anfänger',
+  progress: 0.4,
+  xpIntoLevel: 60,
+  xpToNext: 150,
+  totalXp: 300,
+};
 
 describe('HomeTab', () => {
-  it('renders the level card and the streak/goal ring', () => {
-    render(
-      <HomeTab lvl={lvl} totalXp={300} learnedCount={12} goalPct={0.5} goalMet={false} streak={4} />
-    );
+  it('renders the personal hub and the streak/goal ring', () => {
+    render(<HomeTab score={score} learnedCount={12} goalPct={0.5} goalMet={false} streak={4} />);
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('Anfänger')).toBeInTheDocument();
     expect(screen.getByTitle('Daily goal · 50%')).toBeInTheDocument();
@@ -23,24 +28,21 @@ describe('HomeTab', () => {
 
   // Home is a quick glance, not a second Stats — the deep-dive widgets
   // (accuracy breakdown, heatmap, leaderboard, account) stay exclusive to
-  // Stats. See docs/superpowers/specs/2026-08-24-entry-flow-and-home-dashboard-design.md §7.
+  // Profile. See docs/superpowers/specs/2026-08-24-entry-flow-and-home-dashboard-design.md §7.
   it('shows nothing beyond the progress snapshot', () => {
-    render(
-      <HomeTab lvl={lvl} totalXp={300} learnedCount={12} goalPct={0.5} goalMet={false} streak={4} />
-    );
+    render(<HomeTab score={score} learnedCount={12} goalPct={0.5} goalMet={false} streak={4} />);
     expect(screen.queryByText(/accuracy/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/leaderboard/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/account/i)).not.toBeInTheDocument();
   });
 
-  // E5 is superseded NARROWLY by the identity strip: identity may appear,
-  // administration may not. This is the assertion that stops the strip
-  // drifting into a full account page on Home later.
+  // E5 is superseded NARROWLY by the personal hub: identity may appear,
+  // administration may not. This is the assertion that stops Home drifting
+  // into a full account page later — Settings lives in the Profile tab.
   it('carries identity but never account management', () => {
     render(
       <HomeTab
-        lvl={lvl}
-        totalXp={300}
+        score={score}
         learnedCount={12}
         goalPct={0.5}
         goalMet={false}
@@ -57,6 +59,13 @@ describe('HomeTab', () => {
     expect(screen.queryByRole('button', { name: /delete account/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /export my data/i })).not.toBeInTheDocument();
     expect(screen.queryByText(/danger zone/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /handle/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /change email/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/appearance/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: /level/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/daily goal/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/sound: on/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/sound: off/i)).not.toBeInTheDocument();
   });
 
   it('renders the missions it is handed, and routes from one', async () => {
@@ -64,8 +73,7 @@ describe('HomeTab', () => {
     const onGoToTab = vi.fn();
     render(
       <HomeTab
-        lvl={lvl}
-        totalXp={300}
+        score={score}
         learnedCount={12}
         goalPct={0.5}
         goalMet={false}
@@ -82,8 +90,7 @@ describe('HomeTab', () => {
   it('congratulates when no missions are open', () => {
     render(
       <HomeTab
-        lvl={lvl}
-        totalXp={300}
+        score={score}
         learnedCount={12}
         goalPct={0.5}
         goalMet
@@ -93,5 +100,25 @@ describe('HomeTab', () => {
       />
     );
     expect(screen.getByText(/alles erledigt/i)).toBeInTheDocument();
+  });
+
+  it('groups the remaining boards under Heute without merging their regions', () => {
+    render(
+      <HomeTab
+        score={score}
+        learnedCount={12}
+        goalPct={0.5}
+        goalMet={false}
+        streak={4}
+        cefrLevel="a1"
+        missions={[
+          { id: 'srs-due', count: 5, tab: 'vocab', priority: 0 },
+          { id: 'goal-remaining', count: 20, tab: 'chat', priority: 2 },
+          { id: 'revisit-wrong', count: 3, tab: 'translate', priority: 3 },
+        ]}
+      />
+    );
+    expect(screen.getByRole('region', { name: /heute/i })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: /missionen/i })).toBeInTheDocument();
   });
 });

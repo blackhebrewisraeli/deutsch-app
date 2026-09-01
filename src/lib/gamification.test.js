@@ -7,6 +7,7 @@ import {
   thresholdForLevel,
   levelFromXp,
   rankName,
+  score,
   goalProgress,
   ACHIEVEMENTS,
   earnedAchievements,
@@ -70,6 +71,30 @@ describe('levels', () => {
     expect(rankName(10)).toBe('Sehr gut');
     expect(rankName(15)).toBe('Fließend');
     expect(rankName(20)).toBe('Muttersprachler');
+  });
+});
+
+describe('score', () => {
+  it('carries the level fields and the lifetime total together', () => {
+    const daily = { '2026-06-01': day(5, 0, 0), '2026-06-02': day(3, 0, 0) }; // 50 + 30 = 80
+    const s = score(daily);
+    expect(s.totalXp).toBe(80);
+    expect(s).toMatchObject({ level: 2, xpIntoLevel: 30, xpToNext: 100 });
+    expect(s.rankName).toBe('Anfänger');
+    expect(s.progress).toBeCloseTo(0.3);
+  });
+
+  // The whole reason this exists: the level and the total must come from one
+  // read of one log, so a caller cannot pair a level with a stale total.
+  it('agrees with levelFromXp(totalXp(daily)) for the same log', () => {
+    const daily = { '2026-06-01': day(9, 2, 1) };
+    expect(score(daily)).toEqual({ ...levelFromXp(totalXp(daily)), totalXp: totalXp(daily) });
+  });
+
+  it('reads an empty or missing log as a level-1 zero', () => {
+    for (const empty of [undefined, null, {}]) {
+      expect(score(empty)).toMatchObject({ level: 1, totalXp: 0, xpIntoLevel: 0 });
+    }
   });
 });
 
