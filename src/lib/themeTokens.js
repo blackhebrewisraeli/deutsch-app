@@ -80,6 +80,30 @@ const ACCENT_TIERS_DARK = {
   'accent-red-on': '#0F0F11',
 };
 
+// The informational plane. One surface in the app is neither a card the user
+// can act on nor a piece of chrome: the first-visit banner that explains how
+// the exercise model works. It was painted with `COLORS.ink` as a fill, which
+// is the same token the user's chat bubble, the active nav tab, toasts and
+// every primary button use — so the one panel that is purely explanatory
+// looked exactly like the things that do something when pressed.
+//
+// Indigo carries no other meaning in this palette. Gold is reward, red is
+// wrong, green is correct, charcoal is identity chrome; none of them were free
+// to mean "read this". Note the standing rule three comments up — a tier that
+// ships without a consumer gets retired, as the gold one did. This one has
+// exactly one consumer (`chat/WelcomeBanner.jsx`) and should keep having one.
+//
+// It is the only accent here that ADAPTS by mode rather than holding a single
+// value, and that is deliberate rather than an oversight: the point of the
+// plane is separation from the page, and separation is a relationship, not a
+// colour. Light mode grounds on ivory, where a deep indigo reads as a rich
+// panel; dark mode grounds on near-black, where that same indigo sinks into
+// the background at 1.7:1. The dark value is lifted until the panel clears 3:1
+// against its ground, which is the non-text threshold for a boundary the eye
+// has to find. The ink is shared, because near-white sits on both.
+const INFO_PLANE_LIGHT = { info: '#312E81', 'info-on': '#EEF0FF' };
+const INFO_PLANE_DARK = { info: '#4F46E5', 'info-on': '#EEF0FF' };
+
 // Entry-splash flag stripes. These are brand colours, not theme colours: a
 // light-mode machine still gets black / red / gold. Pairing them with
 // COLORS.ink / COLORS.paper made the "black" stripe invert with the theme
@@ -112,6 +136,7 @@ function withDerived(base) {
 
 const LIGHT = withDerived({
   ...ACCENT_TIERS_LIGHT,
+  ...INFO_PLANE_LIGHT,
   ground: '#FBF8F1',
   surface: '#FFFFFF',
   'surface-alt': '#F0ECE1',
@@ -145,6 +170,7 @@ const LIGHT = withDerived({
 /** Nocturne — Dark mode. */
 const DARK = withDerived({
   ...ACCENT_TIERS_DARK,
+  ...INFO_PLANE_DARK,
   ground: '#0F0F11',
   surface: '#1A1A1E',
   // The elevated card plane the palette aims at is #24242A, but that is

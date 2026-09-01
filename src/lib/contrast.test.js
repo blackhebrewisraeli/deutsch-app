@@ -152,6 +152,26 @@ function pairsFor(mode) {
     });
   }
 
+  // The informational plane. Body copy sits on it, so its ink is held to body
+  // AA — and the plane itself is held to the 3:1 NON-text threshold against the
+  // page ground, which no other fill here is. That second pair is the whole
+  // reason the token exists: a panel whose job is to look unlike the cards
+  // around it has failed if the eye cannot find its edge. It is also the pair
+  // that forced the dark value to differ from the light one, so removing it
+  // would quietly re-open the case for collapsing them.
+  pairs.push({
+    fg: c['info-on'],
+    bg: c.info,
+    min: AA_NORMAL,
+    name: `${label} info-on on info`,
+  });
+  pairs.push({
+    fg: c.info,
+    bg: c.ground,
+    min: AA_LARGE,
+    name: `${label} info plane against ground (non-text boundary)`,
+  });
+
   // The masthead's quiet ink is body text (the tagline), so it is held to body
   // AA on its own plane rather than the 3:1 a decorative tone would get.
   pairs.push({
@@ -265,6 +285,28 @@ describe('accent tiers are fills, not foregrounds', () => {
   it('has no gold tier — COLORS.gold already owns reward', () => {
     for (const mode of ['light', 'dark']) {
       expect(MODE_COLORS[mode]['accent-gold']).toBeUndefined();
+    }
+  });
+
+  // The info plane is not a German-flag tier and is not swept with them, but it
+  // obeys the same fill/ink contract and needs the same proof of shape.
+  it('the info plane ships a paired ink in every palette', () => {
+    for (const mode of ['light', 'dark']) {
+      const c = MODE_COLORS[mode];
+      expect(c.info, `${mode} info`).toMatch(/^#[0-9A-Fa-f]{6}$/);
+      expect(c['info-on'], `${mode} info-on`).toMatch(/^#[0-9A-Fa-f]{6}$/);
+    }
+  });
+
+  // Indigo has to stay indigo's. If a future palette pointed `info` at a value
+  // the chrome already uses, the banner would go back to looking like a button
+  // or a card and the token would be dead weight carrying a comment.
+  it('keeps the info plane distinct from the fills it exists to differ from', () => {
+    for (const mode of ['light', 'dark']) {
+      const c = MODE_COLORS[mode];
+      for (const other of ['fg', 'surface', 'ground', 'accent-black']) {
+        expect(c.info, `${mode} info must not equal ${other}`).not.toBe(c[other]);
+      }
     }
   });
 

@@ -18,8 +18,12 @@ export default function WelcomeBanner({ mobile, onDismiss }) {
       style={{
         borderRadius: RADIUS.lg,
         boxShadow: SHADOW.bar,
-        background: COLORS.ink,
-        color: COLORS.paper,
+        // The info plane, not COLORS.ink. Ink-as-fill is what the user's chat
+        // bubble, the active nav tab, toasts and every primary button are
+        // painted with, so this banner — the one panel here that explains
+        // rather than does — was wearing the uniform of the things that act.
+        background: COLORS.info,
+        color: COLORS.infoOn,
         padding: mobile ? SPACE[4] : SPACE[5],
         marginBottom: mobile ? SPACE[4] : SPACE[6],
         display: 'grid',
@@ -65,9 +69,12 @@ export default function WelcomeBanner({ mobile, onDismiss }) {
         onClick={onDismiss}
         style={{
           background: 'transparent',
-          border: `2px solid ${COLORS.paper}`,
+          // Both from the plane's own ink: COLORS.paper is the page ground and
+          // renders near-black on indigo in dark mode, which is how an outline
+          // button disappears into its own container.
+          border: `2px solid ${COLORS.infoOn}`,
           borderRadius: RADIUS.md,
-          color: COLORS.paper,
+          color: COLORS.infoOn,
           fontFamily: FONT_MONO,
           fontWeight: 700,
           fontSize: FONT_SIZE.tag,
