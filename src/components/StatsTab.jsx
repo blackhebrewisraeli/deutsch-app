@@ -58,7 +58,7 @@ export default function StatsTab({
   const [internalView, setInternalView] = useState(VIEWS.stats);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  const controlled = typeof onViewChange === 'function';
+  const controlled = typeof view === 'string' && typeof onViewChange === 'function';
   const activeView = controlled ? view : internalView;
   const setActiveView = (next) => {
     if (controlled) onViewChange(next);
