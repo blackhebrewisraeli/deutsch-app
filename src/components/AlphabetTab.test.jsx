@@ -23,18 +23,67 @@ describe('AlphabetTab', () => {
         'aria-pressed',
         'true'
       );
-      expect(screen.getByRole('button', { name: 'Play letter audio again' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Play the letter' })).toBeInTheDocument();
       for (const letter of firstGroup.letters) {
         expect(screen.getByRole('button', { name: `Select letter ${letter}` })).toBeInTheDocument();
       }
     });
 
-    it('replays the target letter on demand', async () => {
+    // The quiz opened by speaking the target 300ms after mount, and switching
+    // back from Browse spoke it again. Both are gone: audio that starts by
+    // itself talks over a screen reader reading the round, and it fires on a
+    // shared or public device before the learner can decline.
+    it('stays silent until the learner presses play', () => {
       render(<AlphabetTab level="a1" />);
-      await userEvent.click(screen.getByRole('button', { name: 'Play letter audio again' }));
+      expect(speak).not.toHaveBeenCalled();
+    });
+
+    it('does not speak when the round advances', async () => {
+      render(<AlphabetTab level="a1" />);
+      await userEvent.click(
+        screen.getByRole('button', { name: `Select letter ${firstGroup.letters[0]}` })
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'NEXT ROUND →' }));
+      expect(speak).not.toHaveBeenCalled();
+    });
+
+    it('does not speak when returning from browse mode', async () => {
+      render(<AlphabetTab level="a1" />);
+      await userEvent.click(screen.getByRole('button', { name: '📋 Browse' }));
+      speak.mockClear(); // a browse letter tap is a press, and may legitimately speak
+      await userEvent.click(screen.getByRole('button', { name: '🎧 Quiz' }));
+      expect(speak).not.toHaveBeenCalled();
+    });
+
+    it('plays the target letter on demand', async () => {
+      render(<AlphabetTab level="a1" />);
+      await userEvent.click(screen.getByRole('button', { name: 'Play the letter' }));
       expect(speak).toHaveBeenCalled();
       const [spoken] = speak.mock.calls.at(-1);
       expect(firstGroup.letters).toContain(spoken);
+    });
+
+    // "TAP TO HEAR AGAIN" on a round that has played nothing asks the learner
+    // to repeat something they never heard.
+    it('asks for a first listen, then offers a replay', async () => {
+      render(<AlphabetTab level="a1" />);
+      expect(screen.getByText('TAP TO HEAR THE LETTER')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: 'Play the letter' }));
+      expect(screen.getByText('TAP TO HEAR AGAIN')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Play the letter again' })).toBeInTheDocument();
+    });
+
+    // Each round is its own first listen — the replay wording must not leak
+    // across a round boundary the way a plain boolean would.
+    it('resets to a first listen on the next round', async () => {
+      render(<AlphabetTab level="a1" />);
+      await userEvent.click(screen.getByRole('button', { name: 'Play the letter' }));
+      await userEvent.click(
+        screen.getByRole('button', { name: `Select letter ${firstGroup.letters[0]}` })
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'NEXT ROUND →' }));
+      expect(screen.getByText('TAP TO HEAR THE LETTER')).toBeInTheDocument();
     });
 
     it('grades a guess and offers the next round', async () => {

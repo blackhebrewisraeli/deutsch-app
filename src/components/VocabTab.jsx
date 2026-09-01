@@ -64,6 +64,11 @@ export default function VocabTab({
 
   const [answered, setAnswered] = useState(false);
   const [result, setResult] = useState(null); // 'correct' | 'almost' | 'wrong'
+  // The card whose audio has been played, NOT a boolean. Storing the id means
+  // `played` falsifies itself the moment a different card arrives, so there is
+  // no reset to forget on any of the several paths that advance the queue —
+  // answering, skipping, switching deck, or a review target jumping the line.
+  const [playedCardId, setPlayedCardId] = useState(null);
   const [typedAnswer, setTypedAnswer] = useState('');
   const [queue, setQueue] = useState([]);
   // A pending review target — when the deck-reset effect runs, it puts this
@@ -150,6 +155,7 @@ export default function VocabTab({
 
   const currentIdx = queue[0] ?? null;
   const card = currentIdx !== null ? activeDeck[currentIdx] : null;
+  const played = card != null && playedCardId === card.id;
 
   const getChoices = (deck, cardIdx) => {
     const correct = deck[cardIdx].en;
@@ -275,15 +281,17 @@ export default function VocabTab({
   const drill = drillFor(deckId, AUTO_DECKS);
   const isDrill = drill !== null;
 
-  // The audio IS the question for a listening drill, so it plays on arrival
-  // rather than waiting for a click — a learner who must press play before every
-  // card is being taxed, not tested. speak() is a no-op where speechSynthesis is
-  // missing, which is also what makes this safe in jsdom.
-  useEffect(() => {
-    if (drill?.speak && card) speak(drill.speak(card));
-    // card.id is the identity that matters; re-speaking on unrelated re-renders
-    // would interrupt the learner mid-word.
-  }, [drill, card?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  // A listening card USED to speak itself on arrival, on the argument that the
+  // audio is the question and a learner pressing play before every card is
+  // being taxed rather than tested. That argument lost to a harder rule: sound
+  // in this app never starts without a press. Unannounced audio is the failure
+  // mode for anyone on a screen reader (it talks over the announcement), on a
+  // shared or public device, or simply not expecting it — and none of them get
+  // a say before it has already played.
+  //
+  // What replaces it is not "press play every time" but a play button that is
+  // the loudest thing on the card, plus a caption that distinguishes the first
+  // listen from a replay. See `played` below.
   const showChoices = !isDrill && isBeginner && activeDeck.length >= 4;
   const showTyped = !isDrill && (level === 'b1' || (isBeginner && activeDeck.length < 4));
 
@@ -437,11 +445,22 @@ export default function VocabTab({
               {drill?.speak && !answered && (
                 <button
                   type="button"
-                  onClick={() => speak(drill.speak(card))}
-                  aria-label="Play the word again"
-                  style={{ ...BUTTON.tile, width: '100%', marginBottom: SPACE[3] }}
+                  onClick={() => {
+                    speak(drill.speak(card));
+                    setPlayedCardId(card.id);
+                  }}
+                  aria-label={played ? 'Play the word again' : 'Play the word'}
+                  // BUTTON.go, not BUTTON.tile. On a Hören card the audio IS
+                  // the question, and nothing plays it but this — so until it
+                  // has been pressed it is the primary action on the card, not
+                  // a neutral one sitting quietly above the answer field.
+                  style={{
+                    ...(played ? BUTTON.tile : BUTTON.go),
+                    width: '100%',
+                    marginBottom: SPACE[3],
+                  }}
                 >
-                  <Volume2 size={18} aria-hidden="true" /> PLAY AGAIN
+                  <Volume2 size={18} aria-hidden="true" /> {played ? 'PLAY AGAIN' : 'PLAY'}
                 </button>
               )}
 
