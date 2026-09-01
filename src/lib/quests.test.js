@@ -406,6 +406,21 @@ describe('the catalogue itself', () => {
     }
   });
 
+  it('never sets a target above the baseline it derives from', () => {
+    // THE RULE. A multiplier above 1.0 on a self-referential baseline is a
+    // treadmill: the learner's own median rises to meet the target, and the
+    // target rises with it, so the stable state is failure. This is what the
+    // 1.2x volume quest was, and it is what a future edit must not re-introduce.
+    //
+    // Swept across a range of baselines, not one value: a violating multiplier
+    // can hide at base=2, where every entry's MIN_TARGET floor is doing the work.
+    for (const q of QUEST_CATALOGUE) {
+      for (const base of [MIN_TARGET, 3, 4, 5, 8, 10, 17, 40, 100]) {
+        expect(q.target(base), `${q.id} at base=${base}`).toBeLessThanOrEqual(base);
+      }
+    }
+  });
+
   it('has enough groups to fill a day without repeating one', () => {
     expect(new Set(QUEST_CATALOGUE.map((q) => q.group)).size).toBeGreaterThanOrEqual(QUEST_COUNT);
   });
@@ -463,10 +478,11 @@ describe('questHistory', () => {
   });
 
   it('does NOT hand out a clean sweep every day for a steady learner', () => {
-    // Targets scale off the trailing median, so a learner doing exactly their
-    // usual amount is asked for a little more. Five identical days are not five
-    // perfect days, and that is the point of relative targets — this test
-    // originally asserted 5×QUEST_COUNT and was wrong about the design.
+    // Not because the targets out-run the learner — they no longer do — but
+    // because the board draws 3 of 4 groups, and the focus quest asks for half
+    // the learner's whole median IN ONE TAB. A day spread over four tabs clears
+    // volume, accuracy and breadth and still misses focus. Five identical days
+    // are not five perfect days.
     const r = questHistory({ daily: historyOf(bigDay(), 5), userId: 'u1' });
     expect(r.perfectDays).toBeLessThan(5);
   });

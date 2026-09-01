@@ -20,6 +20,13 @@
 // unreachable on a typical day, and a board of unreachable goals is worse than
 // no board. Targets scale off the learner's own recent activity, with a floor
 // so a returning learner is not handed a target of zero.
+//
+// AND NEVER ABOVE 1.0x THE BASELINE. The volume quest shipped at 1.2x the
+// learner's own median, which is a treadmill: doing more raises the median,
+// which raises the target. Its stable state was failure, for exactly the
+// habit-builder the streak system exists to reward — 0 of 143 seeded steady
+// learners could ever complete it. The catalogue guard in quests.test.js
+// enforces `target(base) <= base` so this cannot come back quietly.
 import { TABS } from './stats.js';
 
 /** How many quests a day. Small on purpose: a board of five is a chore list. */
