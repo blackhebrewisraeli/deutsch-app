@@ -255,7 +255,27 @@ VITE_SYNC_ENABLED=true
 VITE_LEAGUES_ENABLED=true
 ```
 
-Then restart `npm run dev`.
+Then restart `npm run dev`. Vite reads `.env` once at startup, so a running dev
+server will not pick either flag up.
+
+> **Sync looks dead locally? It is configuration, not a code path.** Nothing in
+> the app checks for `development`, `localhost`, or `navigator.onLine` — the
+> only gate is `VITE_SYNC_ENABLED === 'true'` in `src/lib/sync.js`, and it
+> behaves identically on a laptop and in production. Two settings switch it off,
+> and missing both is the default for a fresh clone, because `.env` is
+> git-ignored and only `.env.example` is tracked:
+>
+> - **No `.env` at all** — `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are
+>   then undefined, so `isAuthConfigured()` is false, sign-in never appears, and
+>   with no session there is nothing to sync. This is the usual cause.
+> - **`.env` present but `VITE_SYNC_ENABLED` unset or `false`** — you can sign
+>   in, but `start()` and `markDirty()` are no-ops.
+>
+> Sync is deliberately not gated on connectivity. `navigator.onLine` reports
+> whether a network interface is attached, not whether Supabase is reachable,
+> and gating on it would stop the engine from ever starting for someone who
+> opens the app offline — which is the case the offline-first design exists to
+> serve. Writes go to localStorage first and reconcile when a push succeeds.
 
 ### Full app with AI endpoints
 
