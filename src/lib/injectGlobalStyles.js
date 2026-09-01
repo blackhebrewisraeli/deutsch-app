@@ -1,4 +1,4 @@
-import { FOCUS } from './theme';
+import { COLORS, FOCUS } from './theme';
 
 /**
  * App-wide base styles + keyframes formerly injected by App.jsx <style>.
@@ -33,6 +33,29 @@ export function injectGlobalStyles() {
        together. */
     @media (hover: hover) and (pointer: fine) {
       [data-ui="button"]:not([disabled]):not([aria-busy="true"]):hover { filter: brightness(1.04); }
+      /* Earned badges lift under the cursor. The chip is not a control — there
+         is nothing to click — so this stops short of a button's affordance: no
+         cursor change, no colour change, just a hair of elevation, which reads
+         as "this object is real" rather than "press me".
+
+         The shadow is mixed from the FOREGROUND ink, not SHADOW.card. Two
+         reasons, and the second is why this is not a style preference:
+         SHADOW.card is a fixed light-mode rgba that is all but invisible on a
+         dark surface (the same fact BORDER.panel exists for), and a lift with
+         no visible shadow is just a chip that changed size. Deriving from
+         var(--c-fg) inverts with the palette — a shadow under the chip in
+         light mode, a soft halo in dark — so one declaration covers both.
+
+         An earlier draft firmed up border-color here instead. It did nothing:
+         the chip carries border as an INLINE shorthand, which outranks any
+         stylesheet rule, so the declaration was silently dropped in both
+         themes — visible only in a browser, since jsdom resolves no cascade.
+         Anything this rule wants to change must be a property the component
+         does not also set inline.
+
+         (No backticks in this comment: it lives inside a template literal, so
+         one would end the string. That mistake is what wrote this paragraph.) */
+      .badge-chip:hover { transform: translateY(-1px) scale(1.04); box-shadow: 0 3px 10px ${COLORS.inkA20}; }
     }
     /* Full-height entry screens (welcome gate, level splash). 100vh on iOS
        Safari means the viewport WITHOUT the URL bar, so a 100vh element is
@@ -75,8 +98,57 @@ export function injectGlobalStyles() {
     .wiggle { animation: wiggle 0.30s ease-in-out; }
     @keyframes ui-spin { to { transform: rotate(360deg); } }
     .ui-spinner { animation: ui-spin 0.7s linear infinite; }
+    /* ── Modal entrance ────────────────────────────────────────────────────
+       Scrim and card animate SEPARATELY and at different speeds, which is the
+       whole trick: the scrim is the context switch and wants to be immediate,
+       while the card is the object being handed to you and wants to travel.
+       Animating the pair as one block makes the page look like it stuttered.
+
+       0.5s on the card sounds slow read as a number, and is not, because the
+       easing is expo-out: roughly three quarters of the distance is covered in
+       the first 120ms and the tail is the settle. A linear or ease-out half
+       second genuinely would drag. Do not swap the curve without shortening
+       the duration to match.
+
+       16px, matching the SPACE[4] step, so the card rises by a real unit of the
+       layout rather than an arbitrary nudge. It travels UP, so the motion
+       points at where the card ends rather than away from it. */
+    @keyframes scrim-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes rise-in  { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+    .modal-scrim-in { animation: scrim-in 0.22s ease-out; }
+    .modal-card-in  { animation: rise-in 0.5s cubic-bezier(0.16, 1, 0.3, 1); }
+    /* ── "This is you" ─────────────────────────────────────────────────────
+       A glow that breathes rather than a pulse that blinks: the shadow never
+       reaches zero, so at every frame the pill is lit and the animation only
+       changes HOW MUCH. A ring that leaves and returns reads as a notification
+       badge demanding action; this reads as the pill being warm.
+
+       color-mix over var(--c-accent) rather than a literal, so it is the pack
+       accent in both palettes — the same construction pulse-gold uses. 3.2s is
+       deliberately longer than a heartbeat; anything near 1s becomes a tic you
+       cannot stop looking at, next to text you are meant to read. */
+    @keyframes self-glow {
+      0%, 100% { box-shadow: 0 0 4px 0 color-mix(in srgb, var(--c-accent) 22%, transparent); }
+      50%      { box-shadow: 0 0 12px 2px color-mix(in srgb, var(--c-accent) 62%, transparent); }
+    }
+    .self-glow  { animation: self-glow 3.2s ease-in-out infinite; }
+    .badge-chip { transition: transform 0.18s ease, box-shadow 0.18s ease; }
     @media (prefers-reduced-motion: reduce) {
       .pop, .wiggle, .slide-up { animation: none !important; }
+      /* The card must still ARRIVE — the keyframes start at opacity 0, so
+         cancelling the animation is what makes it simply be there. */
+      .modal-scrim-in, .modal-card-in { animation: none !important; }
+      /* Frozen at the low end of its own cycle instead of switched off. The
+         pill's job is to stand out, and reduced motion is a request for less
+         movement, not for less information. One line, like every other rule in
+         this sheet: injectGlobalStyles.test.js reads this block with a regex
+         that ends at the first indented closing brace, so a multi-line rule
+         here truncates the block and blinds the assertions below it. */
+      .self-glow { animation: none !important; box-shadow: 0 0 4px 0 color-mix(in srgb, var(--c-accent) 22%, transparent); }
+      /* Hover keeps its shadow and loses its travel: the shadow is feedback,
+         the 1px rise is the only part that is actually motion. */
+      .badge-chip { transition: none !important; }
+      .badge-chip:hover { transform: none !important; }
       /* Stops turning, stays visible: aria-busy alone is not a visible
          affordance, so removing the glyph would leave nothing to see. */
       .ui-spinner { animation: none !important; }

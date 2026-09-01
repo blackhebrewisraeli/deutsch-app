@@ -187,3 +187,55 @@ describe('PassportBody — badges', () => {
     expect(within(badge).getByText(first.icon)).toHaveAttribute('aria-hidden', 'true');
   });
 });
+
+// ── Polish ─────────────────────────────────────────────────────────────────
+// The animations themselves live in injectGlobalStyles and are guarded there.
+// What belongs here is that the right elements opt in, and — the part worth
+// more than the effect — that opting in did not quietly turn decoration into a
+// promise the card cannot keep.
+describe('PassportBody — micro-interactions', () => {
+  const first = ACHIEVEMENTS[0];
+
+  it('lifts every earned badge on hover, not just the first', () => {
+    show({ achievements: [first.id, ACHIEVEMENTS[1].id] });
+    const chips = [...document.querySelectorAll('[data-badge]')];
+    expect(chips).toHaveLength(2);
+    expect(chips.every((c) => c.classList.contains('badge-chip'))).toBe(true);
+  });
+
+  // The chip is an <li> with no handler. A hover that looks like a button's
+  // invites a click that does nothing, so the lift stops short of the two
+  // things that actually say "control": the pointer cursor and a role.
+  it('does not dress a badge up as something clickable', () => {
+    show({ achievements: [first.id] });
+    const chip = document.querySelector(`[data-badge="${first.id}"]`);
+    expect(chip.style.cursor).toBe('');
+    expect(chip).not.toHaveAttribute('role', 'button');
+    expect(chip).not.toHaveAttribute('tabindex');
+    expect(chip.querySelector('button')).toBeNull();
+  });
+
+  it('glows the self marker', () => {
+    show({}, { isSelf: true });
+    const pill = [...document.querySelectorAll('div')].find((d) => d.textContent === 'This is you');
+    expect(pill).toHaveClass('self-glow');
+  });
+
+  // The glow is the accent; the pill's own legibility is the surface/border
+  // pair chosen for it. Those must stay independent, or the marker becomes
+  // unreadable for anyone whose browser is animating nothing.
+  it('keeps the marker legible without the glow doing any work', () => {
+    show({}, { isSelf: true });
+    const pill = [...document.querySelectorAll('div')].find((d) => d.textContent === 'This is you');
+    expect(pill.style.background).toBe(COLORS.surface2);
+    expect(pill.style.color).toBe(COLORS.ink);
+    // No inline box-shadow: the glow is the class's to own, and an inline one
+    // would beat the reduced-motion rule that holds it at its dimmest frame.
+    expect(pill.style.boxShadow).toBe('');
+  });
+
+  it('marks nobody else, so the glow cannot appear on a competitor', () => {
+    show({ achievements: [first.id] });
+    expect(document.querySelector('.self-glow')).toBeNull();
+  });
+});
