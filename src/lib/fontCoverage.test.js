@@ -65,6 +65,27 @@ function* strings(value, depth = 0) {
     for (const v of Object.values(value)) yield* strings(v, depth + 1);
 }
 
+/**
+ * Every string reachable in a value EXCEPT the ones stored under an `ipa` key.
+ *
+ * Phonetics render through `TEXT.ipa`, which is pinned to the mono face, so
+ * they are the mono face's content and never the body face's. Scanning them
+ * while auditing the body face asks that face to carry glyphs nothing sets in
+ * it — and 28 lexicon entries put χ (greek) in `ipa`, which the body sans is
+ * deliberately latin-only and cannot render.
+ *
+ * The exclusion is by KEY, not by codepoint: it stays correct if a new
+ * phonetic glyph is added, and it fails loudly if `TEXT.ipa` ever stops
+ * pinning the mono face, because `theme.test.js` guards that pin separately.
+ */
+function* prose(value, depth = 0) {
+  if (depth > 8 || value == null) return;
+  if (typeof value === 'string') yield value;
+  else if (Array.isArray(value)) for (const v of value) yield* prose(v, depth + 1);
+  else if (typeof value === 'object')
+    for (const [key, v] of Object.entries(value)) if (key !== 'ipa') yield* prose(v, depth + 1);
+}
+
 // Whitespace and C1 controls are never rendered as glyphs.
 const rendered = (cp) => cp > 0x20 && !(cp >= 0x7f && cp <= 0x9f);
 
@@ -182,6 +203,91 @@ describe('no dropped subset is carrying content', () => {
         readFileSync(`${FONT_DIR}/${manifest.families[bodyFamily].slug}/face.css`, 'utf8')
       ).length
     ).toBeGreaterThan(10);
+  });
+
+  /**
+   * Every range ANY vendored family ships or could have shipped.
+   *
+   * This is what makes an outright coverage assertion possible at all. The
+   * naive form — "the body face covers every authored codepoint" — cannot pass
+   * and should not: the content holds emoji (👋 🍞 ✈), arrows, and IPA
+   * combining marks like U+032F that NO text font here offers, and those fall
+   * back to a system face by design.
+   *
+   * Membership of this union is the difference between "we could have had this
+   * glyph and did not take it" and "no font we vendor was ever going to supply
+   * it". Measured against the real content, 24 authored codepoints are absent
+   * from the body face and every one of them is outside this union.
+   *
+   * It is derived, not hand-listed, so adding a family or a subset widens the
+   * scope automatically rather than needing an allowlist kept in step.
+   */
+  const obtainable = Object.values(manifest.families).flatMap((f) => [
+    ...parseRanges(readFileSync(`${FONT_DIR}/${f.slug}/face.css`, 'utf8')),
+    ...f.skipped.flatMap((sub) => tokens(sub.unicodeRange)),
+  ]);
+  const keptBy = Object.fromEntries(
+    Object.entries(manifest.families).map(([name, f]) => [
+      name,
+      parseRanges(readFileSync(`${FONT_DIR}/${f.slug}/face.css`, 'utf8')),
+    ])
+  );
+
+  /**
+   * THE GAP THIS CLOSES. `lost` above only fires for a codepoint some SKIPPED
+   * subset covered — it can see a subset we dropped, never one the face was
+   * never offered. Greek is not in the body sans's `skipped` list because it
+   * was never on offer, so χ would never be flagged there even though the sans
+   * genuinely cannot draw it.
+   *
+   * This asks the question the other way round: of everything our vendor could
+   * supply, does the face that renders prose actually have it?
+   */
+  const uncovered = (family, found) =>
+    [...found].filter(([cp]) => !covers(keptBy[family], cp) && covers(obtainable, cp));
+
+  it('the scope rule is neither vacuous nor everything', () => {
+    // Guards the guard, in both directions.
+    // χ is real content (28 lexicon `ipa` fields), IS obtainable — JetBrains
+    // Mono ships greek — and is NOT in the body face. So it is exactly the
+    // codepoint the assertions below would flag if IPA ever moved to the body
+    // face, and proof the rule can fire at all.
+    const chi = 'χ'.codePointAt(0);
+    expect(covers(obtainable, chi), 'χ must be obtainable').toBe(true);
+    expect(covers(keptBy[bodyFamily], chi), 'body face must not already cover χ').toBe(false);
+    // And an emoji must stay OUT of scope, or the assertions become unpassable
+    // for reasons that have nothing to do with a regression.
+    expect(covers(obtainable, 0x1f44b), '👋 must be out of scope').toBe(false);
+  });
+
+  it('the IPA exclusion actually excludes something', () => {
+    // If `prose` and `strings` saw the same text, the whole split would be
+    // ceremony. This fails the moment the walker stops skipping the key.
+    const withIpa = codepoints(strings(lexicon()));
+    const withoutIpa = codepoints(prose(lexicon()));
+    expect(withIpa.size).toBeGreaterThan(withoutIpa.size);
+    expect(withIpa.has('χ'.codePointAt(0))).toBe(true);
+    expect(withoutIpa.has('χ'.codePointAt(0))).toBe(false);
+  });
+
+  it('the body face can draw every prose glyph our vendor could supply', () => {
+    const found = codepoints(prose(activePack.content));
+    expect(found.size).toBeGreaterThan(40);
+    expect(
+      uncovered(bodyFamily, found).map(
+        ([cp, ex]) => `${show(cp)} in ${JSON.stringify(ex.slice(0, 60))}`
+      )
+    ).toEqual([]);
+  });
+
+  it('and every prose glyph in the lexicon too', () => {
+    const found = codepoints(prose(lexicon()));
+    expect(found.size).toBeGreaterThan(40);
+    expect(
+      uncovered(bodyFamily, found).map(
+        ([cp, ex]) => `${show(cp)} in ${JSON.stringify(ex.slice(0, 60))}`
+      )
+    ).toEqual([]);
   });
 
   it('the body face keeps every subset the authored content needs', () => {
