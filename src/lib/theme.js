@@ -35,6 +35,15 @@ export const COLORS = {
   accentRed: 'var(--c-accent-red)',
   accentRedOn: 'var(--c-accent-red-on)',
 
+  // The informational plane — explanatory panels that are NOT pressable.
+  // A fill and its paired ink, like the accent tiers: `infoOn` is near-white in
+  // both modes, so it is legible on `info` and nowhere else in light mode.
+  // Reach for this only when a surface explains rather than acts; a second
+  // consumer that is actually a button would undo the distinction it exists to
+  // draw. See INFO_PLANE_* in themeTokens.js.
+  info: 'var(--c-info)',
+  infoOn: 'var(--c-info-on)',
+
   // Mode-independent German-flag stripes (entry splash). Same hex in every
   // palette — see FLAG_STRIPES in themeTokens.js.
   flagBlack: 'var(--c-flag-black)',
@@ -354,10 +363,30 @@ export const TEXT = {
     letterSpacing: LETTER_SPACING.tight,
     lineHeight: 1,
   },
+  // Phonetic transcriptions. One recipe, shared by the chat bubbles and the
+  // vocab card, which drifted to 0.7 and 0.6 opacity at two sizes while this
+  // token sat unused.
+  //
+  // The face stays MONO and is not negotiable: IPA borrows θ and χ from the
+  // greek subset, and of the three vendored families only JetBrains Mono
+  // carries it — the sans is deliberately latin-only. Setting a sans here
+  // renders those glyphs as tofu, and fontCoverage.test.js is the guard.
+  //
+  // Everything else is tuned for legibility rather than restraint. 12px over
+  // 11 because IPA is read glyph by glyph, not scanned; explicit 400 so it
+  // cannot inherit the bold of a heading it sits under; `wide` tracking
+  // because stacked diacritics (ˈ ̯ ̩ ) collide at default spacing; 1.5 line
+  // height because those same marks clip against the line above. Opacity went
+  // UP, not down — it is what recedes the line, and the app's rendered-DOM
+  // contrast audit measures the result, so softening past this reads as a
+  // failure rather than as taste.
   ipa: {
     fontFamily: FONTS.mono,
-    fontSize: FONT_SIZE.ipa,
-    opacity: 0.65,
+    fontSize: FONT_SIZE.sm,
+    fontWeight: FONT_WEIGHT.normal,
+    letterSpacing: LETTER_SPACING.wide,
+    lineHeight: 1.5,
+    opacity: 0.75,
   },
   translation: {
     fontFamily: FONTS.body,

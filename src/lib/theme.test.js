@@ -84,6 +84,23 @@ describe('theme tokens', () => {
     expect(TEXT.kicker.color).toBe(COLORS.red);
   });
 
+  // Not a style preference. Of the three vendored families only the mono face
+  // carries the greek subset, and IPA borrows θ and χ from it — a sans here
+  // renders those as tofu. fontCoverage.test.js guards the subset; this guards
+  // the one recipe that has to consume it.
+  it('keeps IPA on the mono face, which is the only one with the greek subset', () => {
+    expect(TEXT.ipa.fontFamily).toBe(FONTS.mono);
+    expect(TEXT.ipa.fontFamily).not.toBe(FONTS.body);
+    expect(TEXT.ipa.fontFamily).not.toBe(FONTS.display);
+  });
+
+  // The rendered-DOM contrast audit measures the opacity too, so "softer"
+  // here has a floor. Both call sites were below it before they shared this.
+  it('keeps IPA legible rather than merely faint', () => {
+    expect(TEXT.ipa.opacity).toBeGreaterThanOrEqual(0.75);
+    expect(TEXT.ipa.fontSize).toBeGreaterThanOrEqual(FONT_SIZE.ipa);
+  });
+
   it('exposes surface, elevated-surface, and border aliases from the token model', () => {
     expect(COLORS.surface).toBe('var(--c-surface)');
     expect(COLORS.surfaceElevated).toBe('var(--c-surface-3)');
