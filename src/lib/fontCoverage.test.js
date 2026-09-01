@@ -142,10 +142,31 @@ describe('no dropped subset is carrying content', () => {
     })
   );
 
-  const bodyFamily = activePack.theme.font.families[0].name;
-  // VocabTab renders every card's pronunciation with FONTS.mono, so IPA is the
-  // mono face's content, not the body face's.
-  const monoFamily = activePack.theme.font.families[1].name;
+  // Resolved from the pack's font STACK, not from a position in `families`.
+  // These were `families[0]` and `families[1]`, which happened to be right only
+  // while body and display were the same serif: the moment `font.body` moved to
+  // the sans, "the body face" below went on auditing Fraunces — a face nothing
+  // sets prose in — and the sans shipped unchecked while the suite stayed green.
+  // A positional index cannot notice that; reading the declaration can.
+  const familyFor = (role) => {
+    const first = (activePack.theme.font[role] ?? '').match(/'([^']+)'/)?.[1] ?? '';
+    return activePack.theme.font.families.find((f) => f.name === first)?.name ?? null;
+  };
+  const bodyFamily = familyFor('body');
+  // Phonetics render through TEXT.ipa, which is pinned to the mono face, so IPA
+  // is the mono face's content and never the body face's.
+  const monoFamily = familyFor('mono');
+
+  it('resolves each role to a family that is actually vendored', () => {
+    // A typo in the stack, or a family dropped from `families`, would otherwise
+    // make `lost[undefined]` throw somewhere far less legible than here.
+    for (const role of ['display', 'body', 'mono']) {
+      expect(familyFor(role), `${role} resolves to a vendored family`).toBeTruthy();
+    }
+    // Body and mono must stay distinct faces: the IPA assertion below is only
+    // meaningful if the mono face is not also the one setting prose.
+    expect(bodyFamily).not.toBe(monoFamily);
+  });
 
   it('the manifest records skipped subsets to check against', () => {
     // Guards the guard: if `skipped` were empty the assertions below would
@@ -157,7 +178,9 @@ describe('no dropped subset is carrying content', () => {
     expect(lost[monoFamily](0x0400)).toBe(true);
     expect(lost[monoFamily]('a'.codePointAt(0))).toBe(false);
     expect(
-      parseRanges(readFileSync(`${FONT_DIR}/fraunces/face.css`, 'utf8')).length
+      parseRanges(
+        readFileSync(`${FONT_DIR}/${manifest.families[bodyFamily].slug}/face.css`, 'utf8')
+      ).length
     ).toBeGreaterThan(10);
   });
 

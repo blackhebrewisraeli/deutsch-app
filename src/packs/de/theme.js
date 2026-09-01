@@ -41,13 +41,21 @@ export const progress = ['ground', 'accentAlt', 'accent'];
 // src/lib/fontCoverage.test.js fails if a subset that is carrying real content
 // gets dropped from either list.
 /**
- * Body sans, vendored and ready but not yet adopted.
+ * Body sans — adopted 2026-09-01, on the product owner's call.
  *
- * Body copy currently renders in Fraunces — AGENTS.md fixes the typography as
- * Fraunces for display and JetBrains Mono for uppercase labels, and switching
- * body copy to a sans is a brand decision, not a refactor. The family is
- * vendored so that decision costs one line here (`body: BODY_SANS`) instead of
- * a fetch, a licence check and a manifest regeneration.
+ * It was vendored ahead of time precisely so the decision would cost one line
+ * here rather than a fetch, a licence check and a manifest regeneration. This
+ * is that line. AGENTS.md's typography rule was updated in the same change, so
+ * the rule and the code do not disagree.
+ *
+ * Display stays Fraunces. The serif is the brand at headword scale — the vocab
+ * card, the hero titles, the chat bubble's German line — and none of those are
+ * what the switch was for. What changed is *prose*: paragraphs, glosses and
+ * form copy, which Fraunces set at 13–15px more decoratively than legibly.
+ *
+ * IPA is not affected and must not be. Phonetics render through `TEXT.ipa`,
+ * which is pinned to the mono face because this sans is vendored latin-only
+ * and IPA borrows θ and χ from the greek subset. See the families list below.
  *
  * Weights stop at 700: body copy uses regular through bold, and asking for the
  * full 200..800 range widens each subset file for two weights nothing renders.
@@ -56,7 +64,7 @@ export const BODY_SANS = "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-se
 
 export const font = {
   display: "'Fraunces', Georgia, serif",
-  body: "'Fraunces', Georgia, serif",
+  body: BODY_SANS,
   mono: "'JetBrains Mono', 'Courier New', monospace",
   families: [
     { name: 'Fraunces', axes: 'opsz,wght@9..144,300..900', subsets: ['latin', 'latin-ext'] },

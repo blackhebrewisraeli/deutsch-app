@@ -12,7 +12,7 @@ ESLint 10 flat config + Prettier.
 
 **Product decision (2026-08-15) — German stays the only pack.** The multi-pack
 engine work (Phases 1.2–1.5, 3a) is kept and still valuable: it is why the
-engine is clean. But shipping a second language is *not* the goal. Phases 3b/3c
+engine is clean. But shipping a second language is _not_ the goal. Phases 3b/3c
 (content) and Phase 4 (picker + storage namespacing) are shelved, and the ~25
 German chrome/gamification strings in `src/lib/gamification.js` stay hardcoded —
 the German flavour **is** the brand. Effort goes into the German app itself.
@@ -20,6 +20,7 @@ Recorded here because the fuller write-up lives in `CURSOR_TASKS.md`, which is
 git-excluded and therefore absent from CI and fresh checkouts.
 
 **Linked environments:**
+
 - **GitHub:** https://github.com/blackhebrewisraeli/deutsch-app (origin, `main` is protected truth)
 - **Vercel:** auto-deploys `main` via the GitHub integration → https://deutsch-app-dusky.vercel.app
 - **CI:** `.github/workflows/ci.yml` runs on every push/PR
@@ -59,13 +60,30 @@ git-excluded and therefore absent from CI and fresh checkouts.
 - **Styling:** inline styles only, tokens from `src/lib/theme.js`
   (COLORS / RADIUS / SHADOW / BUTTON / CARD). Never hardcode colors, radii, or
   shadows. UI primitives live in `src/components/ui/`.
-- **Typography:** Fraunces serif for display words, JetBrains Mono for UI
-  labels (uppercase). Don't change fonts.
+- **Typography:** Fraunces serif for display words, Plus Jakarta Sans for body
+  prose, JetBrains Mono for UI labels (uppercase) **and for IPA**. Don't change
+  fonts without the owner's say-so; all three are vendored under `public/fonts/`
+  and declared in `src/packs/de/theme.js`.
+  - **Body was Fraunces until 2026-09-01**, when the owner moved prose to the
+    sans that had been vendored in advance for exactly that decision. Display
+    stayed Fraunces — the serif is the brand at headword scale. If you are
+    reading an older doc that says "Fraunces for display and body", this is the
+    line that supersedes it.
+  - **IPA on the mono face is a constraint, not a preference.** Phonetics borrow
+    θ and χ from the `greek` subset, and of the three vendored families only
+    JetBrains Mono ships it — the sans is deliberately latin-only, so setting a
+    sans on IPA renders those glyphs as tofu. Phonetics render through
+    `TEXT.ipa`, which pins the face; `fontCoverage.test.js` guards the subset
+    and `theme.test.js` guards the recipe.
+  - `fontCoverage.test.js` resolves each role from the pack's font _stack_, not
+    from a position in the `families` array. Keep it that way: the positional
+    version audited whichever family happened to be first, which silently
+    stopped matching the body face the moment body and display diverged.
 - **Grid tracks:** always `minmax(0, 1fr)`, never a bare `1fr`. A `1fr` track
   keeps `min-width: auto`, so it refuses to shrink below its content and pushes
   the page wider than the viewport instead. This caused mobile overflow in four
   separate places (see `docs/DEMO_READINESS.md` #15–#17).
-- **Narrow viewports:** verify at 375px *and* 320px (`bp.tiny`), and with a
+- **Narrow viewports:** verify at 375px _and_ 320px (`bp.tiny`), and with a
   populated account — a fresh one hides elements that only exist with real
   progress (freeze chip, high level, long rank names).
 - **Language-blind engine rule:** code in `src/lib/*` and `src/components/*`
@@ -74,7 +92,7 @@ git-excluded and therefore absent from CI and fresh checkouts.
   belongs in the pack (`src/packs/de/`), accessed via `activePack`.
 - **The `de` field name is a recorded exception to that rule.** Pack cards ship
   as `{ de, en, ipa, … }`, and the translate exercises, chat message rendering,
-  and the vocab drill/card layer read `card.de` directly. This is a *field name*
+  and the vocab drill/card layer read `card.de` directly. This is a _field name_
   in the pack's own data contract, not a German branch: nothing reads it to
   decide German behaviour, and `src/lib/*` does not read it at all (`srsKey`
   keys on `card.id`, `speech.js` reads `activePack`). Renaming it to `term`
