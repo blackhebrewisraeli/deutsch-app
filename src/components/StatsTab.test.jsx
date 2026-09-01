@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import StatsTab from './StatsTab';
 
 // --- Module mocks ---
@@ -20,8 +19,14 @@ vi.mock('../lib/stats', () => ({
 }));
 
 vi.mock('../lib/gamification', () => ({
-  levelFromXp: () => 1,
-  totalXp: () => 0,
+  score: () => ({
+    level: 1,
+    rankName: 'Anfänger',
+    progress: 0,
+    xpIntoLevel: 0,
+    xpToNext: 50,
+    totalXp: 0,
+  }),
   DEFAULT_GOAL: 20,
 }));
 
@@ -64,6 +69,7 @@ describe('StatsTab — Leagues flag OFF', () => {
     const { render: renderOff, screen: screenOff } = await import('@testing-library/react');
     renderOff(<StatsTabOff />);
     expect(screenOff.queryByRole('button', { name: /leagues/i })).toBeNull();
+    expect(screenOff.getByRole('button', { name: /settings/i })).toBeTruthy();
     vi.resetModules();
   });
 });
@@ -88,64 +94,24 @@ describe('StatsTab — Leagues view', () => {
   });
 });
 
-describe('StatsTab — Learning level', () => {
-  it('offers a level picker and reports the chosen level', async () => {
-    const onLevelChange = vi.fn();
-    render(<StatsTab level="a1" onLevelChange={onLevelChange} />);
-    await userEvent.click(screen.getByRole('radio', { name: /B1/ }));
-    expect(onLevelChange).toHaveBeenCalledWith('b1');
+describe('StatsTab — Profile segments', () => {
+  it('always offers STATS and SETTINGS', () => {
+    render(<StatsTab />);
+    expect(screen.getByRole('button', { name: /stats/i })).toBeTruthy();
+    expect(screen.getByRole('button', { name: /settings/i })).toBeTruthy();
   });
 
-  it('persists the chosen level', async () => {
-    render(<StatsTab level="a1" onLevelChange={() => {}} />);
-    await userEvent.click(screen.getByRole('radio', { name: /A2/ }));
-    expect(localStorage.getItem('deutsch-level')).toBe('a2');
+  it('renders the settings panel in the SETTINGS view', () => {
+    render(<StatsTab settingsPanel={<div>stub-settings</div>} />);
+    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+    expect(screen.getByText('stub-settings')).toBeTruthy();
   });
 
-  it('names the level for a guest, with no bonus promised', () => {
-    render(<StatsTab level="a1" onLevelChange={() => {}} />);
-    expect(screen.getByText('Beginner')).toBeInTheDocument();
-    expect(screen.queryByText(/XP per answer/)).toBeNull();
-  });
-
-  it.each([
-    ['a1', /Word tiles/, /Assemble the full sentence/],
-    ['a2', /Fill the blanks/, /Select the missing words/],
-    ['b1', /Free typing/, /AI-graded translation/],
-  ])('describes the %s exercise mode', (lvl, label, detail) => {
-    render(<StatsTab level={lvl} onLevelChange={() => {}} />);
-    const line = screen.getByText(/Translate exercises:/);
-    expect(line).toHaveTextContent(label);
-    expect(line).toHaveTextContent(detail);
-  });
-
-  // Case-transforming the descriptor mangled the acronym ("ai-graded").
-  it('keeps the AI acronym uppercase in the B1 descriptor', () => {
-    render(<StatsTab level="b1" onLevelChange={() => {}} />);
-    expect(screen.getByText(/Translate exercises:/)).toHaveTextContent('AI-graded');
-    expect(screen.queryByText(/ai-graded/)).toBeNull();
-  });
-
-  it('describes only the selected level, not all three', () => {
-    render(<StatsTab level="a1" onLevelChange={() => {}} />);
-    const line = screen.getByText(/Translate exercises:/);
-    expect(line).not.toHaveTextContent(/AI-graded/);
-    expect(line).not.toHaveTextContent(/missing words/);
-  });
-
-  it('names the level XP bonus for an account holder above A1', () => {
-    render(<StatsTab level="b1" onLevelChange={() => {}} levelBoost />);
-    expect(screen.getByText(/×1\.5 XP per answer/)).toBeInTheDocument();
-  });
-
-  it('promises no bonus to a guest', () => {
-    render(<StatsTab level="b1" onLevelChange={() => {}} />);
-    expect(screen.queryByText(/XP per answer/)).toBeNull();
-  });
-
-  it('names the level but promises no bonus for an A1 account holder', () => {
-    render(<StatsTab level="a1" onLevelChange={() => {}} levelBoost />);
-    expect(screen.getByText('Beginner')).toBeInTheDocument();
-    expect(screen.queryByText(/XP per answer/)).toBeNull();
+  it('does not keep GoalPicker or LevelSwitcher on the stats view', () => {
+    render(<StatsTab />);
+    expect(screen.queryByRole('radiogroup', { name: /level/i })).toBeNull();
+    expect(screen.queryByText(/daily goal/i)).toBeNull();
+    expect(screen.queryByText(/sound: on/i)).toBeNull();
+    expect(screen.queryByText(/sound: off/i)).toBeNull();
   });
 });

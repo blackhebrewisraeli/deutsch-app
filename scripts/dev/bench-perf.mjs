@@ -254,7 +254,7 @@ async function runOnce() {
   if (gated > 0) throw new Error('bench: welcome gate is showing — seeding failed, aborting.');
 
   // ── Tab switches (first mount of each is the expensive one) ──
-  for (const tab of ['Alphabet', 'Vocab', 'Translate', 'Stats', 'Chat']) {
+  for (const tab of ['Alphabet', 'Vocab', 'Translate', 'Profile', 'Chat']) {
     results.push(
       await measure(
         page,
@@ -282,7 +282,7 @@ async function runOnce() {
   // ── Core game loop: answer one card ─────────────────────────
   const answer = page
     .getByRole('button')
-    .filter({ hasNotText: /chat|alphabet|vocab|translate|stats|cards$|generate|sign in/i });
+    .filter({ hasNotText: /chat|alphabet|vocab|translate|profile|cards$|generate|sign in/i });
   const answerCount = await answer.count();
   if (answerCount === 0) throw new Error('bench: no answerable control found on the Vocab tab');
   results.push(

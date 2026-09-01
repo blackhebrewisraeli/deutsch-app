@@ -24,13 +24,10 @@ const profile = { handle: 'sam', avatar_emoji: '🦊' };
 const renderRoute = (props = {}) =>
   render(
     <SettingsRoute
-      open
-      onClose={() => {}}
       user={user}
       profile={profile}
       level="a2"
       goal={50}
-      themeMode="light"
       onSignIn={() => {}}
       onSignOut={() => {}}
       onExport={() => {}}
@@ -40,60 +37,27 @@ const renderRoute = (props = {}) =>
   );
 
 describe('SettingsRoute', () => {
-  it('renders nothing while closed', () => {
-    const { container } = renderRoute({ open: false });
-    expect(container).toBeEmptyDOMElement();
+  it('is an inline panel, not a modal dialog', () => {
+    renderRoute();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /einstellungen/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /close settings/i })).not.toBeInTheDocument();
   });
 
-  it('is a modal dialog with an accessible name', () => {
+  it('carries all four sections the spec lists', () => {
     renderRoute();
-    const dialog = screen.getByRole('dialog', { name: /settings/i });
-    expect(dialog).toHaveAttribute('aria-modal', 'true');
-  });
-
-  it('carries all five sections the spec lists', () => {
-    renderRoute();
-    const dialog = screen.getByRole('dialog', { name: /settings/i });
     // Profile — the handle is the one name now; display_name is gone.
-    expect(within(dialog).getByRole('textbox', { name: /handle/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /handle/i })).toBeInTheDocument();
     // Learning — the SAME level control the header uses, not a second one
-    expect(within(dialog).getByRole('radiogroup', { name: /level/i })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: /level/i })).toBeInTheDocument();
     // Appearance
-    expect(within(dialog).getByLabelText(/appearance/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/appearance/i)).toBeInTheDocument();
     // Account: the email lives here now, with the control that changes it.
-    expect(within(dialog).getByText('sam@example.com')).toBeInTheDocument();
-    expect(within(dialog).getByRole('button', { name: /change email/i })).toBeInTheDocument();
+    expect(screen.getByText('sam@example.com')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /change email/i })).toBeInTheDocument();
     // Sync + danger zone, moved wholesale from Stats
-    expect(within(dialog).getByRole('button', { name: /export my data/i })).toBeInTheDocument();
-    expect(within(dialog).getByText(/danger zone/i)).toBeInTheDocument();
-  });
-
-  it('closes from the close button', async () => {
-    const onClose = vi.fn();
-    renderRoute({ onClose });
-    await userEvent.click(screen.getByRole('button', { name: /close settings/i }));
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  it('closes on Escape', async () => {
-    const onClose = vi.fn();
-    renderRoute({ onClose });
-    await userEvent.keyboard('{Escape}');
-    expect(onClose).toHaveBeenCalledTimes(1);
-  });
-
-  // Unlike the three header chips, which are non-modal and must stay untrapped,
-  // this is a full-screen surface and takes the standard trap.
-  it('traps focus inside the panel', async () => {
-    renderRoute();
-    const dialog = screen.getByRole('dialog', { name: /settings/i });
-    const focusables = within(dialog).getAllByRole('button');
-    expect(focusables.length).toBeGreaterThan(1);
-
-    // Tabbing from the last control wraps back inside rather than escaping.
-    focusables[focusables.length - 1].focus();
-    await userEvent.tab();
-    expect(dialog.contains(document.activeElement)).toBe(true);
+    expect(screen.getByRole('button', { name: /export my data/i })).toBeInTheDocument();
+    expect(screen.getByText(/danger zone/i)).toBeInTheDocument();
   });
 
   it('drives the level through the shared control', async () => {
@@ -104,6 +68,13 @@ describe('SettingsRoute', () => {
     expect(onLevelChange).toHaveBeenCalledWith('b1');
   });
 
+  it('persists the chosen level', async () => {
+    renderRoute({ level: 'a1', onLevelChange: () => {} });
+    const group = screen.getByRole('radiogroup', { name: /level/i });
+    await userEvent.click(within(group).getByRole('radio', { name: /a2/i }));
+    expect(localStorage.getItem('deutsch-level')).toBe('a2');
+  });
+
   it('drives the daily goal', async () => {
     const onGoalChange = vi.fn();
     renderRoute({ onGoalChange });
@@ -111,5 +82,61 @@ describe('SettingsRoute', () => {
     const goalButton = buttons.find((b) => /XP/i.test(b.textContent ?? ''));
     await userEvent.click(goalButton);
     expect(onGoalChange).toHaveBeenCalled();
+  });
+
+  it('toggles sound', async () => {
+    const onSoundChange = vi.fn();
+    renderRoute({ soundOn: false, onSoundChange });
+    await userEvent.click(screen.getByRole('button', { name: /sound: off/i }));
+    expect(onSoundChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SettingsRoute — Learning level', () => {
+  it('names the level for a guest, with no bonus promised', () => {
+    renderRoute({ level: 'a1' });
+    expect(screen.getByText('Beginner')).toBeInTheDocument();
+    expect(screen.queryByText(/XP per answer/)).toBeNull();
+  });
+
+  it.each([
+    ['a1', /Word tiles/, /Assemble the full sentence/],
+    ['a2', /Fill the blanks/, /Select the missing words/],
+    ['b1', /Free typing/, /AI-graded translation/],
+  ])('describes the %s exercise mode', (lvl, label, detail) => {
+    renderRoute({ level: lvl });
+    const line = screen.getByText(/Translate exercises:/);
+    expect(line).toHaveTextContent(label);
+    expect(line).toHaveTextContent(detail);
+  });
+
+  // Case-transforming the descriptor mangled the acronym ("ai-graded").
+  it('keeps the AI acronym uppercase in the B1 descriptor', () => {
+    renderRoute({ level: 'b1' });
+    expect(screen.getByText(/Translate exercises:/)).toHaveTextContent('AI-graded');
+    expect(screen.queryByText(/ai-graded/)).toBeNull();
+  });
+
+  it('describes only the selected level, not all three', () => {
+    renderRoute({ level: 'a1' });
+    const line = screen.getByText(/Translate exercises:/);
+    expect(line).not.toHaveTextContent(/AI-graded/);
+    expect(line).not.toHaveTextContent(/missing words/);
+  });
+
+  it('names the level XP bonus for an account holder above A1', () => {
+    renderRoute({ level: 'b1', levelBoost: true });
+    expect(screen.getByText(/×1\.5 XP per answer/)).toBeInTheDocument();
+  });
+
+  it('promises no bonus to a guest', () => {
+    renderRoute({ level: 'b1' });
+    expect(screen.queryByText(/XP per answer/)).toBeNull();
+  });
+
+  it('names the level but promises no bonus for an A1 account holder', () => {
+    renderRoute({ level: 'a1', levelBoost: true });
+    expect(screen.getByText('Beginner')).toBeInTheDocument();
+    expect(screen.queryByText(/XP per answer/)).toBeNull();
   });
 });

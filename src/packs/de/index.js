@@ -14,6 +14,7 @@ import { DECKS } from './decks.js';
 import { MISSIONS, MISSIONS_CHROME } from './missions.js';
 import { QUESTS, QUESTS_CHROME } from './quests.js';
 import { IDENTITY } from './identity.js';
+import { HOME_CHROME } from './home.js';
 import { resolveDecks } from '../resolve.js';
 import { theme } from './theme.js';
 import { grammar } from './grammar.js';
@@ -60,9 +61,12 @@ export const dePack = {
     // and progress; this turns them into words.
     quests: QUESTS,
     questsChrome: QUESTS_CHROME,
-    // Copy for the Home identity strip — month names and greetings are
+    // Copy for the Home personal hub — month names and greetings are
     // language, not layout.
     identity: IDENTITY,
+    // Copy for Home's own chrome: the promoted quick-action heading and its
+    // fallback rows, and the heading that groups the two open-task boards.
+    homeChrome: HOME_CHROME,
   },
   validation: {
     // Keyboard substitutions German itself defines for keyboards lacking the

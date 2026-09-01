@@ -4,7 +4,7 @@ import { isAuthConfigured } from '../lib/auth.js';
 
 // Header account affordance. Guest: a quiet "Sign in" link. Signed-in: an
 // initial-in-a-circle that opens a small sheet (email · sign out). Full
-// management lives in the Stats AccountSection; this is the glance + escape.
+// management lives in the Profile tab's Settings view; this is the glance + escape.
 //
 // The sheet is a `dialog`, matching ThemeChip and StatusChip. It previously
 // advertised `aria-haspopup="true"` — which means MENU — over a panel carrying

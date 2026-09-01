@@ -59,6 +59,27 @@ export function levelFromXp(xp) {
   };
 }
 
+/**
+ * The whole XP picture as one value: level, rank, progress within the level,
+ * and the lifetime total.
+ *
+ * It exists because the level and the total are DERIVED FROM THE SAME `daily`
+ * log, and every surface that showed both used to take them as two props —
+ * `lvl={levelFromXp(totalXp(daily))} totalXp={totalXp(daily)}`. Two props from
+ * one source can be passed inconsistently, and Home did exactly that: it read
+ * `totalXp` off App's `liveState` while `lvl` came from `game`, which is
+ * re-derived on a different schedule. A card could render level 4 beside a
+ * total belonging to level 3.
+ *
+ * @param {Record<string, object>} daily
+ * @returns {{level: number, rankName: string, xpIntoLevel: number,
+ *   xpToNext: number, progress: number, totalXp: number}}
+ */
+export function score(daily) {
+  const total = totalXp(daily);
+  return { ...levelFromXp(total), totalXp: total };
+}
+
 // ─── Daily goal ──────────────────────────────────────────────
 export function goalProgress(today, goal) {
   const target = goal || DEFAULT_GOAL;

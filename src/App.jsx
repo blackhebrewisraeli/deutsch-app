@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { BarChart3, Flame, BookOpen, MessageSquare, Type, Languages, Home } from 'lucide-react';
+import { User, Flame, BookOpen, MessageSquare, Type, Languages, Home } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
@@ -12,6 +12,7 @@ import {
   totalXp,
   todayXp,
   levelFromXp,
+  score,
   goalProgress,
   earnedAchievements,
   gamificationContext,
@@ -46,8 +47,8 @@ import {
 } from './lib/learnedWords';
 import { useLeagueStanding } from './lib/useLeagueStanding';
 
-// Settings is a route rather than a seventh nav tab, so the hash is what makes
-// it deep-linkable and reload-safe.
+// Settings lives inside the Profile tab. The hash is what makes the Settings
+// view deep-linkable and reload-safe, without spending a seventh nav slot.
 const SETTINGS_HASH = '#/settings';
 import { fetchMyProfile } from './lib/profile';
 import ChatTab from './components/ChatTab';
@@ -85,7 +86,9 @@ import { Analytics } from '@vercel/analytics/react';
 import { useWindowWidth, isMobile, isTiny, isTablet, bp } from './lib/useWindowWidth';
 
 export default function App() {
-  const [tab, setTab] = useState('home');
+  const [tab, setTab] = useState(() =>
+    typeof window !== 'undefined' && window.location.hash === SETTINGS_HASH ? 'stats' : 'home'
+  );
   const [stats, setStats] = useState({ streak: 0, learnedCount: 0, lastVisit: null });
   const [learnedWords, setLearnedWords] = useState({});
   // Generated decks live here rather than inside VocabTab, which unmounts on
@@ -424,6 +427,21 @@ export default function App() {
     window.dispatchEvent(new CustomEvent('deutsch:progress'));
   };
 
+  const handleSoundToggle = () => {
+    const current = loadState() ?? {};
+    const cur = current.gamification ?? {
+      goal: DEFAULT_GOAL,
+      soundOn: false,
+      achievements: {},
+      lastGoalMet: null,
+    };
+    const gamification = { ...cur, soundOn: !cur.soundOn };
+    saveState({ ...current, gamification });
+    stampSettings();
+    setSoundEnabled(!!gamification.soundOn);
+    window.dispatchEvent(new CustomEvent('deutsch:progress'));
+  };
+
   const authOverlay = (
     <>
       <AuthCallbackLanding
@@ -540,24 +558,42 @@ export default function App() {
   // Onboarding + level
   const [level, setLevel] = useState(readLevel);
 
-  // Settings is a route, not a tab: six tabs already ship and the 320px header
-  // budget is a measured 10px. The hash makes it deep-linkable and reload-safe.
-  const [settingsOpen, setSettingsOpen] = useState(
-    () => typeof window !== 'undefined' && window.location.hash === SETTINGS_HASH
+  // Settings lives inside the Profile tab (id still `stats`). The hash keeps
+  // the deep link; it is not a seventh nav tab. The WelcomeGate still wins
+  // while it is up — a guest who has not entered the app cannot skip it by
+  // arriving on `#/settings`.
+  const [profileView, setProfileView] = useState(() =>
+    typeof window !== 'undefined' && window.location.hash === SETTINGS_HASH ? 'settings' : 'stats'
   );
-  const openSettings = () => {
-    if (typeof window !== 'undefined') window.location.hash = SETTINGS_HASH;
-    setSettingsOpen(true);
-  };
-  const closeSettings = () => {
-    // Clear the hash without adding a history entry the Back button must undo.
+  const clearSettingsHash = () => {
     if (typeof window !== 'undefined' && window.location.hash === SETTINGS_HASH) {
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
-    setSettingsOpen(false);
+  };
+  const setSettingsHash = () => {
+    if (typeof window !== 'undefined' && window.location.hash !== SETTINGS_HASH) {
+      window.location.hash = SETTINGS_HASH;
+    }
+  };
+  const openSettings = () => {
+    setTab('stats');
+    setProfileView('settings');
+    setSettingsHash();
+  };
+  const handleProfileView = (next) => {
+    setProfileView(next);
+    if (next === 'settings') setSettingsHash();
+    else clearSettingsHash();
   };
   useEffect(() => {
-    const onHash = () => setSettingsOpen(window.location.hash === SETTINGS_HASH);
+    const onHash = () => {
+      if (window.location.hash === SETTINGS_HASH) {
+        setTab('stats');
+        setProfileView('settings');
+      } else {
+        setProfileView((cur) => (cur === 'settings' ? 'stats' : cur));
+      }
+    };
     window.addEventListener('hashchange', onHash);
     return () => window.removeEventListener('hashchange', onHash);
   }, []);
@@ -694,7 +730,7 @@ export default function App() {
     { id: 'alphabet', label: 'Alphabet', icon: Type, num: '03' },
     { id: 'vocab', label: 'Vocab', icon: BookOpen, num: '04' },
     { id: 'translate', label: 'Translate', icon: Languages, num: '05' },
-    { id: 'stats', label: 'Stats', icon: BarChart3, num: '06' },
+    { id: 'stats', label: 'Profile', icon: User, num: '06' },
   ];
 
   // Stats nav badge — count of wrong items + due vocab cards.
@@ -766,10 +802,8 @@ export default function App() {
     daily: liveState.daily,
   });
 
-  const settingsOverlay = (
+  const settingsPanel = (
     <SettingsRoute
-      open={settingsOpen}
-      onClose={closeSettings}
       user={user}
       profile={profile}
       onProfileSaved={setProfile}
@@ -778,6 +812,9 @@ export default function App() {
       onLevelChange={setLevel}
       goal={loadState()?.gamification?.goal ?? DEFAULT_GOAL}
       onGoalChange={handleGoalChange}
+      soundOn={loadState()?.gamification?.soundOn ?? false}
+      onSoundChange={handleSoundToggle}
+      levelBoost={authStatus === 'authenticated'}
       onSignIn={requestSignIn}
       onSignOut={handleSignOut}
       onExport={handleExport}
@@ -831,7 +868,6 @@ export default function App() {
           googleBusy={googleBusy}
         />
         {authOverlay}
-        {settingsOverlay}
       </>
     );
   }
@@ -1002,7 +1038,14 @@ export default function App() {
                 ref={
                   t.id === 'chat' ? chatAnchorRef : t.id === 'stats' ? statsAnchorRef : undefined
                 }
-                onClick={() => setTab(t.id)}
+                onClick={() => {
+                  setTab(t.id);
+                  if (t.id === 'stats') {
+                    if (profileView === 'settings') setSettingsHash();
+                  } else {
+                    clearSettingsHash();
+                  }
+                }}
                 aria-label={t.label}
                 aria-current={active ? 'page' : undefined}
                 style={{
@@ -1110,8 +1153,7 @@ export default function App() {
           )}
           {tab === 'home' && (
             <HomeTab
-              lvl={game.lvl}
-              totalXp={totalXp(liveState.daily ?? {})}
+              score={score(liveState.daily ?? {})}
               learnedCount={stats.learnedCount ?? 0}
               goalPct={game.goal.pct}
               goalMet={game.goal.met}
@@ -1191,10 +1233,9 @@ export default function App() {
               onReview={handleReview}
               user={user}
               onSignIn={requestSignIn}
-              onOpenSettings={openSettings}
-              level={level}
-              onLevelChange={setLevel}
-              levelBoost={authStatus === 'authenticated'}
+              view={profileView}
+              onViewChange={handleProfileView}
+              settingsPanel={settingsPanel}
             />
           )}
         </PageFrame>
@@ -1227,7 +1268,6 @@ export default function App() {
 
         <Analytics />
         {authOverlay}
-        {settingsOverlay}
       </div>
     </SessionGuardContext.Provider>
   );
