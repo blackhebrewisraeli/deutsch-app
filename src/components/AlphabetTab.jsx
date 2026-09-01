@@ -34,6 +34,11 @@ export default function AlphabetTab({
   const [quizGroup, setQuizGroup] = useState(null);
   const [quizTarget, setQuizTarget] = useState(null);
   const [quizResult, setQuizResult] = useState(null); // null | 'correct' | 'wrong'
+  // Whether the target has been played THIS round. Nothing plays on its own, so
+  // the button and its caption have to say "hear it" the first time and "hear
+  // it again" afterwards — a round that opens on "TAP TO HEAR AGAIN" is asking
+  // the learner to repeat something they were never played.
+  const [played, setPlayed] = useState(false);
   const [score, setScore] = useState({ correct: 0, total: 0 });
   const [shuffledLetters, setShuffledLetters] = useState([]);
   // A pending review target letter — consumed by the quiz-setup effect below.
@@ -61,9 +66,8 @@ export default function AlphabetTab({
     setQuizGroup(group);
     setQuizTarget(target);
     setQuizResult(null);
+    setPlayed(false);
     setShuffledLetters(shuffle(group.letters));
-    const id = setTimeout(() => speak(target), 300);
-    return () => clearTimeout(id);
   }, [mode, quizRound, quizSeed]);
 
   // Pick up review targets handed in from the Stats Review feed.
@@ -82,13 +86,14 @@ export default function AlphabetTab({
 
   const handleModeChange = (newMode) => {
     setMode(newMode);
-    if (newMode === 'quiz') {
-      // Re-trigger the quiz effect for the current round
-      setQuizResult(null);
-      setTimeout(() => {
-        if (quizGroup && quizTarget) speak(quizTarget);
-      }, 300);
-    }
+    // Returning to the quiz clears the previous verdict but does NOT speak.
+    // Sound in this app only ever follows a press of the play button.
+    if (newMode === 'quiz') setQuizResult(null);
+  };
+
+  const playTarget = () => {
+    speak(quizTarget);
+    setPlayed(true);
   };
 
   const handleLetterGuess = (letter) => {
@@ -178,14 +183,15 @@ export default function AlphabetTab({
               marginBottom: SPACE[5],
             }}
           >
-            ROUND {quizRound + 1} · SCORE {score.correct}/{score.total} · WHICH LETTER DID YOU HEAR?
+            ROUND {quizRound + 1} · SCORE {score.correct}/{score.total} · LISTEN, THEN PICK THE
+            LETTER
           </div>
 
-          {/* Play button */}
+          {/* Play button — the only thing in this tab that makes a sound. */}
           <button
             type="button"
-            onClick={() => speak(quizTarget)}
-            aria-label="Play letter audio again"
+            onClick={playTarget}
+            aria-label={played ? 'Play the letter again' : 'Play the letter'}
             style={{
               width: 100,
               height: 100,
@@ -214,7 +220,7 @@ export default function AlphabetTab({
               marginBottom: SPACE[6],
             }}
           >
-            TAP TO HEAR AGAIN
+            {played ? 'TAP TO HEAR AGAIN' : 'TAP TO HEAR THE LETTER'}
           </div>
 
           {/* Four letter options */}

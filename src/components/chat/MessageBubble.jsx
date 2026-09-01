@@ -1,5 +1,5 @@
 import { Volume2 } from 'lucide-react';
-import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from '../../lib/theme';
+import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW, TEXT } from '../../lib/theme';
 import { speak } from '../../lib/speech';
 import { activePack } from '../../packs';
 
@@ -90,11 +90,7 @@ export default function MessageBubble({ msg }) {
               </button>
             )}
           </div>
-          {msg.ipa && (
-            <div style={{ fontFamily: FONT_MONO, fontSize: 11, opacity: 0.7, marginBottom: 4 }}>
-              {msg.ipa}
-            </div>
-          )}
+          {msg.ipa && <div style={{ ...TEXT.ipa, marginBottom: 4 }}>{msg.ipa}</div>}
           {msg.en && (
             <div
               style={{

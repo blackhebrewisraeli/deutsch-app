@@ -7,6 +7,7 @@ import {
   SPACE,
   RADIUS,
   SHADOW,
+  TEXT,
 } from '../../lib/theme';
 import { formatVerb } from '../../lib/verbDisplay';
 import { activePack } from '../../packs';
@@ -83,11 +84,7 @@ export default function CardFace({ card, learned, mobile, display, conceal = [] 
       >
         {display ?? card.de}
       </div>
-      {card.ipa && !hidden('ipa') && (
-        <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.6 }}>
-          {card.ipa}
-        </div>
-      )}
+      {card.ipa && !hidden('ipa') && <div style={TEXT.ipa}>{card.ipa}</div>}
       {card.plural && !hidden('plural') && (
         <div
           style={{

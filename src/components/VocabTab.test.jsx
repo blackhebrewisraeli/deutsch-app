@@ -731,17 +731,36 @@ describe('VocabTab', () => {
       expect(screen.queryByText(/Ich wohne/)).not.toBeInTheDocument(); // example
     });
 
-    it('speaks the word on arrival', async () => {
+    // This drill used to speak the card on arrival, and the inverse of that
+    // test is now the assertion. Audio that starts by itself talks over a
+    // screen reader announcing the card, and it fires on a shared or public
+    // device before the learner can decline — neither is recoverable after the
+    // fact, so nothing here plays without a press.
+    it('stays silent until the learner presses play', async () => {
       const user = userEvent.setup();
       await openDeck(user);
+      expect(speak).not.toHaveBeenCalled();
+    });
+
+    it('speaks on demand', async () => {
+      const user = userEvent.setup();
+      await openDeck(user);
+      await user.click(screen.getByRole('button', { name: 'Play the word' }));
       expect(speak).toHaveBeenCalledWith('das Haus');
     });
 
-    it('replays on demand', async () => {
+    // The button carried "AGAIN" from the autoplay era, when the card had
+    // always spoken once already. Left alone it would ask the learner to
+    // repeat something they were never played.
+    it('offers a first listen, then a replay', async () => {
       const user = userEvent.setup();
       await openDeck(user);
+      expect(screen.queryByRole('button', { name: 'Play the word again' })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Play the word' }));
+      const again = await screen.findByRole('button', { name: 'Play the word again' });
       speak.mockClear();
-      await user.click(screen.getByRole('button', { name: 'Play the word again' }));
+      await user.click(again);
       expect(speak).toHaveBeenCalledWith('das Haus');
     });
 
