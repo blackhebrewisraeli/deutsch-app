@@ -20,6 +20,13 @@
 // unreachable on a typical day, and a board of unreachable goals is worse than
 // no board. Targets scale off the learner's own recent activity, with a floor
 // so a returning learner is not handed a target of zero.
+//
+// AND NEVER ABOVE 1.0x THE BASELINE. The volume quest shipped at 1.2x the
+// learner's own median, which is a treadmill: doing more raises the median,
+// which raises the target. Its stable state was failure, for exactly the
+// habit-builder the streak system exists to reward — 0 of 143 seeded steady
+// learners could ever complete it. The catalogue guard in quests.test.js
+// enforces `target(base) <= base` so this cannot come back quietly.
 import { TABS } from './stats.js';
 
 /** How many quests a day. Small on purpose: a board of five is a chore list. */
@@ -107,7 +114,7 @@ export const QUEST_CATALOGUE = [
     id: 'answer-cards',
     group: 'volume',
     tab: 'vocab',
-    target: (base) => Math.max(MIN_TARGET, Math.round(base * 1.2)),
+    target: (base) => Math.max(MIN_TARGET, Math.round(base)),
     progress: (day) => dayTotal(day),
   },
   {
@@ -123,7 +130,7 @@ export const QUEST_CATALOGUE = [
     tab: 'home',
     // Breadth is about the shape of the day, not its size, so this one is
     // deliberately absolute — and capped at what the app actually offers.
-    target: () => Math.min(3, TABS.length),
+    target: () => Math.min(2, TABS.length),
     progress: (day) => tabsTouched(day),
   },
   // ONE shared group across all four. Giving each its own group made the

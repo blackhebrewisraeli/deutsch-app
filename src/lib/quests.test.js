@@ -27,6 +27,19 @@ function dayWith(events) {
 const answers = (n, tab = 'vocab', verdict = 'correct') =>
   dayWith(Array.from({ length: n }, () => [tab, 'a1', verdict]));
 
+// The spec's §2.4 steady learner: 10 answers a day, every day, over two tabs.
+// Built with the real applyEvent for the same reason dayWith is — a
+// hand-written counter shape can drift from what the app stores.
+function steadyHistory(days) {
+  let daily = {};
+  for (let i = 1; i <= days; i += 1) {
+    const key = `2026-07-${String(i).padStart(2, '0')}`;
+    for (let n = 0; n < 5; n += 1) daily = applyEvent(daily, key, 'vocab', 'a1', 'correct');
+    for (let n = 0; n < 5; n += 1) daily = applyEvent(daily, key, 'translate', 'a1', 'correct');
+  }
+  return daily;
+}
+
 describe('hashSeed', () => {
   it('is stable for the same input', () => {
     expect(hashSeed('abc')).toBe(hashSeed('abc'));
@@ -230,9 +243,53 @@ describe('deriveQuests', () => {
     if (volumeOf(quiet) !== undefined) expect(volumeOf(busy)).toBeGreaterThan(volumeOf(quiet));
   });
 
-  it('never sets a target below 1, whatever the history', () => {
+  it('lets a steady learner complete the volume quest — 1.2x made it unreachable', () => {
+    // The bug this epic exists for: base is the learner's own median, so a
+    // target of 1.2x base is a treadmill that speeds up as they walk. Measured
+    // before the fix, 143 of 200 seeded learners were offered this quest and
+    // exactly ZERO could ever finish it.
+    //
+    // Many seeds, not one: the quest set is seeded per (user, day), so a single
+    // userId is one sample and proves nothing about the population.
+    const daily = steadyHistory(14);
+    let offered = 0;
+    let completed = 0;
+    for (let u = 0; u < 200; u += 1) {
+      const volume = deriveQuests({ userId: `u${u}`, todayKey: '2026-07-14', daily }).find(
+        (q) => q.id === 'answer-cards'
+      );
+      if (!volume) continue;
+      offered += 1;
+      if (volume.done) completed += 1;
+    }
+    // Assert the denominator too: "0 completed of 0 offered" and "0 of 143"
+    // print identically at the assertion below, and only one of them is a bug.
+    expect(offered).toBeGreaterThan(20);
+    expect(completed).toBe(offered);
+  });
+
+  it('lets a steady learner clear the whole board, which two dead groups prevented', () => {
+    // The board draws 3 of 4 groups a day. With volume AND breadth both
+    // unreachable, a steady learner needed the draw to drop one dead group and
+    // was still left holding the other — a perfect day was arithmetically
+    // impossible. Measured across these 200 seeds: 0% before this epic, 16%
+    // with the volume fix alone, 48% with both.
+    //
+    // Deterministic, not statistical: the same 200 userIds on the same day
+    // always draw the same boards, so this threshold cannot flake. It sits with
+    // ~15 points of margin on either side of the two outcomes it separates.
+    const daily = steadyHistory(14);
+    let perfect = 0;
+    for (let u = 0; u < 200; u += 1) {
+      const board = deriveQuests({ userId: `u${u}`, todayKey: '2026-07-14', daily });
+      if (board.length > 0 && board.every((q) => q.done)) perfect += 1;
+    }
+    expect(perfect).toBeGreaterThan(60);
+  });
+
+  it('never sets a target below MIN_TARGET, whatever the history', () => {
     const quests = deriveQuests({ userId: 'u1', todayKey, daily: { '2026-08-29': { total: 0 } } });
-    for (const q of quests) expect(q.target).toBeGreaterThanOrEqual(1);
+    for (const q of quests) expect(q.target).toBeGreaterThanOrEqual(MIN_TARGET);
   });
 
   it('reads progress from the real counters applyEvent writes', () => {
@@ -313,6 +370,21 @@ describe('questsCompleted', () => {
 });
 
 describe('the catalogue itself', () => {
+  it('clears breadth on two tabs, and still fails on one', () => {
+    // Breadth is about the shape of a day, not its size. Two tabs rules out a
+    // single-surface day; three demanded the learner scatter across
+    // three quarters of the app daily, which a focused habit never does.
+    const breadth = QUEST_CATALOGUE.find((q) => q.id === 'practise-tabs');
+    const twoTabs = dayWith([
+      ['vocab', 'a1', 'correct'],
+      ['translate', 'a1', 'correct'],
+    ])['2026-08-30'];
+    const oneTab = dayWith([['vocab', 'a1', 'correct']])['2026-08-30'];
+
+    expect(breadth.progress(twoTabs)).toBeGreaterThanOrEqual(breadth.target());
+    expect(breadth.progress(oneTab)).toBeLessThan(breadth.target());
+  });
+
   it('has unique ids', () => {
     const ids = QUEST_CATALOGUE.map((q) => q.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -329,9 +401,41 @@ describe('the catalogue itself', () => {
     // This is the invariant deriveQuests relies on instead of an unreachable
     // runtime clamp. A new quest that forgets the floor fails here.
     for (const q of QUEST_CATALOGUE) {
-      expect(q.target(MIN_TARGET)).toBeGreaterThanOrEqual(1);
+      expect(q.target(MIN_TARGET)).toBeGreaterThanOrEqual(MIN_TARGET);
       expect(Number.isInteger(q.target(MIN_TARGET))).toBe(true);
     }
+  });
+
+  it('never sets a RELATIVE target above the baseline it derives from', () => {
+    // THE RULE. A multiplier above 1.0 on a self-referential baseline is a
+    // treadmill: the learner's own median rises to meet the target, and the
+    // target rises with it, so the stable state is failure. This is what the
+    // 1.2x volume quest was, and it is what a future edit must not re-introduce.
+    //
+    // Swept across a range of baselines, not one value: a violating multiplier
+    // can hide at base=2, where every entry's MIN_TARGET floor is doing the work.
+    //
+    // Scoped to relative entries only: an absolute target (declared with no
+    // baseline argument, e.g. practise-tabs' `() => Math.min(2, TABS.length)`)
+    // derives from no baseline, so the rule does not apply to it.
+    let sweptRelative = 0;
+    let skippedAbsolute = 0;
+    for (const q of QUEST_CATALOGUE) {
+      if (q.target.length === 0) {
+        skippedAbsolute += 1;
+        continue;
+      }
+      sweptRelative += 1;
+      for (const base of [MIN_TARGET, 3, 4, 5, 8, 10, 17, 40, 100]) {
+        expect(q.target(base), `${q.id} at base=${base}`).toBeLessThanOrEqual(base);
+      }
+    }
+    // Guard the guard: if either side of the partition ever goes empty, the
+    // catalogue changed shape and this test needs revisiting.
+    expect(sweptRelative, 'expected at least one relative entry to be swept').toBeGreaterThan(0);
+    expect(skippedAbsolute, 'expected at least one absolute entry to be skipped').toBeGreaterThan(
+      0
+    );
   });
 
   it('has enough groups to fill a day without repeating one', () => {
@@ -351,7 +455,13 @@ describe('the catalogue itself', () => {
 });
 
 describe('questHistory', () => {
-  // A day whose counters clear every quest, whatever the seed picks.
+  // A day whose counters clear every size-based quest (volume, accuracy,
+  // breadth), whatever the seed picks. It does NOT clear focus once the
+  // trailing baseline catches up to it — see 'does NOT hand out a clean
+  // sweep every day for a steady learner' below, which relies on exactly
+  // that: 60 answers in each of 4 tabs makes total 240, so once the
+  // baseline reaches 240 the focus quest asks for 120 in a single tab and
+  // only 60 are there.
   const bigDay = () => {
     let d = {};
     for (const tab of TABS) {
@@ -391,10 +501,11 @@ describe('questHistory', () => {
   });
 
   it('does NOT hand out a clean sweep every day for a steady learner', () => {
-    // Targets scale off the trailing median, so a learner doing exactly their
-    // usual amount is asked for a little more. Five identical days are not five
-    // perfect days, and that is the point of relative targets — this test
-    // originally asserted 5×QUEST_COUNT and was wrong about the design.
+    // Not because the targets out-run the learner — they no longer do — but
+    // because the board draws 3 of 4 groups, and the focus quest asks for half
+    // the learner's whole median IN ONE TAB. A day spread over four tabs clears
+    // volume, accuracy and breadth and still misses focus. Five identical days
+    // are not five perfect days.
     const r = questHistory({ daily: historyOf(bigDay(), 5), userId: 'u1' });
     expect(r.perfectDays).toBeLessThan(5);
   });
