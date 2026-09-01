@@ -107,7 +107,7 @@ export const QUEST_CATALOGUE = [
     id: 'answer-cards',
     group: 'volume',
     tab: 'vocab',
-    target: (base) => Math.max(MIN_TARGET, Math.round(base * 1.2)),
+    target: (base) => Math.max(MIN_TARGET, Math.round(base)),
     progress: (day) => dayTotal(day),
   },
   {

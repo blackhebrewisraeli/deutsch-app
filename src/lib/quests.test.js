@@ -27,6 +27,19 @@ function dayWith(events) {
 const answers = (n, tab = 'vocab', verdict = 'correct') =>
   dayWith(Array.from({ length: n }, () => [tab, 'a1', verdict]));
 
+// The spec's §2.4 steady learner: 10 answers a day, every day, over two tabs.
+// Built with the real applyEvent for the same reason dayWith is — a
+// hand-written counter shape can drift from what the app stores.
+function steadyHistory(days) {
+  let daily = {};
+  for (let i = 1; i <= days; i += 1) {
+    const key = `2026-07-${String(i).padStart(2, '0')}`;
+    for (let n = 0; n < 5; n += 1) daily = applyEvent(daily, key, 'vocab', 'a1', 'correct');
+    for (let n = 0; n < 5; n += 1) daily = applyEvent(daily, key, 'translate', 'a1', 'correct');
+  }
+  return daily;
+}
+
 describe('hashSeed', () => {
   it('is stable for the same input', () => {
     expect(hashSeed('abc')).toBe(hashSeed('abc'));
@@ -228,6 +241,31 @@ describe('deriveQuests', () => {
     const volumeOf = (qs) => qs.find((q) => q.id === 'answer-cards')?.target;
     // Same quest set (same seed), different bar.
     if (volumeOf(quiet) !== undefined) expect(volumeOf(busy)).toBeGreaterThan(volumeOf(quiet));
+  });
+
+  it('lets a steady learner complete the volume quest — 1.2x made it unreachable', () => {
+    // The bug this epic exists for: base is the learner's own median, so a
+    // target of 1.2x base is a treadmill that speeds up as they walk. Measured
+    // before the fix, 143 of 200 seeded learners were offered this quest and
+    // exactly ZERO could ever finish it.
+    //
+    // Many seeds, not one: the quest set is seeded per (user, day), so a single
+    // userId is one sample and proves nothing about the population.
+    const daily = steadyHistory(14);
+    let offered = 0;
+    let completed = 0;
+    for (let u = 0; u < 200; u += 1) {
+      const volume = deriveQuests({ userId: `u${u}`, todayKey: '2026-07-14', daily }).find(
+        (q) => q.id === 'answer-cards'
+      );
+      if (!volume) continue;
+      offered += 1;
+      if (volume.done) completed += 1;
+    }
+    // Assert the denominator too: "0 completed of 0 offered" and "0 of 143"
+    // print identically at the assertion below, and only one of them is a bug.
+    expect(offered).toBeGreaterThan(20);
+    expect(completed).toBe(offered);
   });
 
   it('never sets a target below 1, whatever the history', () => {
