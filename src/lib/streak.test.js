@@ -156,6 +156,23 @@ describe('reconcile + freezesAvailable', () => {
     const state = { daily: week(), gamification: { goal: 50 } };
     expect(freezesAvailable(state, '2026-06-08')).toBe(1);
   });
+
+  it('keeps a day rescued even when nothing would grant that freeze today', () => {
+    // §4.3, the ratchet. The GRANT is derived and may move when the catalogue
+    // changes; the SPEND is stored and unions, so it only ever grows. A day the
+    // learner already saw rescued must stay rescued forever — otherwise a
+    // catalogue edit retroactively shortens a streak, silently, with no user
+    // action and nothing in any multi-device test to catch it.
+    //
+    // '2026-05-01' is not in `daily` at all, so NO simulation over this state
+    // could ever produce it. It can only survive by being unioned in.
+    const state = {
+      daily: questfulDays(1, 3),
+      gamification: { goal: 50, frozenDays: { '2026-05-01': true }, bestStreak: 0 },
+    };
+    const r = reconcile(state, '2026-06-05', { userId: 'u1' });
+    expect(r.frozenDays['2026-05-01']).toBe(true);
+  });
 });
 
 describe('multiplier', () => {
