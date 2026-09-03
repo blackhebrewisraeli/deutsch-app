@@ -452,6 +452,41 @@ describe('the catalogue itself', () => {
       expect(p).toBeGreaterThanOrEqual(0);
     }
   });
+
+  it('is append-only — an existing entry never changes what it derives', () => {
+    // Quest history is replayed from the CURRENT catalogue, so editing an entry
+    // in place retroactively changes what past days asked for. Once freezes are
+    // derived from that history, an in-place edit can silently drop a learner's
+    // held balance. The rule: never edit an existing entry's id, target or
+    // progress — add a new entry and retire the old one.
+    //
+    // These are the values as shipped. A deliberate change to the economy
+    // updates this pin in the same commit, which is exactly the review moment
+    // this test exists to force.
+    const FOCUS = [2, 2, 2, 3, 4, 5, 9, 20, 50];
+    const PINNED = {
+      'answer-cards': [2, 3, 4, 5, 8, 10, 17, 40, 100],
+      'get-correct': [2, 2, 2, 3, 5, 6, 10, 24, 60],
+      'practise-tabs': [2, 2, 2, 2, 2, 2, 2, 2, 2],
+      'focus-chat': FOCUS,
+      'focus-alphabet': FOCUS,
+      'focus-vocab': FOCUS,
+      'focus-translate': FOCUS,
+    };
+    const bases = [2, 3, 4, 5, 8, 10, 17, 40, 100];
+
+    const ids = QUEST_CATALOGUE.map((q) => q.id);
+    for (const id of Object.keys(PINNED)) {
+      expect(ids, `entry ${id} was REMOVED — retire, do not delete`).toContain(id);
+    }
+    for (const q of QUEST_CATALOGUE) {
+      if (!PINNED[q.id]) continue; // a newly appended entry is fine
+      expect(
+        bases.map((b) => q.target(b)),
+        `entry ${q.id} changed in place`
+      ).toEqual(PINNED[q.id]);
+    }
+  });
 });
 
 describe('questHistory', () => {
