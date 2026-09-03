@@ -237,6 +237,11 @@ describe('freezes earned from quest completions', () => {
     // during render. The walk must use pickQuests + a rolling window instead.
     // A static check, because the cost only shows up on a large day map and a
     // timing assertion would flake on a loaded machine.
-    expect(streakSource).not.toMatch(/deriveQuests/);
+    expect(
+      streakSource,
+      'streak.js must not reference deriveQuests anywhere — even in a comment. ' +
+        'This is a plain source scan, deliberately: a timing assertion would flake. ' +
+        'Grade quests inline with pickQuests + a rolling window instead.'
+    ).not.toMatch(/deriveQuests/);
   });
 });

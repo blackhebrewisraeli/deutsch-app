@@ -19,8 +19,9 @@ import { loadState, saveState } from './storage';
 import { currentStreak, multiplier } from './streak';
 import { DEFAULT_GOAL, XP_PER_VERDICT, LEVEL_MULTIPLIERS } from './gameConfig';
 import { isLevelBoostEnabled } from './xpEntitlement';
+import { TABS } from './tabs.js';
 
-export const TABS = ['chat', 'alphabet', 'vocab', 'translate'];
+export { TABS };
 export const LEVELS = ['a1', 'a2', 'b1'];
 export const VERDICTS = ['correct', 'almost', 'wrong'];
 

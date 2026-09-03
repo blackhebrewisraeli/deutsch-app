@@ -27,7 +27,7 @@
 // habit-builder the streak system exists to reward — 0 of 143 seeded steady
 // learners could ever complete it. The catalogue guard in quests.test.js
 // enforces `target(base) <= base` so this cannot come back quietly.
-import { TABS } from './stats.js';
+import { TABS } from './tabs.js';
 
 /** How many quests a day. Small on purpose: a board of five is a chore list. */
 export const QUEST_COUNT = 3;
@@ -109,67 +109,41 @@ export function baselineFrom(totals) {
 // Copy lives in the pack, exactly as it does for missions: an entry carries an
 // id, a target and a way to measure — never a word the learner reads.
 
-function buildQuestCatalogue() {
-  return [
-    {
-      id: 'answer-cards',
-      group: 'volume',
-      tab: 'vocab',
-      target: (base) => Math.max(MIN_TARGET, Math.round(base)),
-      progress: (day) => dayTotal(day),
-    },
-    {
-      id: 'get-correct',
-      group: 'accuracy',
-      tab: 'vocab',
-      target: (base) => Math.max(MIN_TARGET, Math.round(base * 0.6)),
-      progress: (day) => verdictTotal(day, 'correct'),
-    },
-    {
-      id: 'practise-tabs',
-      group: 'breadth',
-      tab: 'home',
-      // Breadth is about the shape of the day, not its size, so this one is
-      // deliberately absolute — and capped at what the app actually offers.
-      target: () => Math.min(2, TABS.length),
-      progress: (day) => tabsTouched(day),
-    },
-    // ONE shared group across all four. Giving each its own group made the
-    // dedup guard inert — three tab-focus quests are three variations of the
-    // same idea, which is exactly what the guard exists to prevent.
-    ...TABS.map((tab) => ({
-      id: `focus-${tab}`,
-      group: 'focus',
-      tab,
-      target: (base) => Math.max(MIN_TARGET, Math.round(base * 0.5)),
-      progress: (day) => tabCount(day, tab),
-    })),
-  ];
-}
-
-// Built lazily behind a Proxy, not as a plain array literal, because streak.js
-// now imports from this module (for the quest-earned freeze faucet), closing a
-// cycle: streak.js -> quests.js -> stats.js (for TABS) -> streak.js (stats.js
-// already needed currentStreak/multiplier). Whichever of the three a caller
-// touches first, an eager `TABS.map(...)` here can run while stats.js is still
-// mid-evaluation, before it reaches its own `TABS` declaration, reading
-// `undefined` instead of the tab list. Every REAL read of QUEST_CATALOGUE —
-// from pickQuests/deriveQuests, or from a test body — happens only after the
-// whole module graph has finished loading, so building it on first touch is
-// safe, and the Proxy keeps it usable as a plain array everywhere it already
-// is (`.map`, `.find`, spread, `for...of`, …).
-let _questCatalogue = null;
-function ensureQuestCatalogue() {
-  if (!_questCatalogue) _questCatalogue = buildQuestCatalogue();
-  return _questCatalogue;
-}
-export const QUEST_CATALOGUE = new Proxy([], {
-  get: (_target, prop) => Reflect.get(ensureQuestCatalogue(), prop, ensureQuestCatalogue()),
-  has: (_target, prop) => Reflect.has(ensureQuestCatalogue(), prop),
-  ownKeys: () => Reflect.ownKeys(ensureQuestCatalogue()),
-  getOwnPropertyDescriptor: (_target, prop) =>
-    Reflect.getOwnPropertyDescriptor(ensureQuestCatalogue(), prop),
-});
+export const QUEST_CATALOGUE = [
+  {
+    id: 'answer-cards',
+    group: 'volume',
+    tab: 'vocab',
+    target: (base) => Math.max(MIN_TARGET, Math.round(base)),
+    progress: (day) => dayTotal(day),
+  },
+  {
+    id: 'get-correct',
+    group: 'accuracy',
+    tab: 'vocab',
+    target: (base) => Math.max(MIN_TARGET, Math.round(base * 0.6)),
+    progress: (day) => verdictTotal(day, 'correct'),
+  },
+  {
+    id: 'practise-tabs',
+    group: 'breadth',
+    tab: 'home',
+    // Breadth is about the shape of the day, not its size, so this one is
+    // deliberately absolute — and capped at what the app actually offers.
+    target: () => Math.min(2, TABS.length),
+    progress: (day) => tabsTouched(day),
+  },
+  // ONE shared group across all four. Giving each its own group made the
+  // dedup guard inert — three tab-focus quests are three variations of the same
+  // idea, which is exactly what the guard exists to prevent.
+  ...TABS.map((tab) => ({
+    id: `focus-${tab}`,
+    group: 'focus',
+    tab,
+    target: (base) => Math.max(MIN_TARGET, Math.round(base * 0.5)),
+    progress: (day) => tabCount(day, tab),
+  })),
+];
 
 // ─── Selection ────────────────────────────────────────────────
 
