@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { URL as NodeURL } from 'node:url';
 import { describe, it, expect } from 'vitest';
 import {
   qualifies,
@@ -9,6 +11,14 @@ import {
   freezesAvailable,
   multiplier,
 } from './streak';
+import { applyEvent } from './stats';
+import { FREEZE } from './gameConfig';
+
+// The jsdom test environment shadows the global `URL` with its own
+// implementation, and Node's fs rejects that instance with "The URL must be
+// of scheme file" even though the href is a valid file:// URL — so this uses
+// Node's own URL constructor explicitly rather than the (jsdom) global one.
+const streakSource = readFileSync(new NodeURL('./streak.js', import.meta.url), 'utf8');
 
 // 5 correct = 50 XP; 4 correct = 40 XP
 const day = (correct) => ({ byLevel: { a1: { correct, almost: 0, wrong: 0 } } });
@@ -25,6 +35,21 @@ const week = () =>
     '2026-06-06',
     '2026-06-07'
   );
+
+// Days rich enough to COMPLETE quests. The hand-written `qual` fixture above
+// carries only `byLevel`, so volume/breadth/focus quests all score 0 against it
+// and 14 days of it yields 6 completions — under the threshold, which makes a
+// missing feature look like a working negative. These are built with the real
+// applyEvent: 10 answers a day over two tabs.
+function questfulDays(startDay, days) {
+  let daily = {};
+  for (let i = 0; i < days; i += 1) {
+    const k = `2026-06-${String(startDay + i).padStart(2, '0')}`;
+    for (let n = 0; n < 5; n += 1) daily = applyEvent(daily, k, 'vocab', 'a1', 'correct');
+    for (let n = 0; n < 5; n += 1) daily = applyEvent(daily, k, 'translate', 'a1', 'correct');
+  }
+  return daily;
+}
 
 describe('qualifies', () => {
   it('is true when the day reaches the goal XP', () => {
@@ -142,5 +167,76 @@ describe('multiplier', () => {
     expect(multiplier(14)).toBe(1.75);
     expect(multiplier(30)).toBe(2.0);
     expect(multiplier(100)).toBe(2.0);
+  });
+});
+
+describe('freezes earned from quest completions', () => {
+  // goal 500 is deliberately unreachable: 10 correct answers is 100 XP, so NO
+  // day qualifies and the 7-consecutive-day faucet grants nothing. Any freeze
+  // here can only have come from quests, which is what isolates the new path.
+  const QUEST_ONLY_GOAL = 500;
+
+  it('earns freezes from quests alone, on days that never meet the XP goal', () => {
+    const daily = questfulDays(1, 14);
+    const r = simulateFreezes(daily, QUEST_ONLY_GOAL, '2026-06-15', { userId: 'u1' });
+    // 33 completions over 14 days / earnPerQuests 14 = 2 grants, and each is
+    // spent bridging the miss on the day it lands (see R2 in the plan).
+    expect(Object.keys(r.frozenDays).length).toBe(2);
+  });
+
+  it('grants nothing extra to a signed-out learner', () => {
+    // R1: no userId means no quest grading at all, so the guest balance is
+    // exactly what it is today. This is the guard on "strictly additive".
+    const daily = questfulDays(1, 14);
+    const guest = simulateFreezes(daily, QUEST_ONLY_GOAL, '2026-06-15');
+    expect(guest).toEqual({ frozenDays: {}, freezes: 0 });
+  });
+
+  it('is deterministic — the property that replaces a stored inventory', () => {
+    const daily = questfulDays(1, 14);
+    const a = simulateFreezes(daily, QUEST_ONLY_GOAL, '2026-06-15', { userId: 'u1' });
+    const b = simulateFreezes(daily, QUEST_ONLY_GOAL, '2026-06-15', { userId: 'u1' });
+    expect(a).toEqual(b);
+  });
+
+  it('depends on the user, because their quest sets did', () => {
+    const daily = questfulDays(1, 14);
+    const u1 = simulateFreezes(daily, QUEST_ONLY_GOAL, '2026-06-15', { userId: 'u1' });
+    const u2 = simulateFreezes(daily, QUEST_ONLY_GOAL, '2026-06-15', { userId: 'u2' });
+    expect(u1.frozenDays).not.toEqual(u2.frozenDays);
+  });
+
+  it('never exceeds maxHeld, however many quests are cleared', () => {
+    // 28 full days accrue EIGHT grants between the two faucets (four from the
+    // 7-day run, four from quest completions) and only maxHeld are ever held.
+    // Asserted as an equality, not `<=`: measured, an uncapped walk reaches 8,
+    // so `<=` would also pass on a broken cap that simply never granted.
+    //
+    // upTo is the day AFTER the last recorded day on purpose. Walking further
+    // makes every unrecorded day a miss, which spends the held freezes bridging
+    // them and lands the balance back at 0 — where `<=` passes for the wrong
+    // reason entirely. This test was written that way first and caught here.
+    const daily = questfulDays(1, 28);
+    const r = simulateFreezes(daily, 50, '2026-06-29', { userId: 'u1' });
+    expect(r.freezes).toBe(FREEZE.maxHeld);
+  });
+
+  it('bridges a real miss, and the streak survives it', () => {
+    // The end-to-end claim, not the counter: 14 qualifying+questful days, then a
+    // genuine miss, then a qualifying day. The miss must be rescued and the run
+    // must span it.
+    const daily = { ...questfulDays(1, 14), '2026-06-15': miss, ...questfulDays(16, 1) };
+    const r = simulateFreezes(daily, 50, '2026-06-17', { userId: 'u1' });
+    expect(r.frozenDays['2026-06-15']).toBe(true);
+    expect(currentStreak(daily, 50, '2026-06-16', r.frozenDays)).toBe(16);
+  });
+
+  it('grades quests inline rather than calling deriveQuests per day', () => {
+    // D1. deriveQuests re-derives the baseline by re-scanning the whole day map,
+    // so one call per day makes this walk O(n²) inside a function App evaluates
+    // during render. The walk must use pickQuests + a rolling window instead.
+    // A static check, because the cost only shows up on a large day map and a
+    // timing assertion would flake on a loaded machine.
+    expect(streakSource).not.toMatch(/deriveQuests/);
   });
 });

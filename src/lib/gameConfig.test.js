@@ -26,7 +26,7 @@ describe('gameConfig', () => {
     expect(STREAK_MILESTONES).toEqual([3, 7, 14, 30, 50, 100]);
   });
   it('defines the freeze economy', () => {
-    expect(FREEZE).toEqual({ earnEveryDays: 7, maxHeld: 2 });
+    expect(FREEZE).toEqual({ earnEveryDays: 7, maxHeld: 2, earnPerQuests: 14 });
   });
   it('defines the guest-trial bounds', () => {
     expect(TRIAL_ROUND_CAP).toBe(60);

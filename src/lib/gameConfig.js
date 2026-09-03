@@ -19,7 +19,13 @@ export const TRIAL_REQUIRES = { allTabs: true, firstGoal: true };
 export const STREAK_MILESTONES = [3, 7, 14, 30, 50, 100];
 
 // Freeze economy: earn one freeze per N-day run, hold at most `maxHeld`.
-export const FREEZE = { earnEveryDays: 7, maxHeld: 2 };
+// earnEveryDays: the original faucet — 7 consecutive qualifying days.
+// earnPerQuests: the second faucet — cumulative daily-quest completions. 14 is
+// calibrated against a SIMULATION, not production (which has one learner and 12
+// recorded days): a steady learner completes ~2.3 quests/day, so 14 lands one
+// freeze per ~6 days, matching the 7-day cadence of the original faucet rather
+// than flooding it. Revisit with real data. maxHeld bounds the stock either way.
+export const FREEZE = { earnEveryDays: 7, maxHeld: 2, earnPerQuests: 14 };
 
 // XP multiplier by current streak length — the longer the streak, the bigger
 // every "+XP". The highest matching tier (minStreak ≤ streak) wins.

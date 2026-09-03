@@ -2,6 +2,7 @@
 // (consistent with how XP/levels work), never stored as a running counter.
 import { xpForDay } from './gamification';
 import { STREAK_MILESTONES, FREEZE, DEFAULT_GOAL, MULTIPLIER_TIERS } from './gameConfig';
+import { QUEST_CATALOGUE, pickQuests, seedFor, baselineFrom, BASELINE_DAYS } from './quests.js';
 
 // A calendar day qualifies toward the streak once its XP reaches the goal.
 export function qualifies(day, goal) {
@@ -69,17 +70,50 @@ export function crossedMilestone(prev, next) {
   return hit.length ? Math.max(...hit) : null;
 }
 
-// Forward calendar walk from the first activity day to `upTo` (exclusive),
-// auto-earning a freeze every FREEZE.earnEveryDays qualifying days (cap maxHeld)
-// and spending one to bridge a miss; a miss with no freeze breaks the run.
-// Pure + deterministic from daily+goal — so the resulting frozenDays is sync-safe.
-export function simulateFreezes(daily, goal, upTo) {
+// Forward calendar walk from the first activity day to `upTo` (exclusive).
+// TWO faucets, one pass:
+//   - every FREEZE.earnEveryDays consecutive qualifying days, and
+//   - every FREEZE.earnPerQuests cumulative daily-quest completions
+// both grant a freeze, capped at FREEZE.maxHeld, and a freeze is spent to
+// bridge a miss. A miss with no freeze breaks the run.
+//
+// The quest accumulator rides the SAME walk deliberately. Re-deriving today's
+// quests per day (the quests.js per-day helper) would re-scan and re-sort the
+// whole day map — O(n²) — inside a function App evaluates during render.
+// `window` is the trailing baseline, mirroring questHistory's
+// `entries.slice(i - BASELINE_DAYS, i)` exactly.
+//
+// Pure + deterministic from (daily, goal, userId) — which is why a freeze needs
+// no stored inventory: two devices holding the same merged `daily` derive the
+// same balance with nothing shared.
+export function simulateFreezes(daily, goal, upTo, { userId = null } = {}) {
   const keys = Object.keys(daily).sort();
   if (keys.length === 0) return { frozenDays: {}, freezes: 0 };
   let run = 0;
   let freezes = 0;
+  let questsDone = 0;
+  let questGrants = 0;
+  const window = [];
   const frozenDays = {};
   for (let d = keys[0]; d < upTo; d = nextKey(d)) {
+    // A signed-out learner earns no quest freezes (R1): seedFor would happily
+    // grade them against the 'guest' seed, which would change a guest balance
+    // that this epic promises not to touch.
+    if (userId != null && Object.prototype.hasOwnProperty.call(daily, d)) {
+      const base = baselineFrom(window);
+      for (const q of pickQuests(QUEST_CATALOGUE, seedFor(userId, d))) {
+        if (q.progress(daily[d]) >= q.target(base)) questsDone += 1;
+      }
+      window.push(daily[d]?.total ?? 0);
+      if (window.length > BASELINE_DAYS) window.shift();
+    }
+    // Granted BEFORE the qualify/spend branch (R2), so a freeze earned on a
+    // missed day can bridge that same day — which is the whole point for a
+    // learner who engages daily without reaching the XP goal.
+    while (Math.floor(questsDone / FREEZE.earnPerQuests) > questGrants) {
+      questGrants += 1;
+      freezes = Math.min(freezes + 1, FREEZE.maxHeld);
+    }
     if (qualifies(daily[d], goal)) {
       run += 1;
       if (run % FREEZE.earnEveryDays === 0) freezes = Math.min(freezes + 1, FREEZE.maxHeld);
@@ -96,21 +130,21 @@ export function simulateFreezes(daily, goal, upTo) {
 
 // Day-rollover reconcile: recompute rescued days + the record from history.
 // Idempotent — frozenDays is a pure function of daily+goal.
-export function reconcile(state, today) {
+export function reconcile(state, today, { userId = null } = {}) {
   const daily = state.daily ?? {};
   const g = state.gamification ?? {};
   const goal = g.goal ?? DEFAULT_GOAL;
-  const sim = simulateFreezes(daily, goal, today);
+  const sim = simulateFreezes(daily, goal, today, { userId });
   const frozenDays = { ...(g.frozenDays ?? {}), ...sim.frozenDays };
   const best = Math.max(g.bestStreak ?? 0, bestStreakFromHistory(daily, goal, frozenDays));
   return { frozenDays, bestStreak: best, lastReconcileDay: today };
 }
 
 // Freezes the user holds entering `today` (for the ❄️×N indicator).
-export function freezesAvailable(state, today) {
+export function freezesAvailable(state, today, { userId = null } = {}) {
   const daily = state.daily ?? {};
   const goal = state.gamification?.goal ?? DEFAULT_GOAL;
-  return simulateFreezes(daily, goal, today).freezes;
+  return simulateFreezes(daily, goal, today, { userId }).freezes;
 }
 
 // XP multiplier for a streak length — the highest tier it reaches.
