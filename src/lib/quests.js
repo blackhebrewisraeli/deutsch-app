@@ -27,7 +27,7 @@
 // habit-builder the streak system exists to reward — 0 of 143 seeded steady
 // learners could ever complete it. The catalogue guard in quests.test.js
 // enforces `target(base) <= base` so this cannot come back quietly.
-import { TABS } from './stats.js';
+import { TABS } from './tabs.js';
 
 /** How many quests a day. Small on purpose: a board of five is a chore list. */
 export const QUEST_COUNT = 3;
@@ -92,7 +92,7 @@ export function recentBaseline(daily, todayKey, days = BASELINE_DAYS) {
 }
 
 /** Median of a set of day totals, floored — the shared rule for every target. */
-function baselineFrom(totals) {
+export function baselineFrom(totals) {
   if (!totals || totals.length === 0) return MIN_TARGET;
   const sorted = [...totals].sort((a, b) => a - b);
   const mid = Math.floor(sorted.length / 2);
