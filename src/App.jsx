@@ -115,7 +115,10 @@ export default function App() {
   // Derived from storage, refreshed on every `deutsch:progress` event.
   const prevLevelRef = useRef(null);
   const prevStreakRef = useRef(null);
-  const deriveGame = () => {
+  // `userId` is a PARAMETER, not a closure read: this runs as the useState
+  // initializer during the first render, before useAuth() and userIdRef exist
+  // further down the component. Reading either from here is a TDZ crash.
+  const deriveGame = (userId = null) => {
     const s = loadState() ?? {};
     const daily = s.daily ?? {};
     const goalXp = s.gamification?.goal ?? DEFAULT_GOAL;
@@ -125,7 +128,7 @@ export default function App() {
       lvl: levelFromXp(totalXp(daily)),
       goal: goalProgress(todayXp(daily, todayKey()), goalXp),
       streak: streakNow,
-      freezes: freezesAvailable(s, todayKey()),
+      freezes: freezesAvailable(s, todayKey(), { userId }),
       mult: multiplier(streakNow),
       // Guest-trial status rides along here so it refreshes with everything
       // else: applyProgress re-runs deriveGame on every `deutsch:progress`
@@ -133,7 +136,7 @@ export default function App() {
       trial: trialStatus(daily, s.gamification),
     };
   };
-  const [game, setGame] = useState(deriveGame);
+  const [game, setGame] = useState(() => deriveGame(null));
 
   // Celebration toasts (level-up / achievement / goal-met).
   const [toasts, setToasts] = useState([]);
@@ -219,7 +222,7 @@ export default function App() {
       const prevFrozen = g.frozenDays ?? {};
       const hadReconciled = g.lastReconcileDay != null;
       if (g.lastReconcileDay !== tKey) {
-        const rec = reconcile(s, tKey);
+        const rec = reconcile(s, tKey, { userId: userIdRef.current });
         nextG.frozenDays = rec.frozenDays;
         nextG.lastReconcileDay = rec.lastReconcileDay;
       } else {
@@ -290,7 +293,7 @@ export default function App() {
 
       saveState({ ...s, gamification: nextG });
       setSoundEnabled(!!nextG.soundOn);
-      setGame(deriveGame());
+      setGame(deriveGame(userIdRef.current));
 
       if (newToasts.length) {
         pushToasts(newToasts);
@@ -349,6 +352,13 @@ export default function App() {
   // them agreeing without re-subscribing the listener on every auth change.
   const userIdRef = useRef(null);
   userIdRef.current = user?.id ?? null;
+  // Freezes are now account-derived, and the first render is always the guest
+  // value (deriveGame's initializer cannot see auth). Re-derive when the account
+  // settles or changes, or a learner who signs in sees a stale ❄️ until their
+  // next answer.
+  useEffect(() => {
+    setGame(deriveGame(userIdRef.current));
+  }, [user?.id]);
   const syncStatus = useSyncStatus();
   // Claim any league-winner rewards on load (not just when the Leagues tab
   // opens), and celebrate a fresh win with a toast.
