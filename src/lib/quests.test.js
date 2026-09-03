@@ -475,6 +475,36 @@ describe('the catalogue itself', () => {
     };
     const bases = [2, 3, 4, 5, 8, 10, 17, 40, 100];
 
+    // The other half of "what an entry derives". A progress function edited in
+    // place moves which past days were satisfied just as surely as a target
+    // does, and the freeze balance is replayed from both.
+    //
+    // The day is chosen so every pin is non-zero and the four focus values are
+    // all different: a pin of 0 cannot tell a working progress function from one
+    // that broke to zero, and equal focus values cannot tell two tabs apart if
+    // they were swapped.
+    const progressDay = dayWith([
+      ['chat', 'a1', 'almost'],
+      ['alphabet', 'a1', 'correct'],
+      ['alphabet', 'a1', 'correct'],
+      ['vocab', 'a1', 'correct'],
+      ['vocab', 'a1', 'correct'],
+      ['vocab', 'a1', 'correct'],
+      ['translate', 'a1', 'wrong'],
+      ['translate', 'a1', 'wrong'],
+      ['translate', 'a1', 'wrong'],
+      ['translate', 'a1', 'wrong'],
+    ])['2026-08-30'];
+    const PINNED_PROGRESS = {
+      'answer-cards': 10,
+      'get-correct': 5,
+      'practise-tabs': 4,
+      'focus-chat': 1,
+      'focus-alphabet': 2,
+      'focus-vocab': 3,
+      'focus-translate': 4,
+    };
+
     const ids = QUEST_CATALOGUE.map((q) => q.id);
     for (const id of Object.keys(PINNED)) {
       expect(ids, `entry ${id} was REMOVED — retire, do not delete`).toContain(id);
@@ -485,6 +515,9 @@ describe('the catalogue itself', () => {
         bases.map((b) => q.target(b)),
         `entry ${q.id} changed in place`
       ).toEqual(PINNED[q.id]);
+      expect(q.progress(progressDay), `entry ${q.id} changed its progress in place`).toBe(
+        PINNED_PROGRESS[q.id]
+      );
     }
   });
 });
