@@ -68,6 +68,13 @@ describe('RLS: lessons', () => {
     expect(error).not.toBeNull();
   });
 
+  it('rejects a tab outside the closed set', async () => {
+    const { error } = await admin
+      .from('lessons')
+      .insert({ ...ROW, tab: 'dictation', unit_number: 5 });
+    expect(error).not.toBeNull();
+  });
+
   it('rejects a course_code outside the v1 allow-list', async () => {
     const { error } = await admin
       .from('lessons')
