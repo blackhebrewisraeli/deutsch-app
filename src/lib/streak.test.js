@@ -182,6 +182,12 @@ describe('freezes earned from quest completions', () => {
     // 33 completions over 14 days / earnPerQuests 14 = 2 grants, and each is
     // spent bridging the miss on the day it lands (see R2 in the plan).
     expect(Object.keys(r.frozenDays).length).toBe(2);
+    // R2: the grant is applied BEFORE the qualify/spend branch, so the freeze is
+    // spent on the very day its threshold is crossed. Asserting the exact days,
+    // not just how many: reversing that ordering still bridges two days, just
+    // later ones, so a count cannot see the difference and a previous version of
+    // this test could not tell the two orderings apart.
+    expect(r.frozenDays).toEqual({ '2026-06-06': true, '2026-06-12': true });
   });
 
   it('grants nothing extra to a signed-out learner', () => {
