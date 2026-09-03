@@ -25,6 +25,7 @@
 - **Do not store `totalXpEarned` or `completedQuests`.** Both are derivations (`xpForDay`, `deriveQuests`).
 - **Do not reshape `counters.byTab`.** It is a per-tab round count. Per-tab verdicts, if ever wanted, are an optional sibling key.
 - **Explicit `.js` extensions on every relative import in `api/**`** — including imports from `src/`. Vite and vitest resolve extensionless paths; native Node ESM on Vercel does not, and the function 500s in production with `ERR_MODULE_NOT_FOUND`. Precedent: `api/v1/league/profile.js:5` imports `'../../../src/lib/xpCore.js'`.
+- **Rate-limit config uses `max`, never `limit`.** `createRateLimiter` destructures `{ windowMs, max }` (`api/_lib/ratelimit.js:64`) and compares `count <= max`. Passing `limit` leaves `max` undefined, `count <= undefined` is `false`, and **every request 429s starting with the first**. Every existing caller uses `max` — copy them.
 - **Error envelope is unchanged:** failures are `{ error: { code, message } }` via `sendError`. Success bodies return the resource directly — **no `{ success: true, … }` wrapper.**
 - **`.husky/pre-commit` runs `npx lint-staged` AND the full `npm test`.** A task never ends red. **Never `--no-verify`**, never `git -c core.hooksPath=...`.
 - **`main` takes no direct pushes** (`enforce_admins: true`, 4 required checks). Branch + PR.
@@ -306,6 +307,7 @@ vi.mock('./supabase.js', () => ({ serviceClient: vi.fn() }));
 
 import { createPublicHandler } from './publicHandler.js';
 import { serviceClient } from './supabase.js';
+import { MemoryStore } from './ratelimit.js';
 import { createRes } from './test-helpers.js';
 
 let seq = 0;
@@ -322,10 +324,16 @@ const req = (over = {}) => {
 const build = (over = {}) =>
   createPublicHandler({
     method: 'GET',
-    ipRate: { limit: 60, windowMs: 300000 },
+    ipRate: { max: 60, windowMs: 300000 },
     name: 'content',
     run: async ({ res }) => res.status(200).json({ ok: true }),
     allowedOrigins: ['https://app.test'],
+    // A real MemoryStore, NOT defaultStore(): serviceClient is mocked to a
+    // truthy `{}`, so defaultStore would build a SupabaseStore whose .rpc()
+    // does not exist. Its increment throws, the limiter FAILS OPEN by design,
+    // and the rate-limit assertion below would then pass no matter what the
+    // limiter did — a second defect hiding the first.
+    store: new MemoryStore(),
     ...over,
   });
 
@@ -353,7 +361,7 @@ describe('createPublicHandler', () => {
 
   it('rate limits by IP', async () => {
     serviceClient.mockReturnValue({});
-    const handler = build({ ipRate: { limit: 1, windowMs: 300000 } });
+    const handler = build({ ipRate: { max: 1, windowMs: 300000 } });
     const fixedIp = { headers: { 'x-forwarded-for': '10.2.2.2', origin: 'https://app.test' } };
     await handler(req(fixedIp), createRes());
     const res = createRes();
@@ -706,7 +714,7 @@ export function sanitizeExercises(exercises, rowId) {
 
 const handler = createPublicHandler({
   method: 'GET',
-  ipRate: { limit: 120, windowMs: 300000 },
+  ipRate: { max: 120, windowMs: 300000 },
   name: 'content lessons',
   failureMessage: 'Content unavailable.',
   run: async ({ req, res, db }) => {
@@ -1396,8 +1404,8 @@ export function validateEventBody(raw) {
 
 const handler = createAccountHandler({
   method: 'POST',
-  ipRate: { limit: 120, windowMs: 300000 },
-  userRate: { limit: 60, windowMs: 300000 },
+  ipRate: { max: 120, windowMs: 300000 },
+  userRate: { max: 60, windowMs: 300000 },
   name: 'progress events',
   failureMessage: 'Could not record progress.',
   run: async ({ req, res, auth, db }) => {
@@ -1594,8 +1602,8 @@ export function emptyCounters() {
 
 const handler = createAccountHandler({
   method: 'GET',
-  ipRate: { limit: 120, windowMs: 300000 },
-  userRate: { limit: 60, windowMs: 300000 },
+  ipRate: { max: 120, windowMs: 300000 },
+  userRate: { max: 60, windowMs: 300000 },
   name: 'progress daily',
   failureMessage: 'Could not read progress.',
   run: async ({ req, res, auth, db }) => {
