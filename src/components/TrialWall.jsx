@@ -36,8 +36,9 @@ export default function TrialWall({
   googleBusy = false,
 }) {
   // Clearance under App's sticky header + nav, which stack to ~113px on mobile
-  // and ~132px on desktop. This is a gap, not an alignment, so it only has to
-  // be about right — the card must simply never dock underneath the nav.
+  // and ~132px on desktop. The masthead now grows by inset-top, so this offset
+  // does too — otherwise the card docks under a taller header on a notched
+  // phone. A gap, not an alignment: the card must simply never sit under the nav.
   const stickyTop = mobile ? 121 : 140;
 
   // When Google is on, every existing action demotes one step: Google takes
@@ -65,7 +66,10 @@ export default function TrialWall({
         alignItems: 'flex-start',
         justifyContent: 'center',
         background: COLORS.scrim,
-        padding: SPACE[6],
+        paddingTop: SPACE[6],
+        paddingLeft: `calc(${SPACE[6]}px + env(safe-area-inset-left, 0px))`,
+        paddingRight: `calc(${SPACE[6]}px + env(safe-area-inset-right, 0px))`,
+        paddingBottom: `calc(${SPACE[6]}px + env(safe-area-inset-bottom, 0px))`,
         boxSizing: 'border-box',
       }}
     >
@@ -74,8 +78,8 @@ export default function TrialWall({
           // Sticky so the wall stays with the user down a long practice
           // surface instead of scrolling away from the scrim it belongs to.
           position: 'sticky',
-          top: stickyTop,
-          maxHeight: `calc(100vh - ${stickyTop + SPACE[6]}px)`,
+          top: `calc(${stickyTop}px + env(safe-area-inset-top, 0px))`,
+          maxHeight: `calc(100vh - ${stickyTop + SPACE[6]}px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))`,
           overflowY: 'auto',
           background: COLORS.paper,
           color: COLORS.ink,

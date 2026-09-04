@@ -339,7 +339,9 @@ describe('header at mobile width', () => {
     setViewportWidth(480);
     renderPastEntry(<App />);
     const header = screen.getByRole('banner');
-    expect(header.style.padding).toBe('12px 10px');
+    expect(header.style.paddingTop).toContain('12px');
+    expect(header.style.paddingTop).toContain('safe-area-inset-top');
+    expect(header.style.paddingLeft).toContain('10px');
     const wordmark = within(header)
       .getByText(/Deutsch/)
       .closest('div');
@@ -390,7 +392,9 @@ describe('header at mobile width', () => {
     setViewportWidth(1280);
     renderPastEntry(<App />);
     const header = screen.getByRole('banner');
-    expect(header.style.padding).toBe('20px 32px');
+    expect(header.style.paddingTop).toContain('20px');
+    expect(header.style.paddingTop).toContain('safe-area-inset-top');
+    expect(header.style.paddingLeft).toContain('32px');
     const wordmark = within(header)
       .getByText(/Deutsch/)
       .closest('div');

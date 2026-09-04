@@ -910,7 +910,14 @@ export default function App() {
           style={{
             borderBottom: `1px solid ${COLORS.border}`,
             boxShadow: SHADOW.bar,
-            padding: mobile ? '12px 10px' : '20px 32px',
+            // Inset-top is added to the existing padding so the charcoal bar
+            // paints under the status bar / Dynamic Island and the chips stay
+            // below it. Nav's sticky `top` below includes the same inset, or
+            // it would slide under a taller header.
+            paddingTop: `calc(${mobile ? 12 : 20}px + env(safe-area-inset-top, 0px))`,
+            paddingBottom: mobile ? 12 : 20,
+            paddingLeft: `calc(${mobile ? 10 : 32}px + env(safe-area-inset-left, 0px))`,
+            paddingRight: `calc(${mobile ? 10 : 32}px + env(safe-area-inset-right, 0px))`,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
@@ -1030,11 +1037,14 @@ export default function App() {
           style={{
             display: 'flex',
             gap: mobile ? 6 : 8,
-            padding: mobile ? '8px 10px' : '12px 16px',
+            paddingTop: mobile ? 8 : 12,
+            paddingBottom: mobile ? 8 : 12,
+            paddingLeft: `calc(${mobile ? 10 : 16}px + env(safe-area-inset-left, 0px))`,
+            paddingRight: `calc(${mobile ? 10 : 16}px + env(safe-area-inset-right, 0px))`,
             background: COLORS.paper,
             borderBottom: `1px solid ${COLORS.border}`,
             position: 'sticky',
-            top: mobile ? 53 : 81,
+            top: `calc(${mobile ? 53 : 81}px + env(safe-area-inset-top, 0px))`,
             zIndex: 49,
             boxShadow: SHADOW.bar,
           }}
@@ -1142,10 +1152,11 @@ export default function App() {
         </nav>
 
         {/* ── Main ─────────────────────────────────────────────── */}
-        {/* The measure, both gutters and the safe-area inset all live in
-            PageFrame now. `gutter` covers the inline edges and the top, which
-            in this app are the same number; the 32px bottom is PageFrame's
-            bottomGutter default. */}
+        {/* The measure, both gutters and the inline/bottom safe-area insets
+            live in PageFrame. `gutter` covers the inline edges and the top
+            (inset-top is owned by the sticky masthead above). The 32px
+            bottom is PageFrame's bottomGutter default, composed with
+            inset-bottom so home-indicator clearance cannot replace it. */}
         <PageFrame as="main" gutter={mobile ? 4 : 8}>
           {/* On mobile this is the only daily-goal indicator — the header ring is
             dropped there for width — so it has to appear on every tab except
