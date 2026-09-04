@@ -1,7 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import chat from '../v1/ai/chat.js';
-import grade from '../v1/ai/grade.js';
-import deck from '../v1/ai/deck.js';
+import { chatHandler as chat, gradeHandler as grade, deckHandler as deck } from './aiEndpoints.js';
 import legacy from '../chat.js';
 
 describe('AI endpoints', () => {

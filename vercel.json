@@ -10,7 +10,15 @@
       "maxDuration": 30
     }
   },
-  "crons": [
-    { "path": "/api/v1/league/settle", "schedule": "0 0 * * 1" }
+  "crons": [{ "path": "/api/v1/league/settle", "schedule": "0 0 * * 1" }],
+  "rewrites": [
+    { "source": "/api/v1/progress/events", "destination": "/api/v1/progress" },
+    { "source": "/api/v1/progress/daily", "destination": "/api/v1/progress" },
+    { "source": "/api/v1/account/profile", "destination": "/api/v1/account" },
+    { "source": "/api/v1/account/export", "destination": "/api/v1/account" },
+    { "source": "/api/v1/account/delete", "destination": "/api/v1/account" },
+    { "source": "/api/v1/ai/chat", "destination": "/api/v1/ai?op=chat" },
+    { "source": "/api/v1/ai/deck", "destination": "/api/v1/ai?op=deck" },
+    { "source": "/api/v1/ai/grade", "destination": "/api/v1/ai?op=grade" }
   ]
 }

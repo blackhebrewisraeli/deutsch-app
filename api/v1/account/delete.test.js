@@ -4,7 +4,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('../../_lib/supabase.js', () => ({ serviceClient: vi.fn() }));
 vi.mock('../../_lib/auth-middleware.js', () => ({ requireAuth: vi.fn() }));
 
-import handler from './delete.js';
+import { deleteHandler as handler } from '../../_lib/accountEndpoints.js';
 import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
 import { createRes } from '../../_lib/test-helpers.js';

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import handler from './chat.js';
+import { chatHandler as handler } from '../../_lib/aiEndpoints.js';
 import { createRes, postReq } from '../../_lib/test-helpers.js';
 
 // The route is a module singleton, so its MemoryStore persists across tests —

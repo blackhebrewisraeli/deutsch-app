@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import handler from './grade.js';
+import { gradeHandler as handler } from '../../_lib/aiEndpoints.js';
 import { createRes, postReq } from '../../_lib/test-helpers.js';
 
 describe('POST /api/v1/ai/grade', () => {
