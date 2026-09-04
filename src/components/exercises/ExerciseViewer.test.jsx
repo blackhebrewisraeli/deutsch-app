@@ -39,6 +39,24 @@ describe('ExerciseViewer', () => {
     expect(screen.getByText('See you later')).toBeInTheDocument();
   });
 
+  it('renders a chat stub instead of the fallback', () => {
+    render(<ExerciseViewer type="chat" payload={{ initialMessage: 'Hallo!', persona: 'Anna' }} />);
+    expect(screen.getByText('Hallo!')).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
+  it('renders a multiple-choice stub instead of the fallback', () => {
+    render(
+      <ExerciseViewer
+        type="multiple-choice"
+        payload={{ question: 'Pick one', options: ['Ja', 'Nein'] }}
+      />
+    );
+    expect(screen.getByRole('heading', { name: 'Pick one' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Ja' })).toBeInTheDocument();
+    expect(screen.queryByText(/not available/i)).not.toBeInTheDocument();
+  });
+
   it('falls back gracefully when the type is unknown', () => {
     render(<ExerciseViewer type="hologram" payload={{ term: 'should not render' }} />);
     expect(screen.getByRole('status')).toHaveTextContent(/not available/i);

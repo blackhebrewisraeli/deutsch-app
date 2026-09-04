@@ -1,4 +1,6 @@
+import ChatExercise from './ChatExercise';
 import FlashcardExercise from './FlashcardExercise';
+import MultipleChoiceExercise from './MultipleChoiceExercise';
 import TranslateExercise from './TranslateExercise';
 import UnknownExercise from './UnknownExercise';
 
@@ -11,12 +13,14 @@ export const EXERCISE_TYPES = ['flashcard', 'translate', 'chat', 'multiple-choic
 const REGISTRY = {
   flashcard: FlashcardExercise,
   translate: TranslateExercise,
+  chat: ChatExercise,
+  'multiple-choice': MultipleChoiceExercise,
 };
 
 /**
  * Strategy lookup: `type` string → presentation component.
- * Unknown, missing, or not-yet-built types (chat, multiple-choice) fall back
- * to UnknownExercise so a bad row cannot take down the viewer.
+ * Unknown or missing types fall back to UnknownExercise so a bad row
+ * cannot take down the viewer.
  */
 export function getExerciseComponent(type) {
   return REGISTRY[type] ?? UnknownExercise;
