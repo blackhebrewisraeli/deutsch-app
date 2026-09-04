@@ -133,34 +133,28 @@ describe('PageFrame', () => {
       </PageFrame>
     );
     const el = screen.getByTestId('p');
-    expect(el.style.paddingInline).toBe('32px');
+    expect(el.style.paddingLeft).toContain('32px');
+    expect(el.style.paddingLeft).toContain('safe-area-inset-left');
+    expect(el.style.paddingRight).toContain('safe-area-inset-right');
     expect(el.style.paddingTop).toBe('32px');
   });
 
   it('defaults the gutter to SPACE[4]', () => {
     render(<PageFrame data-testid="p">x</PageFrame>);
     const el = screen.getByTestId('p');
-    expect(el.style.paddingInline).toBe('16px');
+    expect(el.style.paddingLeft).toContain('16px');
     expect(el.style.paddingTop).toBe('16px');
   });
 
-  // The defect this prevents (spec §3.4): PageFrame used to set
-  // `paddingBottom: env(safe-area-inset-bottom, 0px)`, which computes to 0 on
-  // desktop. <main> has a real 32px bottom gutter, so adopting the primitive
-  // naively would have removed it from every tab — invisible to unit tests,
-  // visible as content sitting closer to the nav. `bottomGutter` is what keeps
-  // that gutter real, and this asserts it survives.
-  //
-  // The inset term is gone with it. The app does not opt into safe areas, so
-  // env(safe-area-inset-bottom) resolved to 0 everywhere and only made the
-  // declaration look load-bearing. src/safeArea.test.js holds that line: if
-  // index.html ever gains viewport-fit=cover, it fails until the inset comes
-  // back here — ADDED to the gutter, never replacing it.
-  it('gives the bottom a real gutter, with no inert safe-area term', () => {
+  // The defect this prevents (spec §3.4): PageFrame once set
+  // `paddingBottom: env(safe-area-inset-bottom, 0px)` alone, which computes to
+  // 0 on desktop and silently dropped <main>'s 32px gutter. The inset is
+  // ADDED to the gutter, never a replacement.
+  it('composes the bottom gutter with the home-indicator inset', () => {
     render(<PageFrame data-testid="p">x</PageFrame>);
     const pb = screen.getByTestId('p').style.paddingBottom;
-    expect(pb).toBe('32px');
-    expect(pb).not.toContain('safe-area-inset');
+    expect(pb).toContain('32px');
+    expect(pb).toContain('safe-area-inset-bottom');
   });
 
   it('takes the bottom gutter from the SPACE scale', () => {

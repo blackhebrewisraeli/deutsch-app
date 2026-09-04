@@ -26,14 +26,22 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
         justifyContent: 'center',
         gap: 24,
         fontFamily: FONTS.display,
-        padding: 24,
+        // Padding lives on .entry-screen so it can compose the 24px gutter
+        // with env(safe-area-inset-*). An inline padding shorthand would
+        // override those sides and put the CTAs under the home indicator.
       }}
     >
       {/* Theme access from the very first frame. This is the only screen that
           renders before the main app's own header (which already has
           ThemeChip) once the level-picker splash is gone, so it gets its own
           corner rather than a shared shell. */}
-      <div style={{ position: 'absolute', top: 16, right: 16 }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 'calc(16px + env(safe-area-inset-top, 0px))',
+          right: 'calc(16px + env(safe-area-inset-right, 0px))',
+        }}
+      >
         <ThemeChip />
       </div>
       <div

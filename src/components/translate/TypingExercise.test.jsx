@@ -53,6 +53,10 @@ describe('TypingExercise', () => {
     await userEvent.click(screen.getByRole('button', { name: /CHECK/ }));
     expect(await screen.findByText('✓ CORRECT')).toBeInTheDocument();
     expect(onCorrect).toHaveBeenCalledTimes(1);
+    expect(callClaude).toHaveBeenCalledWith(expect.any(String), expect.any(String), [], {
+      endpoint: 'grade',
+      routingContext: { taskType: 'translation_check', userTier: 'guest' },
+    });
   });
 
   it('"almost" still advances and shows the corrected sentence', async () => {

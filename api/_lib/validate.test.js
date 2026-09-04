@@ -41,6 +41,16 @@ describe('validateAiBody', () => {
     expect(ALLOWED_MODELS).toContain('claude-haiku-4-5-20251001');
   });
 
+  it('accepts every catalog model id the router can pick', () => {
+    expect(validateAiBody({ ...valid(), model: 'claude-sonnet-4-5' }).ok).toBe(true);
+    expect(validateAiBody({ ...valid(), model: 'claude-opus-4-1' }).ok).toBe(true);
+    expect(ALLOWED_MODELS).toEqual([
+      'claude-haiku-4-5-20251001',
+      'claude-sonnet-4-5',
+      'claude-opus-4-1',
+    ]);
+  });
+
   it('clamps max_tokens to the cap and defaults bad values', () => {
     expect(validateAiBody({ ...valid(), max_tokens: 999999 }).safeBody.max_tokens).toBe(
       MAX_TOKENS_CAP

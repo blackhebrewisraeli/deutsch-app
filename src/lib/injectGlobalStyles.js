@@ -65,22 +65,22 @@ export function injectGlobalStyles() {
        it hides and shows. The 100vh line stays first as the fallback for
        engines without dvh; both declarations are needed, which is why this is
        a class and not an inline style. */
-    .entry-screen { min-height: 100vh; min-height: 100dvh; }
-    /* No safe-area rule follows, deliberately. The app does not opt into safe
-       areas: index.html's viewport meta has no viewport-fit=cover, so iOS
-       reports every safe-area inset as 0 — in Mobile Safari and in the installed
-       PWA alike. An .entry-screen-foot rule padding by that inset used to sit
-       here and was inert twice over: the inset resolved to 0, and no element in
-       the app ever carried the class.
+    .entry-screen {
+      min-height: 100vh;
+      min-height: 100dvh;
+      box-sizing: border-box;
+      padding-top: calc(24px + env(safe-area-inset-top, 0px));
+      padding-right: calc(24px + env(safe-area-inset-right, 0px));
+      padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      padding-left: calc(24px + env(safe-area-inset-left, 0px));
+    }
+    /* Insets are composed with the 24px gutter, not a replacement. The
+       viewport opt-in (viewport-fit=cover in index.html) is what makes them
+       non-zero on a notched device. Do not reintroduce .entry-screen-foot —
+       no element carries it.
 
        (No backticks anywhere in this comment: it lives inside a template
-       literal, so one would end the string.)
-
-       The dvh handling above is NOT part of that and IS live: it tracks the
-       URL bar, which is independent of viewport-fit. Do not remove it.
-
-       src/safeArea.test.js fails if a safe-area inset reappears here without the
-       viewport opt-in landing alongside it. */
+       literal, so one would end the string.) */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: var(--c-surface-alt); }
     ::-webkit-scrollbar-thumb { background: var(--c-fg); border: 2px solid var(--c-surface-alt); }
