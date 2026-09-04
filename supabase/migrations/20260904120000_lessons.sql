@@ -44,6 +44,19 @@ create policy "lessons are publicly readable"
   using (true);
 
 -- No insert / update / delete policies on purpose: clients cannot write.
--- service_role bypasses RLS for seed / import.
+--
+-- RLS bypass is NOT a privilege. service_role skips policies, but it still
+-- needs a table grant like any other role, and under the Data API default that
+-- replaced `api.auto_expose_new_tables` a new table in `public` carries no
+-- privileges for anyone until they are granted explicitly — see the header of
+-- 20260612201311_data_api_explicit_grants.sql, which grants every earlier
+-- table, and 20260627000300 which does the same for the league tables.
+--
+-- Omitting this line still passes locally, because a local stack created under
+-- the older permissive default hands service_role the privileges anyway. CI
+-- builds its stack under the new default and fails with
+-- `42501 permission denied for table lessons` on the first seeding insert.
+grant all on table public.lessons to service_role;
+
 revoke insert, update, delete on public.lessons from anon, authenticated;
 grant select on public.lessons to anon, authenticated;
