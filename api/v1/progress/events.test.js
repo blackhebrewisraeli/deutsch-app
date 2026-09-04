@@ -5,7 +5,11 @@ import { join } from 'node:path';
 vi.mock('../../_lib/supabase.js', () => ({ serviceClient: vi.fn() }));
 vi.mock('../../_lib/auth-middleware.js', () => ({ requireAuth: vi.fn() }));
 
-import handler, { validateEventBody, MAX_BONUS_XP } from './events.js';
+import {
+  eventsHandler as handler,
+  validateEventBody,
+  MAX_BONUS_XP,
+} from '../../_lib/progressHandlers.js';
 import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
 import { createRes } from '../../_lib/test-helpers.js';

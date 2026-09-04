@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../../_lib/supabase.js', () => ({ serviceClient: vi.fn() }));
 vi.mock('../../_lib/auth-middleware.js', () => ({ requireAuth: vi.fn() }));
 
-import handler, { emptyCounters } from './daily.js';
+import { dailyHandler as handler, emptyCounters } from '../../_lib/progressHandlers.js';
 import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
 import { createRes } from '../../_lib/test-helpers.js';

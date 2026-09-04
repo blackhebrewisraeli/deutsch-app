@@ -1,6 +1,6 @@
-import { createAccountHandler } from '../../_lib/accountHandler.js';
-import { sendError } from '../../_lib/respond.js';
-import { isValidDateKey } from '../../_lib/dateKey.js';
+import { createAccountHandler } from './accountHandler.js';
+import { sendError } from './respond.js';
+import { isValidDateKey } from './dateKey.js';
 
 // Generic progress events. The write goes through one Postgres function
 // because an event is an INCREMENT: client-side read-modify-write on
@@ -10,6 +10,12 @@ import { isValidDateKey } from '../../_lib/dateKey.js';
 // LWW, and enabling both writers loses increments — see spec section 7.3. A
 // later plan that moves the signed-in path onto this endpoint must disable the
 // stats_daily sync adapter in the same PR.
+//
+// eventsHandler and dailyHandler live in one file — not two api/v1/progress/*
+// files — because Vercel's Hobby plan caps a deployment at 12 Serverless
+// Functions and this project was over. api/v1/progress.js dispatches on
+// req.method between the two; see that file for the dispatcher and
+// vercel.json for the rewrites that keep the documented URLs working.
 
 const TABS = ['chat', 'alphabet', 'vocab', 'translate'];
 const LEVELS = ['a1', 'a2', 'b1'];
@@ -62,7 +68,7 @@ export function validateEventBody(raw) {
   return { ok: true, value: { dateKey, packId, tab, level, verdict, bonusXp } };
 }
 
-const handler = createAccountHandler({
+export const eventsHandler = createAccountHandler({
   method: 'POST',
   ipRate: { max: 120, windowMs: 300000 },
   userRate: { max: 60, windowMs: 300000 },
@@ -94,4 +100,62 @@ const handler = createAccountHandler({
   },
 });
 
-export default handler;
+// Completes the developer interface: read a day back without a browser
+// supabase-js select. The signed-in PWA does not have to switch to this — the
+// existing sync pull keeps working.
+//
+// Query parameter rather than a dynamic route segment: this project compiles
+// static function filenames and has no [param] routes. See the plan's Ruling 1.
+
+/**
+ * The zeroed aggregate, mirroring emptyDayAggregate in src/lib/stats.js.
+ * A quiet day is zeros, never a 404 and never `{}` — readers index straight
+ * into byLevel[level][verdict], and an empty object gives them undefined.
+ */
+export function emptyCounters() {
+  const byTab = {};
+  for (const tab of TABS) byTab[tab] = 0;
+  const byLevel = {};
+  for (const level of LEVELS) {
+    byLevel[level] = {};
+    for (const verdict of VERDICTS) byLevel[level][verdict] = 0;
+  }
+  return { total: 0, bonusXp: 0, byTab, byLevel };
+}
+
+export const dailyHandler = createAccountHandler({
+  method: 'GET',
+  ipRate: { max: 120, windowMs: 300000 },
+  userRate: { max: 60, windowMs: 300000 },
+  name: 'progress daily',
+  failureMessage: 'Could not read progress.',
+  run: async ({ req, res, auth, db }) => {
+    const dateKey = req.query?.date;
+    if (!isValidDateKey(dateKey)) {
+      return sendError(res, 'bad_request', 'date must be YYYY-MM-DD.');
+    }
+    const packId = req.query?.packId ?? 'de';
+    if (!PACK_IDS.includes(packId)) {
+      return sendError(res, 'bad_request', 'Unknown packId.');
+    }
+
+    const { data, error } = await db
+      .from('stats_daily')
+      .select('counters')
+      .eq('user_id', auth.userId)
+      .eq('pack_id', packId)
+      .eq('day', dateKey)
+      .maybeSingle();
+
+    if (error) {
+      console.error('progress daily query failed:', error.message);
+      return sendError(res, 'server_error', 'Could not read progress.');
+    }
+
+    return res.status(200).json({
+      dateKey,
+      packId,
+      counters: data?.counters ?? emptyCounters(),
+    });
+  },
+});
