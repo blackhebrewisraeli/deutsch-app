@@ -1136,7 +1136,7 @@ describe('apply_progress_event: arithmetic', () => {
 - [ ] **Step 3: Apply and run**
 
 Run: `npx supabase db reset && npm run test:rls`
-Expected: **PASS**. (This test file has SEVEN `it()` blocks, not eight — an earlier draft of this line miscounted. The RLS suite goes from 5 files / 69 tests to 6 files / 76.)
+Expected: **PASS**. (This test file ships with EIGHT `it()` blocks — seven from this task plus one added by the final-review fix wave, which made the pure helper raise on an out-of-set bucket. The RLS suite goes from 5 files / 69 tests to 6 files / 77.)
 
 - [ ] **Step 4: Prove the concurrency test has teeth**
 
