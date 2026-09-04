@@ -354,6 +354,14 @@ describe('recordEvent', () => {
     vi.restoreAllMocks();
   });
 
+  it('enqueues an event even when signed out', () => {
+    recordEvent('chat', 'a1', 'correct');
+    const q = JSON.parse(localStorage.getItem('deutsch-app-progress-queue-v1') ?? '[]');
+    expect(q).toHaveLength(1);
+    expect(q[0].tab).toBe('chat');
+    expect(q[0].id).toMatch(/^[0-9a-f-]{36}$/i);
+  });
+
   it("persists a single event to localStorage under today's key", () => {
     recordEvent('chat', 'a1', 'correct');
     const state = loadState();

@@ -6,7 +6,6 @@ import { loadSyncMeta, saveSyncMeta } from './sync/syncMeta.js';
 import {
   srsToRows,
   srsFromRows,
-  dailyToRows,
   dailyFromRows,
   settingsToRow,
   settingsFromRow,
@@ -18,7 +17,6 @@ import {
 import {
   mergeSrs,
   mergeSettings,
-  mergeDailyAdditive,
   mergeDecks,
   mergeLearnedByDeck,
   addCounters,
@@ -28,6 +26,7 @@ import {
 import { readDecks } from './customDecks.js';
 import { readLearnedByDeck, backfillFromSrs } from './learnedWords.js';
 import { LEVEL_KEY } from './levelPref.js';
+import { loadQueue, countersFromQueue } from './progressQueue.js';
 
 export const SYNC_ENABLED = import.meta.env.VITE_SYNC_ENABLED === 'true';
 
@@ -49,7 +48,6 @@ export async function pullAndMerge(userId) {
   const c = await client();
   if (!c) return;
   const s = loadState() ?? {};
-  const meta = loadSyncMeta();
   const level = localStorage.getItem(LEVEL_KEY) ?? undefined;
 
   const srsRemote = srsFromRows((await c.from('srs_state').select()).data ?? []);
@@ -92,35 +90,33 @@ export async function pullAndMerge(userId) {
 
   const dailyRemote = dailyFromRows((await c.from('stats_daily').select()).data ?? []);
   const local = s.daily ?? {};
-  const nextLastSynced = { ...meta.lastSyncedCounters };
-  const serverWrites = {};
-  for (const day of new Set([...Object.keys(local), ...Object.keys(dailyRemote)])) {
-    const res = mergeDailyAdditive({
-      local: local[day],
-      server: dailyRemote[day],
-      lastSynced: meta.lastSyncedCounters[day],
-    });
-    serverWrites[day] = res.server;
-    // Pull spec: lastSynced = server_counters (not local pre-merge baseline).
-    nextLastSynced[day] = serverWrites[day];
+  const pending = countersFromQueue(loadQueue());
+  const mergedDaily = {};
+  for (const day of new Set([
+    ...Object.keys(local),
+    ...Object.keys(dailyRemote),
+    ...Object.keys(pending),
+  ])) {
+    // Reconstruct from server + unflushed queue, then keep any local leftover
+    // (pre-queue guest days, or applyEvent that beat the enqueue). Never upsert.
+    const reconstructed = addCounters(dailyRemote[day], pending[day]);
+    const leftover = clampCounters(subCounters(local[day], reconstructed));
+    mergedDaily[day] = addCounters(reconstructed, leftover);
   }
-
-  if (Object.keys(serverWrites).length) {
-    await c.from('stats_daily').upsert(withUser(dailyToRows(serverWrites), userId));
-  }
+  const nextLastSynced = { ...dailyRemote };
 
   // Re-read at write time: the user can record activity (answer a card, toggle a
   // setting) during the awaits above. Spreading the stale `s` would clobber it.
-  // Recover any concurrent daily delta (it pushes on the next reconcile), and
-  // re-merge srs/settings against the current blob so nothing local is lost.
+  // Recover any concurrent daily delta, and re-merge srs/settings against the
+  // current blob so nothing local is lost. Daily is pull-only; the RPC writes.
   const cur = loadState() ?? {};
   const curDaily = cur.daily ?? {};
   const adoptedDaily = {};
-  for (const day of new Set([...Object.keys(serverWrites), ...Object.keys(curDaily)])) {
+  for (const day of new Set([...Object.keys(mergedDaily), ...Object.keys(curDaily)])) {
     // Floor at 0: a negative here means local was cleared during the reconcile,
-    // not genuine activity — adopt the server value rather than subtracting.
+    // not genuine activity — adopt the reconstructed value rather than subtracting.
     const concurrent = clampCounters(subCounters(curDaily[day], local[day]));
-    adoptedDaily[day] = addCounters(serverWrites[day], concurrent);
+    adoptedDaily[day] = addCounters(mergedDaily[day], concurrent);
   }
   const curSettings = {
     gamification: cur.gamification,
