@@ -18,7 +18,15 @@ const USER = { userId: 'uid-1', email: 'a@b.com' };
 // auth.users. Mirrors USER_OWNED in supabase/tests/rls/cascade.test.js: that
 // suite proves deletion covers them all, this one proves the export has an
 // opinion about them all. A new table must be classified in both.
-const USER_OWNED = ['profiles', 'srs_state', 'stats_daily', 'decks', 'settings', 'league_members'];
+const USER_OWNED = [
+  'profiles',
+  'srs_state',
+  'stats_daily',
+  'decks',
+  'settings',
+  'league_members',
+  'progress_events_seen',
+];
 
 // Distinct rows per table. The previous fixture returned the SAME row for every
 // table, so it could not tell whether a key held its own data — an assertion

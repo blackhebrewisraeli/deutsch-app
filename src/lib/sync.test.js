@@ -108,7 +108,7 @@ describe('sync engine', () => {
     __setClientForTest(null);
   });
 
-  it('pushAll reconciles and upserts srs/daily/settings rows for the user', async () => {
+  it('pushAll reconciles and upserts srs/settings rows for the user', async () => {
     localStorage.setItem(
       'deutsch-app-state-v1',
       JSON.stringify({
@@ -122,13 +122,34 @@ describe('sync engine', () => {
     localStorage.setItem('deutsch-level', 'a2');
     await pushAll('user-1');
     const tables = fake._calls.upserts.map((u) => u.table).sort();
-    expect(tables).toEqual(['settings', 'srs_state', 'stats_daily']);
+    expect(tables).toEqual(['settings', 'srs_state']);
     expect(
       fake._calls.upserts.every((u) => u.rows.every?.((r) => r.user_id === 'user-1') ?? true)
     ).toBe(true);
   });
 
-  it('pullAndMerge folds guest local stats into the account exactly once (persisting server)', async () => {
+  it('does not upsert stats_daily — the RPC is the only writer', async () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ daily: { [DAY]: counters(3, 3) } })
+    );
+    await pushAll('user-1');
+    expect(fake._calls.upserts.filter((u) => u.table === 'stats_daily')).toEqual([]);
+  });
+
+  it("pull still adopts another device's counters into local", async () => {
+    const seeded = makeFakeClient(
+      { stats_daily: [{ day: DAY, counters: counters(7, 7) }] },
+      { persist: true }
+    );
+    __setClientForTest(seeded);
+    localStorage.setItem('deutsch-app-state-v1', JSON.stringify({ daily: {} }));
+    await pullAndMerge('user-1');
+    const daily = JSON.parse(localStorage.getItem('deutsch-app-state-v1')).daily;
+    expect(daily[DAY].total).toBe(7);
+  });
+
+  it('pull does not upsert guest leftovers — flush owns that fold-in', async () => {
     localStorage.setItem(
       'deutsch-app-state-v1',
       JSON.stringify({ daily: { [DAY]: counters(5, 5) } })
@@ -139,14 +160,26 @@ describe('sync engine', () => {
     );
     __setClientForTest(seeded);
     await pullAndMerge('user-1');
-    const pushed = seeded._calls.upserts.filter((u) => u.table === 'stats_daily').pop();
-    expect(pushed.rows[0].counters.total).toBe(10);
+    expect(seeded._calls.upserts.filter((u) => u.table === 'stats_daily')).toEqual([]);
+    // Matching remote + leftover 0: display converges on 5, it does not add to 10.
+    expect(JSON.parse(localStorage.getItem('deutsch-app-state-v1')).daily[DAY].total).toBe(5);
     await pullAndMerge('user-1');
-    const pushed2 = seeded._calls.upserts.filter((u) => u.table === 'stats_daily').pop();
-    expect(pushed2.rows[0].counters.total).toBe(10);
+    expect(JSON.parse(localStorage.getItem('deutsch-app-state-v1')).daily[DAY].total).toBe(5);
   });
 
-  it('reconcile after local activity does not double-count on a second pull', async () => {
+  it('pull keeps unflushed local days when remote and the queue are empty', async () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ daily: { [DAY]: counters(5, 5) } })
+    );
+    const seeded = makeFakeClient({}, { persist: true });
+    __setClientForTest(seeded);
+    await pullAndMerge('user-1');
+    expect(seeded._calls.upserts.filter((u) => u.table === 'stats_daily')).toEqual([]);
+    expect(JSON.parse(localStorage.getItem('deutsch-app-state-v1')).daily[DAY].total).toBe(5);
+  });
+
+  it('reconcile after local activity does not write stats_daily', async () => {
     const seeded = makeFakeClient({}, { persist: true });
     __setClientForTest(seeded);
 
@@ -158,12 +191,12 @@ describe('sync engine', () => {
       JSON.stringify({ daily: { [DAY]: counters(3, 3) } })
     );
     await pushAll('user-1');
-    const afterPush = seeded._tables.stats_daily.find((r) => r.day === DAY);
-    expect(afterPush.counters.total).toBe(3);
+    expect(seeded._tables.stats_daily.find((r) => r.day === DAY)).toBeUndefined();
+    expect(JSON.parse(localStorage.getItem('deutsch-app-state-v1')).daily[DAY].total).toBe(3);
 
     await pullAndMerge('user-1');
-    const afterResume = seeded._tables.stats_daily.find((r) => r.day === DAY);
-    expect(afterResume.counters.total).toBe(3);
+    expect(seeded._tables.stats_daily.find((r) => r.day === DAY)).toBeUndefined();
+    expect(JSON.parse(localStorage.getItem('deutsch-app-state-v1')).daily[DAY].total).toBe(3);
   });
 
   it('does not clobber local activity recorded during the reconcile (no lost answers)', async () => {
@@ -245,8 +278,8 @@ describe('sync engine', () => {
     // runs interleave and re-add the day's delta (runaway double-count).
     await Promise.all([__reconcileNowForTest('user-1'), __reconcileNowForTest('user-1')]);
 
-    const row = seeded._tables.stats_daily.find((r) => r.day === DAY);
-    expect(row.counters.total).toBe(5); // folded in exactly once
+    expect(seeded._tables.stats_daily.find((r) => r.day === DAY)).toBeUndefined();
+    expect(JSON.parse(localStorage.getItem('deutsch-app-state-v1')).daily[DAY].total).toBe(5);
   });
 });
 
@@ -423,8 +456,9 @@ describe('custom decks sync', () => {
     await pullAndMerge('user-1');
 
     const tables = seeded._calls.upserts.map((u) => u.table).sort();
-    expect(tables).toEqual(['decks', 'settings', 'srs_state', 'stats_daily']);
-    expect(seeded._tables.stats_daily[0].counters.total).toBe(3);
+    expect(tables).toEqual(['decks', 'settings', 'srs_state']);
+    expect(seeded._tables.stats_daily).toEqual([]);
+    expect(JSON.parse(localStorage.getItem('deutsch-app-state-v1')).daily[DAY].total).toBe(3);
     expect(seeded._tables.srs_state[0].srs_key).toBe('g:h');
   });
 });

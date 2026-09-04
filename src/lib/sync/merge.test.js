@@ -104,6 +104,16 @@ describe('mergeDailyAdditive (delta sync)', () => {
       mergeDailyAdditive({ local: day(0), server: day(0), lastSynced: day(5) }).server.total
     ).toBe(0);
   });
+
+  it('an RPC increment plus a stale lastSynced baseline double-counts (E4 premise)', () => {
+    // local applyEvent → 1; RPC already wrote server → 1; lastSynced still 0
+    const res = mergeDailyAdditive({
+      local: { total: 1 },
+      server: { total: 1 },
+      lastSynced: { total: 0 },
+    });
+    expect(res.server.total).toBe(2);
+  });
 });
 
 describe('mergeSettings', () => {

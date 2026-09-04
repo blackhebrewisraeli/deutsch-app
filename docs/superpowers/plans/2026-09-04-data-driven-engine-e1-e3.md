@@ -10,12 +10,14 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-04-data-driven-engine.md` — read §2 (ground truth), §5 (schema), §6 (API), §7 (architecture rules) and §8 (testing) before Task 1. §13's three open questions are answered in "Rulings" below; they are no longer open.
 
+> **Correction (E4, 2026-09-04):** this plan's Global Constraints originally said two writers "lose increments" via whole-object LWW. The daily adapter is `mergeDailyAdditive`. Two writers **double-count**. Later task snippets that still say LWW are historical; do not copy them.
+
 ## Global Constraints
 
 - **`stats_daily` is NOT altered.** No migration touches it. Widening the documented counters shape is a contract note, not DDL.
 - **Do not create `user_progress_daily`**, nor a SQL view of that name. The Mongoose name survives as a mapping only.
 - **No `src/**` changes at all.** Client adoption is E4, a later plan. A task that edits `src/` has left the spec.
-- **No endpoint added here may be called from `src/`.** Two writers on `stats_daily` — B2 sync (whole-object LWW) and this RPC (additive) — will silently lose increments. Shipping the contract without a caller is deliberate (§7.3).
+- **No endpoint added here may be called from `src/`.** Two writers on `stats_daily` — B2 sync (`mergeDailyAdditive`, a three-way delta merge) and this RPC (additive) — **double-count**, they do not lose increments. Shipping the contract without a caller is deliberate (§7.3). E4 removes the daily upsert.
 - **No Express, Mongoose, MongoDB, `server.js`, or new Node process.** No new npm dependency of any kind.
 - **Do not implement or stub `GET /api/v1/packs`.** Lane 3 stays reserved.
 - **Language-blind engine:** no German string literals, no `language === 'de'` branch, no `card.de` read in `api/**`. `courseCode` / `packId` are opaque identifiers.
@@ -1664,9 +1666,8 @@ function walk(dir, out = []) {
 
 describe('the progress lane has no client caller', () => {
   it('nothing under src/ references the progress endpoints', () => {
-    // Spec section 7.3: B2 sync writes stats_daily with whole-object LWW and
-    // this RPC writes additively. Both live at once loses increments, silently,
-    // and no unit test would show it. E4 is the plan that switches one off.
+    // Spec section 7.3: B2 daily sync is mergeDailyAdditive and this RPC writes
+    // additively. Both live at once double-counts. E4 is the plan that switches one off.
     const offenders = walk('src').filter((f) =>
       /\/api\/v1\/progress\//.test(readFileSync(f, 'utf8'))
     );

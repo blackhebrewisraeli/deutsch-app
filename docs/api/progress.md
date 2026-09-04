@@ -1,13 +1,11 @@
 # Progress lane — `/api/v1/progress/*`
 
-> **These endpoints are not called by the app, deliberately.**
-> `stats_daily` already has a writer: the B2 sync adapter, which pushes the
-> whole `counters` object last-write-wins. This lane writes _additively_.
-> Running both against the same day loses increments — sync overwrites a row
-> the RPC just updated, or the RPC increments a stale snapshot that sync then
-> pushes back. A later plan that moves the signed-in client onto this lane
-> **must disable the `stats_daily` sync adapter in the same PR**, with a test
-> that fails if both write.
+> **E4: the signed-in app is the caller; the RPC is the only writer of
+> `stats_daily`.** The daily sync adapter is a three-way additive delta merge
+> (`mergeDailyAdditive`), not whole-object last-write-wins. Running this lane
+> **and** the daily `upsert` double-counts one answer. The daily `select`
+> (pull) stays so a second device still sees the first's progress. Events
+> carry a client `id`; the server dedupes on `(user_id, event_id)` for 30 days.
 
 Both endpoints require `Authorization: Bearer <jwt>`. Rate limit: 60 requests
 per 5 minutes per user id, plus an IP limit ahead of authentication.
@@ -20,6 +18,7 @@ because an event is an **increment** — client-side read-modify-write on
 
 ```json
 {
+  "id": "11111111-1111-4111-8111-111111111111",
   "dateKey": "2026-09-04",
   "packId": "de",
   "tab": "vocab",
@@ -31,6 +30,7 @@ because an event is an **increment** — client-side read-modify-write on
 
 | Field     | Rule                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
 | --------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id`      | UUID, required. Client-generated. The RPC inserts `(user_id, event_id)` first and returns existing counters unchanged on conflict, so a retried POST cannot double-count. Seen ids are kept for 30 days.                                                                                                                                                                                                                                                                                              |
 | `dateKey` | `YYYY-MM-DD`, required. The server does **not** overwrite it with its own clock: the learner's local day is the streak day.                                                                                                                                                                                                                                                                                                                                                                            |
 | `packId`  | Optional, default `de`. v1 accepts only `de`.                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
 | `tab`     | `chat` · `alphabet` · `vocab` · `translate`                                                                                                                                                                                                                                                                                                                                                                                                                                                            |

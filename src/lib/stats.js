@@ -16,6 +16,7 @@
 // Pure helpers (testable in isolation): everything except `recordEvent`.
 
 import { loadState, saveState } from './storage';
+import { enqueue, newEventId } from './progressQueue';
 import { currentStreak, multiplier } from './streak';
 import { DEFAULT_GOAL, XP_PER_VERDICT, LEVEL_MULTIPLIERS } from './gameConfig';
 import { isLevelBoostEnabled } from './xpEntitlement';
@@ -250,6 +251,19 @@ export function recordEvent(tab, level, verdict) {
     const bonus = Math.round(base * (mult - 1));
     const daily = applyEvent(state.daily ?? {}, today, tab, level, verdict, bonus);
     saveState({ ...state, daily });
+    try {
+      enqueue({
+        id: newEventId(),
+        dateKey: today,
+        packId: 'de',
+        tab,
+        level,
+        verdict,
+        bonusXp: bonus,
+      });
+    } catch {
+      // Queue is best-effort; local applyEvent already committed.
+    }
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('deutsch:progress'));
     }

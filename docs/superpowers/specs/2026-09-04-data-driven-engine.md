@@ -109,7 +109,7 @@ Content can carry a pedagogical-track tag. Progress cannot — not in v1.
 | Course identity | `pack_id` on user data; `course_code` on lessons only | User rows stay on the B1 PK. Lessons may tag a pedagogical track. |
 | `course_code` v1 allow-list | `'de'` only | German-only product decision. `'de-he'` / `'en-he'` are reserved strings, not shipped rows. |
 | Lesson reads | Public `GET /api/v1/content/lessons/:courseCode/:level/:tab` | Language-blind path. Anon + authenticated may read. |
-| Progress writes | Authenticated `POST /api/v1/progress/events` + sibling GET | Developer interface for generic events. Client must not enable this **and** B2 LWW sync on the same day — see §7.3. |
+| Progress writes | Authenticated `POST /api/v1/progress/events` + sibling GET | Developer interface for generic events. Client must not enable this **and** the daily sync upsert on the same day — they double-count, see §7.3. |
 | Lesson writes | Service role only (seed / import) | Same posture as `rate_limits`: no client INSERT/UPDATE/DELETE. |
 | Offline SoT | Unchanged: bundled pack + `localStorage` | PWA stays playable with `npm run dev` and no secrets. |
 | Lane 3 packs routes | Still reserved | This is a lesson-unit slice, not B4. Do not implement `/api/v1/packs`. |
@@ -550,17 +550,19 @@ re-argue them.
 
 | Writer | Semantics | Status today |
 |---|---|---|
-| B2 sync adapter | Last-write-wins on the whole `counters` object via `updated_at` | Live for signed-in users |
+| B2 sync adapter (daily slice) | Three-way **additive delta** against `lastSyncedCounters` (`mergeDailyAdditive`) | Live for signed-in users |
 | `apply_progress_event` | Additive increment, server `updated_at` | This spec |
 
-Enabling both on the same client will lose increments: sync will overwrite a
-row the RPC just updated, or the RPC will increment a stale snapshot and
-sync will push the stale object back.
+The draft of this spec called the daily adapter whole-object last-write-wins.
+That is `mergeSettings`, a different slice. **Enabling both writers
+double-counts:** `recordEvent` increments local, the RPC increments server,
+and the next reconcile pushes `delta = local − lastSynced` on top of the
+already-incremented row. E4 (`2026-09-04-e4-client-adoption.md`) is the plan
+that removes the daily upsert so the RPC is the only writer.
 
 **v1 rule:** ship the RPC and the endpoints. Do **not** call them from
-`src/`. The PWA keeps `applyEvent` + sync. A later plan that switches the
-signed-in path onto the RPC must disable the `stats_daily` sync adapter in
-the same PR, with a test that fails if both write.
+`src/` until E4 lands in the same PR as the daily-upsert removal, with a
+test that fails if both write.
 
 Anonymous / offline: the engine remains a no-op on the network, as B2
 specified. No JWT, no progress POST.

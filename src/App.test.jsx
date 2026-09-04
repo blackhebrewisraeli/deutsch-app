@@ -98,6 +98,19 @@ vi.mock('./lib/sync', async (importOriginal) => ({
   markDirty: syncMock.markDirty,
 }));
 
+const progressFlushMock = vi.hoisted(() => ({
+  start: vi.fn(),
+  stop: vi.fn(),
+  scheduleFlush: vi.fn(),
+}));
+
+vi.mock('./lib/progressQueue', async (importOriginal) => ({
+  ...(await importOriginal()),
+  startProgressFlush: (...args) => progressFlushMock.start(...args),
+  stopProgressFlush: (...args) => progressFlushMock.stop(...args),
+  scheduleFlush: (...args) => progressFlushMock.scheduleFlush(...args),
+}));
+
 const TAB_NAMES = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Profile'];
 
 const setViewportWidth = (width) => {
@@ -1209,6 +1222,41 @@ describe('sync engine wiring', () => {
     expect(syncMock.start).not.toHaveBeenCalled();
     expect(syncMock.markDirty).not.toHaveBeenCalled();
     expect(syncMock.stop).toHaveBeenCalled();
+  });
+});
+
+describe('progress flush wiring', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.setItem('deutsch-level', 'a1');
+    syncMock.enabled = false;
+    progressFlushMock.start.mockClear();
+    progressFlushMock.stop.mockClear();
+    progressFlushMock.scheduleFlush.mockClear();
+    authMock.status = 'anonymous';
+  });
+
+  it('starts the flusher for a signed-in user even when sync is off', () => {
+    authMock.status = 'authenticated';
+    renderPastEntry(<App />);
+    expect(progressFlushMock.start).toHaveBeenCalled();
+    expect(syncMock.start).not.toHaveBeenCalled();
+  });
+
+  it('does not start the flusher while signed out', () => {
+    authMock.status = 'anonymous';
+    renderPastEntry(<App />);
+    expect(progressFlushMock.start).not.toHaveBeenCalled();
+    expect(progressFlushMock.stop).toHaveBeenCalled();
+  });
+
+  it('schedules a flush when progress is recorded', () => {
+    authMock.status = 'authenticated';
+    renderPastEntry(<App />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('deutsch:progress'));
+    });
+    expect(progressFlushMock.scheduleFlush).toHaveBeenCalled();
   });
 });
 

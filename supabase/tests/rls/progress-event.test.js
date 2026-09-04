@@ -20,6 +20,7 @@ const callAsService = (over = {}) =>
     p_level: 'a1',
     p_verdict: 'correct',
     p_bonus_xp: 0,
+    p_event_id: crypto.randomUUID(),
     ...over,
   });
 
@@ -28,6 +29,8 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
+  if (!A?.id) return;
+  await admin.from('progress_events_seen').delete().eq('user_id', A.id);
   await admin.from('stats_daily').delete().eq('user_id', A.id);
 });
 
@@ -41,6 +44,7 @@ describe('apply_progress_event: privilege', () => {
       p_level: 'a1',
       p_verdict: 'correct',
       p_bonus_xp: 0,
+      p_event_id: crypto.randomUUID(),
     });
     expect(error).not.toBeNull();
   });
@@ -137,5 +141,33 @@ describe('apply_progress_event: arithmetic', () => {
       .single();
     expect(data.counters.total).toBe(10);
     expect(data.counters.byTab.vocab).toBe(10);
+  });
+});
+
+describe('apply_progress_event: idempotency', () => {
+  it('a replayed event_id does not increment again', async () => {
+    const id = crypto.randomUUID();
+    const day = '2026-09-06';
+    const first = await callAsService({ p_day: day, p_event_id: id });
+    expect(first.error).toBeNull();
+    expect(first.data.total).toBe(1);
+    const replay = await callAsService({ p_day: day, p_event_id: id });
+    expect(replay.error).toBeNull();
+    expect(replay.data.total).toBe(1);
+    const { data } = await admin
+      .from('stats_daily')
+      .select('counters')
+      .eq('user_id', A.id)
+      .eq('day', day)
+      .single();
+    expect(data.counters.total).toBe(1);
+  });
+
+  it('a signed-in client CANNOT insert into progress_events_seen', async () => {
+    const { error } = await A.client.from('progress_events_seen').insert({
+      user_id: A.id,
+      event_id: crypto.randomUUID(),
+    });
+    expect(error).not.toBeNull();
   });
 });

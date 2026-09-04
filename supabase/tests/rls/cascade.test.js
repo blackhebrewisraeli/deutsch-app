@@ -21,7 +21,15 @@ import { adminClient, createSignedInUser } from './helpers.js';
 // Every table that holds rows keyed to a user. `leagues` is excluded on purpose:
 // it is shared competition scaffolding, not user-owned, and must SURVIVE the
 // deletion of any one member.
-const USER_OWNED = ['profiles', 'srs_state', 'stats_daily', 'decks', 'settings', 'league_members'];
+const USER_OWNED = [
+  'profiles',
+  'srs_state',
+  'stats_daily',
+  'decks',
+  'settings',
+  'league_members',
+  'progress_events_seen',
+];
 
 let admin;
 let userId;
@@ -54,6 +62,10 @@ beforeAll(async () => {
     admin
       .from('league_members')
       .insert({ league_id: leagueId, user_id: userId, handle: 'cascade-probe', weekly_xp: 10 }),
+    admin.from('progress_events_seen').insert({
+      user_id: userId,
+      event_id: '11111111-1111-4111-8111-111111111111',
+    }),
   ];
   for (const q of seed) {
     const { error } = await q;

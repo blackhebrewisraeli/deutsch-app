@@ -65,6 +65,7 @@ import ThemeChip from './components/ThemeChip';
 import {
   useAuth,
   getAccessToken,
+  getSupabase,
   isAuthConfigured,
   mayHaveSession,
   signInWithGoogle,
@@ -72,6 +73,8 @@ import {
 } from './lib/auth';
 import { signOutAndReset } from './lib/clearUserState';
 import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
+import { dailyFromRows } from './lib/sync/adapters';
+import { startProgressFlush, stopProgressFlush, scheduleFlush } from './lib/progressQueue';
 import { setLevelBoostEnabled } from './lib/xpEntitlement';
 import { useSyncStatus } from './lib/useSyncStatus';
 import { useLeagueRewards } from './lib/useLeagueRewards';
@@ -558,6 +561,34 @@ export default function App() {
     window.addEventListener('deutsch:progress', onProgress);
     return () => window.removeEventListener('deutsch:progress', onProgress);
   }, [user?.id]);
+
+  // Progress RPC flush is gated on a JWT, not VITE_SYNC_ENABLED. Sync off
+  // must not strand answers now that the daily upsert is gone.
+  useEffect(() => {
+    if (authStatus !== 'authenticated') {
+      stopProgressFlush();
+      return;
+    }
+    startProgressFlush({
+      getAccessToken,
+      loadRemoteDaily: async () => {
+        try {
+          const c = await getSupabase();
+          if (!c) return {};
+          const { data } = await c.from('stats_daily').select();
+          return dailyFromRows(data ?? []);
+        } catch {
+          return {};
+        }
+      },
+    });
+    const onProgress = () => scheduleFlush(500);
+    window.addEventListener('deutsch:progress', onProgress);
+    return () => {
+      window.removeEventListener('deutsch:progress', onProgress);
+      stopProgressFlush();
+    };
+  }, [authStatus]);
 
   // The per-level XP multiplier is an account benefit. Driven off authStatus
   // rather than `user` so a sign-out turns it off in the same render.
