@@ -21,6 +21,7 @@ const TABS = ['chat', 'alphabet', 'vocab', 'translate'];
 const LEVELS = ['a1', 'a2', 'b1'];
 const VERDICTS = ['correct', 'almost', 'wrong'];
 const PACK_IDS = ['de'];
+const EVENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * Per-event cap on the league-XP pipe (`counters.bonusXp` → `xpForDay` →
@@ -57,6 +58,10 @@ export function validateEventBody(raw) {
   if (!LEVELS.includes(level)) return { ok: false, message: 'Unknown level.' };
   if (!VERDICTS.includes(verdict)) return { ok: false, message: 'Unknown verdict.' };
 
+  if (typeof body.id !== 'string' || !EVENT_ID.test(body.id)) {
+    return { ok: false, message: 'id must be a UUID.' };
+  }
+
   const packId = body.packId ?? 'de';
   if (!PACK_IDS.includes(packId)) return { ok: false, message: 'Unknown packId.' };
 
@@ -65,7 +70,7 @@ export function validateEventBody(raw) {
     return { ok: false, message: `bonusXp must be an integer between 0 and ${MAX_BONUS_XP}.` };
   }
 
-  return { ok: true, value: { dateKey, packId, tab, level, verdict, bonusXp } };
+  return { ok: true, value: { id: body.id, dateKey, packId, tab, level, verdict, bonusXp } };
 }
 
 export const eventsHandler = createAccountHandler({
@@ -78,10 +83,10 @@ export const eventsHandler = createAccountHandler({
     const parsed = validateEventBody(req.body);
     if (!parsed.ok) return sendError(res, 'bad_request', parsed.message);
 
-    const { dateKey, packId, tab, level, verdict, bonusXp } = parsed.value;
+    const { id, dateKey, packId, tab, level, verdict, bonusXp } = parsed.value;
 
     const { data, error } = await db.rpc('apply_progress_event', {
-      // The authenticated identity, never a body field.
+      // The authenticated identity, never a body-supplied user id.
       p_user_id: auth.userId,
       p_pack_id: packId,
       p_day: dateKey,
@@ -89,6 +94,7 @@ export const eventsHandler = createAccountHandler({
       p_level: level,
       p_verdict: verdict,
       p_bonus_xp: bonusXp,
+      p_event_id: id,
     });
 
     if (error) {

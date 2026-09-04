@@ -169,6 +169,8 @@ export const EXCLUDED_TABLES = {
   // Shared competition scaffolding rather than private learning data, and the
   // standings are already visible in the app.
   league_members: 'public competition data; pending a payload-shape decision',
+  // Opaque idempotency tokens. The counters they protect already export as daily.
+  progress_events_seen: 'idempotency keys for the progress RPC; counters already export as daily',
 };
 
 // `settings` is one row per user; everything else is a collection. Keeping the

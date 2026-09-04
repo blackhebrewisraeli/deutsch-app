@@ -26,7 +26,13 @@ const req = (body, method = 'POST') => {
   };
 };
 
-const VALID = { dateKey: '2026-09-04', tab: 'vocab', level: 'a1', verdict: 'correct' };
+const VALID = {
+  id: '11111111-1111-4111-8111-111111111111',
+  dateKey: '2026-09-04',
+  tab: 'vocab',
+  level: 'a1',
+  verdict: 'correct',
+};
 
 let rpcResult;
 let rpcArgs;
@@ -85,6 +91,11 @@ describe('validateEventBody', () => {
   it('accepts a body that arrived unparsed', () => {
     expect(validateEventBody(JSON.stringify(VALID)).ok).toBe(true);
   });
+
+  it('rejects a missing or non-uuid id', () => {
+    expect(validateEventBody({ ...VALID, id: undefined }).ok).toBe(false);
+    expect(validateEventBody({ ...VALID, id: 'not-a-uuid' }).ok).toBe(false);
+  });
 });
 
 describe('POST /api/v1/progress/events', () => {
@@ -94,6 +105,11 @@ describe('POST /api/v1/progress/events', () => {
     expect(res.statusCode).toBe(200);
     expect(rpcArgs.name).toBe('apply_progress_event');
     expect(rpcArgs.args.p_user_id).toBe(USER.userId);
+  });
+
+  it('passes p_event_id through to the RPC', async () => {
+    await handler(req(VALID), createRes());
+    expect(rpcArgs.args.p_event_id).toBe(VALID.id);
   });
 
   it('returns the resulting counters', async () => {
@@ -161,18 +177,18 @@ function walk(dir, out = []) {
   return out;
 }
 
-describe('the progress lane has no client caller', () => {
-  it('nothing under src/ references the progress endpoints', () => {
-    // E4: this assertion inverts in Task 6 (src/ becomes the caller; the
-    // daily upsert is the thing that must not exist). Two writers double-count
-    // via mergeDailyAdditive, they do not lose increments.
+describe('the progress lane has one writer', () => {
+  it('src/ may call /api/v1/progress/events and must not upsert stats_daily', () => {
     const files = walk('src');
-    // A guard that inspected nothing would report zero offenders too — the
-    // same green result as a guard that actually found none. Assert the
-    // denominator so an accidentally-empty walk (wrong path, moved directory)
-    // fails loudly instead of passing quietly.
     expect(files.length).toBeGreaterThan(50);
-    const offenders = files.filter((f) => /\/api\/v1\/progress\//.test(readFileSync(f, 'utf8')));
-    expect(offenders).toEqual([]);
+    const upserts = files.filter((f) => {
+      const src = readFileSync(f, 'utf8');
+      return /stats_daily['"]\)\s*\.upsert|from\('stats_daily'\)[\s\S]{0,200}upsert/.test(src);
+    });
+    expect(upserts).toEqual([]);
+    const callers = files.filter((f) =>
+      /\/api\/v1\/progress\/events/.test(readFileSync(f, 'utf8'))
+    );
+    expect(callers.length).toBeGreaterThan(0);
   });
 });
