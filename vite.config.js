@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 import { sentryVitePlugin } from '@sentry/vite-plugin';
 import { resolveRelease } from './scripts/lib/resolveRelease.js';
+import { MODE_COLORS } from './src/lib/themeTokens.js';
 
 const SENTRY_RELEASE = resolveRelease();
 
@@ -40,7 +41,10 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Service worker caches all app assets for offline use
+      includeAssets: ['favicon.svg', 'pwa-192.png', 'pwa-512.png', 'apple-touch-icon.png'],
+      // Service worker caches the app shell and static assets for offline use.
+      // navigateFallback is the basic offline strategy: unknown navigations
+      // (and a cold open with no network) serve the precached index.html.
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
         // vite-plugin-pwa follows build.sourcemap, so enabling maps for the
@@ -78,8 +82,10 @@ export default defineConfig({
         name: 'Deutsch. Sprachschule',
         short_name: 'Deutsch.',
         description: 'Learn German with AI-powered guided exercises',
-        theme_color: '#16110b',
-        background_color: '#FBF8F1',
+        // Tokens, not literals: theme_color is the charcoal masthead (light
+        // `fg`), background_color is the ivory splash (light `ground`).
+        theme_color: MODE_COLORS.light.fg,
+        background_color: MODE_COLORS.light.ground,
         display: 'standalone',
         orientation: 'portrait-primary',
         scope: '/',

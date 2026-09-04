@@ -143,24 +143,12 @@ export function Grid({
 // hidden dependency and cannot be tested without stubbing the hook; the caller
 // already knows whether it is mobile.
 //
-// There is deliberately NO safe-area inset. This app does not opt into safe
-// areas: index.html's viewport meta is `width=device-width, initial-scale=1.0`
-// with no `viewport-fit=cover`, and without that opt-in iOS reports every
-// env(safe-area-inset-*) as 0 — in Mobile Safari and inside the installed PWA
-// alike (vite.config.js sets display:'standalone'). A
-// calc(<gutter>px + env(safe-area-inset-bottom, 0px)) sat here briefly; the
-// env() term always resolved to 0, so it was inert rather than protective
-// while reading as load-bearing.
-//
-// If the opt-in ever lands, the inset is ADDED to bottomGutter rather than
-// substituted for it — that composition is what the prop exists to guarantee,
-// so the inset can never replace the gutter and leave content flush with an
-// edge (spec §3.4). But opting in is a real visual change, not a one-attribute
-// fix: the masthead in App.jsx is `position: sticky; top: 0`, so
-// viewport-fit=cover would slide it under the status bar / Dynamic Island
-// unless it takes an inset-top, and the inline gutters would need
-// inset-left/right or landscape content goes under the notch. That needs a
-// notched device to verify and is not done.
+// Safe-area insets are ADDED to the gutters, never substituted for them —
+// that composition is what `bottomGutter` exists to guarantee (spec §3.4).
+// The viewport opt-in lives in index.html (`viewport-fit=cover`); without it
+// these env() terms resolve to 0. The sticky masthead in App.jsx owns
+// inset-top so the charcoal bar paints under the status bar; this primitive
+// owns the inline edges (landscape notch) and the bottom (home indicator).
 // src/safeArea.test.js fails if either half of the opt-in lands without the other.
 export function PageFrame({
   maxWidth = 1400,
@@ -178,13 +166,10 @@ export function PageFrame({
       style={{
         maxWidth,
         marginInline: 'auto',
-        paddingInline: inline,
+        paddingLeft: `calc(${inline}px + env(safe-area-inset-left, 0px))`,
+        paddingRight: `calc(${inline}px + env(safe-area-inset-right, 0px))`,
         paddingTop: inline,
-        // A plain gutter, with no env(safe-area-inset-bottom) term — see above.
-        // The §3.4 defect this still prevents is the original one: <main> has a
-        // real 32px bottom gutter, and adopting the primitive without this prop
-        // would have silently removed it from every tab.
-        paddingBottom: bottom,
+        paddingBottom: `calc(${bottom}px + env(safe-area-inset-bottom, 0px))`,
         width: '100%',
         ...SHRINKABLE,
         ...style,

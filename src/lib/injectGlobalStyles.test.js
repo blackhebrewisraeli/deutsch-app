@@ -35,20 +35,14 @@ describe('injectGlobalStyles', () => {
     expect(rule.indexOf('100vh')).toBeLessThan(rule.indexOf('100dvh'));
   });
 
-  // The app does not opt into safe areas (no viewport-fit=cover in index.html),
-  // so a safe-area inset in this sheet would always resolve to 0. The rule that
-  // used to live here padded `.entry-screen-foot`, a class no element carried.
-  // Negative assertion because the failure mode is a re-addition, not a removal:
-  // src/safeArea.test.js is the guard that ties this to the viewport meta.
-  it('ships no safe-area padding while the viewport does not opt in', () => {
+  it('pads entry screens by the safe-area insets, composed with the 24px gutter', () => {
     injectGlobalStyles();
-    // Comments stripped first: the sheet explains at length why the rule is
-    // absent, and that prose names both the old class and the inset. Asserting
-    // on the raw text would match the explanation instead of live CSS.
     const rules = sheet().replace(/\/\*[\s\S]*?\*\//g, '');
     expect(rules).not.toContain('entry-screen-foot');
-    expect(rules).not.toContain('safe-area-inset');
-    // The dvh handling is a different concern and must survive.
+    const rule = rules.match(/\.entry-screen\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(rule).toContain('safe-area-inset-top');
+    expect(rule).toContain('safe-area-inset-bottom');
+    expect(rule).toContain('24px');
     expect(rules).toContain('100dvh');
   });
 

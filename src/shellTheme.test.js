@@ -10,7 +10,7 @@ const html = readFileSync('index.html', 'utf8');
 
 /** The shell writes its palette through a JS map keyed by mode. */
 function shellPalette(key) {
-  const m = html.match(new RegExp(`'${key}':\\s*\\[([^\\]]+)\\]`));
+  const m = html.match(new RegExp(`['"]?${key}['"]?:\\s*\\[([^\\]]+)\\]`));
   if (!m) throw new Error(`index.html has no shell palette for "${key}"`);
   return m[1].split(',').map((s) => s.trim().replace(/^'|'$/g, '').toLowerCase());
 }
