@@ -56,6 +56,7 @@ import AlphabetTab from './components/AlphabetTab';
 import VocabTab from './components/VocabTab';
 import TranslateTab from './components/TranslateTab';
 import StatsTab from './components/StatsTab';
+import PracticeLane from './components/PracticeLane';
 import WelcomeGate from './components/WelcomeGate';
 import TrialWall from './components/TrialWall';
 import AuthSheet from './components/auth/AuthSheet';
@@ -1225,48 +1226,57 @@ export default function App() {
             allowed to: Stats and settings stay reachable while it is up. */}
           {TABS.includes(tab) && (
             <div style={{ position: 'relative' }}>
-              {tab === 'chat' && <ChatTab level={level} mobile={mobile} wide={width >= bp.wide} />}
-              {tab === 'alphabet' && (
-                <AlphabetTab
-                  level={level}
-                  mobile={mobile}
-                  reviewTarget={reviewTarget?.tab === 'alphabet' ? reviewTarget : null}
-                  onReviewConsumed={clearReviewTarget}
-                />
-              )}
-              {tab === 'vocab' && (
-                <VocabTab
-                  learnedWords={learnedWords}
-                  learnedByDeck={learnedByDeck}
-                  markLearned={markLearned}
-                  level={level}
-                  mobile={mobile}
-                  reviewTarget={reviewTarget?.tab === 'vocab' ? reviewTarget : null}
-                  onReviewConsumed={clearReviewTarget}
-                  customDecks={liveDecks(decks)}
-                  onDeckGenerated={handleDeckGenerated}
-                  onDeckDeleted={handleDeckDeleted}
-                />
-              )}
-              {tab === 'translate' && (
-                <TranslateTab
-                  // Keyed by level so a switch REMOUNTS rather than mutating a
-                  // live session. The exercise banks are differently shaped per
-                  // level (A1 rows carry `words`, A2 `template`), so any scheme
-                  // that keeps the old state for even one commit hands the wrong
-                  // row to the wrong exercise component and throws. Remounting
-                  // is also what already happens on every tab switch — this tab
-                  // is conditionally rendered — so the level switch now matches
-                  // the lifecycle the component was always written against.
-                  // Removing this key resurrects the A1 -> A2 crash; the
-                  // "restarts the exercise set" test in App.test.jsx is the guard.
-                  key={level}
-                  level={level}
-                  mobile={mobile}
-                  reviewTarget={reviewTarget?.tab === 'translate' ? reviewTarget : null}
-                  onReviewConsumed={clearReviewTarget}
-                />
-              )}
+              {/* Server-driven units, additive over the bundled pack. With no
+                units for this (level, tab) the lane renders its children and
+                NOTHING else, so with an unseeded `lessons` table every tab
+                below is byte-identical to what it was. With units, the tab's
+                own content moves into the lane's collapsible. */}
+              <PracticeLane level={level} tab={tab}>
+                {tab === 'chat' && (
+                  <ChatTab level={level} mobile={mobile} wide={width >= bp.wide} />
+                )}
+                {tab === 'alphabet' && (
+                  <AlphabetTab
+                    level={level}
+                    mobile={mobile}
+                    reviewTarget={reviewTarget?.tab === 'alphabet' ? reviewTarget : null}
+                    onReviewConsumed={clearReviewTarget}
+                  />
+                )}
+                {tab === 'vocab' && (
+                  <VocabTab
+                    learnedWords={learnedWords}
+                    learnedByDeck={learnedByDeck}
+                    markLearned={markLearned}
+                    level={level}
+                    mobile={mobile}
+                    reviewTarget={reviewTarget?.tab === 'vocab' ? reviewTarget : null}
+                    onReviewConsumed={clearReviewTarget}
+                    customDecks={liveDecks(decks)}
+                    onDeckGenerated={handleDeckGenerated}
+                    onDeckDeleted={handleDeckDeleted}
+                  />
+                )}
+                {tab === 'translate' && (
+                  <TranslateTab
+                    // Keyed by level so a switch REMOUNTS rather than mutating a
+                    // live session. The exercise banks are differently shaped per
+                    // level (A1 rows carry `words`, A2 `template`), so any scheme
+                    // that keeps the old state for even one commit hands the wrong
+                    // row to the wrong exercise component and throws. Remounting
+                    // is also what already happens on every tab switch — this tab
+                    // is conditionally rendered — so the level switch now matches
+                    // the lifecycle the component was always written against.
+                    // Removing this key resurrects the A1 -> A2 crash; the
+                    // "restarts the exercise set" test in App.test.jsx is the guard.
+                    key={level}
+                    level={level}
+                    mobile={mobile}
+                    reviewTarget={reviewTarget?.tab === 'translate' ? reviewTarget : null}
+                    onReviewConsumed={clearReviewTarget}
+                  />
+                )}
+              </PracticeLane>
               {trialWallUp && (
                 <TrialWall
                   roundsUsed={game.trial.roundsUsed}
