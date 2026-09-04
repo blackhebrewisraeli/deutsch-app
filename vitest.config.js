@@ -44,7 +44,7 @@ export default defineConfig({
     // pre-commit hook catch it — but the summary reads "Test Files no tests",
     // which looks far more benign than it is.
     poolOptions: { forks: { minForks: 1, maxForks: 4 } },
-    include: ['src/**/*.test.{js,jsx}', 'api/**/*.test.js', 'scripts/**/*.test.js'],
+    include: ['src/**/*.test.{js,jsx}', 'api/**/*.test.js', 'scripts/**/*.test.{js,jsx}'],
     coverage: {
       provider: 'v8',
       // lcov is what SonarCloud reads (sonar.javascript.lcov.reportPaths).

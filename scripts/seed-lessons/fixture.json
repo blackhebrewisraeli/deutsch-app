@@ -1,0 +1,58 @@
+{
+  "note": "A1 seed for the content lane. Payload keys follow what the SHIPPED renderers in src/components/exercises read, which is not always what spec 5.3 sketched — see the header of index.js.",
+  "lessons": [
+    {
+      "pack_id": "de",
+      "course_code": "de",
+      "level": "a1",
+      "tab": "vocab",
+      "unit_number": 1,
+      "exercises": [
+        { "id": "vocab-a1-1-hallo", "type": "flashcard", "payload": { "term": "Hallo", "glosses": ["hello", "hi"], "ipa": "/haˈloː/", "example": "Hallo, wie geht es dir?" } },
+        { "id": "vocab-a1-1-danke", "type": "flashcard", "payload": { "term": "Danke", "glosses": ["thank you", "thanks"], "ipa": "/ˈdaŋkə/", "example": "Danke für deine Hilfe." } },
+        { "id": "vocab-a1-1-brot", "type": "flashcard", "payload": { "term": "das Brot", "glosses": ["the bread"], "ipa": "/das bʁoːt/", "example": "Ich kaufe das Brot." } },
+        { "id": "vocab-a1-1-wasser", "type": "flashcard", "payload": { "term": "das Wasser", "glosses": ["the water"], "ipa": "/das ˈvasɐ/", "example": "Ein Glas Wasser, bitte." } },
+        { "id": "vocab-a1-1-apfel", "type": "flashcard", "payload": { "term": "der Apfel", "glosses": ["the apple"], "ipa": "/deːɐ̯ ˈapfl̩/", "example": "Der Apfel ist rot." } }
+      ]
+    },
+    {
+      "pack_id": "de",
+      "course_code": "de",
+      "level": "a1",
+      "tab": "translate",
+      "unit_number": 1,
+      "exercises": [
+        { "id": "tr-a1-1-morning", "type": "translate", "payload": { "prompt": "Good morning", "accepted": ["Guten Morgen"], "direction": "en-de" } },
+        { "id": "tr-a1-1-name", "type": "translate", "payload": { "prompt": "My name is Anna", "accepted": ["Ich heiße Anna", "Mein Name ist Anna"], "direction": "en-de" } },
+        { "id": "tr-a1-1-water", "type": "translate", "payload": { "prompt": "Ich trinke Wasser", "accepted": ["I drink water", "I am drinking water"], "direction": "de-en" } },
+        { "id": "tr-a1-1-where", "type": "translate", "payload": { "prompt": "Where is the station?", "accepted": ["Wo ist der Bahnhof?", "Wo ist der Bahnhof"], "direction": "en-de" } },
+        { "id": "tr-a1-1-thanks", "type": "translate", "payload": { "prompt": "Vielen Dank", "accepted": ["Many thanks", "Thank you very much"], "direction": "de-en" } }
+      ]
+    },
+    {
+      "pack_id": "de",
+      "course_code": "de",
+      "level": "a1",
+      "tab": "alphabet",
+      "unit_number": 1,
+      "exercises": [
+        { "id": "alpha-a1-1-eszett", "type": "multiple-choice", "payload": { "question": "Wie klingt »ß«?", "choices": ["wie ss", "wie z", "wie sch"] } },
+        { "id": "alpha-a1-1-umlaut-a", "type": "multiple-choice", "payload": { "question": "Welches Wort schreibt man mit »ä«?", "choices": ["Bär", "Bar", "Boot"] } },
+        { "id": "alpha-a1-1-w", "type": "multiple-choice", "payload": { "question": "Wie spricht man »w« in »Wasser«?", "choices": ["wie ein v im Englischen", "wie ein w im Englischen", "stumm"] } },
+        { "id": "alpha-a1-1-z", "type": "multiple-choice", "payload": { "question": "Wie klingt »z« in »Zeit«?", "choices": ["wie ts", "wie s", "wie tsch"] } },
+        { "id": "alpha-a1-1-ch", "type": "multiple-choice", "payload": { "question": "Welcher Laut steht in »ich«?", "choices": ["weiches ch", "hartes k", "sch"] } }
+      ]
+    },
+    {
+      "pack_id": "de",
+      "course_code": "de",
+      "level": "a1",
+      "tab": "chat",
+      "unit_number": 1,
+      "exercises": [
+        { "id": "chat-a1-1-bakery", "type": "chat", "payload": { "persona": "Bäckerin", "initialMessage": "Guten Morgen! Was möchten Sie kaufen?" } },
+        { "id": "chat-a1-1-intro", "type": "chat", "payload": { "persona": "Nachbar", "initialMessage": "Hallo! Wie heißen Sie?" } }
+      ]
+    }
+  ]
+}

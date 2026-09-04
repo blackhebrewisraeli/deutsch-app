@@ -15,6 +15,7 @@ import { MISSIONS, MISSIONS_CHROME } from './missions.js';
 import { QUESTS, QUESTS_CHROME } from './quests.js';
 import { IDENTITY } from './identity.js';
 import { HOME_CHROME } from './home.js';
+import { LESSON_CHROME } from './lessons.js';
 import { resolveDecks } from '../resolve.js';
 import { theme } from './theme.js';
 import { grammar } from './grammar.js';
@@ -67,6 +68,7 @@ export const dePack = {
     // Copy for Home's own chrome: the promoted quick-action heading and its
     // fallback rows, and the heading that groups the two open-task boards.
     homeChrome: HOME_CHROME,
+    lessonChrome: LESSON_CHROME,
   },
   validation: {
     // Keyboard substitutions German itself defines for keyboards lacking the

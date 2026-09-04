@@ -56,6 +56,7 @@ import AlphabetTab from './components/AlphabetTab';
 import VocabTab from './components/VocabTab';
 import TranslateTab from './components/TranslateTab';
 import StatsTab from './components/StatsTab';
+import LessonUnits from './components/LessonUnits';
 import WelcomeGate from './components/WelcomeGate';
 import TrialWall from './components/TrialWall';
 import AuthSheet from './components/auth/AuthSheet';
@@ -1225,6 +1226,11 @@ export default function App() {
             allowed to: Stats and settings stay reachable while it is up. */}
           {TABS.includes(tab) && (
             <div style={{ position: 'relative' }}>
+              {/* Server-driven units, additive over the bundled pack. Renders
+                null unless the content lane returns units for this (level,
+                tab), so with an unseeded `lessons` table every tab below is
+                byte-identical to what it was. */}
+              <LessonUnits level={level} tab={tab} />
               {tab === 'chat' && <ChatTab level={level} mobile={mobile} wide={width >= bp.wide} />}
               {tab === 'alphabet' && (
                 <AlphabetTab
