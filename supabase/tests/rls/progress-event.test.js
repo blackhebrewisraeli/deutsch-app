@@ -108,6 +108,21 @@ describe('apply_progress_event: arithmetic', () => {
     expect(bad3.error).not.toBeNull();
   });
 
+  it('the pure helper itself raises on an out-of-set bucket, rather than returning NULL', async () => {
+    // Unreachable through the endpoint (the writer validates first), but the
+    // helper is exported as an independently testable unit and must not fail
+    // silently: to_jsonb(NULL::integer) is strict, so an unvalidated bad tab
+    // would otherwise make jsonb_set propagate NULL all the way out.
+    const { error } = await admin.rpc('progress_counters_apply', {
+      prev: {},
+      p_tab: 'weird',
+      p_level: 'a1',
+      p_verdict: 'correct',
+      p_bonus_xp: 0,
+    });
+    expect(error).not.toBeNull();
+  });
+
   it('keeps concurrent events from clobbering each other', async () => {
     // The property the ON CONFLICT form exists for. A read-then-write
     // implementation passes every test above and fails this one.

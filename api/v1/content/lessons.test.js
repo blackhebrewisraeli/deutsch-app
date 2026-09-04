@@ -20,10 +20,12 @@ const req = (query = {}, over = {}) => {
 let rows;
 let dbError;
 let orderArgs;
+let filters;
 const mockDb = () => ({
   from: vi.fn(() => ({
     select: vi.fn(() => ({
-      eq: vi.fn(function () {
+      eq: vi.fn(function (col, val) {
+        filters.push([col, val]);
         return this;
       }),
       order: vi.fn((col, opts) => {
@@ -38,6 +40,7 @@ beforeEach(() => {
   rows = [];
   dbError = null;
   orderArgs = null;
+  filters = [];
   serviceClient.mockReturnValue(mockDb());
 });
 
@@ -82,11 +85,13 @@ describe('GET /api/v1/content/lessons', () => {
     rows = [
       {
         id: 'r1',
+        pack_id: 'de',
         course_code: 'de',
         level: 'a1',
         tab: 'vocab',
         unit_number: 1,
         exercises: [{ id: 'e1', type: 'flashcard', payload: {} }],
+        updated_at: '2026-09-04T00:00:00Z',
       },
     ];
     const res = createRes();
@@ -95,6 +100,38 @@ describe('GET /api/v1/content/lessons', () => {
     expect(res.body.lessons).toHaveLength(1);
     expect(res.body.lessons[0].unitNumber).toBe(1);
     expect(res.body.lessons[0].exercises).toHaveLength(1);
+  });
+
+  it('returns packId and updatedAt on each lesson', async () => {
+    rows = [
+      {
+        id: 'r1',
+        pack_id: 'de',
+        course_code: 'de',
+        level: 'a1',
+        tab: 'vocab',
+        unit_number: 1,
+        exercises: [],
+        updated_at: '2026-09-04T00:00:00Z',
+      },
+    ];
+    const res = createRes();
+    await handler(req(), res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body.lessons[0].packId).toBe('de');
+    expect(res.body.lessons[0].updatedAt).toBe('2026-09-04T00:00:00Z');
+  });
+
+  it('rejects an unknown packId', async () => {
+    const res = createRes();
+    await handler(req({ packId: 'en' }), res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error.code).toBe('bad_request');
+  });
+
+  it('filters the query on pack_id', async () => {
+    await handler(req(), createRes());
+    expect(filters).toContainEqual(['pack_id', 'de']);
   });
 
   it('returns an empty list, not a 404, when nothing matches', async () => {

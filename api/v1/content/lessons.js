@@ -13,6 +13,7 @@ import { sendError } from '../../_lib/respond.js';
 const COURSE_CODES = ['de'];
 const LEVELS = ['a1', 'a2', 'b1'];
 const TABS = ['chat', 'alphabet', 'vocab', 'translate'];
+const PACK_IDS = ['de'];
 
 /** The closed set of renderers the engine knows how to call. */
 export const EXERCISE_TYPES = ['flashcard', 'translate', 'chat', 'multiple-choice'];
@@ -45,13 +46,14 @@ export function sanitizeExercises(exercises, rowId) {
 
 const handler = createPublicHandler({
   method: 'GET',
-  ipRate: { max: 120, windowMs: 300000 },
+  ipRate: { max: 60, windowMs: 300000 },
   name: 'content lessons',
   failureMessage: 'Content unavailable.',
   run: async ({ req, res, db }) => {
     const courseCode = req.query?.courseCode;
     const level = req.query?.level;
     const tab = req.query?.tab;
+    const packId = req.query?.packId ?? 'de';
 
     if (!COURSE_CODES.includes(courseCode)) {
       return sendError(res, 'bad_request', 'Unknown courseCode.');
@@ -62,10 +64,14 @@ const handler = createPublicHandler({
     if (!TABS.includes(tab)) {
       return sendError(res, 'bad_request', 'Unknown tab.');
     }
+    if (!PACK_IDS.includes(packId)) {
+      return sendError(res, 'bad_request', 'Unknown packId.');
+    }
 
     const { data, error } = await db
       .from('lessons')
-      .select('id, course_code, level, tab, unit_number, exercises')
+      .select('id, pack_id, course_code, level, tab, unit_number, exercises, updated_at')
+      .eq('pack_id', packId)
       .eq('course_code', courseCode)
       .eq('level', level)
       .eq('tab', tab)
@@ -78,11 +84,13 @@ const handler = createPublicHandler({
 
     const lessons = (data ?? []).map((row) => ({
       id: row.id,
+      packId: row.pack_id,
       courseCode: row.course_code,
       level: row.level,
       tab: row.tab,
       unitNumber: row.unit_number,
       exercises: sanitizeExercises(row.exercises, row.id).kept,
+      updatedAt: row.updated_at,
     }));
 
     return res.status(200).json({ lessons });

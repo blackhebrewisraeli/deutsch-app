@@ -14,9 +14,14 @@
 -- increment would vanish.
 
 -- Pure: normalize every bucket to 0, then increment exactly the four counters
--- applyEvent increments. Mirrors normalizeDayAggregate — a partially-written
--- entry (older schema, or one merged in by sync) would otherwise produce NULL
--- where a number belongs, and NULL spreads silently through the XP arithmetic.
+-- applyEvent increments. Structurally mirrors normalizeDayAggregate, but is
+-- STRICTER, not identical: the client's `?? 0` passes junk through silently,
+-- while this raises on a non-integer or overflowing stored counter
+-- (`{"total": "many"}` → invalid input syntax; `{"total": 2147483647}` →
+-- integer out of range). That is the safer of the two behaviours and is left
+-- as-is; a partially-written entry (older schema, or one merged in by sync)
+-- still normalizes missing buckets to 0 rather than producing NULL, which
+-- would otherwise spread silently through the XP arithmetic.
 create or replace function public.progress_counters_apply(
   prev        jsonb,
   p_tab       text,
@@ -37,6 +42,16 @@ declare
   lv       text;
   vd       text;
 begin
+  if p_tab not in ('chat', 'alphabet', 'vocab', 'translate') then
+    raise exception 'invalid tab: %', p_tab;
+  end if;
+  if p_level not in ('a1', 'a2', 'b1') then
+    raise exception 'invalid level: %', p_level;
+  end if;
+  if p_verdict not in ('correct', 'almost', 'wrong') then
+    raise exception 'invalid verdict: %', p_verdict;
+  end if;
+
   out_json := jsonb_build_object(
     'total',   coalesce((prev->>'total')::integer, 0),
     'bonusXp', coalesce((prev->>'bonusXp')::integer, 0),

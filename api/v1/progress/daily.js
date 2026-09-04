@@ -1,5 +1,6 @@
 import { createAccountHandler } from '../../_lib/accountHandler.js';
 import { sendError } from '../../_lib/respond.js';
+import { isValidDateKey } from '../../_lib/dateKey.js';
 
 // Completes the developer interface: read a day back without a browser
 // supabase-js select. The signed-in PWA does not have to switch to this — the
@@ -12,7 +13,6 @@ const TABS = ['chat', 'alphabet', 'vocab', 'translate'];
 const LEVELS = ['a1', 'a2', 'b1'];
 const VERDICTS = ['correct', 'almost', 'wrong'];
 const PACK_IDS = ['de'];
-const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
  * The zeroed aggregate, mirroring emptyDayAggregate in src/lib/stats.js.
@@ -38,7 +38,7 @@ const handler = createAccountHandler({
   failureMessage: 'Could not read progress.',
   run: async ({ req, res, auth, db }) => {
     const dateKey = req.query?.date;
-    if (typeof dateKey !== 'string' || !DATE_KEY.test(dateKey)) {
+    if (!isValidDateKey(dateKey)) {
       return sendError(res, 'bad_request', 'date must be YYYY-MM-DD.');
     }
     const packId = req.query?.packId ?? 'de';

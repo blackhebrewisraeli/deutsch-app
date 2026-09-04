@@ -87,6 +87,12 @@ describe('GET /api/v1/progress/daily', () => {
     expect(res.statusCode).toBe(400);
   });
 
+  it('rejects a well-formed but impossible date with 400, not 500', async () => {
+    const res = createRes();
+    await handler(req({ date: '2026-02-30' }), res);
+    expect(res.statusCode).toBe(400);
+  });
+
   it('rejects an unknown packId', async () => {
     const res = createRes();
     await handler(req({ packId: 'en' }), res);

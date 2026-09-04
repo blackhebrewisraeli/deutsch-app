@@ -1,5 +1,6 @@
 import { createAccountHandler } from '../../_lib/accountHandler.js';
 import { sendError } from '../../_lib/respond.js';
+import { isValidDateKey } from '../../_lib/dateKey.js';
 
 // Generic progress events. The write goes through one Postgres function
 // because an event is an INCREMENT: client-side read-modify-write on
@@ -14,9 +15,15 @@ const TABS = ['chat', 'alphabet', 'vocab', 'translate'];
 const LEVELS = ['a1', 'a2', 'b1'];
 const VERDICTS = ['correct', 'almost', 'wrong'];
 const PACK_IDS = ['de'];
-const DATE_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
-/** Cap so a crafted token cannot drop an enormous bonus onto the league. */
+/**
+ * Per-event cap on the league-XP pipe (`counters.bonusXp` → `xpForDay` →
+ * `weekly_xp`). It bounds ONE request, not the lane: at 60 requests per 5
+ * minutes a caller can still push far more than any real week's XP. The real
+ * limit on abuse is that a signed-in user can already write their own
+ * `stats_daily` row directly through RLS, so this endpoint grants no capability
+ * they did not have. Do not describe this as league protection.
+ */
 export const MAX_BONUS_XP = 500;
 
 export function validateEventBody(raw) {
@@ -37,7 +44,7 @@ export function validateEventBody(raw) {
   }
 
   const { dateKey, tab, level, verdict } = body;
-  if (typeof dateKey !== 'string' || !DATE_KEY.test(dateKey)) {
+  if (!isValidDateKey(dateKey)) {
     return { ok: false, message: 'dateKey must be YYYY-MM-DD.' };
   }
   if (!TABS.includes(tab)) return { ok: false, message: 'Unknown tab.' };

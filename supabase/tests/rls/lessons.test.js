@@ -49,12 +49,12 @@ describe('RLS: lessons', () => {
   });
 
   it('a signed-in client CANNOT update', async () => {
-    const { error } = await A.client.from('lessons').update({ level: 'b1' }).eq('id', seeded.id);
-    // PostgREST reports a blocked UPDATE as an error OR as zero rows affected;
-    // assert the row is unchanged either way, which is the property that matters.
+    await A.client.from('lessons').update({ level: 'b1' }).eq('id', seeded.id);
+    // PostgREST reports a blocked UPDATE as an error OR as zero rows affected,
+    // so asserting on the response's `error` field would be unreliable either
+    // way. The property that actually matters is that the row is unchanged.
     const { data } = await admin.from('lessons').select('level').eq('id', seeded.id).single();
     expect(data.level).toBe('a1');
-    expect(error === null || error !== null).toBe(true);
   });
 
   it('a signed-in client CANNOT delete', async () => {

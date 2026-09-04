@@ -6,15 +6,15 @@ Schema source of truth: `supabase/migrations/` (versioned SQL).
 
 ## Tables
 
-| Table         | PK                            | Holds                                                                                | Mirrors (localStorage)                                         |
-| ------------- | ----------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| `profiles`    | `user_id`                     | display name; auto-created on signup by trigger                                      | —                                                              |
-| `srs_state`   | `(user_id, pack_id, srs_key)` | Leitner state: `box`, `last_reviewed`, `next_due`, `reps`                            | `srs['<deckId>:<cardId>']` — `srs_key` holds that key verbatim |
-| `stats_daily` | `(user_id, pack_id, day)`     | `counters jsonb`                                                                     | `daily['YYYY-MM-DD']`                                          |
-| `decks`       | `(user_id, pack_id, deck_id)` | `name`, `cards jsonb`                                                                | custom decks                                                   |
-| `settings`    | `user_id`                     | `data jsonb`                                                                         | the `gamification` key                                         |
-| `rate_limits` | `(key, window_start)`         | AI-lane counters                                                                     | — (server-only)                                                |
-| `lessons`     | `id`                          | lesson-unit content: `course_code`, `level`, `tab`, `unit_number`, `exercises jsonb` | —                                                              |
+| Table         | PK                            | Holds                                                                                           | Mirrors (localStorage)                                         |
+| ------------- | ----------------------------- | ----------------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `profiles`    | `user_id`                     | display name; auto-created on signup by trigger                                                 | —                                                              |
+| `srs_state`   | `(user_id, pack_id, srs_key)` | Leitner state: `box`, `last_reviewed`, `next_due`, `reps`                                       | `srs['<deckId>:<cardId>']` — `srs_key` holds that key verbatim |
+| `stats_daily` | `(user_id, pack_id, day)`     | `counters jsonb`                                                                                | `daily['YYYY-MM-DD']`                                          |
+| `decks`       | `(user_id, pack_id, deck_id)` | `name`, `cards jsonb`                                                                           | custom decks                                                   |
+| `settings`    | `user_id`                     | `data jsonb`                                                                                    | the `gamification` key                                         |
+| `rate_limits` | `(key, window_start)`         | AI-lane counters                                                                                | — (server-only)                                                |
+| `lessons`     | `id`                          | lesson-unit content: `pack_id`, `course_code`, `level`, `tab`, `unit_number`, `exercises jsonb` | —                                                              |
 
 `lessons` is public content, not user data — nobody owns a row. It is not
 user-scoped (no `user_id`), so it appears in neither `EXPORTED_TABLES` nor

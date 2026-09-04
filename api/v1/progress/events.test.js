@@ -133,6 +133,12 @@ describe('POST /api/v1/progress/events', () => {
     expect(res.body.error.code).toBe('bad_request');
   });
 
+  it('rejects a well-formed but impossible dateKey with 400, not 500', async () => {
+    const res = createRes();
+    await handler(req({ ...VALID, dateKey: '2026-02-30' }), res);
+    expect(res.statusCode).toBe(400);
+  });
+
   it('surfaces an RPC failure as the envelope without leaking the message', async () => {
     rpcResult = { data: null, error: { message: 'pg detail' } };
     const res = createRes();
@@ -156,9 +162,13 @@ describe('the progress lane has no client caller', () => {
     // Spec section 7.3: B2 sync writes stats_daily with whole-object LWW and
     // this RPC writes additively. Both live at once loses increments, silently,
     // and no unit test would show it. E4 is the plan that switches one off.
-    const offenders = walk('src').filter((f) =>
-      /\/api\/v1\/progress\//.test(readFileSync(f, 'utf8'))
-    );
+    const files = walk('src');
+    // A guard that inspected nothing would report zero offenders too — the
+    // same green result as a guard that actually found none. Assert the
+    // denominator so an accidentally-empty walk (wrong path, moved directory)
+    // fails loudly instead of passing quietly.
+    expect(files.length).toBeGreaterThan(50);
+    const offenders = files.filter((f) => /\/api\/v1\/progress\//.test(readFileSync(f, 'utf8')));
     expect(offenders).toEqual([]);
   });
 });
