@@ -17,6 +17,14 @@ const FIXTURES = [
     type: 'translate',
     payload: { prompt: 'Good morning', accepted: ['Guten Morgen', 'Morgen'], direction: 'en-de' },
   },
+  {
+    type: 'chat',
+    payload: { initialMessage: 'Guten Tag! Wie heißt du?', persona: 'Anna' },
+  },
+  {
+    type: 'multiple-choice',
+    payload: { question: 'What is the article for Haus?', options: ['der', 'die', 'das'] },
+  },
   { type: 'hologram', payload: { term: 'should not render' } },
 ];
 
