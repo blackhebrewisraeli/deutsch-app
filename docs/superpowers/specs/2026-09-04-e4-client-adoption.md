@@ -1,10 +1,11 @@
 # E4 — client adoption: queued events, the RPC as the only writer
 
 - **Date:** 2026-09-04
-- **Status:** design, ready for a plan
-- **Author:** Claude Code
+- **Status:** design, decisions locked, plan at `docs/superpowers/plans/2026-09-04-e4-client-adoption.md`
+- **Author:** Claude Code (spec); Cursor (plan, from owner-locked decisions)
 - **Predecessor:** `2026-09-04-data-driven-engine.md` (E1–E3, shipped as #235). Its §13 Q3 refused to fold E4 in and named what a second spec must cover: "sync adapter off, merge tests, offline queue."
 - **Owner decision on record (2026-09-04):** of the three shapes put to the owner — queue events, keep sync unchanged, or RPC-only-when-signed-in — the owner chose **queue events, RPC is the writer**, explicitly to preserve offline play for signed-in learners.
+- **Owner follow-ups (2026-09-04), locking §7:** flush the guest backlog on sign-in; 30-day rolling dedupe window, classified in `EXCLUDED_TABLES`; correct the false "loses increments" sentence in place.
 
 ---
 
@@ -125,17 +126,23 @@ it.** This costs a stored key, which E1–E3 forbade — but that constraint gov
 E1–E3, whose whole point was adding no state. Here the alternative is a known
 data-corruption path, and correctness outranks the earlier slice's minimalism.
 
-The plan must choose the mechanism and justify it. The obvious candidate is a
-`progress_events_seen (user_id, event_id, created_at)` table with a primary key on
-`(user_id, event_id)`, the RPC inserting into it first and returning the existing
-counters unchanged on conflict. **A dedupe table is user-owned data and must be
-classified in `EXPORTED_TABLES` or `EXCLUDED_TABLES` in the same PR** — that
-classification is what `decks` went missing for.
+**Locked (2026-09-04):** `progress_events_seen (user_id, event_id, created_at)`
+with primary key `(user_id, event_id)`. The RPC inserts into it first and
+returns the existing counters unchanged on conflict. It is user-owned
+(`user_id` → `auth.users` `on delete cascade`) and is classified in
+**`EXCLUDED_TABLES`**, not exported: the keys are opaque idempotency tokens,
+and the learning data they protect is already exported as `daily`.
 
-Retention matters: the table grows one row per answered card forever. The plan
-must state a pruning rule (a `created_at` index plus a cron, or a rolling window
-tied to the trailing sync horizon), or explain why unbounded growth is acceptable
-at this scale.
+**Retention: 30-day rolling window, opportunistic prune inside the RPC, no new
+cron.** After a successful insert the writer deletes this user's rows with
+`created_at < now() - interval '30 days'`. No new Vercel function and no new
+cron — the Hobby plan is already at the 12-function cap, which is why the
+progress lane is one dispatched file. A global cron would also prune a device
+that has been offline for 31 days and then replay its queue; per-user prune
+on write only runs when that user writes, so an offline device's seen rows
+stay until it next lands an event. The accepted edge: two devices, one
+offline >30 days, the other writing daily, can prune the offline device's
+ids. At this scale that is cheaper than a 13th function.
 
 ### 4.2 Remove the push, keep the pull
 
@@ -169,9 +176,14 @@ The plan must decide, and the decision is user-visible either way:
 - **Accept the loss** — silently discards guest progress at the moment of sign-up,
   which is the worst possible moment.
 
-This spec does not settle it because it is a product question about what a learner
-is promised when they create an account. It must be answered before the plan's
-first task, not discovered during it.
+**Locked (2026-09-04): flush the guest backlog on sign-in. Never silently
+discard guest progress at account conversion.** `recordEvent` enqueues even
+while signed out. Flush runs only with a JWT. Pre-E4 aggregate-only days
+(local `daily` with no queued events) are expanded into synthetic events from
+`clamp(sub(local, add(remote, queueAsCounters)))` so the RPC remains the only
+writer and leftover guest counters still land. The pairing of tab × level ×
+verdict is not recovered — only the aggregate is — which is what `stats_daily`
+stores.
 
 ---
 
@@ -207,11 +219,13 @@ first task, not discovered during it.
 
 ---
 
-## 7 · Open questions the plan may not answer on its own
+## 7 · Rulings (owner-locked 2026-09-04; no longer open)
 
-1. **§4.3 — the signed-out backlog.** A product decision about what sign-up promises.
-2. **§4.1 — dedupe retention.** Unbounded growth, a cron prune, or a rolling window.
-3. **Does the correction in §1 warrant amending E1–E3's §7.3 in place**, or a note
-   pointing here? The wrong sentence is currently repeated in three shipped files
-   (`docs/api/progress.md`, `api/v1/progress/events.js`, the E1–E3 spec) and will
-   keep being cited until one of them is authoritative.
+1. **§4.3 — signed-out backlog.** Flush on sign-in. See §4.3 locked paragraph.
+2. **§4.1 — dedupe retention.** 30-day rolling window, opportunistic prune in
+   the RPC, classified in `EXCLUDED_TABLES`. See §4.1 locked paragraph.
+3. **§1 correction is in-place, not a pointer.** Amend E1–E3 §7.3,
+   `docs/api/progress.md`, `api/_lib/progressHandlers.js` (the header the
+   predecessor named as `api/v1/progress/events.js` — that file was folded into
+   the dispatcher during E3 because of the Hobby 12-function cap), and the
+   no-caller test comment, so a later reader cannot cite the inverted failure.

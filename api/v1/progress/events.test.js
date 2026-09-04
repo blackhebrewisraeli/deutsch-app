@@ -163,9 +163,9 @@ function walk(dir, out = []) {
 
 describe('the progress lane has no client caller', () => {
   it('nothing under src/ references the progress endpoints', () => {
-    // Spec section 7.3: B2 sync writes stats_daily with whole-object LWW and
-    // this RPC writes additively. Both live at once loses increments, silently,
-    // and no unit test would show it. E4 is the plan that switches one off.
+    // E4: this assertion inverts in Task 6 (src/ becomes the caller; the
+    // daily upsert is the thing that must not exist). Two writers double-count
+    // via mergeDailyAdditive, they do not lose increments.
     const files = walk('src');
     // A guard that inspected nothing would report zero offenders too — the
     // same green result as a guard that actually found none. Assert the

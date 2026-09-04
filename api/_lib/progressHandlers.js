@@ -6,10 +6,10 @@ import { isValidDateKey } from './dateKey.js';
 // because an event is an INCREMENT: client-side read-modify-write on
 // `counters` races across devices.
 //
-// NOT CALLED FROM src/. B2 sync already writes stats_daily with whole-object
-// LWW, and enabling both writers loses increments — see spec section 7.3. A
-// later plan that moves the signed-in path onto this endpoint must disable the
-// stats_daily sync adapter in the same PR.
+// The signed-in PWA calls this (E4). The daily sync upsert is gone; this RPC
+// is the only writer of stats_daily. Running both would DOUBLE-COUNT because
+// mergeDailyAdditive would push local−lastSynced on top of an already
+// incremented row — see docs/superpowers/specs/2026-09-04-e4-client-adoption.md.
 //
 // eventsHandler and dailyHandler live in one file — not two api/v1/progress/*
 // files — because Vercel's Hobby plan caps a deployment at 12 Serverless
