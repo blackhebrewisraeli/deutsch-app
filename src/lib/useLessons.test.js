@@ -5,34 +5,14 @@ import { renderHook, waitFor } from '@testing-library/react';
 // make "the hook falls back to the warm cache" an assertion about a stub
 // rather than about the cache code that actually ships.
 import { useLessons } from './useLessons';
-import { LESSONS_CACHE_KEY, cacheKeyFor } from './lessons';
+import { lessonUnit, respondWith, warmLessonCache } from './lessonsTestHelpers';
 
 const params = { courseCode: 'de', level: 'a1', tab: 'vocab' };
 
-const unit = (id = 'u1') => ({
-  id,
-  packId: 'de',
-  courseCode: 'de',
-  level: 'a1',
-  tab: 'vocab',
-  unitNumber: 1,
-  exercises: [{ id: 'greet-001', type: 'flashcard', payload: {} }],
-});
+const unit = (id = 'u1') =>
+  lessonUnit({ id, exercises: [{ id: 'greet-001', type: 'flashcard', payload: {} }] });
 
-function respondWith(status, body) {
-  return vi.fn().mockResolvedValue({
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(body),
-  });
-}
-
-function warmCache(p, lessons) {
-  localStorage.setItem(
-    LESSONS_CACHE_KEY,
-    JSON.stringify({ [cacheKeyFor(p)]: { lessons, cachedAt: Date.now() } })
-  );
-}
+const warmCache = (p, lessons) => warmLessonCache(lessons, p);
 
 beforeEach(() => {
   localStorage.clear();

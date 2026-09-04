@@ -13,41 +13,22 @@ vi.mock('../lib/stats', async (importOriginal) => ({
 // stubbed. "Stay invisible unless there are units" is the whole contract, and
 // mocking the hook would make it an assertion about a stub.
 import PracticeLane from './PracticeLane';
-import { LESSONS_CACHE_KEY, cacheKeyFor } from '../lib/lessons';
+import {
+  flashcardExercise as flashcard,
+  lessonUnit,
+  pendingFetch,
+  respondWith,
+  warmLessonCache,
+} from '../lib/lessonsTestHelpers';
 import { activePack } from '../packs';
 
 const props = { level: 'a1', tab: 'vocab' };
 const BUNDLED = 'BUNDLED-TAB-CONTENT';
 const bundled = <div>{BUNDLED}</div>;
 
-const unit = (id, unitNumber, exercises) => ({
-  id,
-  packId: 'de',
-  courseCode: 'de',
-  level: 'a1',
-  tab: 'vocab',
-  unitNumber,
-  exercises,
-});
-
-const flashcard = (id, term) => ({ id, type: 'flashcard', payload: { term, glosses: ['x'] } });
-
-function respondWith(status, body) {
-  return vi.fn().mockResolvedValue({
-    ok: status >= 200 && status < 300,
-    status,
-    json: () => Promise.resolve(body),
-  });
-}
-
-function warmCache(lessons, over = {}) {
-  const key = cacheKeyFor({ courseCode: 'de', packId: 'de', ...props, ...over });
-  const existing = JSON.parse(localStorage.getItem(LESSONS_CACHE_KEY) ?? '{}');
-  existing[key] = { lessons };
-  localStorage.setItem(LESSONS_CACHE_KEY, JSON.stringify(existing));
-}
-
-const pending = () => vi.fn(() => new Promise(() => {}));
+const unit = (id, unitNumber, exercises) => lessonUnit({ id, unitNumber, exercises });
+const warmCache = (lessons, over = {}) => warmLessonCache(lessons, over);
+const pending = pendingFetch;
 
 beforeEach(() => {
   localStorage.clear();

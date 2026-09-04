@@ -25,40 +25,21 @@ vi.mock('./exercises/exerciseRegistry', () => ({
 }));
 
 import PracticeLane from './PracticeLane';
-import { LESSONS_CACHE_KEY, cacheKeyFor } from '../lib/lessons';
-import { QUEUE_KEY } from '../lib/progressQueue';
-import { loadState } from '../lib/storage';
-import { todayKey } from '../lib/stats';
+import {
+  lessonUnit,
+  pendingFetch,
+  progressQueueSnapshot as queue,
+  todayRoundTotal as todayTotal,
+  warmLessonCache,
+} from '../lib/lessonsTestHelpers';
 
 const props = { level: 'a1', tab: 'vocab' };
-const queue = () => JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]');
-const todayTotal = () => loadState()?.daily?.[todayKey()]?.total ?? 0;
 
 beforeEach(() => {
   localStorage.clear();
   vi.unstubAllGlobals();
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(() => new Promise(() => {}))
-  );
-  localStorage.setItem(
-    LESSONS_CACHE_KEY,
-    JSON.stringify({
-      [cacheKeyFor({ courseCode: 'de', packId: 'de', ...props })]: {
-        lessons: [
-          {
-            id: 'u1',
-            packId: 'de',
-            courseCode: 'de',
-            level: 'a1',
-            tab: 'vocab',
-            unitNumber: 1,
-            exercises: [{ id: 'a', type: 'flashcard', payload: {} }],
-          },
-        ],
-      },
-    })
-  );
+  vi.stubGlobal('fetch', pendingFetch());
+  warmLessonCache([lessonUnit({ exercises: [{ id: 'a', type: 'flashcard', payload: {} }] })]);
 });
 
 describe('PracticeLane dedupe — a renderer that fires twice still counts once', () => {

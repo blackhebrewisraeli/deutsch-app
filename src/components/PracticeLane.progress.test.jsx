@@ -8,46 +8,22 @@ import userEvent from '@testing-library/user-event';
 // ONE local increment AND exactly ONE queued event. A mocked recordEvent can
 // prove it was called once; only the real one can prove it did not write twice.
 import PracticeLane from './PracticeLane';
-import { LESSONS_CACHE_KEY, cacheKeyFor } from '../lib/lessons';
-import { QUEUE_KEY } from '../lib/progressQueue';
-import { loadState } from '../lib/storage';
-import { todayKey } from '../lib/stats';
+import {
+  flashcardExercise as card,
+  lessonUnit,
+  pendingFetch,
+  progressQueueSnapshot as queue,
+  todayRoundTotal as todayTotal,
+  warmLessonCache,
+} from '../lib/lessonsTestHelpers';
 
 const props = { level: 'a1', tab: 'vocab' };
-
-const card = (id, term) => ({ id, type: 'flashcard', payload: { term, glosses: ['x'] } });
-
-function warmCache(exercises) {
-  localStorage.setItem(
-    LESSONS_CACHE_KEY,
-    JSON.stringify({
-      [cacheKeyFor({ courseCode: 'de', packId: 'de', ...props })]: {
-        lessons: [
-          {
-            id: 'u1',
-            packId: 'de',
-            courseCode: 'de',
-            level: 'a1',
-            tab: 'vocab',
-            unitNumber: 1,
-            exercises,
-          },
-        ],
-      },
-    })
-  );
-}
-
-const queue = () => JSON.parse(localStorage.getItem(QUEUE_KEY) ?? '[]');
-const todayTotal = () => loadState()?.daily?.[todayKey()]?.total ?? 0;
+const warmCache = (exercises) => warmLessonCache([lessonUnit({ exercises })]);
 
 beforeEach(() => {
   localStorage.clear();
   vi.unstubAllGlobals();
-  vi.stubGlobal(
-    'fetch',
-    vi.fn(() => new Promise(() => {}))
-  );
+  vi.stubGlobal('fetch', pendingFetch());
 });
 
 describe('PracticeLane progress — one answer, one increment, one event', () => {
