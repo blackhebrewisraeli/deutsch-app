@@ -9,4 +9,12 @@ export const LESSON_CHROME = {
   heading: 'Lektionen',
   /** Prefixes the unit number: "Einheit 3". */
   unitPrefix: 'Einheit',
+
+  /**
+   * Summary label on the collapsible that holds the tab's bundled content once
+   * server-driven units are on screen. The dynamic pathway is the primary
+   * journey; the bundled decks and tables stay one tap away rather than several
+   * screens down (owner decision, 2026-09-04).
+   */
+  bundledHeading: 'Reference & Bundled Practice',
 };

@@ -21,12 +21,23 @@ const THUMB = {
  * aliases so a seed fixture still renders. Local selection only — no grade,
  * no fetch, no progress write.
  */
-export default function MultipleChoiceExercise({ payload }) {
+export default function MultipleChoiceExercise({ payload, onGraded }) {
   const [selected, setSelected] = useState(null);
   const [submitted, setSubmitted] = useState(false);
   const data = payload && typeof payload === 'object' ? payload : {};
   const question = firstString(data.question, data.prompt);
   const options = readOptions(data.options ?? data.choices);
+  // Optional: a seed written before grading existed carries no `answer`, and
+  // must keep behaving exactly as it did — selectable, submittable, unscored.
+  // Silently grading everything `wrong` against a missing key would bury a
+  // learner's XP under a content bug.
+  const answer = firstString(data.answer);
+
+  function submit() {
+    if (submitted) return;
+    setSubmitted(true);
+    if (onGraded && answer) onGraded(selected === answer ? 'correct' : 'wrong');
+  }
 
   return (
     <Stack gap={5} style={{ width: '100%', overflowX: 'hidden' }}>
@@ -70,7 +81,7 @@ export default function MultipleChoiceExercise({ payload }) {
       <Button
         variant="go"
         disabled={!selected || submitted}
-        onClick={() => setSubmitted(true)}
+        onClick={submit}
         style={{
           ...THUMB,
           marginBottom: `calc(${SPACE[3]}px + env(safe-area-inset-bottom, 0px))`,

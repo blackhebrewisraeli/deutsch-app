@@ -113,7 +113,7 @@ Content can carry a pedagogical-track tag. Progress cannot — not in v1.
 | Lesson writes | Service role only (seed / import) | Same posture as `rate_limits`: no client INSERT/UPDATE/DELETE. |
 | Offline SoT | Unchanged: bundled pack + `localStorage` | PWA stays playable with `npm run dev` and no secrets. |
 | Lane 3 packs routes | Still reserved | This is a lesson-unit slice, not B4. Do not implement `/api/v1/packs`. |
-| Client adoption | Out of scope | A later plan. Shipping the contract first is the B1 pattern. |
+| Client adoption | **Shipped in E5** (#238) | Additive overlay; `PracticeLane` renders units above the tab's bundled content, which moves into a collapsible. Graded answers go through `recordEvent`, the same entry point every other tab uses. |
 
 ---
 
@@ -261,15 +261,36 @@ to make the names line up.
 
 ### 5.3 What `payload` is allowed to contain (guidance, not a schema)
 
-The engine stays language-blind. Payload keys are pack data. Typical v1
-shapes, for implementers and for seed fixtures — not CHECK-constrained:
+The engine stays language-blind. Payload keys are pack data, not CHECK-constrained.
 
-- `flashcard` — `{ term, glosses[], ipa?, example? }` (do not require a
-  `de` field in the table contract; the German pack's card field name is a
-  recorded exception in `AGENTS.md` and lives in pack data, not here)
-- `translate` — `{ prompt, accepted[], direction }`
-- `multiple-choice` — `{ prompt, choices[], correctId }`
-- `chat` — `{ scenarioId, taskId }` referencing pack-owned chat content
+**Corrected 2026-09-04 (E5): these are the keys the SHIPPED renderers in
+`src/components/exercises/` actually read.** The original sketch for
+`multiple-choice` and `chat` did not match any code — a fixture written to it
+inserts cleanly, serves cleanly, and renders an empty card. Code is truth here;
+`scripts/seed-lessons/fixture.test.jsx` renders every fixture exercise through
+the real `ExerciseViewer` and fails on the old shapes.
+
+| Type | Payload | Grades? |
+|---|---|---|
+| `flashcard` | `{ term, glosses[], ipa?, example? }` | Self-rating: "Got it" → `correct`, "Not yet" → `wrong` |
+| `translate` | `{ prompt, accepted[], direction }` | Typed answer vs **every** `accepted` string: distance 0 → `correct`, ≤2 → `almost`, else `wrong` |
+| `multiple-choice` | `{ question \| prompt, choices[], answer? }` | `answer` (a string equal to one of `choices`) → `correct`/`wrong` |
+| `chat` | `{ initialMessage, persona }` | Not graded — a free conversation has no verdict |
+
+Notes that cost time to rediscover:
+
+- `choices` is an array of **plain strings**, not `{ id, label }` objects. The
+  renderer filters non-strings out, so an object array renders **zero options**
+  under a perfectly good question.
+- There is no `correctId`. Correctness is `answer`, matched by value.
+- `answer` is **optional**. Without it the exercise stays selectable and
+  submittable but unscored — a pre-grading seed must not silently bank `wrong`
+  for every learner.
+- `flashcard` does not require a `de` field; the German pack's card field name
+  is a recorded exception in `AGENTS.md` and lives in pack data, not here.
+- Every renderer is presentation-only until a caller passes `onGraded`. With no
+  listener no rating control renders at all, which is what keeps
+  `exercise-preview.html` unchanged.
 
 A seed that puts German literals in `payload` is fine. A handler that
 branches `if (courseCode.startsWith('de'))` is not.

@@ -45,6 +45,18 @@ describe('seed fixture — contract', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
+  it('gives every multiple-choice an answer that is one of its own choices', () => {
+    // Without `answer` the renderer stays unscored on purpose, so a seed that
+    // forgets it looks perfectly healthy and silently banks no XP. And an
+    // `answer` that is not among `choices` grades every learner wrong.
+    const mc = allExercises.filter(([, ex]) => ex.type === 'multiple-choice');
+    expect(mc.length).toBeGreaterThan(0);
+    for (const [label, ex] of mc) {
+      expect(typeof ex.payload.answer, label).toBe('string');
+      expect(ex.payload.choices, label).toContain(ex.payload.answer);
+    }
+  });
+
   it('satisfies the table CHECK constraints the migration declares', () => {
     for (const l of fixture.lessons) {
       expect(['a1', 'a2', 'b1']).toContain(l.level);

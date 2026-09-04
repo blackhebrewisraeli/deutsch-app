@@ -3,7 +3,7 @@ import { FONT_SIZE, SPACE, TEXT } from '../../lib/theme';
 import Button from '../ui/Button';
 import Heading from '../ui/Heading';
 import Surface from '../ui/Surface';
-import { Stack } from '../ui/Layout';
+import { Row, Stack } from '../ui/Layout';
 import { Body } from '../ui/Text';
 
 const THUMB = {
@@ -16,10 +16,13 @@ const THUMB = {
 /**
  * Stub flashcard for `{ type: 'flashcard', payload }`.
  * Payload guidance (spec §5.3): `{ term, glosses[], ipa?, example? }`.
- * Local reveal state only — no fetch, no SRS, no progress write.
+ * Local reveal state, plus an optional self-rating (E5.5). With no `onGraded`
+ * listener it is exactly the presentation-only stub it was: no rating controls
+ * render at all, so the standalone preview page is unchanged.
  */
-export default function FlashcardExercise({ payload }) {
+export default function FlashcardExercise({ payload, onGraded }) {
   const [revealed, setRevealed] = useState(false);
+  const [graded, setGraded] = useState(false);
   const { term, glosses, ipa, example } = payload && typeof payload === 'object' ? payload : {};
   const meanings = Array.isArray(glosses) ? glosses.filter(Boolean) : [];
 
@@ -87,6 +90,36 @@ export default function FlashcardExercise({ payload }) {
       >
         {revealed ? 'Hide meaning' : 'Reveal meaning'}
       </Button>
+      {/* A rating is only offered AFTER the meaning is on screen: grading a
+        card you have not seen is not a self-assessment. The pair stays mounted
+        once graded so the answer does not vanish under the thumb that gave it,
+        but both are disabled — one card, one verdict. */}
+      {onGraded && revealed ? (
+        <Row gap={3} wrap={false} style={{ width: '100%' }}>
+          <Button
+            variant="go"
+            disabled={graded}
+            onClick={() => grade('correct')}
+            style={{ ...THUMB, flex: 1, minWidth: 0 }}
+          >
+            Got it
+          </Button>
+          <Button
+            variant="tile"
+            disabled={graded}
+            onClick={() => grade('wrong')}
+            style={{ ...THUMB, flex: 1, minWidth: 0 }}
+          >
+            Not yet
+          </Button>
+        </Row>
+      ) : null}
     </Stack>
   );
+
+  function grade(verdict) {
+    if (graded) return;
+    setGraded(true);
+    onGraded(verdict);
+  }
 }

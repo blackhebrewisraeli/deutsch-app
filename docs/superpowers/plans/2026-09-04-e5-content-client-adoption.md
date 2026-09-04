@@ -126,15 +126,29 @@ the same failure shape as a 404 reported as `total=0`.
 intended test: cache read that skips re-sanitizing, revalidation that merges
 instead of replacing, and a non-ok response that resolves empty.
 
-## 4 · E5.2 / E5.3 — hook and surface
+## 4 · E5.2 / E5.3 — hook and lane
 
 - `useLessons({ courseCode, level, tab })` → `{ status, lessons }` with
   `status ∈ loading | ready | empty | error`, abort-on-unmount using the
   `cancelled` pattern from `useLeagueStanding.js`. Never throws into render.
-- `LessonUnits` renders units → `ExerciseViewer`, mounted in a tab **only**
-  when `status === 'ready' && lessons.length > 0`.
+- `PracticeLane` (one component, one hook call) renders units above the tab's
+  own bundled content, which it passes through as `children`.
+  **With no units it returns `children` and nothing else** — no wrapper, no
+  heading, no collapsible. Ruling 1 is structural rather than a branch someone
+  can forget.
 - Mobile-first: reuses `PageFrame maxWidth={480}`; verified at 375px **and**
   320px per `AGENTS.md`.
+
+### 4.1 Bundled content goes in a collapsible (owner decision, 2026-09-04)
+
+The dynamic pathway is the primary journey, so units stay **above**. To stop
+them burying the tab, the bundled content moves into a collapsed
+`<details>` labelled from the pack (`lessonChrome.bundledHeading`).
+
+Native `<details>`, not a custom accordion: keyboard and screen-reader operable
+for free, and it **hides children without unmounting them**, so a half-finished
+drill survives a lesson appearing above it. A custom accordion that conditionally
+renders `children` would silently reset every tab's state the day content lands.
 
 ## 5 · E5.4 — seed (the gate)
 
@@ -143,17 +157,53 @@ exercises each. Applied to a **Supabase branch** first (Ruling 5). Production
 seeding is a separate, explicitly-approved step under the prod drill, including
 `notify pgrst, 'reload schema'`.
 
-## 6 · E5.5 — progress wiring
+## 6 · E5.5 — progress wiring (done)
 
-Lesson answers route through the existing `applyEvent` → `progressQueue` path
-so they count identically to a deck answer, with an explicit test that this
-does not double-count against the daily lane (spec §7.3).
+Answers reach progress through **`recordEvent(tab, level, verdict)`** — the same
+single entry point `VocabTab` uses. It writes local `daily` via `applyEvent`
+**and** enqueues the event for the RPC in one call; reaching for `applyEvent`
+directly would do one and skip the other.
 
----
+The stubs were presentation-only, so each gradeable type gained an interaction:
+
+| Type | Interaction | Verdict |
+|---|---|---|
+| `flashcard` | "Got it" / "Not yet", offered only after reveal | `correct` / `wrong` |
+| `translate` | typed answer vs **every** `accepted` string | distance 0 → `correct`, ≤2 → `almost`, else `wrong` |
+| `multiple-choice` | Submit, graded against the new optional `answer` | `correct` / `wrong` |
+| `chat` | none — a free conversation has no verdict | — |
+
+Every renderer stays presentation-only when no `onGraded` is passed: no rating
+control renders at all, so `exercise-preview.html` is unchanged.
+
+### 6.1 Not double-counting
+
+Two independent guards, because the E4 spec's §7.3 hazard is real:
+
+1. **Each renderer locks after one verdict** (disabled controls + an early
+   return).
+2. **The lane keeps a Set of graded exercise ids**, reset when
+   `(pack, course, level, tab)` changes so returning to a tab is not silently
+   unrecorded.
+
+`recordEvent` itself is the only writer — E4 already removed the competing
+daily upsert, so there is no second writer for the day.
+
+**Both guards had to be proven separately, and at first neither was.** Each
+masked the other: deleting the lane's Set changed nothing because the renderer
+still locked, and deleting the renderer's lock changed nothing because the Set
+still deduped — 19 tests stayed green through both mutations. Fixed by
+`PracticeLane.dedupe.test.jsx`, which swaps in a renderer that fires `onGraded`
+twice on one click, and by asserting the flashcard's *behaviour* (which fails
+once both of its guards go). See [[a-second-bug-can-make-a-probe-pass]].
+
+`PracticeLane.progress.test.jsx` mocks nothing but `fetch`: it asserts one
+graded answer produces exactly one local increment **and** exactly one queued
+event, with distinct ids so the RPC can dedupe.
 
 ## 6b · Found while building
 
-### 6b.1 Spec §5.3's payload sketches are wrong for two of the four types
+### 6b.1 Spec §5.3's payload sketches were wrong for two of the four types — RESOLVED
 
 The shipped stubs read different keys than the spec prose:
 
@@ -165,21 +215,23 @@ The shipped stubs read different keys than the spec prose:
 A fixture written to the spec inserts cleanly, serves cleanly, and renders an
 empty card. `scripts/seed-lessons/fixture.test.jsx` renders every fixture
 exercise through the real `ExerciseViewer`; both spec-shaped payloads were run
-against it as mutants and both failed it. Reconciling prose and renderers is
-E5.5's business — the seed follows the renderers, because that is what the
-learner sees.
+against it as mutants and both failed it. **Resolved 2026-09-04 (owner: "code is truth"):** spec §5.3 has been rewritten
+to the shipped keys, as a table that also records what each type grades on. The
+`multiple-choice` contract additionally gained an optional `answer` key so it
+can be graded at all; without it the exercise stays submittable but unscored,
+because banking `wrong` for every learner over a content omission is worse than
+not scoring.
 
-### 6b.2 Overlay placement is an open product question
+### 6b.2 Overlay placement — RESOLVED
 
 The overlay currently mounts **above** the bundled tab content, inside the
 shared practice-tab wrapper in `App.jsx`. Measured on the seeded local stack at
 320px: the Alphabet overlay is 2173px tall against 661px of bundled content, so
 once seeded a learner scrolls past every lesson to reach "Das Alphabet".
 
-This has **zero effect in production today** (the table is empty, the overlay
-renders `null`), so it does not block this PR — but it must be settled before
-E5.4 seeds anything. Options: keep it above, put it below the bundled content,
-or collapse it behind an entry point.
+**Resolved 2026-09-04 (owner):** units stay **above** — the dynamic pathway is
+the primary journey — and the bundled content moves into a collapsed
+`<details>` labelled "Reference & Bundled Practice". See §4.1.
 
 ---
 
