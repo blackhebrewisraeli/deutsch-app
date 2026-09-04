@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // NOTHING is mocked here except fetch. stats.recordEvent, applyEvent, the
@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 // invariant under test spans all four: one graded answer must produce exactly
 // ONE local increment AND exactly ONE queued event. A mocked recordEvent can
 // prove it was called once; only the real one can prove it did not write twice.
-import PracticeLane from './PracticeLane';
+import { renderLane, revealAndRate } from './practiceLaneTestKit';
 import {
   flashcardExercise as card,
   lessonUnit,
@@ -30,16 +30,11 @@ describe('PracticeLane progress — one answer, one increment, one event', () =>
   it('banks exactly one local round and one queued event', async () => {
     const user = userEvent.setup();
     warmCache([card('a', 'Hallo')]);
-    render(
-      <PracticeLane {...props}>
-        <div>bundled</div>
-      </PracticeLane>
-    );
+    renderLane(props);
     expect(todayTotal()).toBe(0);
     expect(queue()).toHaveLength(0);
 
-    await user.click(await screen.findByRole('button', { name: 'Reveal meaning' }));
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    await revealAndRate('Got it', user);
 
     expect(todayTotal()).toBe(1);
     expect(queue()).toHaveLength(1);
@@ -49,13 +44,8 @@ describe('PracticeLane progress — one answer, one increment, one event', () =>
   it('a re-tapped answer adds neither a second increment nor a second event', async () => {
     const user = userEvent.setup();
     warmCache([card('a', 'Hallo')]);
-    render(
-      <PracticeLane {...props}>
-        <div>bundled</div>
-      </PracticeLane>
-    );
-    await user.click(await screen.findByRole('button', { name: 'Reveal meaning' }));
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    renderLane(props);
+    await revealAndRate('Got it', user);
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
     await user.click(screen.getByRole('button', { name: 'Got it' }));
 
@@ -66,11 +56,7 @@ describe('PracticeLane progress — one answer, one increment, one event', () =>
   it('gives each queued event its own id, so the RPC can dedupe them', async () => {
     const user = userEvent.setup();
     warmCache([card('a', 'Hallo'), card('b', 'Danke')]);
-    render(
-      <PracticeLane {...props}>
-        <div>bundled</div>
-      </PracticeLane>
-    );
+    renderLane(props);
     await screen.findByRole('heading', { name: 'Hallo' });
     for (const b of screen.getAllByRole('button', { name: 'Reveal meaning' })) await user.click(b);
     for (const b of screen.getAllByRole('button', { name: 'Got it' })) await user.click(b);
@@ -84,11 +70,7 @@ describe('PracticeLane progress — one answer, one increment, one event', () =>
   it('records nothing for an ungraded exercise type', async () => {
     const user = userEvent.setup();
     warmCache([{ id: 'c1', type: 'chat', payload: { persona: 'X', initialMessage: 'Hallo!' } }]);
-    render(
-      <PracticeLane {...props}>
-        <div>bundled</div>
-      </PracticeLane>
-    );
+    renderLane(props);
     const input = await screen.findByLabelText('Message');
     await user.type(input, 'Guten Tag');
     await user.click(screen.getByRole('button', { name: 'Send' }));

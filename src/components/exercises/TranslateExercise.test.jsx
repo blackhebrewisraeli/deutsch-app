@@ -44,56 +44,37 @@ describe('TranslateExercise — grading (E5.5)', () => {
     direction: 'en-de',
   };
 
-  it('grades an exact answer correct', async () => {
+  /** Type an answer, press Check, and report what the exercise graded it. */
+  async function answer(typed, over = {}) {
     const user = userEvent.setup();
     const onGraded = vi.fn();
-    render(<TranslateExercise payload={payload} onGraded={onGraded} />);
-    await user.type(screen.getByRole('textbox', { name: 'Your answer' }), 'Guten Morgen');
+    render(<TranslateExercise payload={{ ...payload, ...over }} onGraded={onGraded} />);
+    await user.type(screen.getByRole('textbox', { name: 'Your answer' }), typed);
     await user.click(screen.getByRole('button', { name: 'Check' }));
-    expect(onGraded).toHaveBeenCalledWith('correct');
-  });
+    return { onGraded, user };
+  }
 
-  it('grades a near miss "almost", not wrong', async () => {
-    const user = userEvent.setup();
-    const onGraded = vi.fn();
-    render(<TranslateExercise payload={payload} onGraded={onGraded} />);
-    await user.type(screen.getByRole('textbox', { name: 'Your answer' }), 'Guten Morgn');
-    await user.click(screen.getByRole('button', { name: 'Check' }));
-    expect(onGraded).toHaveBeenCalledWith('almost');
-  });
-
-  it('grades an unrelated answer wrong', async () => {
-    const user = userEvent.setup();
-    const onGraded = vi.fn();
-    render(<TranslateExercise payload={payload} onGraded={onGraded} />);
-    await user.type(screen.getByRole('textbox', { name: 'Your answer' }), 'Auf Wiedersehen');
-    await user.click(screen.getByRole('button', { name: 'Check' }));
-    expect(onGraded).toHaveBeenCalledWith('wrong');
-  });
-
-  it('accepts ANY listed answer, not just the first', async () => {
-    const user = userEvent.setup();
-    const onGraded = vi.fn();
-    render(
-      <TranslateExercise
-        payload={{ ...payload, accepted: ['Ich heiße Anna', 'Mein Name ist Anna'] }}
-        onGraded={onGraded}
-      />
-    );
-    await user.type(screen.getByRole('textbox', { name: 'Your answer' }), 'Mein Name ist Anna');
-    await user.click(screen.getByRole('button', { name: 'Check' }));
-    expect(onGraded).toHaveBeenCalledWith('correct');
+  it.each([
+    ['an exact answer', 'Guten Morgen', {}, 'correct'],
+    ['a one-typo near miss', 'Guten Morgn', {}, 'almost'],
+    ['an unrelated answer', 'Auf Wiedersehen', {}, 'wrong'],
+    // Grading only accepted[0] is the bug that made the meaning drill mark real
+    // answers wrong; a second listed answer must count as fully correct.
+    [
+      'ANY listed answer, not just the first',
+      'Mein Name ist Anna',
+      { accepted: ['Ich heiße Anna', 'Mein Name ist Anna'] },
+      'correct',
+    ],
+  ])('grades %s as %s', async (_label, typed, over, verdict) => {
+    const { onGraded } = await answer(typed, over);
+    expect(onGraded).toHaveBeenCalledWith(verdict);
   });
 
   it('grades once, and reveals the accepted answers after checking', async () => {
-    const user = userEvent.setup();
-    const onGraded = vi.fn();
-    render(<TranslateExercise payload={payload} onGraded={onGraded} />);
-    await user.type(screen.getByRole('textbox', { name: 'Your answer' }), 'Guten Morgen');
-    const check = screen.getByRole('button', { name: 'Check' });
-    await user.click(check);
+    const { onGraded, user } = await answer('Guten Morgen');
     expect(screen.getByText('Guten Morgen', { selector: 'li *, li' })).toBeInTheDocument();
-    await user.click(check);
+    await user.click(screen.getByRole('button', { name: 'Check' }));
     expect(onGraded).toHaveBeenCalledTimes(1);
   });
 

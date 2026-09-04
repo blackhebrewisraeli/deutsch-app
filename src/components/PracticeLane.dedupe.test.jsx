@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 // The lane's own dedupe cannot be proven through a real renderer: every one of
@@ -24,7 +24,7 @@ vi.mock('./exercises/exerciseRegistry', () => ({
     },
 }));
 
-import PracticeLane from './PracticeLane';
+import { renderLane } from './practiceLaneTestKit';
 import {
   lessonUnit,
   pendingFetch,
@@ -45,11 +45,7 @@ beforeEach(() => {
 describe('PracticeLane dedupe — a renderer that fires twice still counts once', () => {
   it('swallows the second verdict for the same exercise', async () => {
     const user = userEvent.setup();
-    render(
-      <PracticeLane {...props}>
-        <div>bundled</div>
-      </PracticeLane>
-    );
+    renderLane(props);
     await user.click(await screen.findByRole('button', { name: 'Answer twice' }));
     expect(todayTotal()).toBe(1);
     expect(queue()).toHaveLength(1);

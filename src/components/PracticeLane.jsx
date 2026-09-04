@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, RADIUS, SPACE } from '../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE } from '../lib/theme';
 import { Stack } from './ui/Layout';
+import SectionLabel from './ui/SectionLabel';
 import ExerciseViewer from './exercises/ExerciseViewer';
 import { useLessons } from '../lib/useLessons';
 import { recordEvent } from '../lib/stats';
@@ -61,20 +62,7 @@ export default function PracticeLane({ courseCode = 'de', level, tab, packId = '
   return (
     <Stack gap={6}>
       <section aria-labelledby="lesson-units-heading">
-        <div
-          id="lesson-units-heading"
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            fontWeight: FONT_WEIGHT.bold,
-            letterSpacing: LETTER_SPACING.caps,
-            textTransform: 'uppercase',
-            color: COLORS.mute,
-            marginBottom: SPACE[3],
-          }}
-        >
-          {chrome.heading}
-        </div>
+        <SectionLabel id="lesson-units-heading">{chrome.heading}</SectionLabel>
         <Stack gap={6}>
           {units.map((lesson) => (
             <article key={lesson.id} aria-label={`${chrome.unitPrefix} ${lesson.unitNumber}`}>
@@ -113,24 +101,20 @@ export default function PracticeLane({ courseCode = 'de', level, tab, packId = '
           background: COLORS.surface,
         }}
       >
-        <summary
+        <SectionLabel
+          as="summary"
           style={{
             // A summary is the tap target, so it gets a thumb-sized one.
             minHeight: SPACE[12],
             display: 'flex',
             alignItems: 'center',
             padding: `0 ${SPACE[4]}px`,
+            marginBottom: 0,
             cursor: 'pointer',
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            fontWeight: FONT_WEIGHT.bold,
-            letterSpacing: LETTER_SPACING.caps,
-            textTransform: 'uppercase',
-            color: COLORS.mute,
           }}
         >
           {chrome.bundledHeading}
-        </summary>
+        </SectionLabel>
         <div style={{ padding: SPACE[4], minWidth: 0 }}>{children}</div>
       </details>
     </Stack>

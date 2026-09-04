@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { render, screen, waitFor } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
 const recordEvent = vi.hoisted(() => vi.fn());
@@ -12,7 +12,7 @@ vi.mock('../lib/stats', async (importOriginal) => ({
 // useLessons and lessons.js run FOR REAL — only fetch and recordEvent are
 // stubbed. "Stay invisible unless there are units" is the whole contract, and
 // mocking the hook would make it an assertion about a stub.
-import PracticeLane from './PracticeLane';
+import { BUNDLED, renderLane, revealAndRate } from './practiceLaneTestKit';
 import {
   flashcardExercise as flashcard,
   lessonUnit,
@@ -23,8 +23,6 @@ import {
 import { activePack } from '../packs';
 
 const props = { level: 'a1', tab: 'vocab' };
-const BUNDLED = 'BUNDLED-TAB-CONTENT';
-const bundled = <div>{BUNDLED}</div>;
 
 const unit = (id, unitNumber, exercises) => lessonUnit({ id, unitNumber, exercises });
 const warmCache = (lessons, over = {}) => warmLessonCache(lessons, over);
@@ -39,28 +37,28 @@ beforeEach(() => {
 describe('PracticeLane — no units means nothing changes', () => {
   it('renders the bundled tab untouched while loading', () => {
     vi.stubGlobal('fetch', pending());
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
     expect(screen.getByText(BUNDLED)).toBeInTheDocument();
     expect(screen.queryByRole('group')).not.toBeInTheDocument();
   });
 
   it('renders the bundled tab untouched for an empty track', async () => {
     vi.stubGlobal('fetch', respondWith(200, { lessons: [] }));
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
     await waitFor(() => expect(screen.getByText(BUNDLED)).toBeInTheDocument());
     expect(document.querySelector('details')).toBeNull();
   });
 
   it('renders the bundled tab untouched when the lane is broken', async () => {
     vi.stubGlobal('fetch', respondWith(500, { error: { code: 'server_error' } }));
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
     await waitFor(() => expect(screen.getByText(BUNDLED)).toBeInTheDocument());
     expect(document.querySelector('details')).toBeNull();
   });
 
   it('does NOT collapse the bundled tab when every exercise was dropped as invalid', async () => {
     vi.stubGlobal('fetch', respondWith(200, { lessons: [unit('u1', 1, [{ type: 'sudoku' }])] }));
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
     await waitFor(() => expect(screen.getByText(BUNDLED)).toBeInTheDocument());
     expect(document.querySelector('details')).toBeNull();
   });
@@ -70,7 +68,7 @@ describe('PracticeLane — with units', () => {
   it('renders units above the bundled content, which moves into a collapsible', async () => {
     warmCache([unit('u1', 1, [flashcard('a', 'Hallo')])]);
     vi.stubGlobal('fetch', pending());
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
 
     expect(await screen.findByRole('heading', { name: 'Hallo' })).toBeInTheDocument();
     const details = document.querySelector('details');
@@ -86,7 +84,7 @@ describe('PracticeLane — with units', () => {
     const user = userEvent.setup();
     warmCache([unit('u1', 1, [flashcard('a', 'Hallo')])]);
     vi.stubGlobal('fetch', pending());
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
     await screen.findByRole('heading', { name: 'Hallo' });
 
     const details = document.querySelector('details');
@@ -98,7 +96,7 @@ describe('PracticeLane — with units', () => {
   it('keeps the bundled content MOUNTED while collapsed, so tab state survives', async () => {
     warmCache([unit('u1', 1, [flashcard('a', 'Hallo')])]);
     vi.stubGlobal('fetch', pending());
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
     await screen.findByRole('heading', { name: 'Hallo' });
     // <details> hides its children; it must not unmount them, or every tab
     // would reset its drill the moment a lesson appears.
@@ -108,7 +106,7 @@ describe('PracticeLane — with units', () => {
   it('orders units by unitNumber, not array position', async () => {
     warmCache([unit('u2', 2, [flashcard('b', 'Zwei')]), unit('u1', 1, [flashcard('a', 'Eins')])]);
     vi.stubGlobal('fetch', pending());
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
     const units = await screen.findAllByRole('article');
     expect(units.map((u) => u.getAttribute('aria-label'))).toEqual(['Einheit 1', 'Einheit 2']);
   });
@@ -116,7 +114,7 @@ describe('PracticeLane — with units', () => {
   it('skips a unit with no renderable exercises but keeps its siblings', async () => {
     warmCache([unit('u1', 1, []), unit('u2', 2, [flashcard('b', 'Zwei')])]);
     vi.stubGlobal('fetch', pending());
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
     await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(1));
   });
 });
@@ -128,9 +126,8 @@ describe('PracticeLane — progress wiring (E5.5)', () => {
     const user = userEvent.setup();
     oneCard();
     vi.stubGlobal('fetch', pending());
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
-    await user.click(await screen.findByRole('button', { name: 'Reveal meaning' }));
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    renderLane(props);
+    await revealAndRate('Got it', user);
     expect(recordEvent).toHaveBeenCalledWith('vocab', 'a1', 'correct');
   });
 
@@ -138,9 +135,8 @@ describe('PracticeLane — progress wiring (E5.5)', () => {
     const user = userEvent.setup();
     oneCard();
     vi.stubGlobal('fetch', pending());
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
-    await user.click(await screen.findByRole('button', { name: 'Reveal meaning' }));
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    renderLane(props);
+    await revealAndRate('Got it', user);
     await user.click(screen.getByRole('button', { name: 'Not yet' }));
     await user.click(screen.getByRole('button', { name: 'Got it' }));
     expect(recordEvent).toHaveBeenCalledTimes(1);
@@ -150,7 +146,7 @@ describe('PracticeLane — progress wiring (E5.5)', () => {
     const user = userEvent.setup();
     warmCache([unit('u1', 1, [flashcard('a', 'Hallo'), flashcard('b', 'Danke')])]);
     vi.stubGlobal('fetch', pending());
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
     await screen.findByRole('heading', { name: 'Hallo' });
     for (const reveal of screen.getAllByRole('button', { name: 'Reveal meaning' })) {
       await user.click(reveal);
@@ -165,7 +161,7 @@ describe('PracticeLane — progress wiring (E5.5)', () => {
     const user = userEvent.setup();
     oneCard();
     vi.stubGlobal('fetch', pending());
-    render(<PracticeLane {...props}>{bundled}</PracticeLane>);
+    renderLane(props);
     await user.click(await screen.findByRole('button', { name: 'Reveal meaning' }));
     expect(recordEvent).not.toHaveBeenCalled();
   });
@@ -174,13 +170,8 @@ describe('PracticeLane — progress wiring (E5.5)', () => {
     const user = userEvent.setup();
     warmCache([unit('u9', 1, [flashcard('a', 'Hallo')])], { level: 'b1', tab: 'translate' });
     vi.stubGlobal('fetch', pending());
-    render(
-      <PracticeLane level="b1" tab="translate">
-        {bundled}
-      </PracticeLane>
-    );
-    await user.click(await screen.findByRole('button', { name: 'Reveal meaning' }));
-    await user.click(screen.getByRole('button', { name: 'Got it' }));
+    renderLane({ level: 'b1', tab: 'translate' });
+    await revealAndRate('Got it', user);
     expect(recordEvent).toHaveBeenCalledWith('translate', 'b1', 'correct');
   });
 });

@@ -98,42 +98,35 @@ describe('MultipleChoiceExercise — grading (E5.5)', () => {
     answer: 'wie ss',
   };
 
-  it('grades the chosen option against payload.answer', async () => {
+  /** Pick an option, submit, and report what the exercise graded it. */
+  async function choose(option, over = {}) {
     const user = userEvent.setup();
     const onGraded = vi.fn();
-    render(<MultipleChoiceExercise payload={payload} onGraded={onGraded} />);
-    await user.click(screen.getByRole('button', { name: 'wie ss' }));
+    render(<MultipleChoiceExercise payload={{ ...payload, ...over }} onGraded={onGraded} />);
+    await user.click(screen.getByRole('button', { name: option }));
     await user.click(screen.getByRole('button', { name: 'Submit' }));
-    expect(onGraded).toHaveBeenCalledWith('correct');
+    return { onGraded, user };
+  }
+
+  it.each([
+    ['the right option', 'wie ss', 'correct'],
+    ['a wrong option', 'wie z', 'wrong'],
+  ])('grades %s as %s', async (_label, option, verdict) => {
+    const { onGraded } = await choose(option);
+    expect(onGraded).toHaveBeenCalledWith(verdict);
   });
 
-  it('reports wrong for the wrong option', async () => {
-    const user = userEvent.setup();
-    const onGraded = vi.fn();
-    render(<MultipleChoiceExercise payload={payload} onGraded={onGraded} />);
-    await user.click(screen.getByRole('button', { name: 'wie z' }));
-    await user.click(screen.getByRole('button', { name: 'Submit' }));
-    expect(onGraded).toHaveBeenCalledWith('wrong');
-  });
-
-  it('stays ungraded when the payload carries no answer — a seed without one must not score', async () => {
-    const user = userEvent.setup();
-    const onGraded = vi.fn();
+  it('stays ungraded when the payload carries no answer', async () => {
+    // A seed written before grading existed must not silently bank `wrong` for
+    // every learner over a content omission.
     const { answer: _answer, ...noAnswer } = payload;
-    render(<MultipleChoiceExercise payload={noAnswer} onGraded={onGraded} />);
-    await user.click(screen.getByRole('button', { name: 'wie ss' }));
-    await user.click(screen.getByRole('button', { name: 'Submit' }));
+    const { onGraded } = await choose('wie ss', { ...noAnswer, answer: undefined });
     expect(onGraded).not.toHaveBeenCalled();
   });
 
   it('grades once — Submit is spent after the first press', async () => {
-    const user = userEvent.setup();
-    const onGraded = vi.fn();
-    render(<MultipleChoiceExercise payload={payload} onGraded={onGraded} />);
-    await user.click(screen.getByRole('button', { name: 'wie ss' }));
-    const submit = screen.getByRole('button', { name: 'Submit' });
-    await user.click(submit);
-    await user.click(submit);
+    const { onGraded, user } = await choose('wie ss');
+    await user.click(screen.getByRole('button', { name: 'Submit' }));
     expect(onGraded).toHaveBeenCalledTimes(1);
   });
 
