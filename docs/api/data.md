@@ -15,12 +15,19 @@ Schema source of truth: `supabase/migrations/` (versioned SQL).
 | `settings`    | `user_id`                     | `data jsonb`                                                                                    | the `gamification` key                                         |
 | `rate_limits` | `(key, window_start)`         | AI-lane counters                                                                                | — (server-only)                                                |
 | `lessons`     | `id`                          | lesson-unit content: `pack_id`, `course_code`, `level`, `tab`, `unit_number`, `exercises jsonb` | —                                                              |
+| `progress_events_seen` | `(user_id, event_id)` | idempotency keys for `apply_progress_event`; 30-day rolling window | the client queue (`deutsch-app-progress-queue-v1`) is the pending set, not this table |
 
 `lessons` is public content, not user data — nobody owns a row. It is not
 user-scoped (no `user_id`), so it appears in neither `EXPORTED_TABLES` nor
-`EXCLUDED_TABLES` in `api/v1/account/export.js`; it is simply outside the
+`EXCLUDED_TABLES` in `api/_lib/accountEndpoints.js`; it is simply outside the
 account cascade. Served read-only via `GET /api/v1/content/lessons`
 (`docs/api/content.md`); writes go through `service_role` only.
+
+`progress_events_seen` **is** user-owned (`user_id` → `auth.users` on delete
+cascade) but is **excluded from export**: the keys are opaque, and the
+counters they protect already ship as `daily`. No client policies — the RPC
+is the only writer, matching `rate_limits`. A 30-day prune runs inside the
+RPC after a successful insert.
 
 All user tables carry `pack_id text default 'de'` (multi-language Phase 4
 interlock) and `updated_at` (set by the writer — the B2 sync's
