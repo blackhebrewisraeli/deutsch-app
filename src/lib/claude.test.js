@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { callClaude } from './claude';
+import { MODELS, TASKS, COMPLEXITY_BUMP_AT } from './ai-routing/catalog.js';
+
+function postedBody() {
+  return JSON.parse(fetch.mock.calls.at(-1)[1].body);
+}
 
 describe('callClaude', () => {
   beforeEach(() => {
@@ -40,7 +45,62 @@ describe('callClaude', () => {
       { role: 'assistant', content: 'Hi' },
       { role: 'user', content: 'Wie geht es dir?' },
     ]);
-    expect(body.model).toBe('claude-haiku-4-5-20251001');
+    expect(body.model).toBe(MODELS.haiku.id);
+  });
+
+  it('defaults a missing routingContext to the cheapest baseline (Haiku)', async () => {
+    await callClaude('sys', 'msg');
+    expect(postedBody().model).toBe(MODELS.haiku.id);
+    expect(postedBody().max_tokens).toBe(TASKS.chat.maxTokens);
+  });
+
+  it.each([
+    {
+      name: 'guest translation check',
+      routingContext: { taskType: 'translation_check', userTier: 'guest' },
+      model: MODELS.haiku.id,
+      maxTokens: TASKS.translation_check.maxTokens,
+    },
+    {
+      name: 'free chat',
+      routingContext: { taskType: 'chat', userTier: 'free' },
+      model: MODELS.sonnet.id,
+      maxTokens: TASKS.chat.maxTokens,
+    },
+    {
+      name: 'complex pro chat',
+      routingContext: {
+        taskType: 'chat',
+        userTier: 'pro',
+        complexityScore: COMPLEXITY_BUMP_AT,
+      },
+      model: MODELS.opus.id,
+      maxTokens: TASKS.chat.maxTokens,
+    },
+    {
+      name: 'free deck generation',
+      routingContext: { taskType: 'deck_generation', userTier: 'free' },
+      model: MODELS.sonnet.id,
+      maxTokens: TASKS.deck_generation.maxTokens,
+    },
+  ])(
+    'sends the routed $name model in the fetch payload',
+    async ({ routingContext, model, maxTokens }) => {
+      await callClaude('sys', 'msg', [], { routingContext });
+      const body = postedBody();
+      expect(body.model).toBe(model);
+      expect(body.max_tokens).toBe(maxTokens);
+    }
+  );
+
+  it('keeps endpoint routing independent of the selected model', async () => {
+    await callClaude('sys', 'msg', [], {
+      endpoint: 'grade',
+      routingContext: { taskType: 'translation_check', userTier: 'free' },
+    });
+    expect(fetch.mock.calls[0][0]).toBe('/api/v1/ai/grade');
+    expect(postedBody().model).toBe(MODELS.haiku.id);
+    expect(postedBody().max_tokens).toBe(TASKS.translation_check.maxTokens);
   });
 
   it('routes to the requested endpoint and defaults to chat', async () => {

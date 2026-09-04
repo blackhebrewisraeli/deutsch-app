@@ -116,6 +116,17 @@ describe('createAiHandler', () => {
     expect(options.headers['anthropic-version']).toBe('2023-06-01');
     const sent = JSON.parse(options.body);
     expect('tools' in sent).toBe(false);
+    expect(sent.model).toBe('claude-haiku-4-5-20251001');
+  });
+
+  it('forwards a routed Sonnet model id to Anthropic', async () => {
+    const res = createRes();
+    await createAiHandler(wideOpen)(
+      postReq({ body: { ...validBody(), model: 'claude-sonnet-4-5' } }),
+      res
+    );
+    expect(res.statusCode).toBe(200);
+    expect(JSON.parse(fetch.mock.calls[0][1].body).model).toBe('claude-sonnet-4-5');
   });
 
   it('passes upstream error statuses through unchanged', async () => {

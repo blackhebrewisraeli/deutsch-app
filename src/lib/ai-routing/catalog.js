@@ -1,10 +1,9 @@
 // Policy data for the AI router. Tune scores here; router.js only ranks
-// what this file lists. Model ids are the routing contract — they are not
-// sent anywhere until a follow-up expands ALLOWED_MODELS and callClaude.
+// what this file lists. Model ids are the routing contract: callClaude
+// sends them, and api/_lib/validate.js allows the same set.
 //
-// Haiku's id is the production pin already hardcoded in src/lib/claude.js.
-// Sonnet and Opus are family ids, not dated pins: they are not on the
-// allow-list yet, and inventing a date here would pretend they are.
+// Haiku's id is the production pin and the default when callClaude is
+// invoked without a routingContext. Sonnet and Opus are family ids.
 
 export const COMPLEXITY_BUMP_AT = 0.7;
 export const MAX_CAPABILITY = 3;

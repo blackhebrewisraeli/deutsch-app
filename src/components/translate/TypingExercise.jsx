@@ -42,7 +42,10 @@ export default function TypingExercise({ exercise, level, onCorrect, onSkip }) {
     try {
       const system = graderSystemPrompt({ prompts: activePack.prompts });
       const user = `English sentence: "${exercise.en}"\nIdeal German: "${exercise.de}"\nLearner's answer: "${input}"`;
-      const raw = await callClaude(system, user, [], { endpoint: 'grade' });
+      const raw = await callClaude(system, user, [], {
+        endpoint: 'grade',
+        routingContext: { taskType: 'translation_check', userTier: 'guest' },
+      });
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim());
       if (mounted.current) {
         // Validate verdict; fall back to binary if Claude returns the old shape.

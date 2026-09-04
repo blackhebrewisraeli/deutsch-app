@@ -280,6 +280,7 @@ describe('VocabTab', () => {
       expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
       expect(callClaude).toHaveBeenCalledWith(expect.any(String), expect.any(String), [], {
         endpoint: 'deck',
+        routingContext: { taskType: 'deck_generation', userTier: 'guest' },
       });
       expect(callClaude.mock.calls[0][1]).toContain('weather');
       // the generated deck becomes active: its first card is on screen

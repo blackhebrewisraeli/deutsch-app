@@ -1,7 +1,10 @@
 // Validates and constrains an AI-lane request body, returning a rebuilt
 // clean body — only known-safe fields are ever forwarded upstream.
+// Model ids stay in lockstep with the client router catalog.
 
-export const ALLOWED_MODELS = ['claude-haiku-4-5-20251001'];
+import { MODELS } from '../../src/lib/ai-routing/catalog.js';
+
+export const ALLOWED_MODELS = Object.values(MODELS).map((m) => m.id);
 export const MAX_TOKENS_CAP = 1024;
 export const MAX_MESSAGES = 100;
 export const MAX_TOTAL_CHARS = 100000; // system prompt + all message content
