@@ -1,6 +1,6 @@
 // Pure model picker. No fetch, no storage, no React — callers pass a
-// context object and get { model, maxTokens, profile } back. Wiring this
-// into callClaude / ALLOWED_MODELS is a follow-up; this module only decides.
+// context object and get { model, maxTokens, profile } back. callClaude
+// is the live consumer; this module only decides.
 import {
   MODELS,
   TASKS,

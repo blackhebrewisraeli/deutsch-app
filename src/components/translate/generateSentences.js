@@ -7,6 +7,9 @@ import { sentencePrompts } from '../../lib/prompts';
 // the shape each level's exercise component expects.
 export async function generateMoreSentences(level) {
   const { system, user } = sentencePrompts({ prompts: activePack.prompts, level });
-  const raw = await callClaude(system, user, [], { endpoint: 'grade' });
+  const raw = await callClaude(system, user, [], {
+    endpoint: 'grade',
+    routingContext: { taskType: 'grammar_generation', userTier: 'guest' },
+  });
   return JSON.parse(raw.replace(/```json|```/g, '').trim());
 }

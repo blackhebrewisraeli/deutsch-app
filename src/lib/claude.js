@@ -3,6 +3,11 @@
 // (vercel dev) serves the same functions that run in production;
 // plain `npm run dev` has no /api routes, so AI features fail politely.
 // Contract: docs/api/ai.md.
+//
+// Model + token budget come from routeAiRequest. A missing routingContext
+// is treated as guest chat so today's callers keep the cheap Haiku baseline.
+
+import { routeAiRequest } from './ai-routing/router.js';
 
 const ENDPOINTS = {
   chat: '/api/v1/ai/chat',
@@ -10,20 +15,30 @@ const ENDPOINTS = {
   deck: '/api/v1/ai/deck',
 };
 
+const DEFAULT_ROUTING_CONTEXT = { taskType: 'chat' };
+
+function routingContextFor(routingContext) {
+  if (!routingContext || typeof routingContext !== 'object' || Array.isArray(routingContext)) {
+    return DEFAULT_ROUTING_CONTEXT;
+  }
+  return { ...DEFAULT_ROUTING_CONTEXT, ...routingContext };
+}
+
 export const callClaude = async (
   systemPrompt,
   userMessage,
   conversationHistory = [],
-  { endpoint = 'chat' } = {}
+  { endpoint = 'chat', routingContext } = {}
 ) => {
   const messages = [...conversationHistory, { role: 'user', content: userMessage }];
+  const { model, maxTokens } = routeAiRequest(routingContextFor(routingContext));
 
   const response = await fetch(ENDPOINTS[endpoint], {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1000,
+      model,
+      max_tokens: maxTokens,
       system: systemPrompt,
       messages,
     }),

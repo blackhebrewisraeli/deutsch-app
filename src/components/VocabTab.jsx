@@ -240,7 +240,10 @@ export default function VocabTab({
         prompts: activePack.prompts,
         topic: customTopic,
       });
-      const raw = await callClaude(systemPrompt, userMsg, [], { endpoint: 'deck' });
+      const raw = await callClaude(systemPrompt, userMsg, [], {
+        endpoint: 'deck',
+        routingContext: { taskType: 'deck_generation', userTier: 'guest' },
+      });
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       if (Array.isArray(parsed) && parsed.length > 0) {

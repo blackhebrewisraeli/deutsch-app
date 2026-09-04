@@ -115,7 +115,9 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
     }));
 
     try {
-      const raw = await callClaude(systemPrompt, text, history);
+      const raw = await callClaude(systemPrompt, text, history, {
+        routingContext: { taskType: 'chat', userTier: 'guest' },
+      });
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       const reply = { role: 'assistant', de: parsed.de, ipa: parsed.ipa, en: parsed.en };
