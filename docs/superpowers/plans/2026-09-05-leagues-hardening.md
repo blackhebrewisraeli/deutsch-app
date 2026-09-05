@@ -61,9 +61,11 @@
 
 **Fixes:** `api/v1/league/settle.js` issues one UPDATE per member (25 round trips per cohort, times L leagues, under a 300s budget).
 
-- [ ] **RED.** Extend `settle.test.js` to count DB round trips for a 25-member cohort and assert ≤ 2. Fails today at 25.
-- [ ] **GREEN.** Replace the per-member loop with a single `update … from (values …)` RPC.
-- [ ] **Invariants that must stay green untouched:** the existing idempotency and re-settlement determinism tests.
+- [x] **RED.** `settle.test.js` counts DB round trips for a 25-member cohort and asserts ≤ 2. Failed at **26**.
+- [x] **GREEN.** `20260906001500_apply_league_results.sql` — one `update … from jsonb_to_recordset(...)`. The RPC **takes the ranking as input** rather than computing it: `settleLeague`/`zoneCounts` are shared with the client (the leaderboard draws its promotion dividers from them), so reimplementing the ranking in SQL would fork it into two definitions that drift — the L1 XP-formula problem again.
+- [x] **The handler tests are all mocks and would pass if the SQL did not exist.** `supabase/tests/rls/league-settle-rpc.test.js` is what proves the function: 25 rows in one call, ranks exactly 1..25, service-role only, and league-scoped.
+- [x] **Correction to the plan's own premise:** the invariant tests could NOT stay untouched. The idempotency test watched `update`, which the handler no longer calls — it passed *vacuously*, i.e. it would have passed with settlement deleted entirely. Rewritten to watch the RPC. Three others mocked `.update().match()` and were rewritten the same way.
+- [x] **Teeth.** Scoping proven by replacing `where lm.league_id = p_league_id` with `where true` (cross-league write caught, 1 vs 0); privilege proven by granting execute to `authenticated` (the denial test then fails).
 
 ## L4 — Schema tightening
 
