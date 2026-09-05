@@ -176,6 +176,30 @@ describe('PracticeLane — progress wiring (E5.5)', () => {
   });
 });
 
+describe('PracticeLane — unit states', () => {
+  it('flips the active unit from in-progress to completed after its last grade', async () => {
+    const user = userEvent.setup();
+    warmCache([unit('u1', 1, [flashcard('a', 'Hallo')])]);
+    vi.stubGlobal('fetch', pending());
+    renderLane(props);
+    const article = await screen.findByRole('article', { name: 'Einheit 1' });
+    expect(article).toHaveAttribute('data-unit-state', 'in-progress');
+    await revealAndRate('Got it', user);
+    expect(article).toHaveAttribute('data-unit-state', 'completed');
+  });
+
+  it('keeps the next unit locked until the first is finished', async () => {
+    warmCache([unit('u1', 1, [flashcard('a', 'Eins')]), unit('u2', 2, [flashcard('b', 'Zwei')])]);
+    vi.stubGlobal('fetch', pending());
+    renderLane(props);
+    await screen.findByRole('article', { name: 'Einheit 1' });
+    expect(screen.getByRole('article', { name: 'Einheit 2' })).toHaveAttribute(
+      'data-unit-state',
+      'locked'
+    );
+  });
+});
+
 describe('PracticeLane — copy lives in the pack', () => {
   it('holds no chrome copy of its own', () => {
     const src = readFileSync('src/components/PracticeLane.jsx', 'utf8');
