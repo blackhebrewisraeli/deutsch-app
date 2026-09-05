@@ -1,11 +1,28 @@
-import { useEffect, useRef } from 'react';
-import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE } from '../lib/theme';
+import { useEffect, useRef, useState } from 'react';
+import { COLORS, RADIUS, SPACE } from '../lib/theme';
 import { Stack } from './ui/Layout';
 import SectionLabel from './ui/SectionLabel';
-import ExerciseViewer from './exercises/ExerciseViewer';
+import LessonUnits from './LessonUnits';
 import { useLessons } from '../lib/useLessons';
-import { recordEvent } from '../lib/stats';
+import { recordEvent, todayKey } from '../lib/stats';
+import { currentStreak } from '../lib/streak';
+import { DEFAULT_GOAL } from '../lib/gameConfig';
+import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
+
+function readStreak() {
+  try {
+    const s = loadState() ?? {};
+    return currentStreak(
+      s.daily ?? {},
+      s.gamification?.goal ?? DEFAULT_GOAL,
+      todayKey(),
+      s.gamification?.frozenDays ?? {}
+    );
+  } catch {
+    return 0;
+  }
+}
 
 /**
  * One practice tab's lane: server-driven lesson units on top, the tab's own
@@ -29,12 +46,17 @@ export default function PracticeLane({ courseCode = 'de', level, tab, packId = '
 
   // One event per exercise. Each renderer already locks itself after grading,
   // so this is the second line of defence: a re-render or a double-fire cannot
-  // bank the same answer twice. Reset when the lane changes, or a learner who
-  // came back to a tab would find their answers silently unrecorded.
+  // bank the same answer twice. The ref is the sync guard; `grades` is the
+  // session map the unit states re-render from. Reset when the lane changes,
+  // or a learner who came back to a tab would find their answers silently
+  // unrecorded.
   const graded = useRef(new Set());
+  const [grades, setGrades] = useState({});
+  const [streak, setStreak] = useState(readStreak);
   const laneKey = `${packId}:${courseCode}:${level}:${tab}`;
   useEffect(() => {
     graded.current = new Set();
+    setGrades({});
   }, [laneKey]);
 
   const units =
@@ -53,50 +75,27 @@ export default function PracticeLane({ courseCode = 'de', level, tab, packId = '
   function handleGraded(exerciseId, verdict) {
     if (graded.current.has(exerciseId)) return;
     graded.current.add(exerciseId);
+    setGrades((prev) => ({ ...prev, [exerciseId]: verdict }));
     // The same single entry point every other tab uses: it writes local daily
     // through applyEvent AND enqueues the event for the RPC. Going near
     // applyEvent directly would write one and skip the other.
     recordEvent(tab, level, verdict);
+    setStreak(readStreak());
   }
 
   return (
     <Stack gap={6}>
-      <section aria-labelledby="lesson-units-heading">
-        <SectionLabel id="lesson-units-heading">{chrome.heading}</SectionLabel>
-        <Stack gap={6}>
-          {units.map((lesson) => (
-            <article key={lesson.id} aria-label={`${chrome.unitPrefix} ${lesson.unitNumber}`}>
-              <h2
-                style={{
-                  margin: 0,
-                  marginBottom: SPACE[3],
-                  fontFamily: FONTS.display,
-                  fontSize: FONT_SIZE.xl,
-                  fontWeight: FONT_WEIGHT.bold,
-                  color: COLORS.ink,
-                }}
-              >
-                {chrome.unitPrefix} {lesson.unitNumber}
-              </h2>
-              <Stack gap={5}>
-                {lesson.exercises.map((exercise) => (
-                  <ExerciseViewer
-                    key={exercise.id}
-                    id={exercise.id}
-                    type={exercise.type}
-                    payload={exercise.payload}
-                    onGraded={(verdict) => handleGraded(exercise.id, verdict)}
-                  />
-                ))}
-              </Stack>
-            </article>
-          ))}
-        </Stack>
-      </section>
+      <LessonUnits
+        units={units}
+        grades={grades}
+        chrome={chrome}
+        streak={streak}
+        onGraded={handleGraded}
+      />
 
       <details
         style={{
-          border: `1px solid ${COLORS.line}`,
+          border: `1px solid ${COLORS.border}`,
           borderRadius: RADIUS.md,
           background: COLORS.surface,
         }}

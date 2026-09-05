@@ -17,4 +17,11 @@ export const LESSON_CHROME = {
    * screens down (owner decision, 2026-09-04).
    */
   bundledHeading: 'Reference & Bundled Practice',
+
+  /** Session-only unit states. LessonUnits reads these; it does not author them. */
+  locked: 'Gesperrt',
+  inProgress: 'In Arbeit',
+  completed: 'Geschafft',
+  progressLabel: 'Fortschritt',
+  xpSuffix: 'XP',
 };
