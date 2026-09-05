@@ -313,8 +313,8 @@ export default function VocabTab({
           // auto, so it refuses to shrink below its content's min-content width
           // and pushes past the viewport instead (377px inside 337px at 375px
           // wide). minmax(0, …) lets the track shrink and the content reflow.
-          gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : '320px minmax(0, 1fr)',
-          gap: mobile ? 16 : 32,
+          gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : 'minmax(0, 448px) minmax(0, 1fr)',
+          gap: mobile ? SPACE[4] : SPACE[8],
           marginTop: SPACE[8],
         }}
       >

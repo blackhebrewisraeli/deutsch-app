@@ -61,6 +61,45 @@ describe('DeckPicker', () => {
     }
   });
 
+  it('names filter chips by the deck only — no emoji in the accessible name', () => {
+    render(<DeckPicker {...props} />);
+    const topics = AUTO_DECKS.filter((d) => d.group === 'Topics');
+    for (const d of topics) {
+      const chip = screen.getByRole('button', { name: d.name });
+      expect(chip).toHaveTextContent(d.name);
+      expect(chip.textContent).not.toContain(d.icon);
+    }
+  });
+
+  it('titles groups as clean labels, without a letter box', () => {
+    render(<DeckPicker {...props} />);
+    expect(screen.getByText('Frequency')).toBeInTheDocument();
+    expect(screen.getByText('Topics')).toBeInTheDocument();
+    // The old SectionLabel painted a standalone letter (F, C, T, …) in a
+    // black square. Those letters must not remain as their own nodes.
+    for (const letter of ['F', 'C', 'T', 'A', 'P', 'G', 'B']) {
+      expect(screen.queryByText(letter, { exact: true })).not.toBeInTheDocument();
+    }
+  });
+
+  it('constrains the column so chips cannot scatter across a wide viewport', () => {
+    const { container } = render(<DeckPicker {...props} />);
+    const root = container.firstChild;
+    expect(root).toHaveStyle({
+      maxWidth: '448px',
+      marginLeft: 'auto',
+      marginRight: 'auto',
+    });
+  });
+
+  it('keeps filter chips flat — a border, no drop shadow', () => {
+    render(<DeckPicker {...props} />);
+    const chip = screen.getByRole('button', { name: 'Lifestyle' });
+    expect(chip).toHaveStyle({ boxShadow: 'none' });
+    expect(chip.style.border).not.toBe('none');
+    expect(chip.style.border).not.toBe('');
+  });
+
   it('reports the deck the user picked', async () => {
     const onSelect = vi.fn();
     render(<DeckPicker {...props} onSelect={onSelect} />);

@@ -1,5 +1,6 @@
 import { Sparkles, Trash2 } from 'lucide-react';
 import {
+  BORDER,
   COLORS,
   FONTS,
   FONT_SIZE,
@@ -7,9 +8,31 @@ import {
   LETTER_SPACING,
   RADIUS,
   SHADOW,
+  SPACE,
+  TRANSITION,
 } from '../../lib/theme';
-import { SectionLabel } from '../UI';
+import SectionLabel from '../ui/SectionLabel';
 import { AUTO_DECKS, DECK_GROUPS } from '../../packs/de/autoDecks';
+
+// Tailwind max-w-md — keeps the picker a single readable column on a wide screen.
+const PICKER_MAX_WIDTH = 448;
+
+const chipStyle = (active) => ({
+  padding: `${SPACE[2]}px ${SPACE[3]}px`,
+  background: active ? COLORS.ink : COLORS.surface,
+  color: active ? COLORS.paper : COLORS.ink,
+  border: `1px solid ${active ? COLORS.ink : COLORS.border}`,
+  borderRadius: RADIUS.pill,
+  boxShadow: 'none',
+  fontFamily: FONTS.body,
+  fontSize: FONT_SIZE.sm,
+  fontWeight: FONT_WEIGHT.medium,
+  letterSpacing: LETTER_SPACING.wide,
+  cursor: 'pointer',
+  transition: TRANSITION.fast,
+  minWidth: 0,
+  maxWidth: '100%',
+});
 
 // English pluralisation for the counts this picker renders. Local, exactly as
 // packs/de/missions.js and quests.js each keep their own: the RULE is part of a
@@ -48,14 +71,23 @@ export default function DeckPicker({
   maxDecks,
 }) {
   return (
-    <div>
-      <SectionLabel num="A" text="Preset Decks" />
+    <div
+      style={{
+        width: '100%',
+        maxWidth: PICKER_MAX_WIDTH,
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        minWidth: 0,
+        boxSizing: 'border-box',
+      }}
+    >
+      <SectionLabel>Preset Decks</SectionLabel>
       <div
         style={{
           borderRadius: RADIUS.lg,
-          boxShadow: SHADOW.card,
+          border: BORDER.panel,
           overflow: 'hidden',
-          marginBottom: 24,
+          marginBottom: SPACE[5],
         }}
       >
         {PRESETS.map((d, i) => {
@@ -173,39 +205,38 @@ export default function DeckPicker({
       </div>
 
       {DECK_GROUPS.filter((g) => g !== 'Curated').map((group) => (
-        <div key={group} style={{ marginBottom: 16 }}>
-          <SectionLabel num={group[0]} text={group} />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div key={group} style={{ marginBottom: SPACE[5], minWidth: 0 }}>
+          <SectionLabel>{group}</SectionLabel>
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: SPACE[2],
+              minWidth: 0,
+            }}
+          >
             {AUTO_DECKS.filter((d) => d.group === group).map((d) => (
               <button
                 key={d.id}
                 type="button"
+                data-ui="button"
                 onClick={() => onSelect(d.id)}
                 aria-pressed={deckId === d.id}
-                style={{
-                  padding: '8px 12px',
-                  background: deckId === d.id ? COLORS.ink : COLORS.card,
-                  color: deckId === d.id ? COLORS.paper : COLORS.ink,
-                  border: 'none',
-                  borderRadius: RADIUS.md,
-                  fontFamily: FONTS.display,
-                  fontSize: FONT_SIZE.base,
-                  cursor: 'pointer',
-                }}
+                style={chipStyle(deckId === d.id)}
               >
-                {d.icon} {d.name}
+                {d.name}
               </button>
             ))}
           </div>
         </div>
       ))}
 
-      <SectionLabel num="B" text="Generate Custom" />
+      <SectionLabel>Generate Custom</SectionLabel>
       <div
         style={{
           borderRadius: RADIUS.lg,
-          boxShadow: SHADOW.card,
-          padding: 16,
+          border: BORDER.panel,
+          padding: SPACE[4],
           background: COLORS.paperDeep,
         }}
       >
