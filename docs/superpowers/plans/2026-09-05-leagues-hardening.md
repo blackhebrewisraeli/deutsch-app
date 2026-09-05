@@ -71,9 +71,11 @@
 
 **Fixes:** `league_members.period_start` is still nullable 70 days after its rollout window closed. Postgres treats NULLs as distinct, so a NULL silently defeats `league_members_user_period_uniq` — the exact double-membership bug it was added to prevent (observed in prod 2026-06-28).
 
-- [ ] **RED.** Assert `period_start` is `NOT NULL`; and a probe inserting two memberships for one user in one period **with `period_start` NULL** must raise 23505. That case passes today.
-- [ ] **GREEN.** Backfill guard + `set not null`. Drop the unused `league_members_user_idx` (advisor INFO; every query now filters on `(user_id, period_start)`).
-- [ ] Production has 0 NULL `period_start` rows as of 2026-09-05, so the backfill is a no-op safety net, not a data migration.
+- [x] **RED.** Two failures: a membership row with a NULL `period_start` is accepted, and `league_members_user_idx` is still present. The control — a second membership in the same week with the column *populated* — was green throughout, which is what identifies NULL as the only remaining hole.
+- [x] **GREEN.** `20260906010000_league_period_not_null.sql` — defensive backfill, `set not null`, and `drop index league_members_user_idx` (the unique index is `(user_id, period_start)`, and a composite serves lookups on a prefix, so it already answers every `user_id`-only query).
+- [x] **NOT NULL surfaced three fixtures that were creating memberships production could never create** — `policies.test.js` (x2) and `cascade.test.js` omitted `period_start` entirely. Fixed; they now match what `join.js` actually writes. Production code needed no change: `join.js` has set the column since the rollout.
+- [x] Production had 0 NULL `period_start` rows as of 2026-09-05, so the backfill is a safety net, not a data migration.
+- [x] Clean chain via `supabase db reset`, RLS suite **98/98**. An earlier `lessons.test.js` 23505 was leftover state from the mutation runs, not a defect — it clears on a reset.
 
 ---
 
