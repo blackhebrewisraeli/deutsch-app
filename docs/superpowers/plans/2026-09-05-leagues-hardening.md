@@ -52,10 +52,10 @@
 
 **Fixes:** advisor-confirmed `auth_rls_initplan` on `league_members."read my league rows"` and `leagues."read my leagues"`.
 
-- [ ] **RED.** Test asserting `get_advisors('performance')` returns zero `auth_rls_initplan` rows for both league tables. **Print the denominator** (policies inspected) so zero-findings and zero-inspected cannot print identically.
-- [ ] **GREEN.** Migration recreating both policies with `(select auth.uid())`.
-- [ ] **Verify live.** Re-run advisors. A lint that does not clear means the change did not take — never explain it as cache lag.
-- [ ] **Blocker to resolve first:** `npm run test:rls` is broken locally by a two-CLI version mix (npx 2.116.0 vs global 2.106.0). Pin one, or run this gate in CI only.
+- [x] **RED.** Asserted against `pg_policies` in the local RLS suite, not the management-API advisor: a test cannot reach the MCP, and a static scan of migration files cannot answer the question at all (the 2026-06-27 file contains a bare `auth.uid()` and always will — only the catalog knows which definition won). **Prints the denominator** (policies inspected) so zero-findings and zero-inspected cannot print identically.
+- [x] **GREEN.** `20260906000500_league_policy_initplan.sql` — `ALTER POLICY` (not DROP + CREATE, which would open an instant with no policy on tables where the policy *is* the access control).
+- [ ] **Verify live — POST-DEPLOY.** The MCP advisor is bound to production, so this cannot clear until the migration is applied there. A lint that does not clear means the change did not take; never explain it as cache lag.
+- [x] ~~Blocker: `npm run test:rls` broken locally by a two-CLI version mix.~~ **Did not reproduce** — `npx supabase` (2.116.0) drives `start`/`db reset` fine and `npm run test:rls` runs 89/89. The global 2.106.0 is simply unused. The note that recorded this was stale.
 
 ## L3 — Set-based settle
 
