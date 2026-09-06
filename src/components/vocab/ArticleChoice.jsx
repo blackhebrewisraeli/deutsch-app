@@ -17,6 +17,7 @@ export default function ArticleChoice({ articles, onChoose }) {
         display: 'grid',
         gridTemplateColumns: `repeat(${articles.length}, minmax(0, 1fr))`,
         gap: SPACE[3],
+        width: '100%',
       }}
     >
       {articles.map((article) => (

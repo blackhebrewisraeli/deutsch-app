@@ -27,8 +27,13 @@ export default function DeckCompleteBanner({ learnedCount, onDismiss }) {
         padding: '16px 20px',
         marginBottom: 16,
         display: 'flex',
+        flexWrap: 'wrap',
         alignItems: 'center',
-        justifyContent: 'space-between',
+        justifyContent: 'center',
+        gap: 12,
+        textAlign: 'center',
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
       <Confetti />
@@ -38,9 +43,10 @@ export default function DeckCompleteBanner({ learnedCount, onDismiss }) {
           fontSize: FONT_SIZE.xl,
           fontWeight: FONT_WEIGHT.bold,
           color: COLORS.ink,
+          textAlign: 'center',
         }}
       >
-        🎉 Deck complete — {learnedCount} words learned
+        Deck complete — {learnedCount} words learned
       </span>
       <button
         type="button"

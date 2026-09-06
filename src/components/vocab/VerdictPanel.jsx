@@ -34,6 +34,13 @@ export default function VerdictPanel({ result, answer, onVerdict }) {
           result === 'correct' ? COLORS.accentOn : result === 'almost' ? COLORS.ink : COLORS.paper,
         padding: SPACE[4],
         marginTop: SPACE[3],
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        textAlign: 'center',
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
       <div
@@ -42,6 +49,7 @@ export default function VerdictPanel({ result, answer, onVerdict }) {
           fontSize: FONT_SIZE.tag,
           letterSpacing: LETTER_SPACING.caps,
           marginBottom: SPACE[2],
+          textAlign: 'center',
         }}
       >
         {result === 'correct'
@@ -56,6 +64,7 @@ export default function VerdictPanel({ result, answer, onVerdict }) {
           fontSize: FONT_SIZE.xl,
           fontWeight: FONT_WEIGHT.semibold,
           marginBottom: SPACE[3],
+          textAlign: 'center',
         }}
       >
         {answer}
@@ -74,6 +83,7 @@ export default function VerdictPanel({ result, answer, onVerdict }) {
             display: 'grid',
             gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
             gap: SPACE[2],
+            width: '100%',
           }}
         >
           <button type="button" onClick={() => onVerdict('hard')} style={{ ...BUTTON.tile }}>

@@ -33,6 +33,22 @@ describe('Hero', () => {
     expect(screen.getByText('Flip, listen, learn.')).toBeInTheDocument();
   });
 
+  it('can center the kicker, title and subtitle as a column', () => {
+    const { container } = render(
+      <Hero align="center" kicker="Section 04" title="Wortschatz" sub="Flip, listen, learn." />
+    );
+    expect(container.firstChild).toHaveStyle({
+      textAlign: 'center',
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+    });
+    expect(screen.getByText('Flip, listen, learn.')).toHaveStyle({
+      marginLeft: 'auto',
+      marginRight: 'auto',
+    });
+  });
+
   it('renders the hero title as an h1', () => {
     render(<Hero kicker="A" title="Wortschatz" sub="Sub" />);
     expect(screen.getByRole('heading', { level: 1, name: 'Wortschatz' })).toBeInTheDocument();

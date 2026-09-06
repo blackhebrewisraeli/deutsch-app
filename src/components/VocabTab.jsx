@@ -7,7 +7,7 @@ import { newDeckId, MAX_CUSTOM_DECKS } from '../lib/customDecks';
 import { isLearned, learnedInDeck } from '../lib/learnedWords';
 const { decks: PRESET_DECKS } = activePack.content;
 const DEFAULT_DECK_ID = 'greetings';
-import { Volume2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import StatusNote from './ui/StatusNote';
 import { Hero } from './UI';
 import { shuffle } from '../lib/utils';
@@ -301,6 +301,7 @@ export default function VocabTab({
   return (
     <div>
       <Hero
+        align="center"
         kicker="Section 04"
         title="Wortschatz"
         sub="Flip, listen, learn. Pick a preset or generate a deck on any topic."
@@ -332,14 +333,27 @@ export default function VocabTab({
         />
 
         {/* ── Right column: active recall UI ── */}
-        <div>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'stretch',
+            textAlign: 'center',
+            width: '100%',
+            minWidth: 0,
+          }}
+        >
           {isAuto && deckLoading && (
             <div
               style={{
                 padding: SPACE[8],
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 textAlign: 'center',
                 fontFamily: FONTS.mono,
                 color: COLORS.mute,
+                width: '100%',
               }}
             >
               Loading deck…
@@ -355,7 +369,15 @@ export default function VocabTab({
             </StatusNote>
           )}
           {card && (
-            <>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                width: '100%',
+                minWidth: 0,
+              }}
+            >
               {/* Progress bar */}
               {/* `flexWrap` is load-bearing, and it fixes a bug that predates
                 the report button. Measured in Chrome at 320px:
@@ -371,7 +393,7 @@ export default function VocabTab({
                 own line, where that shrink finally has somewhere to go: 288px
                 at both 10 dots and 12, which is DOT_THRESHOLD and therefore the
                 widest the strip can ever be. The report button then sits in the
-                left group, where it costs the row nothing.
+                remaining-count group, where it costs the row nothing.
 
                 So: do not remove flexWrap, and do not move the button back in
                 beside the dots. Verified in a browser because jsdom computes no
@@ -380,13 +402,21 @@ export default function VocabTab({
                 style={{
                   display: 'flex',
                   flexWrap: 'wrap',
-                  justifyContent: 'space-between',
+                  justifyContent: 'center',
                   alignItems: 'center',
                   gap: SPACE[2],
                   marginBottom: SPACE[4],
+                  width: '100%',
                 }}
               >
-                <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[2] }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: SPACE[2],
+                  }}
+                >
                   <div
                     style={{
                       fontFamily: FONTS.mono,
@@ -418,6 +448,11 @@ export default function VocabTab({
                 />
               </div>
 
+              {/* BUG: DeckCompleteBanner lives inside `{card && …}`, so when
+                the last GOOD empties the queue, `card` becomes null and this
+                banner unmounts with it. Move it beside the empty-deck branch
+                (or keep the last card mounted while deckComplete is true)
+                before treating "deck finished" as a real surface. */}
               {deckComplete && (
                 <DeckCompleteBanner
                   learnedCount={learnedInDeck({
@@ -463,7 +498,7 @@ export default function VocabTab({
                     marginBottom: SPACE[3],
                   }}
                 >
-                  <Volume2 size={18} aria-hidden="true" /> {played ? 'PLAY AGAIN' : 'PLAY'}
+                  {played ? 'PLAY AGAIN' : 'PLAY'}
                 </button>
               )}
 
@@ -493,16 +528,20 @@ export default function VocabTab({
                   onVerdict={handleSrsVerdict}
                 />
               )}
-            </>
+            </div>
           )}
           {!card && !deckComplete && (
             <div
               style={{
                 padding: SPACE[8],
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
                 textAlign: 'center',
                 fontFamily: FONTS.mono,
                 fontSize: FONT_SIZE.base,
                 color: COLORS.mute,
+                width: '100%',
               }}
             >
               Select a deck to start.

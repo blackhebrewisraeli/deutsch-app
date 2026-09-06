@@ -13,6 +13,7 @@ export default function ChoiceGrid({ choices, onChoose }) {
         display: 'grid',
         gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
         gap: SPACE[3],
+        width: '100%',
       }}
     >
       {choices.map((choice) => (

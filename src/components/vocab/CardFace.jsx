@@ -47,15 +47,13 @@ export default function CardFace({ card, learned, mobile, display, conceal = [] 
         justifyContent: 'center',
         textAlign: 'center',
         marginBottom: SPACE[5],
-        position: 'relative',
+        width: '100%',
+        boxSizing: 'border-box',
       }}
     >
       {learned && (
         <div
           style={{
-            position: 'absolute',
-            top: SPACE[3],
-            left: SPACE[3],
             background: COLORS.green,
             color: COLORS.paper,
             padding: '4px 10px',
@@ -63,6 +61,7 @@ export default function CardFace({ card, learned, mobile, display, conceal = [] 
             fontFamily: FONTS.mono,
             fontSize: FONT_SIZE.tag,
             letterSpacing: LETTER_SPACING.widest,
+            marginBottom: SPACE[3],
           }}
         >
           ✓ LEARNED
@@ -80,6 +79,7 @@ export default function CardFace({ card, learned, mobile, display, conceal = [] 
           // whole page wider than the viewport. Let it break instead.
           overflowWrap: 'anywhere',
           maxWidth: '100%',
+          textAlign: 'center',
         }}
       >
         {display ?? card.de}
