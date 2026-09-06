@@ -898,10 +898,12 @@ describe('VocabTab', () => {
       );
       expect(screen.getByText('Wort 15')).toBeInTheDocument();
 
-      await expect(
-        userEvent.click(screen.getByRole('button', { name: /Greetings/ }))
-      ).resolves.not.toThrow();
+      await userEvent.click(screen.getByRole('button', { name: /Greetings/ }));
 
+      expect(
+        screen.queryByRole('heading', { name: /something went wrong/i })
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /reload/i })).not.toBeInTheDocument();
       expect(screen.getByRole('tabpanel', { name: 'Practice' })).toBeInTheDocument();
       expect(screen.getByText(firstCard().de)).toBeInTheDocument();
       expect(screen.getByText(`${DECKS.greetings.length} cards remaining`)).toBeInTheDocument();
