@@ -50,14 +50,16 @@ export default async function handler(req, res) {
         // Idempotency: already fully settled (every member ranked) → skip.
         if (members.every((m) => m.rank != null)) continue;
 
+        // One statement for the whole cohort. settleLeague stays the single
+        // ranking implementation — it is shared with the client, which draws
+        // the promotion/relegation dividers from it — and the RPC only applies
+        // the result set, atomically per league.
         const results = settleLeague(members);
-        for (const r of results) {
-          const { error: upErr } = await db
-            .from('league_members')
-            .update({ rank: r.rank, result: r.result })
-            .match({ league_id: league.id, user_id: r.user_id });
-          if (upErr) throw upErr;
-        }
+        const { error: upErr } = await db.rpc('apply_league_results', {
+          p_league_id: league.id,
+          p_results: results,
+        });
+        if (upErr) throw upErr;
         settled += 1;
       } catch {
         failed += 1;

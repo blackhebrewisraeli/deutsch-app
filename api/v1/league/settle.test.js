@@ -29,26 +29,16 @@ it('settles past leagues and writes ranks/results', async () => {
     { user_id: 'a', weekly_xp: 50, updated_at: 't1', rank: null },
     { user_id: 'b', weekly_xp: 10, updated_at: 't2', rank: null },
   ];
-  const updates = [];
+  const calls = [];
   const db = {
-    from: vi.fn((table) => {
-      if (table === 'leagues') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          lt: vi.fn().mockResolvedValue({ data: past, error: null }),
-        };
-      }
-      // league_members: select(...).eq('league_id', id) resolves the full set
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: members, error: null }),
-        update: vi.fn((vals) => ({
-          match: vi.fn((m) => {
-            updates.push({ vals, m });
-            return Promise.resolve({ error: null });
-          }),
-        })),
-      };
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockResolvedValue({ data: past, error: null }),
+      eq: vi.fn().mockResolvedValue({ data: members, error: null }),
+    })),
+    rpc: vi.fn((fn, args) => {
+      calls.push({ fn, args });
+      return Promise.resolve({ error: null });
     }),
   };
   serviceClient.mockReturnValue(db);
@@ -58,9 +48,14 @@ it('settles past leagues and writes ranks/results', async () => {
   expect(res.statusCode).toBe(200);
   expect(res.body.settled).toBe(1);
   expect(res.body.failed).toBe(0);
-  // winner 'a' got rank 1
-  const winner = updates.find((u) => u.m.user_id === 'a');
-  expect(winner.vals.rank).toBe(1);
+  // The ranking still reaches the database, now as one payload rather than as
+  // one UPDATE per member: winner 'a' got rank 1, and the loser is ranked too.
+  expect(calls).toHaveLength(1);
+  expect(calls[0].fn).toBe('apply_league_results');
+  expect(calls[0].args.p_league_id).toBe('L1');
+  const winner = calls[0].args.p_results.find((r) => r.user_id === 'a');
+  expect(winner.rank).toBe(1);
+  expect(calls[0].args.p_results.find((r) => r.user_id === 'b').rank).toBe(2);
 });
 
 it('skips a league that is already fully settled (idempotent)', async () => {
@@ -69,21 +64,17 @@ it('skips a league that is already fully settled (idempotent)', async () => {
     { user_id: 'a', weekly_xp: 50, updated_at: 't1', rank: 1 },
     { user_id: 'b', weekly_xp: 10, updated_at: 't2', rank: 2 },
   ];
-  const updateSpy = vi.fn();
+  // Asserts against the CURRENT write mechanism. The previous version of this
+  // test watched `update`, which the handler no longer calls at all — it would
+  // now pass with settlement entirely deleted.
+  const rpcSpy = vi.fn().mockResolvedValue({ error: null });
   const db = {
-    from: vi.fn((table) => {
-      if (table === 'leagues') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          lt: vi.fn().mockResolvedValue({ data: past, error: null }),
-        };
-      }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: members, error: null }),
-        update: updateSpy,
-      };
-    }),
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockResolvedValue({ data: past, error: null }),
+      eq: vi.fn().mockResolvedValue({ data: members, error: null }),
+    })),
+    rpc: rpcSpy,
   };
   serviceClient.mockReturnValue(db);
 
@@ -91,7 +82,7 @@ it('skips a league that is already fully settled (idempotent)', async () => {
   await handler(req('secret'), res);
   expect(res.statusCode).toBe(200);
   expect(res.body.settled).toBe(0);
-  expect(updateSpy).not.toHaveBeenCalled();
+  expect(rpcSpy).not.toHaveBeenCalled();
 });
 
 it('isolates a failing league and still settles the others (200, failed counted)', async () => {
@@ -103,29 +94,20 @@ it('isolates a failing league and still settles the others (200, failed counted)
     L_bad: [{ user_id: 'x', weekly_xp: 30, updated_at: 't1', rank: null }],
     L_ok: [{ user_id: 'y', weekly_xp: 20, updated_at: 't2', rank: null }],
   };
-  const okUpdates = [];
+  const okSettled = [];
   const db = {
-    from: vi.fn((table) => {
-      if (table === 'leagues') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          lt: vi.fn().mockResolvedValue({ data: past, error: null }),
-        };
-      }
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockResolvedValue({ data: past, error: null }),
       // league_members: resolve the member set for the scoped league_id
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn((_col, id) => Promise.resolve({ data: membersByLeague[id], error: null })),
-        update: vi.fn(() => ({
-          match: vi.fn((m) => {
-            if (m.league_id === 'L_bad') {
-              return Promise.resolve({ error: { message: 'DB write failed' } });
-            }
-            okUpdates.push(m);
-            return Promise.resolve({ error: null });
-          }),
-        })),
-      };
+      eq: vi.fn((_col, id) => Promise.resolve({ data: membersByLeague[id], error: null })),
+    })),
+    rpc: vi.fn((_fn, args) => {
+      if (args.p_league_id === 'L_bad') {
+        return Promise.resolve({ error: { message: 'DB write failed' } });
+      }
+      okSettled.push(args);
+      return Promise.resolve({ error: null });
     }),
   };
   serviceClient.mockReturnValue(db);
@@ -135,7 +117,7 @@ it('isolates a failing league and still settles the others (200, failed counted)
   expect(res.statusCode).toBe(200);
   expect(res.body.settled).toBe(1); // L_ok
   expect(res.body.failed).toBe(1); // L_bad
-  expect(okUpdates.some((m) => m.user_id === 'y')).toBe(true);
+  expect(okSettled.flatMap((a) => a.p_results).some((r) => r.user_id === 'y')).toBe(true);
 });
 
 // Vercel Cron triggers its path with a GET, not a POST. This endpoint opened
@@ -152,25 +134,16 @@ it('settles when Vercel Cron issues a GET', async () => {
     { user_id: 'a', weekly_xp: 50, updated_at: 't1', rank: null },
     { user_id: 'b', weekly_xp: 10, updated_at: 't2', rank: null },
   ];
-  const updates = [];
+  const calls = [];
   const db = {
-    from: vi.fn((table) => {
-      if (table === 'leagues') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          lt: vi.fn().mockResolvedValue({ data: past, error: null }),
-        };
-      }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockResolvedValue({ data: members, error: null }),
-        update: vi.fn((vals) => ({
-          match: vi.fn((m) => {
-            updates.push({ vals, m });
-            return Promise.resolve({ error: null });
-          }),
-        })),
-      };
+    from: vi.fn(() => ({
+      select: vi.fn().mockReturnThis(),
+      lt: vi.fn().mockResolvedValue({ data: past, error: null }),
+      eq: vi.fn().mockResolvedValue({ data: members, error: null }),
+    })),
+    rpc: vi.fn((fn, args) => {
+      calls.push({ fn, args });
+      return Promise.resolve({ error: null });
     }),
   };
   serviceClient.mockReturnValue(db);
@@ -179,7 +152,7 @@ it('settles when Vercel Cron issues a GET', async () => {
   await handler(req('secret', 'GET'), res);
   expect(res.statusCode).toBe(200);
   expect(res.body.settled).toBe(1);
-  expect(updates.find((u) => u.m.user_id === 'a').vals.rank).toBe(1);
+  expect(calls[0].args.p_results.find((r) => r.user_id === 'a').rank).toBe(1);
 });
 
 // Accepting GET must not widen the security boundary: the secret is what
@@ -196,4 +169,61 @@ it('still rejects methods neither Vercel nor a manual run uses (405)', async () 
   const res = createRes();
   await handler(req('secret', 'DELETE'), res);
   expect(res.statusCode).toBe(405);
+});
+
+// L3: settle issued one UPDATE per member. A full cohort is LEAGUE_SIZE (25),
+// so a single league cost 26 round trips and the whole run cost 26 x L, all
+// sequential, inside one 300s function. It is also not atomic per league: a
+// failure halfway leaves some members ranked and some not, which is only
+// survivable because re-settlement re-ranks the full set.
+//
+// Counting round trips rather than timing: a timing assertion would be flaky
+// and would not say WHY it was slow.
+it('settles a full 25-member cohort in at most two round trips', async () => {
+  const past = [{ id: 'L1', period_start: '2026-06-15' }];
+  const members = Array.from({ length: 25 }, (_, i) => ({
+    user_id: `u${i}`,
+    handle: `h${i}`,
+    weekly_xp: 100 - i,
+    updated_at: `t${i}`,
+    rank: null,
+  }));
+
+  let memberTrips = 0;
+  const db = {
+    from: vi.fn((table) => {
+      if (table === 'leagues') {
+        return {
+          select: vi.fn().mockReturnThis(),
+          lt: vi.fn().mockResolvedValue({ data: past, error: null }),
+        };
+      }
+      return {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn(() => {
+          memberTrips += 1;
+          return Promise.resolve({ data: members, error: null });
+        }),
+        update: vi.fn(() => ({
+          match: vi.fn(() => {
+            memberTrips += 1;
+            return Promise.resolve({ error: null });
+          }),
+        })),
+      };
+    }),
+    rpc: vi.fn(() => {
+      memberTrips += 1;
+      return Promise.resolve({ error: null });
+    }),
+  };
+  serviceClient.mockReturnValue(db);
+
+  const res = createRes();
+  await handler(req('secret'), res);
+
+  expect(res.statusCode).toBe(200);
+  expect(res.body.settled).toBe(1);
+  // One read of the member set, one write of the whole ranking.
+  expect(memberTrips).toBeLessThanOrEqual(2);
 });

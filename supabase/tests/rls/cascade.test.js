@@ -59,9 +59,13 @@ beforeAll(async () => {
       .insert({ user_id: userId, day: '2026-08-31', counters: { total: 1 } }),
     admin.from('decks').insert({ user_id: userId, deck_id: 'custom', name: 'My deck', cards: [] }),
     admin.from('settings').insert({ user_id: userId, data: { soundOn: true } }),
-    admin
-      .from('league_members')
-      .insert({ league_id: leagueId, user_id: userId, handle: 'cascade-probe', weekly_xp: 10 }),
+    admin.from('league_members').insert({
+      league_id: leagueId,
+      user_id: userId,
+      handle: 'cascade-probe',
+      weekly_xp: 10,
+      period_start: '2026-08-31',
+    }),
     admin.from('progress_events_seen').insert({
       user_id: userId,
       event_id: '11111111-1111-4111-8111-111111111111',
