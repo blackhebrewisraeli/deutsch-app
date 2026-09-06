@@ -157,7 +157,7 @@ describe('RLS: leagues + league_members', () => {
     LA = la.id;
     const { error: maErr } = await admin
       .from('league_members')
-      .insert({ league_id: LA, user_id: A.id, handle: 'AAA01' });
+      .insert({ league_id: LA, user_id: A.id, handle: 'AAA01', period_start: '2026-06-22' });
     if (maErr) throw new Error(maErr.message);
 
     const { data: lb, error: lbErr } = await admin
@@ -169,7 +169,7 @@ describe('RLS: leagues + league_members', () => {
     LB = lb.id;
     const { error: mbErr } = await admin
       .from('league_members')
-      .insert({ league_id: LB, user_id: B.id, handle: 'BBB01' });
+      .insert({ league_id: LB, user_id: B.id, handle: 'BBB01', period_start: '2026-06-22' });
     if (mbErr) throw new Error(mbErr.message);
   });
 
