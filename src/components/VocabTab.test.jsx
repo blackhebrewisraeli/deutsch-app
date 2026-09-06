@@ -853,6 +853,19 @@ describe('VocabTab', () => {
       expect(screen.getByText(firstCard().en)).toBeInTheDocument();
     });
 
+    it('Practise on a Browse row returns to Practice on that card', async () => {
+      renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      const first = firstCard();
+      await userEvent.click(screen.getByRole('button', { name: `Practise ${first.de}` }));
+      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      expect(screen.getByRole('button', { name: /GENERATE/ })).toBeInTheDocument();
+      expect(screen.getByText(first.de)).toBeInTheDocument();
+    });
+
     it('shows a Custom empty copy and no trash when there are no user decks', async () => {
       renderTab();
       await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));

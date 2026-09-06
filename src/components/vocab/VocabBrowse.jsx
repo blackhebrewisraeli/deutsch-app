@@ -1,9 +1,10 @@
+import { useMemo } from 'react';
 import { AlertTriangle } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, SPACE } from '../../lib/theme';
 import StatusNote from '../ui/StatusNote';
 import SectionLabel from '../ui/SectionLabel';
-import VocabTable from './VocabTable';
-import { loadState } from '../../lib/storage';
+import VocabBrowser from './VocabBrowser';
+import { toVocabRows } from '../../lib/vocabRows';
 
 const plural = (n, one, many) => (n === 1 ? one : many);
 
@@ -11,6 +12,9 @@ const plural = (n, one, many) => (n === 1 ? one : many);
  * View-only browse surface. Title and empty copy are props so no German
  * chrome lands in this file. When `customDecks` is passed this is the Custom
  * tab: a list of user decks (no trash) plus the table for the selected one.
+ *
+ * `srs`, learned maps and `now` are injected — this component must not call
+ * loadState() or Date.now() in render.
  */
 export default function VocabBrowse({
   title,
@@ -23,13 +27,30 @@ export default function VocabBrowse({
   emptyMessage = 'Select a deck to browse.',
   customDecks = null,
   onSelectDeck,
+  onPractice,
+  srs = {},
+  learnedWords = null,
+  learnedByDeck = null,
+  now,
 }) {
-  const srs = (loadState() ?? {}).srs ?? {};
-  const now = Date.now();
   const isCustomMode = customDecks !== null;
   const customEntries = isCustomMode ? Object.entries(customDecks) : [];
   const selectedIsCustom = Boolean(customDecks?.[deckId]);
   const showTable = !loading && !error && cards.length > 0 && (!isCustomMode || selectedIsCustom);
+
+  const rows = useMemo(
+    () =>
+      toVocabRows({
+        cards,
+        deckId,
+        deckName: title,
+        learnedWords,
+        learnedByDeck,
+        srs,
+        now,
+      }),
+    [cards, deckId, title, learnedWords, learnedByDeck, srs, now]
+  );
 
   return (
     <div style={{ width: '100%', minWidth: 0, marginTop: SPACE[8] }}>
@@ -164,13 +185,12 @@ export default function VocabBrowse({
       )}
 
       {showTable && (
-        <VocabTable
-          cards={cards}
+        <VocabBrowser
+          rows={rows}
           deckId={deckId}
-          srs={srs}
-          now={now}
+          deckName={title}
           mobile={mobile}
-          caption={title}
+          onPractice={onPractice}
         />
       )}
     </div>

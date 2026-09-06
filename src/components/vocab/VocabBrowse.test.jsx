@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VocabBrowse from './VocabBrowse';
+import * as storage from '../../lib/storage';
 
 const bread = { id: 'das Brot', de: 'das Brot', en: 'bread', ipa: '/bʁoːt/' };
 
@@ -16,10 +17,33 @@ describe('VocabBrowse', () => {
   });
 
   it('renders the title and a row for each card', () => {
-    render(<VocabBrowse title="Food & Drink" cards={[bread]} deckId="food" />);
+    render(<VocabBrowse title="Food & Drink" cards={[bread]} deckId="food" srs={{}} now={1} />);
     expect(screen.getByRole('heading', { name: 'Food & Drink' })).toBeInTheDocument();
     expect(screen.getByText('das Brot')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Term' })).toBeInTheDocument();
+  });
+
+  it('does not read storage or Date.now during render', () => {
+    const loadSpy = vi.spyOn(storage, 'loadState');
+    const nowSpy = vi.spyOn(Date, 'now');
+    render(<VocabBrowse title="Food & Drink" cards={[bread]} deckId="food" srs={{}} now={1} />);
+    expect(loadSpy).not.toHaveBeenCalled();
+    expect(nowSpy).not.toHaveBeenCalled();
+    loadSpy.mockRestore();
+    nowSpy.mockRestore();
+  });
+
+  it('pages a 60-card deck so row 51 is reachable', async () => {
+    const cards = Array.from({ length: 60 }, (_, i) => ({
+      id: `w-${i}`,
+      de: `Wort ${i}`,
+      en: `word ${i}`,
+    }));
+    render(<VocabBrowse title="Core 100" cards={cards} deckId="core-100" srs={{}} now={1} />);
+    expect(screen.getByText(/showing 1–50 of 60/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+    expect(screen.getByText('Wort 50')).toBeInTheDocument();
+    expect(screen.getByText(/showing 51–60 of 60/i)).toBeInTheDocument();
   });
 
   it('shows the empty copy when there are no cards', () => {

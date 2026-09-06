@@ -51,6 +51,11 @@ export default function VocabTab({
 }) {
   const [deckId, setDeckId] = useState(DEFAULT_DECK_ID);
   const [mode, setMode] = useState('practice');
+  // Snapshot once per mount so Browse/Custom never call Date.now() or loadState
+  // in their own render. Refresh when the learner leaves Practice — that is
+  // when a new SRS row may have been written.
+  const [browseNow] = useState(() => Date.now());
+  const [browseSrs, setBrowseSrs] = useState(() => (loadState() ?? {}).srs ?? {});
   // customCards is a PROP, not state: this component unmounts on every tab
   // switch, which is what used to destroy a generated deck. It lives in the
   // state blob now and App hands it down.
@@ -65,6 +70,12 @@ export default function VocabTab({
     error: deckError,
     retry,
   } = useAutoDeck(deckId);
+
+  useEffect(() => {
+    if (mode === 'browse' || mode === 'custom') {
+      setBrowseSrs((loadState() ?? {}).srs ?? {});
+    }
+  }, [mode]);
 
   const [answered, setAnswered] = useState(false);
   const [result, setResult] = useState(null); // 'correct' | 'almost' | 'wrong'
@@ -308,6 +319,30 @@ export default function VocabTab({
     activePack.content.deckDefs?.[deckId]?.name ||
     deckId;
 
+  const practiseRow = (row) => {
+    const idx = activeDeck.findIndex((c) => c.id === row.id);
+    if (idx >= 0) {
+      const rest = activeDeck.map((_, i) => i).filter((i) => i !== idx);
+      setQueue([idx, ...rest]);
+      setAnswered(false);
+      setResult(null);
+      setTypedAnswer('');
+      setDeckComplete(false);
+    }
+    setMode('practice');
+  };
+
+  const browseProps = {
+    title: deckTitle,
+    deckId,
+    mobile,
+    srs: browseSrs,
+    learnedWords,
+    learnedByDeck,
+    now: browseNow,
+    onPractice: practiseRow,
+  };
+
   return (
     <div>
       <Hero
@@ -322,13 +357,11 @@ export default function VocabTab({
       {mode === 'browse' && (
         <div role="tabpanel" id={vocabPanelId('browse')} aria-labelledby={vocabTabId('browse')}>
           <VocabBrowse
-            title={deckTitle}
+            {...browseProps}
             cards={activeDeck}
-            deckId={deckId}
             loading={isAuto && deckLoading}
             error={isAuto && deckError}
             onRetry={retry}
-            mobile={mobile}
             emptyMessage="Select a deck to browse."
           />
         </div>
@@ -337,10 +370,8 @@ export default function VocabTab({
       {mode === 'custom' && (
         <div role="tabpanel" id={vocabPanelId('custom')} aria-labelledby={vocabTabId('custom')}>
           <VocabBrowse
-            title={deckTitle}
+            {...browseProps}
             cards={customCards ?? []}
-            deckId={deckId}
-            mobile={mobile}
             customDecks={customDecks}
             onSelectDeck={setDeckId}
             emptyMessage="Generate a deck on Practice to see it here."
