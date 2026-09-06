@@ -95,6 +95,19 @@ export default function VocabTab({
   const customCards = customDecks?.[deckId]?.cards ?? null;
   const activeDeck = customCards ?? (isAuto ? (asyncDeck ?? []) : (PRESET_DECKS[deckId] ?? []));
 
+  // Deck changes must not keep the previous queue. React applies setDeckId
+  // before the reset effect, so one render can pair a new (smaller) deck with
+  // a leftover high index — getChoices then reads deck[cardIdx].en off the end.
+  const selectDeck = (nextId) => {
+    if (nextId === deckId) return;
+    setQueue([]);
+    setAnswered(false);
+    setResult(null);
+    setTypedAnswer('');
+    setDeckComplete(false);
+    setDeckId(nextId);
+  };
+
   // The custom deck can disappear while it is the SELECTED one — deleted here,
   // or tombstoned on another device and pulled in by a sync. There is no
   // PRESET_DECKS.custom to fall back on, so without this the learner is left
@@ -103,8 +116,8 @@ export default function VocabTab({
     // Covers a deck deleted here AND one tombstoned on another device and
     // pulled in by a sync: either way the selected id stops resolving.
     const isKnown = customDecks?.[deckId] || isAuto || Object.hasOwn(PRESET_DECKS, deckId ?? '');
-    if (!isKnown) setDeckId(DEFAULT_DECK_ID);
-  }, [deckId, customDecks, isAuto]);
+    if (!isKnown) selectDeck(DEFAULT_DECK_ID);
+  }, [deckId, customDecks, isAuto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const target = pendingReviewRef.current;
@@ -162,18 +175,24 @@ export default function VocabTab({
       }
     } else {
       // Deck change — pendingReviewRef will be consumed by the deck-reset effect.
-      setDeckId(reviewTarget.context);
+      selectDeck(reviewTarget.context);
     }
 
     onReviewConsumed?.();
   }, [reviewTarget, onReviewConsumed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const currentIdx = queue[0] ?? null;
+  const queuedIdx = queue[0];
+  const currentIdx =
+    Number.isInteger(queuedIdx) && queuedIdx >= 0 && queuedIdx < activeDeck.length
+      ? queuedIdx
+      : null;
   const card = currentIdx !== null ? activeDeck[currentIdx] : null;
   const played = card != null && playedCardId === card.id;
 
   const getChoices = (deck, cardIdx) => {
-    const correct = deck[cardIdx].en;
+    const picked = deck?.[cardIdx];
+    if (!picked) return [];
+    const correct = picked.en;
     const others = shuffle(deck.filter((_, i) => i !== cardIdx).map((c) => c.en));
     return shuffle([correct, ...others.slice(0, 3)]);
   };
@@ -272,7 +291,7 @@ export default function VocabTab({
           name: customTopic.trim(),
           cards: parsed.map((c) => ({ ...c, id: activePack.cardId(c) })),
         });
-        setDeckId(generatedId);
+        selectDeck(generatedId);
         // Cleared on SUCCESS only. Generating repeatedly is the normal case now
         // that decks are a collection, and a stale topic meant the next one was
         // typed onto the end of the last ("weather" + "food" = "weatherfood").
@@ -373,7 +392,7 @@ export default function VocabTab({
             {...browseProps}
             cards={customCards ?? []}
             customDecks={customDecks}
-            onSelectDeck={setDeckId}
+            onSelectDeck={selectDeck}
             emptyMessage={CUSTOM_EMPTY_COPY}
           />
         </div>
@@ -397,7 +416,7 @@ export default function VocabTab({
         >
           <DeckPicker
             deckId={deckId}
-            onSelect={setDeckId}
+            onSelect={selectDeck}
             customDecks={customDecks}
             onDelete={onDeckDeleted}
             atCap={Object.keys(customDecks ?? {}).length >= MAX_CUSTOM_DECKS}

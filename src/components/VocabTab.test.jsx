@@ -867,6 +867,49 @@ describe('VocabTab', () => {
       expect(screen.getByText(first.de)).toBeInTheDocument();
     });
 
+    it('does not crash when switching to Greetings after Practise-from-row on a large deck', async () => {
+      // Production Core 100 / CEFR B1 can queue an index past Greetings (10).
+      // The lexicon fixture is only 6 cards, so a 20-card custom deck stands in.
+      const cards = Array.from({ length: 20 }, (_, i) => ({
+        id: `Wort ${i}`,
+        de: `Wort ${i}`,
+        en: `word ${i}`,
+        ipa: '[vɔʁt]',
+      }));
+      render(
+        <VocabTab
+          level="a1"
+          learnedWords={{}}
+          markLearned={() => {}}
+          customDecks={{
+            'custom-big': { deckId: 'custom-big', name: 'Big Deck', cards },
+          }}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Your Deck: Big Deck/ }));
+      expect(screen.getByText('Wort 0')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Practise Wort 15' }));
+      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      expect(screen.getByText('Wort 15')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: /Greetings/ }));
+
+      expect(
+        screen.queryByRole('heading', { name: /something went wrong/i })
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /reload/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('tabpanel', { name: 'Practice' })).toBeInTheDocument();
+      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
+      expect(screen.getByText(`${DECKS.greetings.length} cards remaining`)).toBeInTheDocument();
+      expect(screen.queryByText('Wort 15')).not.toBeInTheDocument();
+    });
+
     it('shows a Custom empty copy and no trash when there are no user decks', async () => {
       renderTab();
       await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
