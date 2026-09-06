@@ -131,6 +131,37 @@ describe('VocabTab', () => {
       expect(screen.getByText(`${DECKS.greetings.length} cards remaining`)).toBeInTheDocument();
     });
 
+    it('centers the section title and the remaining-count row', () => {
+      renderTab();
+      const hero = screen.getByRole('heading', { level: 1, name: 'Wortschatz' }).parentElement;
+      expect(hero).toHaveStyle({
+        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+      });
+      const remaining = screen.getByText(`${DECKS.greetings.length} cards remaining`);
+      expect(remaining.parentElement.parentElement).toHaveStyle({
+        justifyContent: 'center',
+        flexWrap: 'wrap',
+      });
+    });
+
+    it('stretches the card column so a headword cannot collapse to one glyph', () => {
+      // alignItems:center on this column shrinks it to min-content. Combined
+      // with overflowWrap:anywhere that is a single letter, and Hallo stacks
+      // vertically inside a ~116px card. Stretch keeps the track full-width.
+      renderTab();
+      const remaining = screen.getByText(`${DECKS.greetings.length} cards remaining`);
+      let column = remaining.parentElement;
+      while (column && column.style.textAlign !== 'center') {
+        column = column.parentElement;
+      }
+      expect(column).toHaveStyle({
+        alignItems: 'stretch',
+        textAlign: 'center',
+      });
+    });
+
     it('switching decks resets the queue to the new deck', async () => {
       renderTab();
       await userEvent.click(screen.getByRole('button', { name: /Travel 10/ }));
@@ -748,6 +779,14 @@ describe('VocabTab', () => {
       await openDeck(user);
       await user.click(screen.getByRole('button', { name: 'Play the word' }));
       expect(speak).toHaveBeenCalledWith('das Haus');
+    });
+
+    it('labels the play control with words, not a decorative speaker icon', async () => {
+      const user = userEvent.setup();
+      await openDeck(user);
+      const play = screen.getByRole('button', { name: 'Play the word' });
+      expect(play.textContent.trim()).toBe('PLAY');
+      expect(play.querySelector('svg')).toBeNull();
     });
 
     // The button carried "AGAIN" from the autoplay era, when the card had

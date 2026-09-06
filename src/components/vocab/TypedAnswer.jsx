@@ -18,7 +18,14 @@ export default function TypedAnswer({
   placeholder = 'Type the English meaning…',
 }) {
   return (
-    <div>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'stretch',
+        width: '100%',
+      }}
+    >
       <input
         aria-label={label}
         type="text"
@@ -40,6 +47,9 @@ export default function TypedAnswer({
           background: COLORS.surface,
           marginBottom: SPACE[3],
           color: COLORS.ink,
+          // Left-aligned on purpose. A centered field looks tidy for "bread"
+          // and hides the start of a long gloss behind scrollWidth > clientWidth.
+          textAlign: 'start',
         }}
       />
       <button

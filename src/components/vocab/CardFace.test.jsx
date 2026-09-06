@@ -60,6 +60,20 @@ describe('CardFace', () => {
     expect(container.firstChild.style.border).toBe('1px solid var(--c-border)');
   });
 
+  it('centers the headword and the learned badge in the card, not pinned to a corner', () => {
+    const { container } = render(<CardFace card={noun} learned mobile={false} />);
+    expect(container.firstChild).toHaveStyle({
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center',
+    });
+    const badge = screen.getByText('✓ LEARNED');
+    expect(badge.style.position).not.toBe('absolute');
+    expect(screen.getByText('das Brot')).toHaveStyle({ textAlign: 'center' });
+  });
+
   it('steps the display size and padding down on mobile', () => {
     const { container, rerender } = render(<CardFace card={noun} learned={false} mobile />);
     expect(screen.getByText('das Brot')).toHaveStyle({ fontSize: FONT_SIZE['5xl'] });

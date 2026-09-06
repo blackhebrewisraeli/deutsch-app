@@ -93,9 +93,19 @@ export function SectionLabel({ num, text }) {
 
 // ── Hero ──────────────────────────────────────────────────────
 // Full-width section title block: kicker + big heading + subtitle.
-export function Hero({ kicker, title, sub }) {
+export function Hero({ kicker, title, sub, align = 'start' }) {
+  const centered = align === 'center';
   return (
-    <div style={{ borderBottom: BORDER.standard, paddingBottom: SPACE[6] }}>
+    <div
+      style={{
+        borderBottom: BORDER.standard,
+        paddingBottom: SPACE[6],
+        textAlign: centered ? 'center' : undefined,
+        display: centered ? 'flex' : undefined,
+        flexDirection: centered ? 'column' : undefined,
+        alignItems: centered ? 'center' : undefined,
+      }}
+    >
       {/* TEXT.kicker is exactly TEXT.label with a wider tracking and the error
           ink, so it is expressed as a Meta with those two overrides rather than
           as a second near-identical recipe. */}
@@ -124,6 +134,7 @@ export function Hero({ kicker, title, sub }) {
             fontStyle: 'italic',
             maxWidth: 600,
             marginTop: SPACE[4],
+            ...(centered ? { marginLeft: 'auto', marginRight: 'auto' } : {}),
           }}
         >
           {sub}

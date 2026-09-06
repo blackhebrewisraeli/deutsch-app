@@ -41,6 +41,26 @@ describe('TypedAnswer question text', () => {
     expect(screen.getByRole('textbox', { name: 'Type the English meaning' })).toBeInTheDocument();
   });
 
+  it('stretches the field to the card column but keeps typed text start-aligned', () => {
+    // The wrapper fills the centered vocab column. The input itself stays
+    // start-aligned so a long gloss is not scrolled off the left edge.
+    const { container } = render(
+      <TypedAnswer
+        value="the long compound meaning of bread and also bakery goods"
+        onChange={() => {}}
+        onSubmit={() => {}}
+      />
+    );
+    expect(container.firstChild).toHaveStyle({
+      width: '100%',
+      alignItems: 'stretch',
+    });
+    expect(screen.getByRole('textbox', { name: 'Type the English meaning' })).toHaveStyle({
+      textAlign: 'start',
+      width: '100%',
+    });
+  });
+
   it('can ask something else without a second component', () => {
     render(
       <TypedAnswer

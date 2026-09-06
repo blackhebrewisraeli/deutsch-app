@@ -29,6 +29,17 @@ describe('VerdictPanel', () => {
     expect(screen.getByRole('button', { name: 'GOOD' })).toBeInTheDocument();
   });
 
+  it('centers the verdict and the answer', () => {
+    const { container } = render(
+      <VerdictPanel result="correct" answer="bread" onVerdict={() => {}} />
+    );
+    expect(container.firstChild).toHaveStyle({
+      textAlign: 'center',
+      alignItems: 'center',
+      justifyContent: 'center',
+    });
+  });
+
   it('always shows the answer, whatever the verdict', () => {
     for (const result of ['correct', 'almost', 'wrong']) {
       const { unmount } = render(
