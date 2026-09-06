@@ -847,6 +847,7 @@ describe('VocabTab', () => {
       renderTab();
       await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
       expect(screen.getByRole('tabpanel', { name: 'Browse' })).toBeInTheDocument();
+      expect(screen.getByText(/this deck · selected on practice/i)).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Term' })).toBeInTheDocument();
       expect(screen.getByText(firstCard().de)).toBeInTheDocument();
@@ -870,7 +871,8 @@ describe('VocabTab', () => {
       renderTab();
       await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
       expect(screen.getByRole('tabpanel', { name: 'Custom' })).toBeInTheDocument();
-      expect(screen.getByText('Generate a deck on Practice to see it here.')).toBeInTheDocument();
+      expect(screen.getByText(/view-only/i)).toBeInTheDocument();
+      expect(screen.getByText(/no custom decks yet/i)).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
     });

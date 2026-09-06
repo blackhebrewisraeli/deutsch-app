@@ -33,7 +33,7 @@ describe('VocabBrowser', () => {
       now: NOW,
     });
     render(<VocabBrowser rows={rows} deckId="core-100" deckName="Core 100" />);
-    expect(screen.getByText(/showing 1–50 of 60/i)).toBeInTheDocument();
+    expect(screen.getByText(/showing 1–50 of 60 in this deck/i)).toBeInTheDocument();
     expect(screen.getByText('Wort 0')).toBeInTheDocument();
     expect(screen.queryByText('Wort 50')).not.toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Next' }));
@@ -96,6 +96,14 @@ describe('VocabBrowser', () => {
     rerender(<VocabBrowser rows={second} deckId="b" deckName="B" />);
     expect(screen.getByText('Neu')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument();
+  });
+
+  it('keeps status chips on one scrolling row on mobile', () => {
+    const rows = toVocabRows({ cards: [bread], deckId: 'food', now: NOW });
+    render(<VocabBrowser rows={rows} deckId="food" deckName="Food" mobile />);
+    const group = screen.getByRole('group', { name: 'Filter by status' });
+    expect(group).toHaveStyle({ flexWrap: 'nowrap', overflowX: 'auto' });
+    expect(screen.getByRole('searchbox')).toHaveAttribute('placeholder', 'Search this deck');
   });
 
   it('offers Practise on a row', async () => {

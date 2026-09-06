@@ -77,14 +77,14 @@ export default function VocabBrowser({
   };
 
   return (
-    <div style={{ minWidth: 0 }}>
+    <div style={{ minWidth: 0 }} aria-label={deckName ? `${deckName} — this deck` : 'This deck'}>
       <div
         style={{
           display: 'flex',
           flexWrap: 'wrap',
           gap: SPACE[3],
           alignItems: 'center',
-          marginBottom: SPACE[4],
+          marginBottom: SPACE[3],
           minWidth: 0,
         }}
       >
@@ -108,7 +108,7 @@ export default function VocabBrowser({
             type="search"
             value={query}
             onChange={(e) => onQuery(e.target.value)}
-            placeholder="Search word or meaning"
+            placeholder={mobile ? 'Search this deck' : 'Search this deck — word or meaning'}
             style={{
               flex: 1,
               minWidth: 0,
@@ -128,10 +128,11 @@ export default function VocabBrowser({
         aria-label="Filter by status"
         style={{
           display: 'flex',
-          flexWrap: 'wrap',
+          flexWrap: mobile ? 'nowrap' : 'wrap',
           gap: SPACE[2],
-          marginBottom: SPACE[4],
+          marginBottom: SPACE[3],
           minWidth: 0,
+          overflowX: mobile ? 'auto' : 'visible',
         }}
       >
         {filters.map((key) => {
@@ -155,6 +156,7 @@ export default function VocabBrowser({
                 cursor: 'pointer',
                 transition: TRANSITION.fast,
                 whiteSpace: 'nowrap',
+                flexShrink: mobile ? 0 : 1,
               }}
             >
               {FILTER_LABELS[key] ?? key} {counts[key] ?? 0}
@@ -172,8 +174,8 @@ export default function VocabBrowser({
         emptyMessage={emptyMessage ?? 'No words match this search.'}
         caption={
           view.total === 0
-            ? `${deckName} — no words match`.trim()
-            : `${deckName} — showing ${view.from}–${view.to} of ${view.total}`.trim()
+            ? 'No words match in this deck'
+            : `Showing ${view.from}–${view.to} of ${view.total} in this deck`
         }
       />
 

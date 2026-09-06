@@ -1,7 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import VocabBrowse from './VocabBrowse';
+import VocabBrowse, {
+  BROWSE_SCOPE_LABEL,
+  CUSTOM_SCOPE_LABEL,
+  CUSTOM_EMPTY_COPY,
+  CUSTOM_PICK_COPY,
+} from './VocabBrowse';
 import * as storage from '../../lib/storage';
 
 const bread = { id: 'das Brot', de: 'das Brot', en: 'bread', ipa: '/bʁoːt/' };
@@ -18,6 +23,7 @@ describe('VocabBrowse', () => {
 
   it('renders the title and a row for each card', () => {
     render(<VocabBrowse title="Food & Drink" cards={[bread]} deckId="food" srs={{}} now={1} />);
+    expect(screen.getByText(BROWSE_SCOPE_LABEL)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Food & Drink' })).toBeInTheDocument();
     expect(screen.getByText('das Brot')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Term' })).toBeInTheDocument();
@@ -80,9 +86,10 @@ describe('VocabBrowse', () => {
         cards={[bread]}
         deckId="custom-1"
         customDecks={{ 'custom-1': weatherDeck }}
-        emptyMessage="Generate a deck on Practice to see it here."
+        emptyMessage={CUSTOM_EMPTY_COPY}
       />
     );
+    expect(screen.getByText(CUSTOM_SCOPE_LABEL)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /weather/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
     expect(screen.getByText('das Brot')).toBeInTheDocument();
@@ -95,10 +102,11 @@ describe('VocabBrowse', () => {
         cards={[]}
         deckId="greetings"
         customDecks={{}}
-        emptyMessage="Generate a deck on Practice to see it here."
+        emptyMessage={CUSTOM_EMPTY_COPY}
       />
     );
-    expect(screen.getByText('Generate a deck on Practice to see it here.')).toBeInTheDocument();
+    expect(screen.getByText(CUSTOM_SCOPE_LABEL)).toBeInTheDocument();
+    expect(screen.getByText(CUSTOM_EMPTY_COPY)).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
@@ -112,7 +120,8 @@ describe('VocabBrowse', () => {
         onSelectDeck={() => {}}
       />
     );
-    expect(screen.getByText('Select a custom deck to inspect it.')).toBeInTheDocument();
+    expect(screen.getByText(CUSTOM_SCOPE_LABEL)).toBeInTheDocument();
+    expect(screen.getByText(CUSTOM_PICK_COPY)).toBeInTheDocument();
     expect(screen.queryByText('Hallo')).not.toBeInTheDocument();
   });
 
