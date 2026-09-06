@@ -27,7 +27,7 @@ import DeckCompleteBanner from './vocab/DeckCompleteBanner';
 import ArticleChoice from './vocab/ArticleChoice';
 import VocabModeTabs from './vocab/VocabModeTabs';
 import { vocabPanelId, vocabTabId } from './vocab/vocabModes';
-import VocabBrowse from './vocab/VocabBrowse';
+import VocabBrowse, { CUSTOM_EMPTY_COPY } from './vocab/VocabBrowse';
 import { drillFor } from './vocab/drills';
 import { speak } from '../lib/speech';
 import useAutoDeck from './vocab/useAutoDeck';
@@ -362,7 +362,7 @@ export default function VocabTab({
             loading={isAuto && deckLoading}
             error={isAuto && deckError}
             onRetry={retry}
-            emptyMessage="Select a deck to browse."
+            emptyMessage="This deck has no words yet."
           />
         </div>
       )}
@@ -374,7 +374,7 @@ export default function VocabTab({
             cards={customCards ?? []}
             customDecks={customDecks}
             onSelectDeck={setDeckId}
-            emptyMessage="Generate a deck on Practice to see it here."
+            emptyMessage={CUSTOM_EMPTY_COPY}
           />
         </div>
       )}

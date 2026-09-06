@@ -1,49 +1,57 @@
 # Vocabulary management — Browse / Custom beside Practice
 
 - **Date:** 2026-09-06
-- **Status:** design, P1 ready to implement
-- **Author:** Claude Code (from the 2026-09-06 discovery pass)
-- **Predecessor:** #244 (`ui/vocab-centered-cards`) — Practice-column cleanup, merged first on purpose
-- **Scope:** information architecture, edit policy, sync constraints, and the P1 file list.
-  Application code for P1 lives on `feat/vocab-management-p1`, not in this document.
+- **Status:** P1 and most of P2 landed in #245 (`d91886c`). Remaining work is
+  leftover P2 (group/deck filters) plus P3–P5. Do not start P3 writes from this
+  document.
+- **Author:** Claude Code (2026-09-06 discovery). Updated after #245 so the
+  document matches the merged tree, not the original P1 brief.
+- **Predecessor:** #244 (`ui/vocab-centered-cards`) — Practice-column cleanup.
+- **Landed:** #245 (`feat/vocab-management-p1`) — tab shell, searchable table,
+  status chips, pager, row inspect, Practise-from-row.
 
 ---
 
 ## 1 · What this is
 
-The Vocab tab is a **practice session** with a cluttered picker, not a vocabulary
-manager. Learners cannot browse a deck as a list, inspect a word, or edit a
-custom card. Controls for generate, delete, auto-deck chips, and recall all
-share one page.
+The Vocab tab used to be a **practice session** with a cluttered picker. Learners
+could not browse a deck as a list or inspect a word. #245 added an inner tab
+strip so practice and management stop sharing that column.
 
-This epic adds an inner tab strip so practice and management stop sharing that
-column, then lands browse / inspect / custom-edit in small PRs on top of the
-storage and sync contracts that already exist.
+**P0 is done.** #244 merged as cleanup. Do not reopen it.
 
-**P0 is done.** #244 merged as cleanup. Do not reopen it as the redesign vehicle.
+**#245 is done and stays.** It shipped more than the original P1 brief (see §6).
+Fix-forward on copy and first-screen density; do not revert unless a later
+product decision says the extra P2 surface was a mistake.
 
 ---
 
-## 2 · Ground truth (verified 2026-09-06 against `main` @ `fb31659`)
+## 2 · Ground truth (verified 2026-09-06 against `main` @ `d91886c`)
 
-### 2.1 There is no management surface
+### 2.1 Management surface that exists now
 
-[VocabTab.jsx](../../../src/components/VocabTab.jsx) is a two-column practice
-page: [DeckPicker](../../../src/components/vocab/DeckPicker.jsx) on the left
-(presets, custom rows + trash, auto-deck chips, generate form) and one card at
-a time on the right. No table, no inspect drawer, no card editor.
+[VocabTab.jsx](../../../src/components/VocabTab.jsx) has three inner modes:
 
-`App.jsx` mounts VocabTab with `{tab === 'vocab' && …}`, so leaving the app-level
-tab **unmounts** the tree and `deckId` resets to `greetings`.
+| Mode | What it is |
+| --- | --- |
+| **Practice** (default) | Today's recall UI. Generate / delete custom decks still live here. |
+| **Browse** | Table of the **currently selected** deck — not the whole lexicon. Search, status chips, 50-row pager, expand-a-row details, Practise. |
+| **Custom** | View-only list of live custom decks. Selecting one calls `setDeckId` and shows that deck's table. No generate / delete / edit. |
+
+`App.jsx` still mounts VocabTab with `{tab === 'vocab' && …}`, so leaving the
+app-level tab **unmounts** the tree: `deckId` resets to `greetings` and `mode`
+resets to `practice`.
 
 ### 2.2 What can already be written
 
 | Action | Exists? | How |
 | --- | --- | --- |
-| Generate a custom deck | yes | AI, 10 cards, `newDeckId()`, cap 8 live / 100 cards |
-| Delete a custom deck | yes | trash icon, **no confirm**, tombstone + `forgetDeck` |
-| Rename a deck | no | |
-| Edit / delete a card | no | |
+| Generate a custom deck | yes | AI, 10 cards, `newDeckId()`, cap 8 live / 100 cards. **Practice only.** |
+| Delete a custom deck | yes | trash icon on Practice, **no confirm**, tombstone + `forgetDeck` |
+| Browse / search / page a deck | yes | #245 |
+| Practise a row | yes | jumps that card to the front of the Practice queue |
+| Rename a deck | no | P3 |
+| Edit / delete a card | no | P3 |
 | Add a card by hand | no | |
 | Un-learn a word | no | learning is monotonic; `learnedWords` is union-merged |
 | Reset SRS | no | |
@@ -54,7 +62,8 @@ tab **unmounts** the tree and `deckId` resets to `greetings`.
   in [decks.js](../../../src/packs/de/decks.js), resolved at build.
 - **Auto:** ~23 lexicon views in [autoDecks.js](../../../src/packs/de/autoDecks.js)
   (Frequency, CEFR, Topics, grammar drills). Core 100 / Top 500 / CEFR decks
-  are 100–500+ rows. Resolved lazily by [useAutoDeck.js](../../../src/components/vocab/useAutoDeck.js).
+  are 100–500+ rows; CEFR B1 is 2,144. Resolved lazily by
+  [useAutoDeck.js](../../../src/components/vocab/useAutoDeck.js).
 - **Custom:** AI JSON `{ de, en, ipa? }` with `id = activePack.cardId(c)` =
   `card.de`. Stored in `state.decks`.
 
@@ -91,21 +100,24 @@ Storage key stays `deutsch-app-state-v1`. No rename, no new key.
 
 ## 3 · Information architecture
 
-Keep the app-level **Vocab** tab. Add three inner tabs. Four will wrap or
-overflow at 320px.
+Keep the app-level **Vocab** tab. Three inner tabs. Four will wrap or overflow
+at 320px.
 
 1. **Practice** (default) — today's recall UI. Generate/delete stay here through
    P3 and move to Custom in P4.
-2. **Browse** — table/list of the **currently selected** deck (P1). P2 adds
-   group/deck filters, status chips, and a read-only inspector.
-3. **Custom** — the only writable surface (from P3). P1 is a view-only list
-   plus the same table; generate/delete stay on Practice.
+2. **Browse** — table/list of the **currently selected** deck. It is not a
+   library of every word in the pack. Deck changes still happen on Practice
+   (or by picking a custom deck on Custom). #245 already added in-deck search,
+   status chips, a pager, expand-row inspect, and Practise.
+3. **Custom** — the only writable surface **from P3**. Until then it is
+   view-only: a list of live custom decks plus the same table. Generate/delete
+   stay on Practice.
 
-Status (New / Due / Learned / Mastered) is a **filter** on Browse/Custom from
-P2, not a fourth tab.
+Status is a **filter** on Browse/Custom, not a fourth tab. The chips landed in
+#245.
 
 `SegmentedPicker` is the wrong primitive (`role="group"` + `aria-pressed`, no
-arrows). New `VocabModeTabs` is a real `tablist` / `tab` / `tabpanel` with
+arrows). `VocabModeTabs` is a real `tablist` / `tab` / `tabpanel` with
 arrow-key roving tabindex and **manual selection** (arrows move focus;
 Space / Enter / click commit), matching [LevelSwitcher.jsx](../../../src/components/ui/LevelSwitcher.jsx).
 Switching away from Practice mid-card is a session change; selection-follows-focus
@@ -113,7 +125,7 @@ would commit that on the first arrow.
 
 Inner `mode` lives in VocabTab. Leaving the app-level Vocab tab still remounts
 and resets to Practice — same as today's `deckId` reset. Do not lift mode to
-`App` in P1.
+`App` until a later brief says so.
 
 ---
 
@@ -132,48 +144,70 @@ and resets to Practice — same as today's `deckId` reset. Do not lift mode to
 
 ## 5 · Status derivation
 
-One function, used by the table and later by filters:
+Two helpers exist and must not drift further:
 
-| Condition (first match) | Status |
+**Table rows** (`toVocabRows` in [vocabRows.js](../../../src/lib/vocabRows.js))
+keep a **base status** plus two flags, because a mastered card can also be due
+and a learning card can also be learned:
+
+| Field | Meaning |
 | --- | --- |
-| no `srs[deckId:cardId]` | `new` |
-| `box === MASTERED_BOX` (5) | `mastered` |
-| `nextDue <= now` | `due` |
-| otherwise | `learned` |
+| `status` | `new` (no SRS row) · `mastered` (`box === MASTERED_BOX`) · otherwise `learning` |
+| `due` | no usable `nextDue`, or `nextDue <= now` |
+| `learned` | `isLearned(...)` — the same maps as the Practice "✓ LEARNED" badge |
 
-`isLearned` still drives the Practice "✓ LEARNED" badge. It is **not** a
-separate table status: a learned card that is due again shows as `due`.
+The Status column paints additive pills (Learning + Due, Learning + Learned,
+Mastered + Due). Filter chips read those fields independently.
+
+**Collapsed helper** (`statusForCard` in
+[vocabStatus.js](../../../src/components/vocab/vocabStatus.js)) is first-match
+for callers that still want one enum:
+
+`new` → `mastered` → `due` → `learned` → `learning`
+
+`learned` here is also `isLearned`, **not** "has an SRS row that is not due".
+That older reading shipped in the first #245 commit and was corrected in the
+same PR.
 
 ---
 
 ## 6 · Phased PRs
 
-| PR | What | Writes? |
-| --- | --- | --- |
-| **P0** | Merge #244 | no (done) |
-| **P1** | Tab shell + view-only table for the selected deck. Auto decks: first 50 rows. Custom tab is view-only. | no |
-| **P2** | Browse filters (group/deck/status) + read-only inspect. "Practice this" sets `deckId` and switches to Practice. | no |
-| **P3** | Custom rename / edit `en`/`ipa`/glosses / delete card / confirm deck delete. | yes, existing helpers |
-| **P4** | Practice picker becomes select-only. Generate + trash live on Custom. | no new contracts |
-| **P5** | Optional: practice-from-row / due-only session. | no new keys |
+| PR | What | Writes? | Status |
+| --- | --- | --- | --- |
+| **P0** | Merge #244 | no | **done** |
+| **P1** | Tab shell + view-only table for the selected deck. Custom tab is view-only. | no | **done in #245** |
+| **P2 (landed)** | In-deck search (umlaut / `ß` fold), status chips, 50-row **pager** (not a hard cap), Article / Level / Category columns, expand-row details, Practise-from-row. `VocabTable` takes derived `rows`. | no | **done in #245** — the original brief called P1 "cap-50-only"; that is stale. CEFR B1 (2,144 cards) is reachable page by page. |
+| **P2 (left)** | Group / deck filters on Browse so a learner can change deck without returning to Practice. A dedicated inspect panel (today's inspect is an expand row). | no | **not started** |
+| **P3** | Custom rename / edit `en`/`ipa`/glosses / delete card / confirm deck delete. | yes, existing helpers | **not started** |
+| **P4** | Practice picker becomes select-only. Generate + trash live on Custom. | no new contracts | **not started** |
+| **P5** | Optional: due-only session from Browse. Practise-from-row already landed. | no new keys | **not started** |
 
 ---
 
-## 7 · P1 file list (exact)
+## 7 · Files that landed in #245
 
-**Modify**
+**Modified**
 
-- `src/components/VocabTab.jsx`
-- `src/components/VocabTab.test.jsx`
+- `src/components/VocabTab.jsx` + `VocabTab.test.jsx`
+- `src/lib/textRules.js` + `textRules.test.js` (`SEARCH` rule set)
 
-**Add**
+**Added**
 
-- `src/components/vocab/VocabModeTabs.jsx` + `VocabModeTabs.test.jsx`
-- `src/components/vocab/VocabBrowse.jsx` + `VocabBrowse.test.jsx`
-- `src/components/vocab/VocabTable.jsx` + `VocabTable.test.jsx`
+- `src/components/vocab/VocabModeTabs.jsx` + test, `vocabModes.js`
+- `src/components/vocab/VocabBrowse.jsx` + test
+- `src/components/vocab/VocabBrowser.jsx` + test
+- `src/components/vocab/VocabTable.jsx` + test
+- `src/components/vocab/vocabStatus.js`
+- `src/lib/vocabRows.js` + test
 
-**Do not touch:** `App.jsx`, `customDecks.js`, `learnedWords.js`, `srs.js`,
-`storage.js`, `sync/*`, `DeckPicker.jsx`, pack content.
+**Do not touch for leftover P2 or for copy/density follow-ups:** `App.jsx`,
+`customDecks.js`, `learnedWords.js`, `srs.js`, `storage.js`, `sync/*`,
+`DeckPicker.jsx`, pack content, any `localStorage` key.
+
+`VocabTable` contract is `{ rows, expandedId, onToggleExpand, onPractice,
+emptyMessage, mobile, caption }`. Do not pass `{ cards, deckId, srs, now }` —
+that older signature rendered an empty table with no error.
 
 ---
 
@@ -183,19 +217,26 @@ separate table status: a learned card that is due again shows as `due`.
 - New or renamed `localStorage` keys
 - Renaming `card.de` → `term`
 - Manual "add a word" to pack decks
-- Virtualizing the whole lexicon
+- Virtualizing the whole lexicon (paging + search is the designed answer)
 - Fixing `DeckCompleteBanner` (already `// BUG:` from #244)
 - Changing `MAX_CUSTOM_DECKS` (8) or generate-via-AI
 - Chat / Translate / Alphabet
 - Stats `VocabSrsWidget` still counting only the 40 curated cards
+- Preview-SSO / Google OAuth landing on Site URL — not a #245 regression
 
 ---
 
 ## 9 · Risks the later PRs must keep saying out loud
 
 - Whole-deck LWW: two devices editing one custom deck drop one side's cards.
-- Auto-deck size: never mount Top 500 as one table (P1 cap is 50).
+- Auto-deck size: never mount Top 500 (or CEFR B1) as one table. Page size is
+  50; the pager reaches the rest. Search is the way through a 2,144-row deck.
 - `recordVocabAnswer` already has its own `saveState` writer. Do not add a
   third in this epic.
-- Table chrome stays language-blind: headers are Term / Meaning / IPA / Status,
-  not "German". IPA renders through `TEXT.ipa` (JetBrains Mono).
+- Table chrome stays language-blind: headers are Term / Meaning / IPA / Status
+  (plus Article / Level / Category), not "German". IPA renders through
+  `TEXT.ipa` (JetBrains Mono).
+- Browse is the selected deck. Adding group/deck filters is leftover P2, not
+  a silent extra column.
+- Custom is view-only until P3. Do not add edit/delete/card-write on a
+  "small UX" pass.
