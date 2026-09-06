@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { normalizeText, CHOICE, ANSWER } from './textRules';
+import { normalizeText, CHOICE, ANSWER, SEARCH } from './textRules';
 
 const GERMAN = {
   trim: true,
@@ -88,5 +88,17 @@ describe('engine rule sets', () => {
     expect(normalizeText('schön', ANSWER)).toBe('schön');
     expect(normalizeText('groß', ANSWER)).toBe('groß');
     expect(normalizeText('schön', CHOICE)).toBe('schön');
+  });
+
+  // A search box fails the other way from a grader: folding only widens the
+  // result set, so an ASCII keyboard can still reach "Käse".
+  it('SEARCH strips combining marks so Kase finds Käse', () => {
+    expect(normalizeText('Käse', SEARCH)).toBe(normalizeText('Kase', SEARCH));
+    expect(normalizeText('schön', SEARCH)).toBe('schon');
+  });
+
+  it("SEARCH carries no replacements — those stay the pack's to layer on", () => {
+    expect(SEARCH.replacements).toEqual([]);
+    expect(normalizeText('Straße', SEARCH)).not.toBe(normalizeText('Strasse', SEARCH));
   });
 });
