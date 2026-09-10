@@ -943,16 +943,22 @@ describe('VocabTab', () => {
       expectGreetingsQueueRebuilt();
     });
 
-    it('rebuilds the Greetings queue when Browse switches off a stale high index', async () => {
-      // Raw setDeckId still presses Greetings on Practice; the deckId effect
-      // then rebuilds the queue, so chip-pressed assertions are not this
-      // contract. The Browse call site must be selectDeck — that is what
-      // drops the leftover high index in the same update as the id change.
+    it('only selectDeck writes deckId — UI surfaces never receive the raw setter', () => {
+      // Bounds checks mean a behavioral test can still pass if a surface is
+      // wired to the raw setter. This pins the call sites instead.
       const src = readFileSync('src/components/VocabTab.jsx', 'utf8');
-      const browse = src.split("{mode === 'browse' &&")[1].split("{mode === 'custom' &&")[0];
-      expect(browse).toContain('onSelectDeck={selectDeck}');
-      expect(browse).not.toContain('onSelectDeck={setDeckId}');
+      expect(src).toContain('const [deckId, setDeckIdRaw] = useState');
+      expect(src).toContain('setDeckIdRaw(nextId)');
+      expect(src.match(/setDeckIdRaw/g)).toEqual(['setDeckIdRaw', 'setDeckIdRaw']);
+      expect(src).not.toMatch(/onSelect(?:Deck)?=\{setDeckId/);
+      expect(src).toContain('onSelectDeck={selectDeck}');
+      expect(src).toContain('onSelect={selectDeck}');
+      expect(src).toContain('selectDeck(reviewTarget.context)');
+      expect(src).toContain('selectDeck(generatedId)');
+      expect(src).toContain('selectDeck(DEFAULT_DECK_ID)');
+    });
 
+    it('rebuilds the Greetings queue after a Browse switch from a high-index deck', async () => {
       await queuePastGreetings();
       await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
       await userEvent.selectOptions(
