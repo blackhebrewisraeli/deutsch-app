@@ -8,7 +8,9 @@ const browseSelect = () => screen.getByRole('combobox', { name: BROWSE_SCOPE_LAB
 describe('BrowseDeckSelect', () => {
   it('is named by the visible Choose a deck label', () => {
     render(<BrowseDeckSelect deckId="greetings" onSelect={() => {}} />);
-    expect(screen.getByText(BROWSE_SCOPE_LABEL)).toBeInTheDocument();
+    const label = screen.getByText(BROWSE_SCOPE_LABEL);
+    expect(label).toBeInTheDocument();
+    expect(label).toHaveStyle({ display: 'block' });
     expect(browseSelect()).toHaveAccessibleName(BROWSE_SCOPE_LABEL);
   });
 

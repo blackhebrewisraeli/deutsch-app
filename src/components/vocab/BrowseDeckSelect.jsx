@@ -43,7 +43,11 @@ export default function BrowseDeckSelect({ deckId, onSelect, customDecks = {} })
 
   return (
     <>
-      <SectionLabel as="label" htmlFor={selectId} style={{ marginBottom: SPACE[2] }}>
+      <SectionLabel
+        as="label"
+        htmlFor={selectId}
+        style={{ display: 'block', marginBottom: SPACE[2] }}
+      >
         {BROWSE_SCOPE_LABEL}
       </SectionLabel>
       <select
