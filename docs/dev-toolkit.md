@@ -71,4 +71,38 @@ Heuristics are regex-based and tuned to this repo's tidy top-of-file imports;
 they don't follow dynamic `import()` or runtime indirection. Treat output as a
 strong hint, not proof.
 
+## Agent & tooling config
+
+`.claude/skills/component/SKILL.md` above is one of several agent files this
+repo tracks on purpose. The full table, and the rules that go with them, live
+in **`AGENTS.md` → "Agent & tooling config"**. The short version:
+
+| Path | What it is |
+| --- | --- |
+| `.mcp.json`, `.cursor/mcp.json`, `.codex/config.toml` | The Supabase MCP server, once per agent format. |
+| `.cursor/rules/deutsch-app.mdc` | Cursor's always-apply rule; points at `AGENTS.md`. |
+| `.claude/launch.json` | Named dev servers for the preview tool — use these, not `npm run dev` through a shell. |
+| `.claude/skills/component/SKILL.md` | First-party; backs `/component` and `npm run where`. |
+| `.agents/skills/**`, `.claude/skills/supabase*` | Vendored third-party skills, hash-pinned by `skills-lock.json`. Deliberate duplicates — `.agents/` is tool-neutral, `.claude/skills/` is what Claude Code reads. |
+
+Per-machine files — `.claude/settings.local.json`, `.claude/worktrees/`,
+`.cursor/settings.json`, `.superpowers/` — are ignored in `.gitignore` and must
+never be tracked.
+
+> [!WARNING]
+> **The MCP config points at the production Supabase project**
+> (`project_ref=xcnnlczvxmuwcqwychox`). There is no staging project. Opening
+> this repo in any agent connects it to the live database with write-capable
+> tools. Never run `supabase migration repair`, `db push`, `db pull`, or
+> `db reset` against it, and never apply a migration or mutate production data
+> through the MCP without the owner's explicit approval. Reads are fine.
+
+On the two migration checks: **`Migration Drift` is the source of truth** — it
+asks whether production has every migration the repo committed, and it is
+deliberately not a required check. **`Supabase Preview` is not required and is
+currently red**; it asks the inverse question and disagrees by design, because
+7 migrations applied through the MCP carry application-time version stamps
+rather than the filename's authoring time. Ignore it — don't "fix" it by
+applying or repairing migrations.
+
 See also `docs/MAINTENANCE_CHECKLIST.md` for how this fits the release flow.

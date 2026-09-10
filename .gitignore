@@ -21,6 +21,16 @@ dist-ssr
 # Superpowers brainstorm sessions
 .superpowers/
 
+# Agent tooling — LOCAL-ONLY state, never track.
+# The agent config this repo *does* track is listed in AGENTS.md under
+# "Agent & tooling config"; everything here is per-machine.
+# These rules previously lived only in .git/info/exclude or a global ignore
+# file, i.e. on one machine — which is exactly how a second checkout ends up
+# committing them by accident.
+.claude/settings.local.json
+.claude/worktrees/
+.cursor/settings.json
+
 # Editor directories
 .vscode/*
 !.vscode/extensions.json

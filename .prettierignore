@@ -2,6 +2,14 @@ dist
 node_modules
 .superpowers
 docs/superpowers
-# Third-party agent skill content installed by `npx skills add` — keep verbatim
-.agents
-.claude
+
+# Third-party agent skills installed by `npx skills add` and pinned by SHA-256
+# in skills-lock.json — keep byte-for-byte verbatim or the hashes stop matching.
+# Scoped to the vendored subtrees ON PURPOSE: this used to read `.agents` and
+# `.claude`, which also hid first-party files we author ourselves
+# (.claude/launch.json, .claude/skills/component/SKILL.md) behind a comment
+# claiming they were third-party. Those stay formatted.
+.agents/skills/supabase
+.agents/skills/supabase-postgres-best-practices
+.claude/skills/supabase
+.claude/skills/supabase-postgres-best-practices
