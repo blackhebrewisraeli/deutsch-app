@@ -899,7 +899,7 @@ describe('VocabTab', () => {
       renderTab();
       await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
       await userEvent.selectOptions(
-        screen.getByRole('combobox', { name: /select a deck to browse/i }),
+        screen.getByRole('combobox', { name: /choose a deck/i }),
         'travel'
       );
       expect(screen.getByRole('heading', { name: 'Travel' })).toBeInTheDocument();
@@ -915,13 +915,32 @@ describe('VocabTab', () => {
 
       await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
       await userEvent.selectOptions(
-        screen.getByRole('combobox', { name: /select a deck to browse/i }),
+        screen.getByRole('combobox', { name: /choose a deck/i }),
         'core-100'
       );
       expect(await screen.findByRole('heading', { name: 'Core 100' })).toBeInTheDocument();
-      expect(screen.getByRole('combobox', { name: /select a deck to browse/i })).toHaveValue(
-        'core-100'
+      expect(screen.getByRole('combobox', { name: /choose a deck/i })).toHaveValue('core-100');
+    });
+
+    it('Browse names the active custom deck instead of the placeholder', async () => {
+      const cards = [{ id: 'die Sonne', de: 'die Sonne', en: 'sun', ipa: '[ˈzɔnə]' }];
+      render(
+        <VocabTab
+          level="a1"
+          learnedWords={{}}
+          markLearned={() => {}}
+          customDecks={{
+            'custom-1': { deckId: 'custom-1', name: 'weather', cards },
+          }}
+        />
       );
+      await userEvent.click(screen.getByRole('button', { name: /Your Deck: weather/ }));
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      const select = screen.getByRole('combobox', { name: /choose a deck/i });
+      expect(select).toHaveValue('custom-1');
+      expect(select).toHaveDisplayValue('weather');
+      expect(screen.getByText('die Sonne')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
     });
 
     it('Practise on a Browse row returns to Practice on that card', async () => {
@@ -945,24 +964,29 @@ describe('VocabTab', () => {
 
     it('only selectDeck writes deckId — UI surfaces never receive the raw setter', () => {
       // Bounds checks mean a behavioral test can still pass if a surface is
-      // wired to the raw setter. This pins the call sites instead.
+      // wired to the raw setter. This pins the call sites instead. Comments
+      // are stripped so a remark cannot inflate a raw occurrence count.
       const src = readFileSync('src/components/VocabTab.jsx', 'utf8');
-      expect(src).toContain('const [deckId, setDeckIdRaw] = useState');
-      expect(src).toContain('setDeckIdRaw(nextId)');
-      expect(src.match(/setDeckIdRaw/g)).toEqual(['setDeckIdRaw', 'setDeckIdRaw']);
-      expect(src).not.toMatch(/onSelect(?:Deck)?=\{setDeckId/);
-      expect(src).toContain('onSelectDeck={selectDeck}');
-      expect(src).toContain('onSelect={selectDeck}');
-      expect(src).toContain('selectDeck(reviewTarget.context)');
-      expect(src).toContain('selectDeck(generatedId)');
-      expect(src).toContain('selectDeck(DEFAULT_DECK_ID)');
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+      expect(code).toContain('const [deckId, setDeckIdRaw] = useState');
+      expect(code).toContain('setDeckIdRaw(nextId)');
+      expect(code).not.toMatch(/onSelect(?:Deck)?=\{setDeckId/);
+      expect(code).toContain('onSelectDeck={selectDeck}');
+      expect(code).toContain('onSelect={selectDeck}');
+      expect(code).toContain('selectDeck(reviewTarget.context)');
+      expect(code).toContain('selectDeck(generatedId)');
+      expect(code).toContain('selectDeck(DEFAULT_DECK_ID)');
+      const remainder = code
+        .replace('const [deckId, setDeckIdRaw] = useState', '')
+        .replace('setDeckIdRaw(nextId)', '');
+      expect(remainder).not.toMatch(/setDeckIdRaw/);
     });
 
     it('rebuilds the Greetings queue after a Browse switch from a high-index deck', async () => {
       await queuePastGreetings();
       await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
       await userEvent.selectOptions(
-        screen.getByRole('combobox', { name: /select a deck to browse/i }),
+        screen.getByRole('combobox', { name: /choose a deck/i }),
         'greetings'
       );
       await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));

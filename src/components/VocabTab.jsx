@@ -361,6 +361,7 @@ export default function VocabTab({
     learnedByDeck,
     now: browseNow,
     onPractice: practiseRow,
+    extraDecks: customDecks,
   };
 
   return (
