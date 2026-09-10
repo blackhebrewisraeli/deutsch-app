@@ -9,7 +9,7 @@ import { toVocabRows } from '../../lib/vocabRows';
 
 const plural = (n, one, many) => (n === 1 ? one : many);
 
-export const BROWSE_SCOPE_LABEL = 'Choose a deck';
+export { BROWSE_SCOPE_LABEL } from './BrowseDeckSelect';
 export const CUSTOM_SCOPE_LABEL = 'Your decks · view only';
 export const CUSTOM_EMPTY_COPY =
   'No custom decks yet. Generate one on Practice — this tab is view-only.';
@@ -34,6 +34,7 @@ export default function VocabBrowse({
   mobile = false,
   emptyMessage = 'Select a deck to browse.',
   customDecks = null,
+  extraDecks = {},
   onSelectDeck,
   onPractice,
   srs = {},
@@ -142,8 +143,7 @@ export default function VocabBrowse({
 
       {!isCustomMode && (
         <header style={{ marginBottom: SPACE[3], minWidth: 0 }}>
-          <SectionLabel style={{ marginBottom: SPACE[2] }}>{BROWSE_SCOPE_LABEL}</SectionLabel>
-          <BrowseDeckSelect deckId={deckId} onSelect={onSelectDeck} />
+          <BrowseDeckSelect deckId={deckId} onSelect={onSelectDeck} customDecks={extraDecks} />
           {title && (
             <h2
               style={{

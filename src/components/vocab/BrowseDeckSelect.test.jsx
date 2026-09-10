@@ -1,11 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import BrowseDeckSelect from './BrowseDeckSelect';
+import BrowseDeckSelect, { BROWSE_SCOPE_LABEL } from './BrowseDeckSelect';
 
-const browseSelect = () => screen.getByRole('combobox', { name: /select a deck to browse/i });
+const browseSelect = () => screen.getByRole('combobox', { name: BROWSE_SCOPE_LABEL });
 
 describe('BrowseDeckSelect', () => {
+  it('is named by the visible Choose a deck label', () => {
+    render(<BrowseDeckSelect deckId="greetings" onSelect={() => {}} />);
+    expect(screen.getByText(BROWSE_SCOPE_LABEL)).toBeInTheDocument();
+    expect(browseSelect()).toHaveAccessibleName(BROWSE_SCOPE_LABEL);
+  });
+
   it('marks the current deck and offers Greetings, Travel, and Core 100', () => {
     render(<BrowseDeckSelect deckId="greetings" onSelect={() => {}} />);
     expect(browseSelect()).toHaveValue('greetings');
@@ -22,10 +28,28 @@ describe('BrowseDeckSelect', () => {
     expect(onSelect).toHaveBeenCalledWith('core-100');
   });
 
-  it('can leave an unknown deck id for a preset', async () => {
+  it('shows the current custom deck instead of the placeholder', () => {
+    render(
+      <BrowseDeckSelect
+        deckId="custom-big"
+        onSelect={() => {}}
+        customDecks={{ 'custom-big': { name: 'Big Deck' } }}
+      />
+    );
+    expect(browseSelect()).toHaveValue('custom-big');
+    expect(browseSelect()).toHaveDisplayValue('Big Deck');
+    expect(screen.getByRole('option', { name: 'Big Deck' })).toHaveValue('custom-big');
+  });
+
+  it('can leave a custom deck for a preset', async () => {
     const onSelect = vi.fn();
-    render(<BrowseDeckSelect deckId="custom-big" onSelect={onSelect} />);
-    expect(browseSelect()).toHaveValue('');
+    render(
+      <BrowseDeckSelect
+        deckId="custom-big"
+        onSelect={onSelect}
+        customDecks={{ 'custom-big': { name: 'Big Deck' } }}
+      />
+    );
     await userEvent.selectOptions(browseSelect(), 'greetings');
     expect(onSelect).toHaveBeenCalledWith('greetings');
   });
