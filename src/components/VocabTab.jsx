@@ -381,6 +381,8 @@ export default function VocabTab({
             loading={isAuto && deckLoading}
             error={isAuto && deckError}
             onRetry={retry}
+            onSelectDeck={selectDeck}
+            selectCustomDecks={customDecks}
             emptyMessage="This deck has no words yet."
           />
         </div>

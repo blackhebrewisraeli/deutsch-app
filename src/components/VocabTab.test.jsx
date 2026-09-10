@@ -847,11 +847,46 @@ describe('VocabTab', () => {
       renderTab();
       await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
       expect(screen.getByRole('tabpanel', { name: 'Browse' })).toBeInTheDocument();
-      expect(screen.getByText(/this deck · selected on practice/i)).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Deck' })).toHaveValue('greetings');
       expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Term' })).toBeInTheDocument();
       expect(screen.getByText(firstCard().de)).toBeInTheDocument();
       expect(screen.getByText(firstCard().en)).toBeInTheDocument();
+    });
+
+    it('switches to Travel from Browse without visiting Practice first', async () => {
+      renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Deck' }), 'travel');
+      expect(screen.getByRole('combobox', { name: 'Deck' })).toHaveValue('travel');
+      expect(screen.getByRole('heading', { name: 'Travel' })).toBeInTheDocument();
+      expect(screen.getByText(firstCard('travel').lemma ?? 'Bahnhof')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
+      expect(screen.getByRole('button', { name: /Travel 10/ })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(screen.getByText(firstCard('travel').de)).toBeInTheDocument();
+      expect(screen.getByText(`${DECKS.travel.length} cards remaining`)).toBeInTheDocument();
+    });
+
+    it('switches to Core 100 from Browse and Practice follows', async () => {
+      mockLexiconFetch();
+      renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Deck' }), 'core-100');
+      expect(screen.getByRole('combobox', { name: 'Deck' })).toHaveValue('core-100');
+      expect(screen.getByRole('heading', { name: 'Core 100' })).toBeInTheDocument();
+      expect(await screen.findByText('Haus')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
+      expect(screen.getByRole('button', { name: /Core 100/i })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(await screen.findByText('das Haus')).toBeInTheDocument();
     });
 
     it('Practise on a Browse row returns to Practice on that card', async () => {

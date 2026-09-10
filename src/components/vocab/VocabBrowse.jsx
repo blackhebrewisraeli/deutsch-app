@@ -4,11 +4,13 @@ import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, SPACE } from '../../lib/theme';
 import StatusNote from '../ui/StatusNote';
 import SectionLabel from '../ui/SectionLabel';
 import VocabBrowser from './VocabBrowser';
+import BrowseDeckSelect from './BrowseDeckSelect';
 import { toVocabRows } from '../../lib/vocabRows';
 
 const plural = (n, one, many) => (n === 1 ? one : many);
 
-export const BROWSE_SCOPE_LABEL = 'This deck · selected on Practice';
+export const BROWSE_DECK_SELECT_ID = 'browse-deck-select';
+export const BROWSE_SCOPE_LABEL = 'Deck';
 export const CUSTOM_SCOPE_LABEL = 'Your decks · view only';
 export const CUSTOM_EMPTY_COPY =
   'No custom decks yet. Generate one on Practice — this tab is view-only.';
@@ -16,8 +18,9 @@ export const CUSTOM_PICK_COPY = 'Select a custom deck to inspect it.';
 
 /**
  * View-only browse surface. Title and empty copy are props so no German
- * chrome lands in this file. When `customDecks` is passed this is the Custom
- * tab: a list of user decks (no trash) plus the table for the selected one.
+ * chrome lands in this file. Browse picks a deck through the compact select
+ * (shared `deckId` / `onSelectDeck`). When `customDecks` is passed this is the
+ * Custom tab: a list of user decks (no trash) plus the table for the selected one.
  *
  * `srs`, learned maps and `now` are injected — this component must not call
  * loadState() or Date.now() in render.
@@ -33,6 +36,7 @@ export default function VocabBrowse({
   emptyMessage = 'Select a deck to browse.',
   customDecks = null,
   onSelectDeck,
+  selectCustomDecks = {},
   onPractice,
   srs = {},
   learnedWords = null,
@@ -140,14 +144,26 @@ export default function VocabBrowse({
 
       {!isCustomMode && (
         <header style={{ marginBottom: SPACE[3], minWidth: 0 }}>
-          <SectionLabel style={{ marginBottom: SPACE[2] }}>{BROWSE_SCOPE_LABEL}</SectionLabel>
+          <SectionLabel
+            as="label"
+            htmlFor={BROWSE_DECK_SELECT_ID}
+            style={{ marginBottom: SPACE[2] }}
+          >
+            {BROWSE_SCOPE_LABEL}
+          </SectionLabel>
+          <BrowseDeckSelect
+            id={BROWSE_DECK_SELECT_ID}
+            deckId={deckId}
+            onSelect={onSelectDeck}
+            customDecks={selectCustomDecks}
+          />
           {title && (
             <h2
               style={{
                 fontFamily: FONTS.display,
                 fontSize: mobile ? FONT_SIZE.xl : FONT_SIZE['2xl'],
                 fontWeight: FONT_WEIGHT.semibold,
-                margin: 0,
+                margin: `${SPACE[3]}px 0 0`,
                 overflowWrap: 'anywhere',
               }}
             >
