@@ -1,0 +1,21 @@
+---
+description: deutsch-app project conventions (always apply)
+globs:
+alwaysApply: true
+---
+
+# deutsch-app — project conventions
+
+**Source of truth: `AGENTS.md` at repo root.** Read it first — it contains the
+project description, the Cursor/Claude Code division of labor, the
+coordination protocol, all code conventions, and verification requirements.
+
+Cursor-specific reminders:
+- Only work from a **Tier A mission brief** in `CURSOR_TASKS.md`. Never start
+  Tier B items — their architecture isn't designed yet.
+- One branch per mission, named in the brief, branched from up-to-date `main`.
+  Commit before stopping so the tree is clean for the next tool.
+- `.husky/pre-commit` runs lint-staged + the full test suite. Never bypass it
+  (`--no-verify` is forbidden). A green commit is the passing signal.
+- Don't modify files outside your mission's stated file list. Flag
+  out-of-scope bugs with a `// BUG:` comment instead of fixing silently.
