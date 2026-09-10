@@ -25,6 +25,9 @@ import TypedAnswer from './vocab/TypedAnswer';
 import VerdictPanel from './vocab/VerdictPanel';
 import DeckCompleteBanner from './vocab/DeckCompleteBanner';
 import ArticleChoice from './vocab/ArticleChoice';
+import VocabModeTabs from './vocab/VocabModeTabs';
+import { vocabPanelId, vocabTabId } from './vocab/vocabModes';
+import VocabBrowse, { CUSTOM_EMPTY_COPY } from './vocab/VocabBrowse';
 import { drillFor } from './vocab/drills';
 import { speak } from '../lib/speech';
 import useAutoDeck from './vocab/useAutoDeck';
@@ -47,6 +50,12 @@ export default function VocabTab({
   onDeckDeleted,
 }) {
   const [deckId, setDeckId] = useState(DEFAULT_DECK_ID);
+  const [mode, setMode] = useState('practice');
+  // Snapshot once per mount so Browse/Custom never call Date.now() or loadState
+  // in their own render. Refresh when the learner leaves Practice — that is
+  // when a new SRS row may have been written.
+  const [browseNow] = useState(() => Date.now());
+  const [browseSrs, setBrowseSrs] = useState(() => (loadState() ?? {}).srs ?? {});
   // customCards is a PROP, not state: this component unmounts on every tab
   // switch, which is what used to destroy a generated deck. It lives in the
   // state blob now and App hands it down.
@@ -61,6 +70,12 @@ export default function VocabTab({
     error: deckError,
     retry,
   } = useAutoDeck(deckId);
+
+  useEffect(() => {
+    if (mode === 'browse' || mode === 'custom') {
+      setBrowseSrs((loadState() ?? {}).srs ?? {});
+    }
+  }, [mode]);
 
   const [answered, setAnswered] = useState(false);
   const [result, setResult] = useState(null); // 'correct' | 'almost' | 'wrong'
@@ -80,6 +95,19 @@ export default function VocabTab({
   const customCards = customDecks?.[deckId]?.cards ?? null;
   const activeDeck = customCards ?? (isAuto ? (asyncDeck ?? []) : (PRESET_DECKS[deckId] ?? []));
 
+  // Deck changes must not keep the previous queue. React applies setDeckId
+  // before the reset effect, so one render can pair a new (smaller) deck with
+  // a leftover high index — getChoices then reads deck[cardIdx].en off the end.
+  const selectDeck = (nextId) => {
+    if (nextId === deckId) return;
+    setQueue([]);
+    setAnswered(false);
+    setResult(null);
+    setTypedAnswer('');
+    setDeckComplete(false);
+    setDeckId(nextId);
+  };
+
   // The custom deck can disappear while it is the SELECTED one — deleted here,
   // or tombstoned on another device and pulled in by a sync. There is no
   // PRESET_DECKS.custom to fall back on, so without this the learner is left
@@ -88,8 +116,8 @@ export default function VocabTab({
     // Covers a deck deleted here AND one tombstoned on another device and
     // pulled in by a sync: either way the selected id stops resolving.
     const isKnown = customDecks?.[deckId] || isAuto || Object.hasOwn(PRESET_DECKS, deckId ?? '');
-    if (!isKnown) setDeckId(DEFAULT_DECK_ID);
-  }, [deckId, customDecks, isAuto]);
+    if (!isKnown) selectDeck(DEFAULT_DECK_ID);
+  }, [deckId, customDecks, isAuto]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const target = pendingReviewRef.current;
@@ -147,18 +175,24 @@ export default function VocabTab({
       }
     } else {
       // Deck change — pendingReviewRef will be consumed by the deck-reset effect.
-      setDeckId(reviewTarget.context);
+      selectDeck(reviewTarget.context);
     }
 
     onReviewConsumed?.();
   }, [reviewTarget, onReviewConsumed]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const currentIdx = queue[0] ?? null;
+  const queuedIdx = queue[0];
+  const currentIdx =
+    Number.isInteger(queuedIdx) && queuedIdx >= 0 && queuedIdx < activeDeck.length
+      ? queuedIdx
+      : null;
   const card = currentIdx !== null ? activeDeck[currentIdx] : null;
   const played = card != null && playedCardId === card.id;
 
   const getChoices = (deck, cardIdx) => {
-    const correct = deck[cardIdx].en;
+    const picked = deck?.[cardIdx];
+    if (!picked) return [];
+    const correct = picked.en;
     const others = shuffle(deck.filter((_, i) => i !== cardIdx).map((c) => c.en));
     return shuffle([correct, ...others.slice(0, 3)]);
   };
@@ -257,7 +291,7 @@ export default function VocabTab({
           name: customTopic.trim(),
           cards: parsed.map((c) => ({ ...c, id: activePack.cardId(c) })),
         });
-        setDeckId(generatedId);
+        selectDeck(generatedId);
         // Cleared on SUCCESS only. Generating repeatedly is the normal case now
         // that decks are a collection, and a stale topic meant the next one was
         // typed onto the end of the last ("weather" + "food" = "weatherfood").
@@ -297,6 +331,36 @@ export default function VocabTab({
   // listen from a replay. See `played` below.
   const showChoices = !isDrill && isBeginner && activeDeck.length >= 4;
   const showTyped = !isDrill && (level === 'b1' || (isBeginner && activeDeck.length < 4));
+
+  const deckTitle =
+    customDecks?.[deckId]?.name ||
+    AUTO_DECKS.find((d) => d.id === deckId)?.name ||
+    activePack.content.deckDefs?.[deckId]?.name ||
+    deckId;
+
+  const practiseRow = (row) => {
+    const idx = activeDeck.findIndex((c) => c.id === row.id);
+    if (idx >= 0) {
+      const rest = activeDeck.map((_, i) => i).filter((i) => i !== idx);
+      setQueue([idx, ...rest]);
+      setAnswered(false);
+      setResult(null);
+      setTypedAnswer('');
+      setDeckComplete(false);
+    }
+    setMode('practice');
+  };
+
+  const browseProps = {
+    title: deckTitle,
+    deckId,
+    mobile,
+    srs: browseSrs,
+    learnedWords,
+    learnedByDeck,
+    now: browseNow,
+    onPractice: practiseRow,
+  };
 
   return (
     <div>
@@ -380,6 +444,110 @@ export default function VocabTab({
             >
               {/* Progress bar */}
               {/* `flexWrap` is load-bearing, and it fixes a bug that predates
+      <VocabModeTabs active={mode} onPick={setMode} />
+
+      {mode === 'browse' && (
+        <div role="tabpanel" id={vocabPanelId('browse')} aria-labelledby={vocabTabId('browse')}>
+          <VocabBrowse
+            {...browseProps}
+            cards={activeDeck}
+            loading={isAuto && deckLoading}
+            error={isAuto && deckError}
+            onRetry={retry}
+            emptyMessage="This deck has no words yet."
+          />
+        </div>
+      )}
+
+      {mode === 'custom' && (
+        <div role="tabpanel" id={vocabPanelId('custom')} aria-labelledby={vocabTabId('custom')}>
+          <VocabBrowse
+            {...browseProps}
+            cards={customCards ?? []}
+            customDecks={customDecks}
+            onSelectDeck={selectDeck}
+            emptyMessage={CUSTOM_EMPTY_COPY}
+          />
+        </div>
+      )}
+
+      {mode === 'practice' && (
+        <div
+          role="tabpanel"
+          id={vocabPanelId('practice')}
+          aria-labelledby={vocabTabId('practice')}
+          style={{
+            display: 'grid',
+            // minmax(0, 1fr) rather than 1fr: a bare 1fr track keeps min-width
+            // auto, so it refuses to shrink below its content's min-content width
+            // and pushes past the viewport instead (377px inside 337px at 375px
+            // wide). minmax(0, …) lets the track shrink and the content reflow.
+            gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : 'minmax(0, 448px) minmax(0, 1fr)',
+            gap: mobile ? SPACE[4] : SPACE[8],
+            marginTop: SPACE[8],
+          }}
+        >
+          <DeckPicker
+            deckId={deckId}
+            onSelect={selectDeck}
+            customDecks={customDecks}
+            onDelete={onDeckDeleted}
+            atCap={Object.keys(customDecks ?? {}).length >= MAX_CUSTOM_DECKS}
+            maxDecks={MAX_CUSTOM_DECKS}
+            customTopic={customTopic}
+            onTopicChange={setCustomTopic}
+            generating={generating}
+            onGenerate={generateDeck}
+          />
+
+          {/* ── Right column: active recall UI ── */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'stretch',
+              textAlign: 'center',
+              width: '100%',
+              minWidth: 0,
+            }}
+          >
+            {isAuto && deckLoading && (
+              <div
+                style={{
+                  padding: SPACE[8],
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  fontFamily: FONTS.mono,
+                  color: COLORS.mute,
+                  width: '100%',
+                }}
+              >
+                Loading deck…
+              </div>
+            )}
+            {isAuto && deckError && (
+              <StatusNote
+                tone="error"
+                icon={AlertTriangle}
+                action={{ label: 'Retry', onClick: retry }}
+              >
+                Could not load this deck.
+              </StatusNote>
+            )}
+            {card && (
+              <div
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'stretch',
+                  width: '100%',
+                  minWidth: 0,
+                }}
+              >
+                {/* Progress bar */}
+                {/* `flexWrap` is load-bearing, and it fixes a bug that predates
                 the report button. Measured in Chrome at 320px:
 
                   before this change, no button ...... 73px sideways scroll
@@ -415,40 +583,58 @@ export default function VocabTab({
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: SPACE[2],
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: SPACE[2],
+                    marginBottom: SPACE[4],
+                    width: '100%',
                   }}
                 >
                   <div
                     style={{
-                      fontFamily: FONTS.mono,
-                      fontSize: FONT_SIZE.tag,
-                      letterSpacing: LETTER_SPACING.caps,
-                      color: COLORS.mute,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: SPACE[2],
                     }}
                   >
-                    {queue.length} card{queue.length !== 1 ? 's' : ''} remaining
-                  </div>
-                  {/* itemLabel is card.de — the very thing CardFace conceals on
+                    <div
+                      style={{
+                        fontFamily: FONTS.mono,
+                        fontSize: FONT_SIZE.tag,
+                        letterSpacing: LETTER_SPACING.caps,
+                        color: COLORS.mute,
+                      }}
+                    >
+                      {queue.length} card{queue.length !== 1 ? 's' : ''} remaining
+                    </div>
+                    {/* itemLabel is card.de — the very thing CardFace conceals on
                     the Hören and Artikel decks. Captured for triage, never
                     rendered; see FeedbackDialog. */}
-                  <FeedbackButton
-                    context={{
-                      surface: 'vocab',
-                      level,
-                      deckId,
-                      itemId: card.id,
-                      itemLabel: card.de ?? null,
-                    }}
+                    <FeedbackButton
+                      context={{
+                        surface: 'vocab',
+                        level,
+                        deckId,
+                        itemId: card.id,
+                        itemLabel: card.de ?? null,
+                      }}
+                    />
+                  </div>
+                  <DeckProgress
+                    cards={activeDeck}
+                    learnedWords={learnedWords}
+                    learnedByDeck={learnedByDeck}
+                    deckId={deckId}
                   />
                 </div>
-                <DeckProgress
-                  cards={activeDeck}
-                  learnedWords={learnedWords}
-                  learnedByDeck={learnedByDeck}
-                  deckId={deckId}
-                />
-              </div>
 
               {/* BUG: DeckCompleteBanner lives inside `{card && …}`, so when
+                {/* BUG: DeckCompleteBanner lives inside `{card && …}`, so when
                 the last GOOD empties the queue, `card` becomes null and this
                 banner unmounts with it. Move it beside the empty-deck branch
                 (or keep the last card mounted while deckComplete is true)
@@ -547,8 +733,109 @@ export default function VocabTab({
               Select a deck to start.
             </div>
           )}
+                {deckComplete && (
+                  <DeckCompleteBanner
+                    learnedCount={learnedInDeck({
+                      learnedByDeck,
+                      learnedWords,
+                      deckId,
+                      cards: activeDeck,
+                    })}
+                    onDismiss={() => setDeckComplete(false)}
+                  />
+                )}
+
+                <CardFace
+                  card={card}
+                  display={drill?.display?.(card)}
+                  conceal={drill?.conceal}
+                  learned={isLearned({ learnedByDeck, learnedWords, deckId, cardId: card.id })}
+                  mobile={mobile}
+                />
+
+                {drill?.kind === 'choice' && !answered && (
+                  <ArticleChoice
+                    articles={drill.options(activePack.grammar)}
+                    onChoose={answerDrill}
+                  />
+                )}
+
+                {drill?.speak && !answered && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      speak(drill.speak(card));
+                      setPlayedCardId(card.id);
+                    }}
+                    aria-label={played ? 'Play the word again' : 'Play the word'}
+                    // BUTTON.go, not BUTTON.tile. On a Hören card the audio IS
+                    // the question, and nothing plays it but this — so until it
+                    // has been pressed it is the primary action on the card, not
+                    // a neutral one sitting quietly above the answer field.
+                    style={{
+                      ...(played ? BUTTON.tile : BUTTON.go),
+                      width: '100%',
+                      marginBottom: SPACE[3],
+                    }}
+                  >
+                    {played ? 'PLAY AGAIN' : 'PLAY'}
+                  </button>
+                )}
+
+                {drill?.kind === 'typed' && !answered && (
+                  <TypedAnswer
+                    value={typedAnswer}
+                    onChange={setTypedAnswer}
+                    onSubmit={() => typedAnswer.trim() && answerDrill(typedAnswer)}
+                    label={drill.label(activePack.grammar)}
+                    placeholder={drill.placeholder(activePack.grammar)}
+                  />
+                )}
+
+                {showChoices && !answered && (
+                  <ChoiceGrid choices={choices} onChoose={chooseOption} />
+                )}
+
+                {showTyped && !answered && (
+                  <TypedAnswer
+                    value={typedAnswer}
+                    onChange={setTypedAnswer}
+                    onSubmit={submitTyped}
+                  />
+                )}
+
+                {answered && (
+                  <VerdictPanel
+                    // The gender drill asked for the article, so the answer it
+                    // owes back is the full form "das Jahr" — not the English
+                    // gloss, which was never the question.
+                    result={result}
+                    answer={drill ? drill.answer(card, activePack.grammar) : glossList(card)}
+                    onVerdict={handleSrsVerdict}
+                  />
+                )}
+              </div>
+            )}
+            {!card && !deckComplete && (
+              <div
+                style={{
+                  padding: SPACE[8],
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  textAlign: 'center',
+                  fontFamily: FONTS.mono,
+                  fontSize: FONT_SIZE.base,
+                  color: COLORS.mute,
+                  width: '100%',
+                }}
+              >
+                Select a deck to start.
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

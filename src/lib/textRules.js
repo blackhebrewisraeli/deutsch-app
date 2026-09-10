@@ -75,3 +75,27 @@ export const ANSWER = {
   stripCombiningMarks: false,
   replacements: [],
 };
+
+/**
+ * A search box, not a grader.
+ *
+ * `stripCombiningMarks` is the one rule that flips relative to CHOICE and
+ * ANSWER, and the reason is that the two surfaces fail in opposite directions.
+ * Grading must keep schön and schon apart — folding them collapses two words
+ * into one and marks a wrong answer right. A filter has no such duty: folding
+ * only ever WIDENS the result set, and a learner who cannot type an umlaut
+ * still has to find "Käse" by typing "Kase".
+ *
+ * `replacements` stays empty here for the same reason it is empty in CHOICE:
+ * a pack's own substitutions are the pack's to declare. A caller that wants
+ * ß→ss in its filter spreads its pack rules over this one — see
+ * components/vocab/VocabBrowser.jsx, which does exactly that. Because the
+ * operation order is strip-then-replace, both survive: "Käse" and "Straße"
+ * are each reachable from an ASCII keyboard.
+ */
+export const SEARCH = {
+  trim: true,
+  caseFold: true,
+  stripCombiningMarks: true,
+  replacements: [],
+};

@@ -829,4 +829,123 @@ describe('VocabTab', () => {
       expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
     });
   });
+
+  describe('management tabs', () => {
+    it('defaults to Practice with a labelled tablist and the greetings drill', () => {
+      renderTab();
+      expect(screen.getByRole('tablist', { name: 'Vocabulary mode' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      expect(screen.getByRole('tabpanel', { name: 'Practice' })).toBeInTheDocument();
+      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /GENERATE/ })).toBeInTheDocument();
+    });
+
+    it('opens Browse as a view-only table of the selected deck and hides generate', async () => {
+      renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      expect(screen.getByRole('tabpanel', { name: 'Browse' })).toBeInTheDocument();
+      expect(screen.getByText(/this deck · selected on practice/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Term' })).toBeInTheDocument();
+      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
+      expect(screen.getByText(firstCard().en)).toBeInTheDocument();
+    });
+
+    it('Practise on a Browse row returns to Practice on that card', async () => {
+      renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      const first = firstCard();
+      await userEvent.click(screen.getByRole('button', { name: `Practise ${first.de}` }));
+      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      expect(screen.getByRole('button', { name: /GENERATE/ })).toBeInTheDocument();
+      expect(screen.getByText(first.de)).toBeInTheDocument();
+    });
+
+    it('does not crash when switching to Greetings after Practise-from-row on a large deck', async () => {
+      // Production Core 100 / CEFR B1 can queue an index past Greetings (10).
+      // The lexicon fixture is only 6 cards, so a 20-card custom deck stands in.
+      const cards = Array.from({ length: 20 }, (_, i) => ({
+        id: `Wort ${i}`,
+        de: `Wort ${i}`,
+        en: `word ${i}`,
+        ipa: '[vɔʁt]',
+      }));
+      render(
+        <VocabTab
+          level="a1"
+          learnedWords={{}}
+          markLearned={() => {}}
+          customDecks={{
+            'custom-big': { deckId: 'custom-big', name: 'Big Deck', cards },
+          }}
+        />
+      );
+
+      await userEvent.click(screen.getByRole('button', { name: /Your Deck: Big Deck/ }));
+      expect(screen.getByText('Wort 0')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Practise Wort 15' }));
+      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      expect(screen.getByText('Wort 15')).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('button', { name: /Greetings/ }));
+
+      expect(
+        screen.queryByRole('heading', { name: /something went wrong/i })
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /reload/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('tabpanel', { name: 'Practice' })).toBeInTheDocument();
+      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
+      expect(screen.getByText(`${DECKS.greetings.length} cards remaining`)).toBeInTheDocument();
+      expect(screen.queryByText('Wort 15')).not.toBeInTheDocument();
+    });
+
+    it('shows a Custom empty copy and no trash when there are no user decks', async () => {
+      renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
+      expect(screen.getByRole('tabpanel', { name: 'Custom' })).toBeInTheDocument();
+      expect(screen.getByText(/view-only/i)).toBeInTheDocument();
+      expect(screen.getByText(/no custom decks yet/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+    });
+
+    it('lists a generated deck on Custom without a remove control', async () => {
+      callClaude.mockResolvedValueOnce(
+        JSON.stringify([{ de: 'die Sonne', en: 'sun', ipa: '[ˈzɔnə]' }])
+      );
+      renderTab();
+      await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
+      await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+      await screen.findByRole('button', { name: /Your Deck/ });
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
+      expect(screen.getByRole('button', { name: /weather/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+      expect(screen.getByText('die Sonne')).toBeInTheDocument();
+    });
+
+    it('resets to Practice when the tab remounts', async () => {
+      const { unmount } = renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      expect(screen.getByRole('tab', { name: 'Browse' })).toHaveAttribute('aria-selected', 'true');
+      unmount();
+      renderTab();
+      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      expect(screen.getByRole('tabpanel', { name: 'Practice' })).toBeInTheDocument();
+    });
+  });
 });
