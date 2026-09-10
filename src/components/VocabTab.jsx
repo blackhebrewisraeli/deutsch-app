@@ -49,7 +49,7 @@ export default function VocabTab({
   onDeckGenerated,
   onDeckDeleted,
 }) {
-  const [deckId, setDeckId] = useState(DEFAULT_DECK_ID);
+  const [deckId, setDeckIdRaw] = useState(DEFAULT_DECK_ID);
   const [mode, setMode] = useState('practice');
   // Snapshot once per mount so Browse/Custom never call Date.now() or loadState
   // in their own render. Refresh when the learner leaves Practice — that is
@@ -95,9 +95,10 @@ export default function VocabTab({
   const customCards = customDecks?.[deckId]?.cards ?? null;
   const activeDeck = customCards ?? (isAuto ? (asyncDeck ?? []) : (PRESET_DECKS[deckId] ?? []));
 
-  // Deck changes must not keep the previous queue. React applies setDeckId
+  // Deck changes must not keep the previous queue. React applies the id write
   // before the reset effect, so one render can pair a new (smaller) deck with
   // a leftover high index — getChoices then reads deck[cardIdx].en off the end.
+  // Every UI path must go through selectDeck; it is the only writer.
   const selectDeck = (nextId) => {
     if (nextId === deckId) return;
     setQueue([]);
@@ -105,7 +106,7 @@ export default function VocabTab({
     setResult(null);
     setTypedAnswer('');
     setDeckComplete(false);
-    setDeckId(nextId);
+    setDeckIdRaw(nextId);
   };
 
   // The custom deck can disappear while it is the SELECTED one — deleted here,
@@ -381,6 +382,7 @@ export default function VocabTab({
             loading={isAuto && deckLoading}
             error={isAuto && deckError}
             onRetry={retry}
+            onSelectDeck={selectDeck}
             emptyMessage="This deck has no words yet."
           />
         </div>

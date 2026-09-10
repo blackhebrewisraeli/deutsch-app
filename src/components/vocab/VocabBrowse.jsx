@@ -4,11 +4,12 @@ import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, SPACE } from '../../lib/theme';
 import StatusNote from '../ui/StatusNote';
 import SectionLabel from '../ui/SectionLabel';
 import VocabBrowser from './VocabBrowser';
+import BrowseDeckSelect from './BrowseDeckSelect';
 import { toVocabRows } from '../../lib/vocabRows';
 
 const plural = (n, one, many) => (n === 1 ? one : many);
 
-export const BROWSE_SCOPE_LABEL = 'This deck · selected on Practice';
+export const BROWSE_SCOPE_LABEL = 'Choose a deck';
 export const CUSTOM_SCOPE_LABEL = 'Your decks · view only';
 export const CUSTOM_EMPTY_COPY =
   'No custom decks yet. Generate one on Practice — this tab is view-only.';
@@ -16,7 +17,8 @@ export const CUSTOM_PICK_COPY = 'Select a custom deck to inspect it.';
 
 /**
  * View-only browse surface. Title and empty copy are props so no German
- * chrome lands in this file. When `customDecks` is passed this is the Custom
+ * chrome lands in this file. Browse picks a deck through `onSelectDeck` (the
+ * shared Practice path). When `customDecks` is passed this is the Custom
  * tab: a list of user decks (no trash) plus the table for the selected one.
  *
  * `srs`, learned maps and `now` are injected — this component must not call
@@ -141,6 +143,7 @@ export default function VocabBrowse({
       {!isCustomMode && (
         <header style={{ marginBottom: SPACE[3], minWidth: 0 }}>
           <SectionLabel style={{ marginBottom: SPACE[2] }}>{BROWSE_SCOPE_LABEL}</SectionLabel>
+          <BrowseDeckSelect deckId={deckId} onSelect={onSelectDeck} />
           {title && (
             <h2
               style={{
