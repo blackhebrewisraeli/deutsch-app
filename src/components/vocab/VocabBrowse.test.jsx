@@ -125,6 +125,30 @@ describe('VocabBrowse', () => {
     expect(screen.queryByText('Hallo')).not.toBeInTheDocument();
   });
 
+  it('selects a preset or auto deck through the shared onSelectDeck path', async () => {
+    const onSelectDeck = vi.fn();
+    render(
+      <VocabBrowse
+        title="Greetings"
+        cards={[bread]}
+        deckId="greetings"
+        srs={{}}
+        now={1}
+        onSelectDeck={onSelectDeck}
+      />
+    );
+    expect(screen.getByRole('button', { name: 'Greetings' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Travel' }));
+    expect(onSelectDeck).toHaveBeenCalledWith('travel');
+    await userEvent.click(screen.getByRole('button', { name: 'Core 100' }));
+    expect(onSelectDeck).toHaveBeenCalledWith('core-100');
+    expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+  });
+
   it('selects a custom deck without offering a trash control', async () => {
     const onSelectDeck = vi.fn();
     render(

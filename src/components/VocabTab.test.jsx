@@ -847,11 +847,36 @@ describe('VocabTab', () => {
       renderTab();
       await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
       expect(screen.getByRole('tabpanel', { name: 'Browse' })).toBeInTheDocument();
-      expect(screen.getByText(/this deck · selected on practice/i)).toBeInTheDocument();
+      expect(screen.getByText(/choose a deck/i)).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Term' })).toBeInTheDocument();
       expect(screen.getByText(firstCard().de)).toBeInTheDocument();
       expect(screen.getByText(firstCard().en)).toBeInTheDocument();
+    });
+
+    it('selecting a deck on Browse updates Browse and Practice', async () => {
+      const travel = firstCard('travel');
+      renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Travel' }));
+      expect(screen.getByRole('heading', { name: 'Travel' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: `Practise ${travel.de}` })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
+      expect(screen.getByRole('button', { name: /Travel 10 cards/ })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(screen.getByText(travel.de)).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Core 100' }));
+      expect(await screen.findByRole('heading', { name: 'Core 100' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Core 100' })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
     });
 
     it('Practise on a Browse row returns to Practice on that card', async () => {
