@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { useState } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -831,6 +832,45 @@ describe('VocabTab', () => {
   });
 
   describe('management tabs', () => {
+    beforeEach(mockLexiconFetch);
+
+    // Production Core 100 / CEFR B1 can queue an index past Greetings (10).
+    // The lexicon fixture is only 6 cards, so a 20-card custom deck stands in.
+    const queuePastGreetings = async () => {
+      const cards = Array.from({ length: 20 }, (_, i) => ({
+        id: `Wort ${i}`,
+        de: `Wort ${i}`,
+        en: `word ${i}`,
+        ipa: '[vɔʁt]',
+      }));
+      render(
+        <VocabTab
+          level="a1"
+          learnedWords={{}}
+          markLearned={() => {}}
+          customDecks={{
+            'custom-big': { deckId: 'custom-big', name: 'Big Deck', cards },
+          }}
+        />
+      );
+      await userEvent.click(screen.getByRole('button', { name: /Your Deck: Big Deck/ }));
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.click(screen.getByRole('button', { name: 'Practise Wort 15' }));
+      expect(screen.getByText('Wort 15')).toBeInTheDocument();
+    };
+
+    const expectGreetingsQueueRebuilt = () => {
+      expect(
+        screen.queryByRole('heading', { name: /something went wrong/i })
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /reload/i })).not.toBeInTheDocument();
+      expect(screen.getByRole('tabpanel', { name: 'Practice' })).toBeInTheDocument();
+      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
+      expect(screen.getByText(`${DECKS.greetings.length} cards remaining`)).toBeInTheDocument();
+      expect(screen.queryByText('Wort 15')).not.toBeInTheDocument();
+      expect(screen.queryByText(/select a deck to start/i)).not.toBeInTheDocument();
+    };
+
     it('defaults to Practice with a labelled tablist and the greetings drill', () => {
       renderTab();
       expect(screen.getByRole('tablist', { name: 'Vocabulary mode' })).toBeInTheDocument();
@@ -858,7 +898,10 @@ describe('VocabTab', () => {
       const travel = firstCard('travel');
       renderTab();
       await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
-      await userEvent.click(screen.getByRole('button', { name: 'Travel' }));
+      await userEvent.selectOptions(
+        screen.getByRole('combobox', { name: /select a deck to browse/i }),
+        'travel'
+      );
       expect(screen.getByRole('heading', { name: 'Travel' })).toBeInTheDocument();
       expect(screen.getByRole('button', { name: `Practise ${travel.de}` })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
@@ -871,11 +914,13 @@ describe('VocabTab', () => {
       expect(screen.getByText(travel.de)).toBeInTheDocument();
 
       await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
-      await userEvent.click(screen.getByRole('button', { name: 'Core 100' }));
+      await userEvent.selectOptions(
+        screen.getByRole('combobox', { name: /select a deck to browse/i }),
+        'core-100'
+      );
       expect(await screen.findByRole('heading', { name: 'Core 100' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Core 100' })).toHaveAttribute(
-        'aria-pressed',
-        'true'
+      expect(screen.getByRole('combobox', { name: /select a deck to browse/i })).toHaveValue(
+        'core-100'
       );
     });
 
@@ -893,46 +938,29 @@ describe('VocabTab', () => {
     });
 
     it('does not crash when switching to Greetings after Practise-from-row on a large deck', async () => {
-      // Production Core 100 / CEFR B1 can queue an index past Greetings (10).
-      // The lexicon fixture is only 6 cards, so a 20-card custom deck stands in.
-      const cards = Array.from({ length: 20 }, (_, i) => ({
-        id: `Wort ${i}`,
-        de: `Wort ${i}`,
-        en: `word ${i}`,
-        ipa: '[vɔʁt]',
-      }));
-      render(
-        <VocabTab
-          level="a1"
-          learnedWords={{}}
-          markLearned={() => {}}
-          customDecks={{
-            'custom-big': { deckId: 'custom-big', name: 'Big Deck', cards },
-          }}
-        />
-      );
-
-      await userEvent.click(screen.getByRole('button', { name: /Your Deck: Big Deck/ }));
-      expect(screen.getByText('Wort 0')).toBeInTheDocument();
-
-      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
-      await userEvent.click(screen.getByRole('button', { name: 'Practise Wort 15' }));
-      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
-        'aria-selected',
-        'true'
-      );
-      expect(screen.getByText('Wort 15')).toBeInTheDocument();
-
+      await queuePastGreetings();
       await userEvent.click(screen.getByRole('button', { name: /Greetings/ }));
+      expectGreetingsQueueRebuilt();
+    });
 
-      expect(
-        screen.queryByRole('heading', { name: /something went wrong/i })
-      ).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /reload/i })).not.toBeInTheDocument();
-      expect(screen.getByRole('tabpanel', { name: 'Practice' })).toBeInTheDocument();
-      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
-      expect(screen.getByText(`${DECKS.greetings.length} cards remaining`)).toBeInTheDocument();
-      expect(screen.queryByText('Wort 15')).not.toBeInTheDocument();
+    it('rebuilds the Greetings queue when Browse switches off a stale high index', async () => {
+      // Raw setDeckId still presses Greetings on Practice; the deckId effect
+      // then rebuilds the queue, so chip-pressed assertions are not this
+      // contract. The Browse call site must be selectDeck — that is what
+      // drops the leftover high index in the same update as the id change.
+      const src = readFileSync('src/components/VocabTab.jsx', 'utf8');
+      const browse = src.split("{mode === 'browse' &&")[1].split("{mode === 'custom' &&")[0];
+      expect(browse).toContain('onSelectDeck={selectDeck}');
+      expect(browse).not.toContain('onSelectDeck={setDeckId}');
+
+      await queuePastGreetings();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.selectOptions(
+        screen.getByRole('combobox', { name: /select a deck to browse/i }),
+        'greetings'
+      );
+      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
+      expectGreetingsQueueRebuilt();
     });
 
     it('shows a Custom empty copy and no trash when there are no user decks', async () => {

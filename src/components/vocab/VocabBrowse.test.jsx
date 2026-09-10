@@ -137,13 +137,11 @@ describe('VocabBrowse', () => {
         onSelectDeck={onSelectDeck}
       />
     );
-    expect(screen.getByRole('button', { name: 'Greetings' })).toHaveAttribute(
-      'aria-pressed',
-      'true'
-    );
-    await userEvent.click(screen.getByRole('button', { name: 'Travel' }));
+    const select = screen.getByRole('combobox', { name: /select a deck to browse/i });
+    expect(select).toHaveValue('greetings');
+    await userEvent.selectOptions(select, 'travel');
     expect(onSelectDeck).toHaveBeenCalledWith('travel');
-    await userEvent.click(screen.getByRole('button', { name: 'Core 100' }));
+    await userEvent.selectOptions(select, 'core-100');
     expect(onSelectDeck).toHaveBeenCalledWith('core-100');
     expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
