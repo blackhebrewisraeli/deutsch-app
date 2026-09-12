@@ -20,6 +20,8 @@ export const CUSTOM_PICK_COPY = 'Select a custom deck to inspect it.';
  * chrome lands in this file. Browse picks a deck through `onSelectDeck` (the
  * shared Practice path). When `customDecks` is passed this is the Custom
  * tab: a list of user decks (no trash) plus the table for the selected one.
+ * `selectableCustomDecks` is the Browse-tab select only — custom decks as
+ * options, not Custom-tab mode.
  *
  * `srs`, learned maps and `now` are injected — this component must not call
  * loadState() or Date.now() in render.
@@ -34,7 +36,7 @@ export default function VocabBrowse({
   mobile = false,
   emptyMessage = 'Select a deck to browse.',
   customDecks = null,
-  extraDecks = {},
+  selectableCustomDecks = {},
   onSelectDeck,
   onPractice,
   srs = {},
@@ -143,7 +145,11 @@ export default function VocabBrowse({
 
       {!isCustomMode && (
         <header style={{ marginBottom: SPACE[3], minWidth: 0 }}>
-          <BrowseDeckSelect deckId={deckId} onSelect={onSelectDeck} customDecks={extraDecks} />
+          <BrowseDeckSelect
+            deckId={deckId}
+            onSelect={onSelectDeck}
+            customDecks={selectableCustomDecks}
+          />
           {title && (
             <h2
               style={{

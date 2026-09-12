@@ -30,6 +30,22 @@ describe('BrowseDeckSelect', () => {
     expect(onSelect).toHaveBeenCalledWith('core-100');
   });
 
+  it('falls back to the disabled placeholder for an unknown deck id', async () => {
+    const onSelect = vi.fn();
+    render(
+      <BrowseDeckSelect
+        deckId="stale-deleted"
+        onSelect={onSelect}
+        customDecks={{ 'custom-big': { name: 'Big Deck' } }}
+      />
+    );
+    expect(browseSelect()).toHaveValue('');
+    expect(browseSelect()).toHaveDisplayValue('Select a deck');
+    expect(screen.getByRole('option', { name: 'Select a deck' })).toBeDisabled();
+    await userEvent.selectOptions(browseSelect(), 'greetings');
+    expect(onSelect).toHaveBeenCalledWith('greetings');
+  });
+
   it('shows the current custom deck instead of the placeholder', () => {
     render(
       <BrowseDeckSelect
