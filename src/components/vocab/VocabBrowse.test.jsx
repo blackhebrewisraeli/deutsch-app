@@ -160,7 +160,7 @@ describe('VocabBrowse', () => {
         title="weather"
         cards={[bread]}
         deckId="custom-1"
-        extraDecks={{ 'custom-1': weatherDeck }}
+        selectableCustomDecks={{ 'custom-1': weatherDeck }}
         srs={{}}
         now={1}
       />
