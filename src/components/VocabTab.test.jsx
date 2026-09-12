@@ -193,6 +193,49 @@ describe('VocabTab', () => {
     });
   });
 
+  describe('mobile hero density', () => {
+    const visuallyHiddenStyle = {
+      position: 'absolute',
+      width: '1px',
+      height: '1px',
+    };
+
+    const findHeroWrapper = () => {
+      const heading = screen.getByRole('heading', { level: 1, name: 'Wortschatz' });
+      let node = heading.parentElement;
+      while (node && node !== document.body) {
+        if (node.style?.position === 'absolute') return node;
+        node = node.parentElement;
+      }
+      return heading.parentElement;
+    };
+
+    it('keeps the Wortschatz heading in the accessibility tree on mobile', () => {
+      renderTab({ mobile: true });
+      expect(screen.getByRole('heading', { level: 1, name: 'Wortschatz' })).toBeInTheDocument();
+      expect(screen.getByText('Section 04')).toBeInTheDocument();
+      expect(
+        screen.getByText('Flip, listen, learn. Pick a preset or generate a deck on any topic.')
+      ).toBeInTheDocument();
+    });
+
+    it('visually hides the Hero wrapper on mobile without deleting it', () => {
+      renderTab({ mobile: true });
+      expect(findHeroWrapper()).toHaveStyle(visuallyHiddenStyle);
+    });
+
+    it('leaves the centered Hero visible on desktop', () => {
+      renderTab({ mobile: false });
+      const hero = screen.getByRole('heading', { level: 1, name: 'Wortschatz' }).parentElement;
+      expect(hero).toHaveStyle({
+        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+      });
+      expect(findHeroWrapper()).not.toHaveStyle(visuallyHiddenStyle);
+    });
+  });
+
   describe('multiple-choice flow (a1)', () => {
     it('correct choice shows feedback, marks learned, and surfaces the badge', async () => {
       render(<StatefulHost />);
