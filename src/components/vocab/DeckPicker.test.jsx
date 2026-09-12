@@ -152,13 +152,50 @@ describe('DeckPicker with a collection', () => {
     expect(onSelect).toHaveBeenCalledWith('custom-b');
   });
 
-  it('gives each deck its OWN remove control, carrying that deck id', async () => {
+  it('asks before deleting — first trash click does not call onDelete', async () => {
     const onDelete = vi.fn();
     render(<DeckPicker {...props} customDecks={two} onDelete={onDelete} />);
     const removes = screen.getAllByRole('button', { name: /^Remove / });
     expect(removes).toHaveLength(2);
     await userEvent.click(removes[0]);
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByText("Remove weather? Cards can't be recovered.")).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Remove$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
+  });
+
+  it('dismisses the confirmation on Cancel and still does not delete', async () => {
+    const onDelete = vi.fn();
+    render(<DeckPicker {...props} customDecks={two} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weather' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.queryByText(/Cards can't be recovered/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove weather' })).toBeInTheDocument();
+  });
+
+  it('deletes only after confirm, once, with that deck id', async () => {
+    const onDelete = vi.fn();
+    render(<DeckPicker {...props} customDecks={two} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weather' }));
+    await userEvent.click(screen.getByRole('button', { name: /^Remove$/ }));
+    expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledWith('custom-a');
+  });
+
+  it('arms only one deck at a time', async () => {
+    const onDelete = vi.fn();
+    render(<DeckPicker {...props} customDecks={two} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weather' }));
+    expect(screen.getByText("Remove weather? Cards can't be recovered.")).toBeInTheDocument();
+    expect(screen.queryByText("Remove food? Cards can't be recovered.")).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove food' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Remove food' }));
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByText("Remove food? Cards can't be recovered.")).toBeInTheDocument();
+    expect(screen.queryByText("Remove weather? Cards can't be recovered.")).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove weather' })).toBeInTheDocument();
   });
 
   it('keeps remove a SIBLING of select for every row', () => {

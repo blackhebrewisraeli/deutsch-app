@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Sparkles, Trash2 } from 'lucide-react';
 import {
   BORDER,
@@ -70,6 +71,10 @@ export default function DeckPicker({
   atCap = false,
   maxDecks,
 }) {
+  // One deck at a time. Arming a second row replaces this id, so two
+  // confirmations never sit side by side waiting for a stray click.
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+
   return (
     <div
       style={{
@@ -124,84 +129,177 @@ export default function DeckPicker({
         })}
         {/* One row per custom deck. With a single deck this renders exactly
             what the single-slot version did. */}
-        {Object.entries(customDecks).map(([id, deck]) => (
-          <div
-            key={id}
-            style={{
-              display: 'flex',
-              alignItems: 'stretch',
-              borderTop: `1px solid ${COLORS.inkA12}`,
-              background: deckId === id ? COLORS.red : COLORS.paperDeep,
-            }}
-          >
-            <button
-              type="button"
-              onClick={() => onSelect(id)}
-              aria-pressed={deckId === id}
-              // The visible row is "✦ weather · 2 cards". A screen reader needs
-              // to know what KIND of thing that is, which the sparkle cannot
-              // convey — so the accessible name states it explicitly.
-              aria-label={`Your Deck: ${deck.name || 'unnamed'} — ${deck.cards.length} ${plural(deck.cards.length, 'card', 'cards')}`}
+        {Object.entries(customDecks).map(([id, deck]) => {
+          const deckName = deck.name || 'Your Deck';
+          const pending = pendingDeleteId === id;
+          const selected = deckId === id;
+
+          return (
+            <div
+              key={id}
               style={{
-                flex: 1,
-                minWidth: 0,
-                padding: '14px 16px',
-                background: 'transparent',
-                color: deckId === id ? COLORS.paper : COLORS.ink,
-                border: 'none',
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: 8,
-                fontFamily: FONTS.display,
-                fontSize: FONT_SIZE.lg,
-                fontWeight: FONT_WEIGHT.semibold,
-                textAlign: 'left',
-                cursor: 'pointer',
+                alignItems: 'stretch',
+                borderTop: `1px solid ${COLORS.inkA12}`,
+                // Confirmation sits on the unselected surface so a red Remove
+                // control stays readable even when this row is the active deck.
+                background: pending ? COLORS.paperDeep : selected ? COLORS.red : COLORS.paperDeep,
               }}
             >
-              {/* The topic the learner typed. With several decks a fixed
-                  label would make them indistinguishable, which is the whole
-                  point of the collection. Truncated rather than wrapped: the
-                  row is a fixed-height control and a long topic must not
-                  reflow it. */}
-              <span
-                style={{
-                  overflow: 'hidden',
-                  textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
-                  minWidth: 0,
-                }}
-              >
-                ✦ {deck.name || 'Your Deck'}
-              </span>
-              <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.7 }}>
-                {deck.cards.length} {plural(deck.cards.length, 'card', 'cards')}
-              </span>
-            </button>
-            {onDelete && (
-              /* Select and Remove are SIBLINGS, never nested: a <button> inside
-                 a <button> is invalid HTML and browsers silently un-nest it. */
-              <button
-                type="button"
-                onClick={() => onDelete(id)}
-                aria-label={`Remove ${deck.name || 'your custom deck'}`}
-                style={{
-                  padding: '14px 16px',
-                  background: 'transparent',
-                  color: deckId === id ? COLORS.paper : COLORS.mute,
-                  border: 'none',
-                  borderLeft: `1px solid ${COLORS.inkA12}`,
-                  fontFamily: FONTS.mono,
-                  fontSize: FONT_SIZE.ipa,
-                  cursor: 'pointer',
-                }}
-              >
-                <Trash2 size={16} aria-hidden="true" />
-              </button>
-            )}
-          </div>
-        ))}
+              {pending ? (
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: SPACE[2],
+                    padding: '14px 16px',
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: FONTS.body,
+                      fontSize: FONT_SIZE.sm,
+                      fontWeight: FONT_WEIGHT.medium,
+                      color: COLORS.ink,
+                      overflowWrap: 'anywhere',
+                      minWidth: 0,
+                    }}
+                  >
+                    {`Remove ${deckName}? Cards can't be recovered.`}
+                  </span>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+                      gap: SPACE[2],
+                    }}
+                  >
+                    <button
+                      type="button"
+                      data-ui="button"
+                      onClick={() => {
+                        onDelete(id);
+                        setPendingDeleteId(null);
+                      }}
+                      style={{
+                        minWidth: 0,
+                        padding: `${SPACE[2]}px ${SPACE[3]}px`,
+                        background: COLORS.red,
+                        color: COLORS.paper,
+                        border: 'none',
+                        borderRadius: RADIUS.md,
+                        boxShadow: SHADOW.press(COLORS.rust),
+                        fontFamily: FONTS.mono,
+                        fontSize: FONT_SIZE.tag,
+                        fontWeight: FONT_WEIGHT.bold,
+                        letterSpacing: LETTER_SPACING.wider,
+                        textTransform: 'uppercase',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Remove
+                    </button>
+                    <button
+                      type="button"
+                      data-ui="button"
+                      onClick={() => setPendingDeleteId(null)}
+                      style={{
+                        minWidth: 0,
+                        padding: `${SPACE[2]}px ${SPACE[3]}px`,
+                        background: COLORS.card,
+                        color: COLORS.ink,
+                        border: 'none',
+                        borderRadius: RADIUS.md,
+                        boxShadow: SHADOW.press(COLORS.lip),
+                        fontFamily: FONTS.mono,
+                        fontSize: FONT_SIZE.tag,
+                        fontWeight: FONT_WEIGHT.bold,
+                        letterSpacing: LETTER_SPACING.wider,
+                        textTransform: 'uppercase',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => onSelect(id)}
+                    aria-pressed={selected}
+                    // The visible row is "✦ weather · 2 cards". A screen reader
+                    // needs to know what KIND of thing that is, which the
+                    // sparkle cannot convey — so the accessible name states it
+                    // explicitly.
+                    aria-label={`Your Deck: ${deck.name || 'unnamed'} — ${deck.cards.length} ${plural(deck.cards.length, 'card', 'cards')}`}
+                    style={{
+                      flex: 1,
+                      minWidth: 0,
+                      padding: '14px 16px',
+                      background: 'transparent',
+                      color: selected ? COLORS.paper : COLORS.ink,
+                      border: 'none',
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      gap: 8,
+                      fontFamily: FONTS.display,
+                      fontSize: FONT_SIZE.lg,
+                      fontWeight: FONT_WEIGHT.semibold,
+                      textAlign: 'left',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    {/* The topic the learner typed. With several decks a fixed
+                        label would make them indistinguishable, which is the
+                        whole point of the collection. Truncated rather than
+                        wrapped: the row is a fixed-height control and a long
+                        topic must not reflow it. */}
+                    <span
+                      style={{
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        minWidth: 0,
+                      }}
+                    >
+                      ✦ {deckName}
+                    </span>
+                    <span style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.ipa, opacity: 0.7 }}>
+                      {deck.cards.length} {plural(deck.cards.length, 'card', 'cards')}
+                    </span>
+                  </button>
+                  {onDelete && (
+                    /* Select and Remove are SIBLINGS, never nested: a <button>
+                       inside a <button> is invalid HTML and browsers silently
+                       un-nest it. First click only arms this row. */
+                    <button
+                      type="button"
+                      onClick={() => setPendingDeleteId(id)}
+                      aria-label={`Remove ${deck.name || 'your custom deck'}`}
+                      style={{
+                        padding: '14px 16px',
+                        background: 'transparent',
+                        color: selected ? COLORS.paper : COLORS.mute,
+                        border: 'none',
+                        borderLeft: `1px solid ${COLORS.inkA12}`,
+                        fontFamily: FONTS.mono,
+                        fontSize: FONT_SIZE.ipa,
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <Trash2 size={16} aria-hidden="true" />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {DECK_GROUPS.filter((g) => g !== 'Curated').map((group) => (
