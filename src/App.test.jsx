@@ -1764,7 +1764,7 @@ describe('deleting a custom deck writes a tombstone', () => {
   const openVocab = async () => userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
   const removeDeck = async () => {
     await userEvent.click(screen.getByRole('button', { name: /^Remove / }));
-    await userEvent.click(screen.getByRole('button', { name: /^Remove$/ }));
+    await userEvent.click(screen.getByRole('button', { name: /permanently$/ }));
   };
 
   it('offers a Remove control beside the deck, not nested inside it', async () => {
@@ -2034,7 +2034,7 @@ describe('mastery is recorded where it was earned', () => {
     await waitFor(() => expect(loadState()?.learnedByDeck?.custom).toBeTruthy());
 
     await userEvent.click(screen.getByRole('button', { name: /^Remove / }));
-    await userEvent.click(screen.getByRole('button', { name: /^Remove$/ }));
+    await userEvent.click(screen.getByRole('button', { name: /permanently$/ }));
 
     await waitFor(() => expect(loadState().learnedByDeck.custom).toBeUndefined());
     expect(loadState().learnedWords['die Sonne']).toBe(true);
@@ -2210,7 +2210,7 @@ describe('a collection of custom decks', () => {
     expect(await screen.findByRole('status')).toBeInTheDocument();
 
     await userEvent.click(screen.getAllByRole('button', { name: /^Remove / })[0]);
-    await userEvent.click(screen.getByRole('button', { name: /^Remove$/ }));
+    await userEvent.click(screen.getByRole('button', { name: /permanently$/ }));
 
     await waitFor(() => expect(screen.queryByRole('status')).toBeNull());
     expect(screen.getByRole('textbox', { name: 'Custom deck topic' })).toBeEnabled();
@@ -2223,7 +2223,7 @@ describe('a collection of custom decks', () => {
     await screen.findByText(/topic 1/);
 
     await userEvent.click(screen.getByRole('button', { name: 'Remove topic 1' }));
-    await userEvent.click(screen.getByRole('button', { name: /^Remove$/ }));
+    await userEvent.click(screen.getByRole('button', { name: /permanently$/ }));
 
     await waitFor(() => expect(screen.queryByText(/topic 1/)).toBeNull());
     expect(screen.getByText(/topic 0/)).toBeInTheDocument();

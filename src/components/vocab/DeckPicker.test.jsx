@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { useState } from 'react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DeckPicker from './DeckPicker';
 import { AUTO_DECKS } from '../../packs/de/autoDecks';
@@ -160,7 +161,7 @@ describe('DeckPicker with a collection', () => {
     await userEvent.click(removes[0]);
     expect(onDelete).not.toHaveBeenCalled();
     expect(screen.getByText("Remove weather? Cards can't be recovered.")).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Remove$/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remove weather permanently' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
@@ -178,7 +179,7 @@ describe('DeckPicker with a collection', () => {
     const onDelete = vi.fn();
     render(<DeckPicker {...props} customDecks={two} onDelete={onDelete} />);
     await userEvent.click(screen.getByRole('button', { name: 'Remove weather' }));
-    await userEvent.click(screen.getByRole('button', { name: /^Remove$/ }));
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weather permanently' }));
     expect(onDelete).toHaveBeenCalledTimes(1);
     expect(onDelete).toHaveBeenCalledWith('custom-a');
   });
@@ -305,5 +306,97 @@ describe('DeckPicker pluralisation', () => {
     // The curated decks are ten cards each — the rule still has to be applied,
     // or the next authored deck of one card reintroduces the bug.
     expect(screen.getAllByText('10 cards').length).toBeGreaterThan(0);
+  });
+});
+
+describe('DeckPicker delete confirmation — accessibility', () => {
+  const two = {
+    'custom-a': { name: 'weather', cards: [{ id: 'a' }, { id: 'b' }] },
+    'custom-b': { name: 'food', cards: [{ id: 'c' }] },
+  };
+
+  // A parent that really drops the deck, the way App does — the picker itself
+  // only reports the id upward.
+  function Collection({ initial }) {
+    const [decks, setDecks] = useState(initial);
+    return (
+      <DeckPicker
+        {...props}
+        customDecks={decks}
+        onDelete={(id) =>
+          setDecks((current) =>
+            Object.fromEntries(Object.entries(current).filter(([k]) => k !== id))
+          )
+        }
+      />
+    );
+  }
+
+  // The armed strip holds both the destructive control and its copy.
+  const armedStrip = (deckName) =>
+    screen.getByText(`Remove ${deckName}? Cards can't be recovered.`).closest('div');
+
+  const confirmButton = (deckName) =>
+    within(armedStrip(deckName)).getByRole('button', { name: /remove/i });
+
+  it('names the deck on the destructive button, not only on the trash it replaced', async () => {
+    // Three buttons read "Remove weather", "Remove food" and a bare "Remove",
+    // and the least-labelled one is the only one that destroys data.
+    render(<DeckPicker {...props} customDecks={two} onDelete={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weather' }));
+
+    expect(confirmButton('weather')).toHaveAccessibleName('Remove weather permanently');
+  });
+
+  it('announces the confirmation — the copy sits in a live region', async () => {
+    // Same role="status" the at-cap note already uses. Without it the question
+    // appears silently: nothing about the armed row reaches a screen reader.
+    render(<DeckPicker {...props} customDecks={two} onDelete={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weather' }));
+
+    expect(screen.getByRole('status')).toHaveTextContent(
+      "Remove weather? Cards can't be recovered."
+    );
+  });
+
+  it('moves focus to the confirm rather than dropping it on <body>', async () => {
+    // Arming UNMOUNTS the trash that was just activated. Per the DOM spec that
+    // sends focus to <body>, i.e. a keyboard user is thrown to the top of the
+    // document at the exact moment a question is put to them.
+    render(<DeckPicker {...props} customDecks={two} onDelete={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weather' }));
+
+    expect(confirmButton('weather')).toHaveFocus();
+  });
+
+  it('returns focus to the trash it came from on Cancel', async () => {
+    // Cancel unmounts itself the same way, so backing out of the question is
+    // the same trip to <body> in reverse.
+    render(<DeckPicker {...props} customDecks={two} onDelete={() => {}} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weather' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(screen.getByRole('button', { name: 'Remove weather' })).toHaveFocus();
+  });
+
+  it('hands focus to a surviving row after the deck is deleted', async () => {
+    // The confirm unmounts with the row it belonged to, so a real delete has
+    // nowhere to return focus to — it has to move to a row that still exists.
+    render(<Collection initial={two} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weather' }));
+    await userEvent.click(confirmButton('weather'));
+
+    expect(screen.getByRole('button', { name: 'Remove food' })).toHaveFocus();
+  });
+
+  it('cancels on Escape, like every other dismissible affordance', async () => {
+    const onDelete = vi.fn();
+    render(<DeckPicker {...props} customDecks={two} onDelete={onDelete} />);
+    await userEvent.click(screen.getByRole('button', { name: 'Remove weather' }));
+    await userEvent.keyboard('{Escape}');
+
+    expect(screen.queryByText(/Cards can't be recovered/)).not.toBeInTheDocument();
+    expect(onDelete).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Remove weather' })).toHaveFocus();
   });
 });
