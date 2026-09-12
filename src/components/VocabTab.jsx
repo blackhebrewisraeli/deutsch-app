@@ -37,6 +37,21 @@ import { AUTO_DECKS } from '../packs/de/autoDecks';
 // not show them, since that would print the answer above the question.
 const glossList = (card) => (card.glosses?.length ? card.glosses.join(' · ') : card.en);
 
+// Clip the masthead to 1×1 on phones so Browse's first row can sit on-screen.
+// The Hero stays mounted — heading, kicker and description remain in the
+// accessibility tree. Same recipe as the table's sr-only labels.
+const visuallyHidden = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
+
 export default function VocabTab({
   level,
   learnedWords,
@@ -366,12 +381,14 @@ export default function VocabTab({
 
   return (
     <div>
-      <Hero
-        align="center"
-        kicker="Section 04"
-        title="Wortschatz"
-        sub="Flip, listen, learn. Pick a preset or generate a deck on any topic."
-      />
+      <div style={mobile ? visuallyHidden : undefined}>
+        <Hero
+          align="center"
+          kicker="Section 04"
+          title="Wortschatz"
+          sub="Flip, listen, learn. Pick a preset or generate a deck on any topic."
+        />
+      </div>
 
       <VocabModeTabs active={mode} onPick={setMode} />
 
