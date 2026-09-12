@@ -37,6 +37,21 @@ import { AUTO_DECKS } from '../packs/de/autoDecks';
 // not show them, since that would print the answer above the question.
 const glossList = (card) => (card.glosses?.length ? card.glosses.join(' · ') : card.en);
 
+// Clip the masthead to 1×1 on phones so Browse's first row can sit on-screen.
+// The Hero stays mounted — heading, kicker and description remain in the
+// accessibility tree. Same recipe as the table's sr-only labels.
+const visuallyHidden = {
+  position: 'absolute',
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: 'hidden',
+  clip: 'rect(0 0 0 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+};
+
 export default function VocabTab({
   level,
   learnedWords,
@@ -49,7 +64,7 @@ export default function VocabTab({
   onDeckGenerated,
   onDeckDeleted,
 }) {
-  const [deckId, setDeckId] = useState(DEFAULT_DECK_ID);
+  const [deckId, setDeckIdRaw] = useState(DEFAULT_DECK_ID);
   const [mode, setMode] = useState('practice');
   // Snapshot once per mount so Browse/Custom never call Date.now() or loadState
   // in their own render. Refresh when the learner leaves Practice — that is
@@ -95,9 +110,10 @@ export default function VocabTab({
   const customCards = customDecks?.[deckId]?.cards ?? null;
   const activeDeck = customCards ?? (isAuto ? (asyncDeck ?? []) : (PRESET_DECKS[deckId] ?? []));
 
-  // Deck changes must not keep the previous queue. React applies setDeckId
+  // Deck changes must not keep the previous queue. React applies the id write
   // before the reset effect, so one render can pair a new (smaller) deck with
   // a leftover high index — getChoices then reads deck[cardIdx].en off the end.
+  // Every UI path must go through selectDeck; it is the only writer.
   const selectDeck = (nextId) => {
     if (nextId === deckId) return;
     setQueue([]);
@@ -105,7 +121,7 @@ export default function VocabTab({
     setResult(null);
     setTypedAnswer('');
     setDeckComplete(false);
-    setDeckId(nextId);
+    setDeckIdRaw(nextId);
   };
 
   // The custom deck can disappear while it is the SELECTED one — deleted here,
@@ -360,16 +376,19 @@ export default function VocabTab({
     learnedByDeck,
     now: browseNow,
     onPractice: practiseRow,
+    selectableCustomDecks: customDecks,
   };
 
   return (
     <div>
-      <Hero
-        align="center"
-        kicker="Section 04"
-        title="Wortschatz"
-        sub="Flip, listen, learn. Pick a preset or generate a deck on any topic."
-      />
+      <div style={mobile ? visuallyHidden : undefined}>
+        <Hero
+          align="center"
+          kicker="Section 04"
+          title="Wortschatz"
+          sub="Flip, listen, learn. Pick a preset or generate a deck on any topic."
+        />
+      </div>
 
       <VocabModeTabs active={mode} onPick={setMode} />
 
@@ -382,7 +401,6 @@ export default function VocabTab({
             error={isAuto && deckError}
             onRetry={retry}
             onSelectDeck={selectDeck}
-            selectCustomDecks={customDecks}
             emptyMessage="This deck has no words yet."
           />
         </div>

@@ -24,27 +24,9 @@ describe('VocabBrowse', () => {
   it('renders the title and a row for each card', () => {
     render(<VocabBrowse title="Food & Drink" cards={[bread]} deckId="food" srs={{}} now={1} />);
     expect(screen.getByText(BROWSE_SCOPE_LABEL)).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Deck' })).toHaveValue('food');
     expect(screen.getByRole('heading', { name: 'Food & Drink' })).toBeInTheDocument();
     expect(screen.getByText('das Brot')).toBeInTheDocument();
     expect(screen.getByRole('columnheader', { name: 'Term' })).toBeInTheDocument();
-  });
-
-  it('lets the learner change deck from the compact select', async () => {
-    const onSelectDeck = vi.fn();
-    render(
-      <VocabBrowse
-        title="Greetings"
-        cards={[bread]}
-        deckId="greetings"
-        srs={{}}
-        now={1}
-        onSelectDeck={onSelectDeck}
-      />
-    );
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Deck' }), 'travel');
-    expect(onSelectDeck).toHaveBeenCalledWith('travel');
-    expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
   });
 
   it('does not read storage or Date.now during render', () => {
@@ -109,7 +91,6 @@ describe('VocabBrowse', () => {
     );
     expect(screen.getByText(CUSTOM_SCOPE_LABEL)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /weather/ })).toBeInTheDocument();
-    expect(screen.queryByRole('combobox', { name: 'Deck' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
     expect(screen.getByText('das Brot')).toBeInTheDocument();
   });
@@ -142,6 +123,53 @@ describe('VocabBrowse', () => {
     expect(screen.getByText(CUSTOM_SCOPE_LABEL)).toBeInTheDocument();
     expect(screen.getByText(CUSTOM_PICK_COPY)).toBeInTheDocument();
     expect(screen.queryByText('Hallo')).not.toBeInTheDocument();
+  });
+
+  it('selects a preset or auto deck through the shared onSelectDeck path', async () => {
+    const onSelectDeck = vi.fn();
+    render(
+      <VocabBrowse
+        title="Greetings"
+        cards={[bread]}
+        deckId="greetings"
+        srs={{}}
+        now={1}
+        onSelectDeck={onSelectDeck}
+      />
+    );
+    const select = screen.getByRole('combobox', { name: BROWSE_SCOPE_LABEL });
+    expect(select).toHaveValue('greetings');
+    await userEvent.selectOptions(select, 'travel');
+    expect(onSelectDeck).toHaveBeenCalledWith('travel');
+    await userEvent.selectOptions(select, 'core-100');
+    expect(onSelectDeck).toHaveBeenCalledWith('core-100');
+    expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+  });
+
+  it('names the selector from the visible Choose a deck label', () => {
+    render(<VocabBrowse title="Greetings" cards={[bread]} deckId="greetings" srs={{}} now={1} />);
+    expect(screen.getByRole('combobox', { name: BROWSE_SCOPE_LABEL })).toHaveAccessibleName(
+      BROWSE_SCOPE_LABEL
+    );
+  });
+
+  it('shows the current custom deck in the selector while listing its rows', () => {
+    render(
+      <VocabBrowse
+        title="weather"
+        cards={[bread]}
+        deckId="custom-1"
+        selectableCustomDecks={{ 'custom-1': weatherDeck }}
+        srs={{}}
+        now={1}
+      />
+    );
+    const select = screen.getByRole('combobox', { name: BROWSE_SCOPE_LABEL });
+    expect(select).toHaveValue('custom-1');
+    expect(select).toHaveDisplayValue('weather');
+    expect(screen.getByText('das Brot')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
   });
 
   it('selects a custom deck without offering a trash control', async () => {

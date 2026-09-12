@@ -1,49 +1,81 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import BrowseDeckSelect, { CUSTOM_GROUP_LABEL, PRESET_GROUP_LABEL } from './BrowseDeckSelect';
-import { AUTO_DECKS, DECK_GROUPS } from '../../packs/de/autoDecks';
+import BrowseDeckSelect, { BROWSE_SCOPE_LABEL } from './BrowseDeckSelect';
+
+const browseSelect = () => screen.getByRole('combobox', { name: BROWSE_SCOPE_LABEL });
 
 describe('BrowseDeckSelect', () => {
-  it('is a compact grouped select, not a chip wall', () => {
-    const { container } = render(<BrowseDeckSelect deckId="greetings" onSelect={() => {}} />);
-    const select = screen.getByRole('combobox', { name: 'Deck' });
-    expect(select.tagName).toBe('SELECT');
-    expect(select).toHaveValue('greetings');
-    expect(select).toHaveStyle({ width: '100%', minWidth: '0', maxWidth: '100%' });
-    const groups = [...container.querySelectorAll('optgroup')].map((g) => g.label);
-    expect(groups[0]).toBe(PRESET_GROUP_LABEL);
-    expect(groups).not.toContain('Curated');
-    expect(groups.slice(1)).toEqual(DECK_GROUPS.filter((g) => g !== 'Curated'));
-    expect(screen.getByRole('option', { name: 'Travel' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Core 100' })).toBeInTheDocument();
-    for (const deck of AUTO_DECKS) {
-      expect(screen.getByRole('option', { name: deck.name })).toBeInTheDocument();
-    }
-    expect(screen.queryAllByRole('button')).toHaveLength(0);
-    expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+  it('is named by the visible Choose a deck label', () => {
+    render(<BrowseDeckSelect deckId="greetings" onSelect={() => {}} />);
+    const label = screen.getByText(BROWSE_SCOPE_LABEL);
+    expect(label).toBeInTheDocument();
+    expect(label).toHaveStyle({ display: 'block' });
+    expect(browseSelect()).toHaveAccessibleName(BROWSE_SCOPE_LABEL);
   });
 
-  it('calls onSelect with the chosen deck id', async () => {
+  it('marks the current deck and offers Greetings, Travel, and Core 100', () => {
+    render(<BrowseDeckSelect deckId="greetings" onSelect={() => {}} />);
+    expect(browseSelect()).toHaveValue('greetings');
+    expect(screen.getByRole('option', { name: 'Travel' })).toHaveValue('travel');
+    expect(screen.getByRole('option', { name: 'Core 100' })).toHaveValue('core-100');
+  });
+
+  it('calls onSelect with the shared deck id', async () => {
     const onSelect = vi.fn();
     render(<BrowseDeckSelect deckId="greetings" onSelect={onSelect} />);
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Deck' }), 'travel');
+    await userEvent.selectOptions(browseSelect(), 'travel');
     expect(onSelect).toHaveBeenCalledWith('travel');
+    await userEvent.selectOptions(browseSelect(), 'core-100');
+    expect(onSelect).toHaveBeenCalledWith('core-100');
   });
 
-  it('includes a custom deck among the options', () => {
-    const { container } = render(
+  it('falls back to the disabled placeholder for an unknown deck id', async () => {
+    const onSelect = vi.fn();
+    render(
       <BrowseDeckSelect
-        deckId="custom-1"
-        onSelect={() => {}}
-        customDecks={{ 'custom-1': { name: 'weather', cards: [{ id: 'a' }] } }}
+        deckId="stale-deleted"
+        onSelect={onSelect}
+        customDecks={{ 'custom-big': { name: 'Big Deck' } }}
       />
     );
-    expect(screen.getByRole('combobox', { name: 'Deck' })).toHaveValue('custom-1');
-    expect(screen.getByRole('option', { name: 'weather' })).toBeInTheDocument();
-    expect([...container.querySelectorAll('optgroup')].map((g) => g.label)).toContain(
-      CUSTOM_GROUP_LABEL
+    expect(browseSelect()).toHaveValue('');
+    expect(browseSelect()).toHaveDisplayValue('Select a deck');
+    expect(screen.getByRole('option', { name: 'Select a deck' })).toBeDisabled();
+    await userEvent.selectOptions(browseSelect(), 'greetings');
+    expect(onSelect).toHaveBeenCalledWith('greetings');
+  });
+
+  it('shows the current custom deck instead of the placeholder', () => {
+    render(
+      <BrowseDeckSelect
+        deckId="custom-big"
+        onSelect={() => {}}
+        customDecks={{ 'custom-big': { name: 'Big Deck' } }}
+      />
     );
+    expect(browseSelect()).toHaveValue('custom-big');
+    expect(browseSelect()).toHaveDisplayValue('Big Deck');
+    expect(screen.getByRole('option', { name: 'Big Deck' })).toHaveValue('custom-big');
+  });
+
+  it('can leave a custom deck for a preset', async () => {
+    const onSelect = vi.fn();
+    render(
+      <BrowseDeckSelect
+        deckId="custom-big"
+        onSelect={onSelect}
+        customDecks={{ 'custom-big': { name: 'Big Deck' } }}
+      />
+    );
+    await userEvent.selectOptions(browseSelect(), 'greetings');
+    expect(onSelect).toHaveBeenCalledWith('greetings');
+  });
+
+  it('does not offer generate or trash', () => {
+    render(<BrowseDeckSelect deckId="greetings" onSelect={() => {}} />);
+    expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 });

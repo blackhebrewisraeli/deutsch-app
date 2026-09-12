@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { readFileSync } from 'node:fs';
 import { useState } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -189,6 +190,49 @@ describe('VocabTab', () => {
     it('does not offer a custom deck button before one is generated', () => {
       renderTab();
       expect(screen.queryByRole('button', { name: /Your Deck/ })).not.toBeInTheDocument();
+    });
+  });
+
+  describe('mobile hero density', () => {
+    const visuallyHiddenStyle = {
+      position: 'absolute',
+      width: '1px',
+      height: '1px',
+    };
+
+    const findHeroWrapper = () => {
+      const heading = screen.getByRole('heading', { level: 1, name: 'Wortschatz' });
+      let node = heading.parentElement;
+      while (node && node !== document.body) {
+        if (node.style?.position === 'absolute') return node;
+        node = node.parentElement;
+      }
+      return heading.parentElement;
+    };
+
+    it('keeps the Wortschatz heading in the accessibility tree on mobile', () => {
+      renderTab({ mobile: true });
+      expect(screen.getByRole('heading', { level: 1, name: 'Wortschatz' })).toBeInTheDocument();
+      expect(screen.getByText('Section 04')).toBeInTheDocument();
+      expect(
+        screen.getByText('Flip, listen, learn. Pick a preset or generate a deck on any topic.')
+      ).toBeInTheDocument();
+    });
+
+    it('visually hides the Hero wrapper on mobile without deleting it', () => {
+      renderTab({ mobile: true });
+      expect(findHeroWrapper()).toHaveStyle(visuallyHiddenStyle);
+    });
+
+    it('leaves the centered Hero visible on desktop', () => {
+      renderTab({ mobile: false });
+      const hero = screen.getByRole('heading', { level: 1, name: 'Wortschatz' }).parentElement;
+      expect(hero).toHaveStyle({
+        textAlign: 'center',
+        display: 'flex',
+        alignItems: 'center',
+      });
+      expect(findHeroWrapper()).not.toHaveStyle(visuallyHiddenStyle);
     });
   });
 
@@ -831,80 +875,11 @@ describe('VocabTab', () => {
   });
 
   describe('management tabs', () => {
-    it('defaults to Practice with a labelled tablist and the greetings drill', () => {
-      renderTab();
-      expect(screen.getByRole('tablist', { name: 'Vocabulary mode' })).toBeInTheDocument();
-      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
-        'aria-selected',
-        'true'
-      );
-      expect(screen.getByRole('tabpanel', { name: 'Practice' })).toBeInTheDocument();
-      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /GENERATE/ })).toBeInTheDocument();
-    });
+    beforeEach(mockLexiconFetch);
 
-    it('opens Browse as a view-only table of the selected deck and hides generate', async () => {
-      renderTab();
-      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
-      expect(screen.getByRole('tabpanel', { name: 'Browse' })).toBeInTheDocument();
-      expect(screen.getByRole('combobox', { name: 'Deck' })).toHaveValue('greetings');
-      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Term' })).toBeInTheDocument();
-      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
-      expect(screen.getByText(firstCard().en)).toBeInTheDocument();
-    });
-
-    it('switches to Travel from Browse without visiting Practice first', async () => {
-      renderTab();
-      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
-      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Deck' }), 'travel');
-      expect(screen.getByRole('combobox', { name: 'Deck' })).toHaveValue('travel');
-      expect(screen.getByRole('heading', { name: 'Travel' })).toBeInTheDocument();
-      expect(screen.getByText(firstCard('travel').lemma ?? 'Bahnhof')).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
-
-      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
-      expect(screen.getByRole('button', { name: /Travel 10/ })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
-      expect(screen.getByText(firstCard('travel').de)).toBeInTheDocument();
-      expect(screen.getByText(`${DECKS.travel.length} cards remaining`)).toBeInTheDocument();
-    });
-
-    it('switches to Core 100 from Browse and Practice follows', async () => {
-      mockLexiconFetch();
-      renderTab();
-      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
-      await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Deck' }), 'core-100');
-      expect(screen.getByRole('combobox', { name: 'Deck' })).toHaveValue('core-100');
-      expect(screen.getByRole('heading', { name: 'Core 100' })).toBeInTheDocument();
-      expect(await screen.findByText('Haus')).toBeInTheDocument();
-
-      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
-      expect(screen.getByRole('button', { name: /Core 100/i })).toHaveAttribute(
-        'aria-pressed',
-        'true'
-      );
-      expect(await screen.findByText('das Haus')).toBeInTheDocument();
-    });
-
-    it('Practise on a Browse row returns to Practice on that card', async () => {
-      renderTab();
-      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
-      const first = firstCard();
-      await userEvent.click(screen.getByRole('button', { name: `Practise ${first.de}` }));
-      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
-        'aria-selected',
-        'true'
-      );
-      expect(screen.getByRole('button', { name: /GENERATE/ })).toBeInTheDocument();
-      expect(screen.getByText(first.de)).toBeInTheDocument();
-    });
-
-    it('does not crash when switching to Greetings after Practise-from-row on a large deck', async () => {
-      // Production Core 100 / CEFR B1 can queue an index past Greetings (10).
-      // The lexicon fixture is only 6 cards, so a 20-card custom deck stands in.
+    // Production Core 100 / CEFR B1 can queue an index past Greetings (10).
+    // The lexicon fixture is only 6 cards, so a 20-card custom deck stands in.
+    const queuePastGreetings = async () => {
       const cards = Array.from({ length: 20 }, (_, i) => ({
         id: `Wort ${i}`,
         de: `Wort ${i}`,
@@ -921,20 +896,13 @@ describe('VocabTab', () => {
           }}
         />
       );
-
       await userEvent.click(screen.getByRole('button', { name: /Your Deck: Big Deck/ }));
-      expect(screen.getByText('Wort 0')).toBeInTheDocument();
-
       await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
       await userEvent.click(screen.getByRole('button', { name: 'Practise Wort 15' }));
-      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
-        'aria-selected',
-        'true'
-      );
       expect(screen.getByText('Wort 15')).toBeInTheDocument();
+    };
 
-      await userEvent.click(screen.getByRole('button', { name: /Greetings/ }));
-
+    const expectGreetingsQueueRebuilt = () => {
       expect(
         screen.queryByRole('heading', { name: /something went wrong/i })
       ).not.toBeInTheDocument();
@@ -943,6 +911,129 @@ describe('VocabTab', () => {
       expect(screen.getByText(firstCard().de)).toBeInTheDocument();
       expect(screen.getByText(`${DECKS.greetings.length} cards remaining`)).toBeInTheDocument();
       expect(screen.queryByText('Wort 15')).not.toBeInTheDocument();
+      expect(screen.queryByText(/select a deck to start/i)).not.toBeInTheDocument();
+    };
+
+    it('defaults to Practice with a labelled tablist and the greetings drill', () => {
+      renderTab();
+      expect(screen.getByRole('tablist', { name: 'Vocabulary mode' })).toBeInTheDocument();
+      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      expect(screen.getByRole('tabpanel', { name: 'Practice' })).toBeInTheDocument();
+      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /GENERATE/ })).toBeInTheDocument();
+    });
+
+    it('opens Browse as a view-only table of the selected deck and hides generate', async () => {
+      renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      expect(screen.getByRole('tabpanel', { name: 'Browse' })).toBeInTheDocument();
+      expect(screen.getByText(/choose a deck/i)).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Term' })).toBeInTheDocument();
+      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
+      expect(screen.getByText(firstCard().en)).toBeInTheDocument();
+    });
+
+    it('selecting a deck on Browse updates Browse and Practice', async () => {
+      const travel = firstCard('travel');
+      renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.selectOptions(
+        screen.getByRole('combobox', { name: /choose a deck/i }),
+        'travel'
+      );
+      expect(screen.getByRole('heading', { name: 'Travel' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: `Practise ${travel.de}` })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
+      expect(screen.getByRole('button', { name: /Travel 10 cards/ })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(screen.getByText(travel.de)).toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.selectOptions(
+        screen.getByRole('combobox', { name: /choose a deck/i }),
+        'core-100'
+      );
+      expect(await screen.findByRole('heading', { name: 'Core 100' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: /choose a deck/i })).toHaveValue('core-100');
+    });
+
+    it('Browse names the active custom deck instead of the placeholder', async () => {
+      const cards = [{ id: 'die Sonne', de: 'die Sonne', en: 'sun', ipa: '[ˈzɔnə]' }];
+      render(
+        <VocabTab
+          level="a1"
+          learnedWords={{}}
+          markLearned={() => {}}
+          customDecks={{
+            'custom-1': { deckId: 'custom-1', name: 'weather', cards },
+          }}
+        />
+      );
+      await userEvent.click(screen.getByRole('button', { name: /Your Deck: weather/ }));
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      const select = screen.getByRole('combobox', { name: /choose a deck/i });
+      expect(select).toHaveValue('custom-1');
+      expect(select).toHaveDisplayValue('weather');
+      expect(screen.getByText('die Sonne')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+    });
+
+    it('Practise on a Browse row returns to Practice on that card', async () => {
+      renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      const first = firstCard();
+      await userEvent.click(screen.getByRole('button', { name: `Practise ${first.de}` }));
+      expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute(
+        'aria-selected',
+        'true'
+      );
+      expect(screen.getByRole('button', { name: /GENERATE/ })).toBeInTheDocument();
+      expect(screen.getByText(first.de)).toBeInTheDocument();
+    });
+
+    it('does not crash when switching to Greetings after Practise-from-row on a large deck', async () => {
+      await queuePastGreetings();
+      await userEvent.click(screen.getByRole('button', { name: /Greetings/ }));
+      expectGreetingsQueueRebuilt();
+    });
+
+    it('only selectDeck writes deckId — UI surfaces never receive the raw setter', () => {
+      // Bounds checks mean a behavioral test can still pass if a surface is
+      // wired to the raw setter. This pins the call sites instead. Comments
+      // are stripped so a remark cannot inflate a raw occurrence count.
+      const src = readFileSync('src/components/VocabTab.jsx', 'utf8');
+      const code = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+      expect(code).toContain('const [deckId, setDeckIdRaw] = useState');
+      expect(code).toContain('setDeckIdRaw(nextId)');
+      expect(code).not.toMatch(/onSelect(?:Deck)?=\{setDeckId/);
+      expect(code).toContain('onSelectDeck={selectDeck}');
+      expect(code).toContain('onSelect={selectDeck}');
+      expect(code).toContain('selectDeck(reviewTarget.context)');
+      expect(code).toContain('selectDeck(generatedId)');
+      expect(code).toContain('selectDeck(DEFAULT_DECK_ID)');
+      const remainder = code
+        .replace('const [deckId, setDeckIdRaw] = useState', '')
+        .replace('setDeckIdRaw(nextId)', '');
+      expect(remainder).not.toMatch(/setDeckIdRaw/);
+    });
+
+    it('rebuilds the Greetings queue after a Browse switch from a high-index deck', async () => {
+      await queuePastGreetings();
+      await userEvent.click(screen.getByRole('tab', { name: 'Browse' }));
+      await userEvent.selectOptions(
+        screen.getByRole('combobox', { name: /choose a deck/i }),
+        'greetings'
+      );
+      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
+      expectGreetingsQueueRebuilt();
     });
 
     it('shows a Custom empty copy and no trash when there are no user decks', async () => {
