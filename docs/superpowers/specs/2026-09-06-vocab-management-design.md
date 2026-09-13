@@ -1,14 +1,15 @@
 # Vocabulary management — Browse / Custom beside Practice
 
 - **Date:** 2026-09-06 · **revised 2026-09-13**
-- **Status:** P0–P2 have landed, plus the Browse deck selector (#251–#254) and
-  the delete confirm (#255). **The order of the two remaining phases is
-  swapped: P4 now precedes P3** — see §6. The next PR is P4.
-- **Author:** Claude Code. Revised after #255 so the document matches the
-  merged tree, not the 2026-09-06 discovery.
+- **Status:** P0–P2 have landed, plus the Browse deck selector (#251–#254),
+  the delete confirm (#255), its a11y follow-up (#257), and **P4** (generate
+  + trash on Custom). **P3 remains blocked** on the owner decision in §9 R1.
+- **Author:** Claude Code. Revised after #257 / P4 so the document matches
+  the tree after those PRs, not the 2026-09-06 discovery.
 - **Predecessor:** #244 (P0) → #245 (P1+P2) → #246 (alignment) → #247 (queue
-  crash) → #251–#254 (Browse selector, mobile density) → #255 (delete confirm).
-- **Verified against:** `main` @ `63383a6`, 237 files / 3030 tests.
+  crash) → #251–#254 (Browse selector, mobile density) → #255 (delete confirm)
+  → #257 (confirm a11y) → P4 (this relocation).
+- **Verified against:** `main` @ `96aa1a6` plus the P4 branch.
 
 ---
 
@@ -34,9 +35,9 @@ product decision says the extra P2 surface was a mistake.
 
 | Mode | What it is |
 | --- | --- |
-| **Practice** (default) | Today's recall UI. Generate / delete custom decks still live here **until P4**. |
-| **Browse** | Table of the **currently selected** deck. Search, status chips, 50-row pager, expand-a-row details, Practise — **plus its own deck selector** since #251. |
-| **Custom** | View-only list of live custom decks. Selecting one calls `selectDeck` and shows that deck's table. No generate / delete / edit. |
+| **Practice** (default) | Today's recall UI. Select-only: curated, auto, and custom decks. No generate / trash. |
+| **Browse** | Table of the **currently selected** deck. Search, status chips, 50-row pager, expand-a-row details, Practise — **plus its own deck selector** since #251. **View-only.** |
+| **Custom** | Management home for custom decks (P4). List + select, generate form, trash with the #255/#257 confirm. Selecting one calls `selectDeck` and shows that deck's table. Rename / card edit still wait for P3. |
 
 **`VocabTab` is wrapped in `PracticeLane`, and the earlier text here was
 wrong.** [App.jsx:1234](../../../src/App.jsx) mounts `<PracticeLane level tab>`
@@ -62,8 +63,8 @@ Leaving the app-level tab still **unmounts** the tree: `deckId` resets to
 
 | Action | Exists? | How |
 | --- | --- | --- |
-| Generate a custom deck | yes | AI, 10 cards, `newDeckId()`, cap 8 live / 100 cards. **Practice only, until P4.** |
-| Delete a custom deck | yes | trash on Practice → **inline Remove / Cancel confirm** (#255) → tombstone + `forgetDeck` |
+| Generate a custom deck | yes | AI, 10 cards, `newDeckId()`, cap 8 live / 100 cards. **Custom tab, since P4.** |
+| Delete a custom deck | yes | trash on Custom → **inline Remove / Cancel confirm** (#255/#257) → tombstone + `forgetDeck` |
 | Select a deck from Browse | yes | `BrowseDeckSelect`, grouped `<select>`, custom decks in a "Your decks" optgroup (#251/#252) |
 | Browse / search / page a deck | yes | #245 |
 | Practise a row | yes | jumps that card to the front of the Practice queue |
@@ -120,16 +121,14 @@ Storage key stays `deutsch-app-state-v1`. No rename, no new key.
 Keep the app-level **Vocab** tab. Three inner tabs. Four will wrap or overflow
 at 320px.
 
-1. **Practice** (default) — today's recall UI. **Through P3.5 it also owned
-   generate and delete; P4 moves both to Custom and leaves Practice
-   select-only.**
+1. **Practice** (default) — today's recall UI. **Select-only since P4.**
 2. **Browse** — table/list of the **currently selected** deck. It is not a
    library of every word in the pack. Since #251 Browse has its own
    `BrowseDeckSelect`, so a deck change no longer requires a trip to Practice.
    #245 added in-deck search, status chips, a pager, expand-row inspect, and
-   Practise.
-3. **Custom** — **the writable surface from P4 onward.** P4 gives it generate
-   + delete; P3 then adds rename and card edit. Before P4 it is view-only.
+   Practise. **Still view-only** — generate / trash did not move here.
+3. **Custom** — **the writable surface since P4.** Generate + delete live
+   here in `CustomDeckManager`. P3 will add rename and card edit.
 
 Status is a **filter** on Browse/Custom, not a fourth tab. The chips landed in
 #245.
@@ -158,8 +157,9 @@ and resets to Practice — same as today's `deckId` reset. Do not lift mode to
    tombstone) — `upsertDeck` already rejects an empty card list.
 5. Confirm before a deck delete. **Shipped in #255** as a per-row inline
    Remove / Cancel strip (no typed phrase — that pattern is calibrated for
-   account erasure, not one deck). The confirm **moves with the trash in P4**;
-   it is not rebuilt.
+   account erasure, not one deck). **#257** added focus restore, `role=status`,
+   Escape-to-cancel, and a labelled destructive button. P4 **moved** that
+   confirm onto Custom with the trash; it was not rebuilt.
 
 ---
 
@@ -208,8 +208,8 @@ Custom surface that P4 immediately re-lays-out.
 | **P2 (landed)** | In-deck search (umlaut / `ß` fold), status chips, 50-row **pager** (not a hard cap), Article / Level / Category columns, expand-row details, Practise-from-row. `VocabTable` takes derived `rows`. | no | **done in #245** |
 | **P2 (left)** | ~~Group / deck filters on Browse~~ **done in #251–#254** (`BrowseDeckSelect`). What remains is only the **dedicated inspect panel** — inspect is still an expand-row. | no | **mostly done** |
 | **P3.5** | Confirm before a deck delete | no new contract | **done in #255** |
-| **P3.6** | a11y of that confirm: focus restore, live region, label the destructive button | no | **not started — prerequisite for P4** |
-| **P4** | Practice picker becomes select-only. Generate + trash-with-confirm move to Custom, in a new `CustomDeckManager`. | no new contracts | **next** |
+| **P3.6** | a11y of that confirm: focus restore, live region, label the destructive button | no | **done in #257** |
+| **P4** | Practice picker becomes select-only. Generate + trash-with-confirm move to Custom, in a new `CustomDeckManager`. | no new contracts | **done** |
 | **P3** | Custom rename / edit `en`/`ipa`/glosses / delete card | yes, existing helpers | **blocked on an owner decision — §9 R1** |
 | **P5** | Optional: due-only session from Browse. Practise-from-row already landed. | no new keys | **not started** |
 
@@ -235,24 +235,32 @@ Custom surface that P4 immediately re-lays-out.
 
 **Do not touch for leftover P2 or for copy/density follow-ups:** `App.jsx`,
 `customDecks.js`, `learnedWords.js`, `srs.js`, `storage.js`, `sync/*`,
-`DeckPicker.jsx`, pack content, any `localStorage` key.
+`DeckPicker.jsx` (P4 now owns a slim of this file), pack content, any
+`localStorage` key.
 
 `VocabTable` contract is `{ rows, expandedId, onToggleExpand, onPractice,
 emptyMessage, mobile, caption }`. Do not pass `{ cards, deckId, srs, now }` —
 that older signature rendered an empty table with no error.
 
-### 7.2 Files that landed in #251–#255
+### 7.2 Files that landed in #251–#257
 
 **Added:** `src/components/vocab/BrowseDeckSelect.jsx` + test (#251).
 
 **Modified:** `VocabTab.jsx` + test (#251–#253), `VocabBrowse.jsx` + test
 (#251/#252/#254), `BrowseDeckSelect.test.jsx` (#254), `DeckPicker.jsx` + test
-and `App.test.jsx` (#255).
+and `App.test.jsx` (#255, #257).
 
-`VocabTab.jsx` is now **676 lines** and still owns the SRS queue, four grading
-paths, AI generation and all three panel mounts. P4 and P3 both touch it; the
-extraction of a `PracticePane` is a separate mission and is **not** part of
-either.
+### 7.3 Files that landed in P4
+
+**Added:** `src/components/vocab/CustomDeckManager.jsx` + test.
+
+**Modified:** `VocabTab.jsx` + test, `DeckPicker.jsx` + test (select-only),
+`VocabBrowse.jsx` + test (`showSelector`, Custom list branch removed),
+`App.test.jsx` (generate / delete helpers open the Custom tab).
+
+`VocabTab.jsx` still owns the SRS queue, four grading paths, AI generation and
+all three panel mounts. The extraction of a `PracticePane` is a separate
+mission and is **not** part of P3.
 
 ---
 
@@ -321,52 +329,44 @@ Status (plus Article / Level / Category), not "German". IPA renders through
 
 ---
 
-## 10 · P4 in detail
+## 10 · P4 as shipped
+
+P4 followed #257. The confirm moved; it was not rewritten.
 
 ### 10.1 The move
 
-| Control | Today | After P4 |
-| --- | --- | --- |
-| Preset / auto deck list | `DeckPicker` on Practice | unchanged |
-| Custom deck list, **selectable** | `DeckPicker` on Practice | **both** — Practice keeps select-only rows; Custom owns the managed list |
-| Generate form (topic, button, at-cap note) | `DeckPicker` | **`CustomDeckManager` on Custom** |
-| Trash + confirm | `DeckPicker` | **`CustomDeckManager` on Custom** |
+| Control | After P4 |
+| --- | --- |
+| Preset / auto deck list | `DeckPicker` on Practice — unchanged |
+| Custom deck list, **selectable** | **both** — Practice keeps select-only rows; Custom owns the managed list |
+| Generate form (topic, button, at-cap note) | **`CustomDeckManager` on Custom** |
+| Trash + confirm (#255/#257) | **`CustomDeckManager` on Custom** |
 
 ### 10.2 Component boundary
 
-`VocabBrowse`'s docstring says "view-only browse surface" and it serves **both**
-Browse and Custom. Do not thread the seven generate/trash props through it.
-
-- **New `src/components/vocab/CustomDeckManager.jsx`** owns the managed deck
-  list (select + trash + confirm), the generate form, the at-cap note and the
-  no-decks-yet copy.
-- **`VocabBrowse` loses its `customDecks` prop and its whole `isCustomMode`
-  branch**, and gains an explicit `showSelector` boolean. It becomes: optional
-  selector + title, loading/error, table, `emptyMessage`. That is the component
-  its docstring already claims it is.
+- **`CustomDeckManager`** owns the managed deck list (select + trash + confirm),
+  the generate form, the at-cap note and the no-decks-yet copy.
+- **`VocabBrowse`** lost `customDecks` / `isCustomMode` and gained
+  `showSelector`. Browse keeps the selector; Custom mounts
+  `showSelector={false}` under the manager.
 - **`VocabTab`'s custom panel** renders `<CustomDeckManager …/>` followed by
   `<VocabBrowse showSelector={false} cards={customCards ?? []} …/>`.
-- **`DeckPicker` drops** `onDelete`, `customTopic`, `onTopicChange`,
-  `generating`, `onGenerate`, `atCap`, `maxDecks` — and the `pendingDeleteId`
-  state goes with the confirm. It keeps custom decks **selectable**.
+- **`DeckPicker`** dropped `onDelete`, `customTopic`, `onTopicChange`,
+  `generating`, `onGenerate`, `atCap`, `maxDecks`, and `pendingDeleteId`.
+  Custom decks stay selectable.
 
 ### 10.3 No new contracts
 
-`App.jsx` is **not** touched: `onDeckGenerated` and `onDeckDeleted` already
-reach `VocabTab`, which simply hands them to a different child. No storage key,
+`App.jsx` was **not** touched: `onDeckGenerated` and `onDeckDeleted` still
+reach `VocabTab`, which hands them to `CustomDeckManager`. No storage key,
 no sync change, no migration, no change to `customDecks.js`.
 
 ### 10.4 Discoverability
 
-**Decision: no transitional pointer on Practice.** The mode tabs are visible
-above the panel and one is literally labelled Custom; a pointer means new copy
-in the pack for a surface the learner can already see. Owner may override.
-
-`CUSTOM_EMPTY_COPY` must be reworded — it currently reads "Generate one on
-Practice — this tab is view-only", which P4 makes false.
+No transitional pointer on Practice. `CUSTOM_EMPTY_COPY` now reads "Type a
+topic below to generate one" and no longer says the tab is view-only.
+`CUSTOM_SCOPE_LABEL` is "Your decks". Browse remains read-only.
 
 ### 10.5 Sequencing
 
-**P3.6 (the confirm's a11y) lands before P4.** The confirm code moves in P4, so
-fixing it first means P4 relocates already-correct code instead of the a11y fix
-having to chase a file that just moved. Both diffs stay honest.
+#257 landed before P4, so this PR relocated already-correct confirm code.

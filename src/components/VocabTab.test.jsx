@@ -345,12 +345,17 @@ describe('VocabTab', () => {
       { de: 'die Wolke', en: 'the cloud', ipa: '[ˈvɔlkə]' },
     ];
 
+    const generateOnCustom = async (topic = 'weather') => {
+      await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
+      await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), topic);
+      await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+    };
+
     it('calls the deck endpoint and renders the generated deck', async () => {
       callClaude.mockResolvedValue(JSON.stringify(generated));
       renderTab();
 
-      await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
-      await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+      await generateOnCustom();
 
       expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
       expect(callClaude).toHaveBeenCalledWith(expect.any(String), expect.any(String), [], {
@@ -358,6 +363,7 @@ describe('VocabTab', () => {
         routingContext: { taskType: 'deck_generation', userTier: 'guest' },
       });
       expect(callClaude.mock.calls[0][1]).toContain('weather');
+      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
       // the generated deck becomes active: its first card is on screen
       expect(screen.getByText(generated[0].de)).toBeInTheDocument();
       expect(screen.getByText(`${generated.length} cards remaining`)).toBeInTheDocument();
@@ -366,8 +372,7 @@ describe('VocabTab', () => {
     it('strips markdown fences from the AI response', async () => {
       callClaude.mockResolvedValue('```json\n' + JSON.stringify(generated) + '\n```');
       renderTab();
-      await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
-      await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+      await generateOnCustom();
       expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
     });
 
@@ -377,16 +382,15 @@ describe('VocabTab', () => {
       callClaude.mockResolvedValue('Sorry, here are some words: Sonne, Regen');
       renderTab();
 
-      await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
-      await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+      await generateOnCustom();
 
       await waitFor(() => expect(alertSpy).toHaveBeenCalled());
       expect(alertSpy.mock.calls[0][0]).toMatch(/Could not generate deck/);
       // no custom deck appears, the preset deck is still active and usable
       expect(screen.queryByRole('button', { name: /Your Deck/ })).not.toBeInTheDocument();
-      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
-      // the generate button has left its loading state
       expect(screen.getByRole('button', { name: /GENERATE 10 CARDS/ })).toBeEnabled();
+      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
+      expect(screen.getByText(firstCard().de)).toBeInTheDocument();
     });
 
     it('an API failure also surfaces the alert and keeps the tab alive', async () => {
@@ -395,11 +399,11 @@ describe('VocabTab', () => {
       callClaude.mockRejectedValue(new Error('API call failed (429): slow down'));
       renderTab();
 
-      await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
-      await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
+      await generateOnCustom();
 
       await waitFor(() => expect(alertSpy).toHaveBeenCalled());
       expect(alertSpy.mock.calls[0][0]).toMatch(/429/);
+      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
       expect(screen.getByText(firstCard().de)).toBeInTheDocument();
     });
   });
@@ -480,10 +484,12 @@ describe('VocabTab', () => {
       callClaude.mockResolvedValue(JSON.stringify(big));
       renderTab();
 
+      await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
       await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
       await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
 
       expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
       const bar = screen.getByRole('progressbar');
       expect(bar).toHaveAttribute('aria-valuenow', '0');
       expect(bar).toHaveAttribute('aria-valuemax', '13');
@@ -923,7 +929,8 @@ describe('VocabTab', () => {
       );
       expect(screen.getByRole('tabpanel', { name: 'Practice' })).toBeInTheDocument();
       expect(screen.getByText(firstCard().de)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /GENERATE/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox', { name: 'Custom deck topic' })).not.toBeInTheDocument();
     });
 
     it('opens Browse as a view-only table of the selected deck and hides generate', async () => {
@@ -995,7 +1002,7 @@ describe('VocabTab', () => {
         'aria-selected',
         'true'
       );
-      expect(screen.getByRole('button', { name: /GENERATE/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
       expect(screen.getByText(first.de)).toBeInTheDocument();
     });
 
@@ -1036,29 +1043,100 @@ describe('VocabTab', () => {
       expectGreetingsQueueRebuilt();
     });
 
-    it('shows a Custom empty copy and no trash when there are no user decks', async () => {
+    it('shows generate on Custom and no longer calls the tab view-only', async () => {
       renderTab();
       await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
       expect(screen.getByRole('tabpanel', { name: 'Custom' })).toBeInTheDocument();
-      expect(screen.getByText(/view-only/i)).toBeInTheDocument();
+      expect(screen.queryByText(/view-only/i)).not.toBeInTheDocument();
       expect(screen.getByText(/no custom decks yet/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /GENERATE/ })).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: 'Custom deck topic' })).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
     });
 
-    it('lists a generated deck on Custom without a remove control', async () => {
+    it('Practice lists a custom deck without generate or trash', () => {
+      const cards = [{ id: 'die Sonne', de: 'die Sonne', en: 'sun', ipa: '[ˈzɔnə]' }];
+      render(
+        <VocabTab
+          level="a1"
+          learnedWords={{}}
+          markLearned={() => {}}
+          customDecks={{
+            'custom-1': { deckId: 'custom-1', name: 'weather', cards },
+          }}
+        />
+      );
+      expect(screen.getByRole('button', { name: /Your Deck: weather/ })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+      expect(screen.queryByRole('textbox', { name: 'Custom deck topic' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+    });
+
+    it('Custom owns generate, trash, and the two-step delete confirm', async () => {
+      const cards = [{ id: 'die Sonne', de: 'die Sonne', en: 'sun', ipa: '[ˈzɔnə]' }];
+      const onDeckDeleted = vi.fn();
+      render(
+        <VocabTab
+          level="a1"
+          learnedWords={{}}
+          markLearned={() => {}}
+          onDeckDeleted={onDeckDeleted}
+          customDecks={{
+            'custom-1': { deckId: 'custom-1', name: 'weather', cards },
+          }}
+        />
+      );
+      await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
+      expect(screen.getByRole('button', { name: /GENERATE 10 CARDS/ })).toBeInTheDocument();
+      const trash = screen.getByRole('button', { name: 'Remove weather' });
+      const select = screen.getByRole('button', { name: /Your Deck: weather/ });
+      expect(select.contains(trash)).toBe(false);
+
+      await userEvent.click(trash);
+      expect(onDeckDeleted).not.toHaveBeenCalled();
+      expect(screen.getByRole('status')).toHaveTextContent(
+        "Remove weather? Cards can't be recovered."
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'Remove weather permanently' }));
+      expect(onDeckDeleted).toHaveBeenCalledTimes(1);
+      expect(onDeckDeleted).toHaveBeenCalledWith('custom-1');
+    });
+
+    it('lists a generated deck on Custom with a remove control', async () => {
       callClaude.mockResolvedValueOnce(
         JSON.stringify([{ de: 'die Sonne', en: 'sun', ipa: '[ˈzɔnə]' }])
       );
       renderTab();
+      await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
       await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
       await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
       await screen.findByRole('button', { name: /Your Deck/ });
 
-      await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
-      expect(screen.getByRole('button', { name: /weather/ })).toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: 'Your Deck: weather — 1 card' })
+      ).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Remove weather' })).toBeInTheDocument();
       expect(screen.getByText('die Sonne')).toBeInTheDocument();
+    });
+
+    it('keeps at-cap copy beside the generate form on Custom, not Practice', async () => {
+      const decks = Object.fromEntries(
+        Array.from({ length: 8 }, (_, i) => [
+          `custom-${i}`,
+          {
+            deckId: `custom-${i}`,
+            name: `topic ${i}`,
+            cards: [{ id: `w${i}`, de: `Wort${i}`, en: `word${i}` }],
+          },
+        ])
+      );
+      render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} customDecks={decks} />);
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
+      expect(screen.getByRole('status')).toHaveTextContent(/8 decks is the limit/i);
+      expect(screen.getByRole('button', { name: /GENERATE 10 CARDS/ })).toBeDisabled();
     });
 
     it('resets to Practice when the tab remounts', async () => {

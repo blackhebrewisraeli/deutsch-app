@@ -1584,6 +1584,7 @@ describe('custom decks survive the component that made them', () => {
 
   const generateADeck = async () => {
     await goToTab('Vocab');
+    await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
     await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
     expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
@@ -1661,6 +1662,7 @@ describe('custom decks survive the component that made them', () => {
     );
     renderPastEntry(<App />);
     await goToTab('Vocab');
+    await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
 
     expect(screen.queryByRole('button', { name: /Your Deck/ })).toBeNull();
     expect(screen.getByRole('textbox', { name: 'Custom deck topic' })).toBeInTheDocument();
@@ -1693,6 +1695,7 @@ describe('a generated deck tells the sync engine there is something to push', ()
 
   const generateADeck = async () => {
     await userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
     await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
     await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
     expect(await screen.findByRole('button', { name: /Your Deck/ })).toBeInTheDocument();
@@ -1762,6 +1765,10 @@ describe('deleting a custom deck writes a tombstone', () => {
     );
 
   const openVocab = async () => userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+  const openCustom = async () => {
+    await openVocab();
+    await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
+  };
   const removeDeck = async () => {
     await userEvent.click(screen.getByRole('button', { name: /^Remove / }));
     await userEvent.click(screen.getByRole('button', { name: /permanently$/ }));
@@ -1770,7 +1777,7 @@ describe('deleting a custom deck writes a tombstone', () => {
   it('offers a Remove control beside the deck, not nested inside it', async () => {
     seedDeck();
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
 
     const remove = await screen.findByRole('button', { name: /^Remove / });
     const select = screen.getByRole('button', { name: /Your Deck/ });
@@ -1781,7 +1788,7 @@ describe('deleting a custom deck writes a tombstone', () => {
   it('takes the deck out of the picker', async () => {
     seedDeck();
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
     await removeDeck();
 
     await waitFor(() => expect(screen.queryByRole('button', { name: /Your Deck/ })).toBeNull());
@@ -1792,7 +1799,7 @@ describe('deleting a custom deck writes a tombstone', () => {
     // device would push its copy straight back on the next pull.
     seedDeck();
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
     await removeDeck();
 
     await waitFor(() => expect(tombstones()).toHaveLength(1));
@@ -1804,7 +1811,7 @@ describe('deleting a custom deck writes a tombstone', () => {
   it('keeps the tombstone across a remount, so the deck stays gone', async () => {
     seedDeck();
     const first = renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
     await removeDeck();
     await waitFor(() => expect(tombstones()).toHaveLength(1));
     first.unmount();
@@ -1821,7 +1828,9 @@ describe('deleting a custom deck writes a tombstone', () => {
     renderPastEntry(<App />);
     await openVocab();
     await userEvent.click(screen.getByRole('button', { name: /Your Deck/ }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
     await removeDeck();
+    await userEvent.click(screen.getByRole('tab', { name: 'Practice' }));
 
     await waitFor(() =>
       expect(screen.getByRole('button', { name: /Greetings/ })).toHaveAttribute(
@@ -1836,7 +1845,7 @@ describe('deleting a custom deck writes a tombstone', () => {
     authMock.status = 'authenticated';
     seedDeck();
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
     await removeDeck();
 
     await waitFor(() => expect(syncMock.markDirty).toHaveBeenCalled());
@@ -1845,7 +1854,7 @@ describe('deleting a custom deck writes a tombstone', () => {
   it('lets a regenerated deck clear the tombstone', async () => {
     seedDeck();
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
     await removeDeck();
     await waitFor(() => expect(tombstones()).toHaveLength(1));
 
@@ -2033,6 +2042,7 @@ describe('mastery is recorded where it was earned', () => {
     await answer('the sun');
     await waitFor(() => expect(loadState()?.learnedByDeck?.custom).toBeTruthy());
 
+    await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
     await userEvent.click(screen.getByRole('button', { name: /^Remove / }));
     await userEvent.click(screen.getByRole('button', { name: /permanently$/ }));
 
@@ -2149,6 +2159,10 @@ describe('a collection of custom decks', () => {
   };
 
   const openVocab = () => userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+  const openCustom = async () => {
+    await openVocab();
+    await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
+  };
 
   it('lists every deck by name', async () => {
     seedDecks(3);
@@ -2163,7 +2177,7 @@ describe('a collection of custom decks', () => {
   it('generating ADDS a deck rather than replacing the existing one', async () => {
     seedDecks(1);
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
 
     await userEvent.type(screen.getByRole('textbox', { name: 'Custom deck topic' }), 'weather');
     await userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
@@ -2177,7 +2191,7 @@ describe('a collection of custom decks', () => {
   it('gives each generated deck its own id', async () => {
     seedDecks(0);
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
 
     for (const topic of ['one', 'two']) {
       const field = screen.getByRole('textbox', { name: 'Custom deck topic' });
@@ -2197,7 +2211,7 @@ describe('a collection of custom decks', () => {
   it('stops generation at the cap and says why', async () => {
     seedDecks(MAX_CUSTOM_DECKS);
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
 
     expect(await screen.findByRole('status')).toHaveTextContent(String(MAX_CUSTOM_DECKS));
     expect(screen.getByRole('button', { name: /GENERATE 10 CARDS/ })).toBeDisabled();
@@ -2206,7 +2220,7 @@ describe('a collection of custom decks', () => {
   it('lets a learner generate again after removing one', async () => {
     seedDecks(MAX_CUSTOM_DECKS);
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
     expect(await screen.findByRole('status')).toBeInTheDocument();
 
     await userEvent.click(screen.getAllByRole('button', { name: /^Remove / })[0]);
@@ -2219,7 +2233,7 @@ describe('a collection of custom decks', () => {
   it('removes only the deck whose control was pressed', async () => {
     seedDecks(3);
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
     await screen.findByText(/topic 1/);
 
     await userEvent.click(screen.getByRole('button', { name: 'Remove topic 1' }));
@@ -2247,12 +2261,16 @@ describe('deck papercuts', () => {
   });
 
   const openVocab = () => userEvent.click(screen.getByRole('button', { name: 'Vocab' }));
+  const openCustom = async () => {
+    await openVocab();
+    await userEvent.click(screen.getByRole('tab', { name: 'Custom' }));
+  };
   const field = () => screen.getByRole('textbox', { name: 'Custom deck topic' });
   const generate = () => userEvent.click(screen.getByRole('button', { name: /GENERATE 10 CARDS/ }));
 
   it('empties the topic field after a successful generation', async () => {
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
     await userEvent.type(field(), 'weather');
     await generate();
 
@@ -2264,7 +2282,7 @@ describe('deck papercuts', () => {
     // The actual symptom: "weather" then "food" produced a deck named
     // "weatherfood".
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
     await userEvent.type(field(), 'weather');
     await generate();
     await waitFor(() => expect(field()).toHaveValue(''));
@@ -2286,7 +2304,7 @@ describe('deck papercuts', () => {
     callClaude.mockRejectedValue(new Error('upstream down'));
 
     renderPastEntry(<App />);
-    await openVocab();
+    await openCustom();
     await userEvent.type(field(), 'weather');
     await generate();
 

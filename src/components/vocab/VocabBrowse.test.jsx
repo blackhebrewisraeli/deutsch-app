@@ -1,12 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import VocabBrowse, {
-  BROWSE_SCOPE_LABEL,
-  CUSTOM_SCOPE_LABEL,
-  CUSTOM_EMPTY_COPY,
-  CUSTOM_PICK_COPY,
-} from './VocabBrowse';
+import VocabBrowse, { BROWSE_SCOPE_LABEL, CUSTOM_PICK_COPY } from './VocabBrowse';
 import * as storage from '../../lib/storage';
 
 const bread = { id: 'das Brot', de: 'das Brot', en: 'bread', ipa: '/bʁoːt/' };
@@ -79,50 +74,45 @@ describe('VocabBrowse', () => {
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 
-  it('lists custom decks without a remove control', () => {
+  it('hides the deck selector when showSelector is false', () => {
     render(
       <VocabBrowse
+        showSelector={false}
         title="weather"
         cards={[bread]}
         deckId="custom-1"
-        customDecks={{ 'custom-1': weatherDeck }}
-        emptyMessage={CUSTOM_EMPTY_COPY}
+        srs={{}}
+        now={1}
       />
     );
-    expect(screen.getByText(CUSTOM_SCOPE_LABEL)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /weather/ })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox', { name: BROWSE_SCOPE_LABEL })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'weather' })).toBeInTheDocument();
     expect(screen.getByText('das Brot')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
   });
 
-  it('shows the custom empty copy when there are no user decks', () => {
+  it('shows the pick-a-custom-deck copy when that is the empty message', () => {
     render(
       <VocabBrowse
+        showSelector={false}
         title=""
         cards={[]}
         deckId="greetings"
-        customDecks={{}}
-        emptyMessage={CUSTOM_EMPTY_COPY}
+        emptyMessage={CUSTOM_PICK_COPY}
       />
     );
-    expect(screen.getByText(CUSTOM_SCOPE_LABEL)).toBeInTheDocument();
-    expect(screen.getByText(CUSTOM_EMPTY_COPY)).toBeInTheDocument();
+    expect(screen.getByText(CUSTOM_PICK_COPY)).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
   });
 
-  it('asks the learner to pick a custom deck when a preset is selected', () => {
-    render(
-      <VocabBrowse
-        title="Greetings"
-        cards={[{ id: 'Hallo', de: 'Hallo', en: 'hello' }]}
-        deckId="greetings"
-        customDecks={{ 'custom-1': weatherDeck }}
-        onSelectDeck={() => {}}
-      />
+  it('skips the empty paragraph when emptyMessage is blank', () => {
+    const { container } = render(
+      <VocabBrowse showSelector={false} title="" cards={[]} deckId="greetings" emptyMessage="" />
     );
-    expect(screen.getByText(CUSTOM_SCOPE_LABEL)).toBeInTheDocument();
-    expect(screen.getByText(CUSTOM_PICK_COPY)).toBeInTheDocument();
-    expect(screen.queryByText('Hallo')).not.toBeInTheDocument();
+    expect(container.querySelector('p')).toBeNull();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('selects a preset or auto deck through the shared onSelectDeck path', async () => {
@@ -170,21 +160,6 @@ describe('VocabBrowse', () => {
     expect(select).toHaveDisplayValue('weather');
     expect(screen.getByText('das Brot')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
-  });
-
-  it('selects a custom deck without offering a trash control', async () => {
-    const onSelectDeck = vi.fn();
-    render(
-      <VocabBrowse
-        title="weather"
-        cards={[]}
-        deckId="greetings"
-        customDecks={{ 'custom-1': weatherDeck }}
-        onSelectDeck={onSelectDeck}
-      />
-    );
-    await userEvent.click(screen.getByRole('button', { name: /weather/ }));
-    expect(onSelectDeck).toHaveBeenCalledWith('custom-1');
-    expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /GENERATE/ })).not.toBeInTheDocument();
   });
 });

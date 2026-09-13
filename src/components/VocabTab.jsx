@@ -27,7 +27,8 @@ import DeckCompleteBanner from './vocab/DeckCompleteBanner';
 import ArticleChoice from './vocab/ArticleChoice';
 import VocabModeTabs from './vocab/VocabModeTabs';
 import { vocabPanelId, vocabTabId } from './vocab/vocabModes';
-import VocabBrowse, { CUSTOM_EMPTY_COPY } from './vocab/VocabBrowse';
+import VocabBrowse, { CUSTOM_PICK_COPY } from './vocab/VocabBrowse';
+import CustomDeckManager from './vocab/CustomDeckManager';
 import { drillFor } from './vocab/drills';
 import { speak } from '../lib/speech';
 import useAutoDeck from './vocab/useAutoDeck';
@@ -408,13 +409,28 @@ export default function VocabTab({
 
       {mode === 'custom' && (
         <div role="tabpanel" id={vocabPanelId('custom')} aria-labelledby={vocabTabId('custom')}>
-          <VocabBrowse
-            {...browseProps}
-            cards={customCards ?? []}
+          <CustomDeckManager
+            deckId={deckId}
+            onSelect={selectDeck}
             customDecks={customDecks}
-            onSelectDeck={selectDeck}
-            emptyMessage={CUSTOM_EMPTY_COPY}
+            onDelete={onDeckDeleted}
+            atCap={Object.keys(customDecks ?? {}).length >= MAX_CUSTOM_DECKS}
+            maxDecks={MAX_CUSTOM_DECKS}
+            customTopic={customTopic}
+            onTopicChange={setCustomTopic}
+            generating={generating}
+            onGenerate={generateDeck}
+            mobile={mobile}
           />
+          {(customCards || Object.keys(customDecks ?? {}).length > 0) && (
+            <VocabBrowse
+              {...browseProps}
+              showSelector={false}
+              title={customCards ? deckTitle : ''}
+              cards={customCards ?? []}
+              emptyMessage={customCards ? '' : CUSTOM_PICK_COPY}
+            />
+          )}
         </div>
       )}
 
@@ -434,18 +450,7 @@ export default function VocabTab({
             marginTop: SPACE[8],
           }}
         >
-          <DeckPicker
-            deckId={deckId}
-            onSelect={selectDeck}
-            customDecks={customDecks}
-            onDelete={onDeckDeleted}
-            atCap={Object.keys(customDecks ?? {}).length >= MAX_CUSTOM_DECKS}
-            maxDecks={MAX_CUSTOM_DECKS}
-            customTopic={customTopic}
-            onTopicChange={setCustomTopic}
-            generating={generating}
-            onGenerate={generateDeck}
-          />
+          <DeckPicker deckId={deckId} onSelect={selectDeck} customDecks={customDecks} />
 
           {/* ── Right column: active recall UI ── */}
           <div
