@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Sparkles, Trash2 } from 'lucide-react';
 import {
   BORDER,
@@ -74,6 +74,25 @@ export default function DeckPicker({
   // One deck at a time. Arming a second row replaces this id, so two
   // confirmations never sit side by side waiting for a stray click.
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  // Only one row is ever armed, so one ref is enough for the confirm.
+  const confirmRef = useRef(null);
+  // id -> that row's trash button, so focus can be handed back to it.
+  const trashRefs = useRef(new Map());
+  // Which row's trash should take focus once the strip closes.
+  const restoreFocusId = useRef(null);
+
+  // Arming swaps the trash out for the confirm strip, and closing swaps it
+  // back; either way the button the keyboard user just activated unmounts, and
+  // focus would land on <body>.
+  useEffect(() => {
+    if (pendingDeleteId) {
+      confirmRef.current?.focus();
+      return;
+    }
+    const id = restoreFocusId.current;
+    restoreFocusId.current = null;
+    if (id) trashRefs.current.get(id)?.focus();
+  }, [pendingDeleteId]);
 
   return (
     <div
@@ -129,7 +148,7 @@ export default function DeckPicker({
         })}
         {/* One row per custom deck. With a single deck this renders exactly
             what the single-slot version did. */}
-        {Object.entries(customDecks).map(([id, deck]) => {
+        {Object.entries(customDecks).map(([id, deck], row, rows) => {
           const deckName = deck.name || 'Your Deck';
           const pending = pendingDeleteId === id;
           const selected = deckId === id;
@@ -148,6 +167,14 @@ export default function DeckPicker({
             >
               {pending ? (
                 <div
+                  // Escape is how a dismissible affordance is backed out of.
+                  // Focus is inside the strip while it is armed, so the keydown
+                  // reaches this wrapper by bubbling.
+                  onKeyDown={(event) => {
+                    if (event.key !== 'Escape') return;
+                    restoreFocusId.current = id;
+                    setPendingDeleteId(null);
+                  }}
                   style={{
                     flex: 1,
                     minWidth: 0,
@@ -157,7 +184,11 @@ export default function DeckPicker({
                     padding: '14px 16px',
                   }}
                 >
+                  {/* The same live region the at-cap note below uses. Arming a
+                      row swaps the controls out from under a screen reader; the
+                      question itself has to be spoken, not just drawn. */}
                   <span
+                    role="status"
                     style={{
                       fontFamily: FONTS.body,
                       fontSize: FONT_SIZE.sm,
@@ -177,9 +208,23 @@ export default function DeckPicker({
                     }}
                   >
                     <button
+                      ref={confirmRef}
                       type="button"
                       data-ui="button"
+                      // The visible word is a bare "Remove", which in a tree
+                      // that also holds "Remove weather" and "Remove food"
+                      // leaves the ONLY button that destroys data as the least
+                      // identified one. "permanently" also separates this from
+                      // the trash it replaced, so activating the trash does not
+                      // announce the same name twice.
+                      aria-label={`Remove ${deckName} permanently`}
                       onClick={() => {
+                        // This row is about to vanish, so focus goes to the row
+                        // that takes its place — the next one, or the previous
+                        // when this was the last. With no row left there is no
+                        // trash to hold focus at all.
+                        const neighbour = rows[row + 1] || rows[row - 1];
+                        restoreFocusId.current = neighbour ? neighbour[0] : null;
                         onDelete(id);
                         setPendingDeleteId(null);
                       }}
@@ -204,7 +249,10 @@ export default function DeckPicker({
                     <button
                       type="button"
                       data-ui="button"
-                      onClick={() => setPendingDeleteId(null)}
+                      onClick={() => {
+                        restoreFocusId.current = id;
+                        setPendingDeleteId(null);
+                      }}
                       style={{
                         minWidth: 0,
                         padding: `${SPACE[2]}px ${SPACE[3]}px`,
@@ -278,6 +326,10 @@ export default function DeckPicker({
                        inside a <button> is invalid HTML and browsers silently
                        un-nest it. First click only arms this row. */
                     <button
+                      ref={(node) => {
+                        if (node) trashRefs.current.set(id, node);
+                        else trashRefs.current.delete(id);
+                      }}
                       type="button"
                       onClick={() => setPendingDeleteId(id)}
                       aria-label={`Remove ${deck.name || 'your custom deck'}`}
