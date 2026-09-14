@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { COLORS, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from '../lib/theme';
-import { speak } from '../lib/speech';
 import { callClaude } from '../lib/claude';
 import { chatSystemPrompt } from '../lib/prompts';
 import { activePack } from '../packs';
@@ -61,7 +60,6 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
     if (!greeting) return;
     setMessages([{ role: 'assistant', ...greeting }]);
     setCorrection(null);
-    setTimeout(() => speak(greeting.de), 400);
   }, [scenario, level]);
 
   const startListening = () => {
@@ -130,7 +128,6 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
         setTaskIdx(nextIdx);
         setHintVisible(false);
       }
-      setTimeout(() => speak(parsed.de), 200);
     } catch (err) {
       setMessages((m) => [
         ...m,

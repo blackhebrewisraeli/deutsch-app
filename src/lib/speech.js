@@ -142,8 +142,8 @@ export function getGermanVoice(timeoutMs = 2000) {
 }
 
 export const speak = (text, lang = activePack.meta.locale, rate = 0.9) => {
-  // Guard window: ChatTab schedules speak() on a timeout that can fire after
-  // jsdom teardown when the suite is slow (unhandled ReferenceError → red hook).
+  // Guard window: a scheduled speak() can fire after jsdom teardown when the
+  // suite is slow (unhandled ReferenceError → red hook).
   if (!isSpeechSynthesisSupported()) return;
   // Synthesis is a nicety on every screen that uses it — a card still reads, a
   // chat message still shows. A driver that throws (Linux with no speech-
