@@ -255,7 +255,9 @@ export default function PersonalHub({
               fontFamily: FONTS.mono,
               fontSize: FONT_SIZE.sm,
               color: COLORS.mute,
-              overflowWrap: 'anywhere',
+              // Wrap on spaces; only break a long number if it cannot fit.
+              // `anywhere` split "to" mid-word on a 320px XP line.
+              overflowWrap: 'break-word',
             }}
           >
             {lvl.xpIntoLevel} / {lvl.xpToNext} XP to next · {lvl.totalXp} XP total
