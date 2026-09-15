@@ -7,7 +7,7 @@ import { updateProfile } from '../../lib/profile';
 import AvatarPicker from './AvatarPicker';
 import { AlertTriangle } from 'lucide-react';
 
-// Personal details: league handle and avatar emoji.
+// Personal details: league handle, plus the avatar picture picker.
 //
 // display_name is gone. It shipped as a third field here and was populated on
 // zero accounts, which made it a question the learner had to answer twice —
@@ -16,6 +16,11 @@ import { AlertTriangle } from 'lucide-react';
 // see. The COLUMN is left in place; dropping it is irreversible and it costs
 // nothing empty.
 //
+// The Avatar emoji INPUT is gone the same way: one identity surface, the
+// picture picker. `avatar_emoji` stays on the row and is still sent on save
+// so existing values are not wiped. This is a UI cleanup, not a data-model
+// change. Home / ProfileCard still render the stored glyph via avatarFor.
+//
 // Handle and avatar are PROFILE fields here, not league fields, so they are not
 // gated behind LEAGUES_ENABLED the way the old Stats editor gated them. Only
 // the league standings readout stays behind that flag.
@@ -23,15 +28,29 @@ import { AlertTriangle } from 'lucide-react';
 // Optimistic UI would be wrong: handle is UNIQUE, so the server can reject a
 // value the form already shows. The stored row it returns is the source of
 // truth, and it is what the fields are reset to on success.
-const FIELDS = [
-  { key: 'handle', label: 'Handle', placeholder: 'semion' },
-  { key: 'avatar_emoji', label: 'Avatar emoji', placeholder: '🦊' },
-];
-
 const asForm = (profile) => ({
   handle: profile?.handle ?? '',
   avatar_emoji: profile?.avatar_emoji ?? '',
 });
+
+const labelStyle = {
+  display: 'block',
+  fontFamily: FONTS.mono,
+  fontSize: FONT_SIZE.tag,
+  color: COLORS.mute,
+  marginBottom: SPACE[1],
+};
+
+const inputStyle = {
+  fontFamily: FONTS.mono,
+  fontSize: FONT_SIZE.base,
+  padding: `${SPACE[1]}px ${SPACE[2]}px`,
+  borderRadius: RADIUS.sm,
+  border: `1px solid ${COLORS.mute}`,
+  background: 'transparent',
+  color: COLORS.ink,
+  width: '100%',
+};
 
 export default function ProfileSection({
   profile,
@@ -45,11 +64,11 @@ export default function ProfileSection({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Dirty-tracking: Save is meaningless until something actually changed, and a
-  // live Save button invites a pointless round trip on a UNIQUE column.
-  const dirty = FIELDS.some((f) => form[f.key] !== saved[f.key]);
+  // Dirty-tracking: Save is meaningless until the handle actually changed, and
+  // a live Save button invites a pointless round trip on a UNIQUE column.
+  const dirty = form.handle !== saved.handle;
 
-  const set = (key) => (e) => setForm((prev) => ({ ...prev, [key]: e.target.value }));
+  const onHandleChange = (e) => setForm((prev) => ({ ...prev, handle: e.target.value }));
 
   const onSave = async () => {
     setSaving(true);
@@ -73,7 +92,7 @@ export default function ProfileSection({
   };
 
   return (
-    <Stack gap={3}>
+    <Stack gap={2}>
       {/* The picker writes avatar_path on its own — it does not share this
           form's dirty-tracking, because an upload is a completed act rather
           than an edit waiting on Save. */}
@@ -85,36 +104,15 @@ export default function ProfileSection({
         save={save}
       />
 
-      {FIELDS.map((field) => (
-        <label key={field.key} style={{ display: 'block' }}>
-          <span
-            style={{
-              display: 'block',
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              color: COLORS.mute,
-              marginBottom: SPACE[1],
-            }}
-          >
-            {field.label}
-          </span>
-          <input
-            value={form[field.key]}
-            onChange={set(field.key)}
-            placeholder={field.placeholder}
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.base,
-              padding: `${SPACE[1]}px ${SPACE[2]}px`,
-              borderRadius: RADIUS.sm,
-              border: `1px solid ${COLORS.mute}`,
-              background: 'transparent',
-              color: COLORS.ink,
-              width: '100%',
-            }}
-          />
-        </label>
-      ))}
+      <label style={{ display: 'block' }}>
+        <span style={labelStyle}>Handle</span>
+        <input
+          value={form.handle}
+          onChange={onHandleChange}
+          placeholder="semion"
+          style={inputStyle}
+        />
+      </label>
 
       {error && (
         <StatusNote tone="error" icon={AlertTriangle}>
