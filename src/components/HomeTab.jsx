@@ -1,7 +1,4 @@
-import { Flame } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE } from '../lib/theme';
-import { StatBlock } from './UI';
-import GoalRing from './gamification/GoalRing';
 import PersonalHub from './PersonalHub';
 import RecommendedActions from './RecommendedActions';
 import { resolveRecommended } from './resolveRecommended';
@@ -44,6 +41,9 @@ export default function HomeTab({
         cefrLevel={cefrLevel}
         score={score}
         learnedCount={learnedCount}
+        streak={streak}
+        goalPct={goalPct}
+        goalMet={goalMet}
         onOpenSettings={onOpenSettings}
       />
 
@@ -51,11 +51,6 @@ export default function HomeTab({
         <ErrorBoundary>
           <RecommendedActions missions={missions} onGo={onGoToTab} />
         </ErrorBoundary>
-      </div>
-
-      <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[5], marginTop: SPACE[6] }}>
-        <GoalRing pct={goalPct} met={goalMet} size={72} />
-        <StatBlock label="STREAK" value={streak} icon={<Flame size={16} />} accent />
       </div>
 
       {/* Remaining Missionen and Tagesaufgaben share a day-scoped heading, but

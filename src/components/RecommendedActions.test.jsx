@@ -58,4 +58,12 @@ describe('RecommendedActions', () => {
     await userEvent.click(screen.getByRole('button', { name: /review vocab/i }));
     expect(onGo).toHaveBeenCalledWith('vocab', expect.objectContaining({ id: 'review-vocab' }));
   });
+
+  it('still renders two cards with pack fallbacks on a quiet day', () => {
+    render(<RecommendedActions missions={[]} />);
+    const cards = screen.getAllByRole('button');
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveAccessibleName(/continue quiz/i);
+    expect(cards[1]).toHaveAccessibleName(/review vocab/i);
+  });
 });

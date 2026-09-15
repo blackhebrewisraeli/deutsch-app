@@ -63,6 +63,54 @@ describe('PersonalHub', () => {
     expect(screen.getByText('12')).toBeInTheDocument();
   });
 
+  it('keeps daily goal and streak in the same panel as identity', () => {
+    render(
+      <PersonalHub
+        user={user}
+        profile={profile}
+        cefrLevel="a2"
+        score={score}
+        learnedCount={12}
+        streak={4}
+        goalPct={0.5}
+        goalMet={false}
+      />
+    );
+    expect(screen.getByTitle('Daily goal · 50%')).toBeInTheDocument();
+    expect(screen.getByLabelText('Streak 4')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toBeInTheDocument();
+  });
+
+  // jsdom has no layout, so overflow is asserted as the styles that let a
+  // long token give way: wrap the greeting/rank, ellipsize the @handle line.
+  it('constrains a long handle and rank so they cannot push the panel wide', () => {
+    const longHandle = 'Maximiliane_Schwarzenberger';
+    const longRank = 'Muttersprachler';
+    render(
+      <PersonalHub
+        user={user}
+        profile={{ ...profile, handle: longHandle }}
+        cefrLevel="a2"
+        score={{ ...score, rankName: longRank }}
+      />
+    );
+    const greeting = screen.getByRole('heading', {
+      name: new RegExp(`guten tag, ${longHandle}`, 'i'),
+    });
+    expect(greeting).toHaveStyle({ overflowWrap: 'anywhere', maxWidth: '100%' });
+
+    const rank = screen.getByText(longRank);
+    expect(rank).toHaveStyle({ overflowWrap: 'anywhere' });
+    expect(rank.style.minWidth).toBe('0');
+
+    const handleLine = screen.getByText(new RegExp(`@${longHandle}`));
+    expect(handleLine).toHaveStyle({
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+    });
+  });
+
   // Decision E5 keeps account MANAGEMENT off Home. The hub is identity +
   // standing, so it must never grow an email, a sign-out or a delete control.
   it('carries no account management, only a link into Settings', () => {
