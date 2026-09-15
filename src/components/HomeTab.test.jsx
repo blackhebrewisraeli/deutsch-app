@@ -15,22 +15,39 @@ const score = {
   totalXp: 300,
 };
 
+const hubProps = {
+  score,
+  learnedCount: 12,
+  goalPct: 0.5,
+  goalMet: false,
+  streak: 4,
+};
+
 describe('HomeTab', () => {
-  it('renders the personal hub and the streak/goal ring', () => {
-    render(<HomeTab score={score} learnedCount={12} goalPct={0.5} goalMet={false} streak={4} />);
+  it('renders daily goal and streak with the identity facts after the layout change', () => {
+    render(<HomeTab {...hubProps} />);
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('Anfänger')).toBeInTheDocument();
     expect(screen.getByTitle('Daily goal · 50%')).toBeInTheDocument();
+    expect(screen.getByLabelText('Streak 4')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
     expect(screen.getByText(/300 XP total/)).toBeInTheDocument();
     expect(screen.getByText('12')).toBeInTheDocument();
+  });
+
+  // App.test.jsx ("renders HomeTab content on the default landing tab") pins
+  // this heading as what the default tab mounts. This polish must not move
+  // that greeting off Home — and must not edit App.jsx to keep the contract.
+  it('still exposes the greeting the default landing tab renders', () => {
+    render(<HomeTab {...hubProps} />);
+    expect(screen.getByRole('heading', { name: /guten tag/i })).toBeInTheDocument();
   });
 
   // Home is a quick glance, not a second Stats — the deep-dive widgets
   // (accuracy breakdown, heatmap, leaderboard, account) stay exclusive to
   // Profile. See docs/superpowers/specs/2026-08-24-entry-flow-and-home-dashboard-design.md §7.
   it('shows nothing beyond the progress snapshot', () => {
-    render(<HomeTab score={score} learnedCount={12} goalPct={0.5} goalMet={false} streak={4} />);
+    render(<HomeTab {...hubProps} />);
     expect(screen.queryByText(/accuracy/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/leaderboard/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/account/i)).not.toBeInTheDocument();
@@ -42,11 +59,7 @@ describe('HomeTab', () => {
   it('carries identity but never account management', () => {
     render(
       <HomeTab
-        score={score}
-        learnedCount={12}
-        goalPct={0.5}
-        goalMet={false}
-        streak={4}
+        {...hubProps}
         user={{ id: 'u1', email: 'semion@example.com' }}
         profile={{ display_name: 'Semion', handle: 'semion' }}
         cefrLevel="a2"
@@ -68,16 +81,29 @@ describe('HomeTab', () => {
     expect(screen.queryByText(/sound: off/i)).not.toBeInTheDocument();
   });
 
+  it('offers a signed-in learner exactly one Settings control', () => {
+    render(
+      <HomeTab
+        {...hubProps}
+        user={{ id: 'u1', email: 'semion@example.com' }}
+        profile={{ handle: 'semion' }}
+        cefrLevel="a2"
+      />
+    );
+    expect(screen.getAllByRole('button', { name: /settings/i })).toHaveLength(1);
+  });
+
+  it('hides Settings from a guest, who has no account to manage', () => {
+    render(<HomeTab {...hubProps} />);
+    expect(screen.queryByRole('button', { name: /settings/i })).not.toBeInTheDocument();
+  });
+
   it('renders the missions it is handed, and routes from one', async () => {
     const { default: userEvent } = await import('@testing-library/user-event');
     const onGoToTab = vi.fn();
     render(
       <HomeTab
-        score={score}
-        learnedCount={12}
-        goalPct={0.5}
-        goalMet={false}
-        streak={4}
+        {...hubProps}
         cefrLevel="a1"
         missions={[{ id: 'srs-due', count: 5, tab: 'vocab', priority: 0 }]}
         onGoToTab={onGoToTab}
@@ -88,28 +114,14 @@ describe('HomeTab', () => {
   });
 
   it('congratulates when no missions are open', () => {
-    render(
-      <HomeTab
-        score={score}
-        learnedCount={12}
-        goalPct={0.5}
-        goalMet
-        streak={4}
-        cefrLevel="a1"
-        missions={[]}
-      />
-    );
+    render(<HomeTab {...hubProps} goalMet cefrLevel="a1" missions={[]} />);
     expect(screen.getByText(/alles erledigt/i)).toBeInTheDocument();
   });
 
   it('groups the remaining boards under Heute without merging their regions', () => {
     render(
       <HomeTab
-        score={score}
-        learnedCount={12}
-        goalPct={0.5}
-        goalMet={false}
-        streak={4}
+        {...hubProps}
         cefrLevel="a1"
         missions={[
           { id: 'srs-due', count: 5, tab: 'vocab', priority: 0 },
@@ -120,5 +132,24 @@ describe('HomeTab', () => {
     );
     expect(screen.getByRole('region', { name: /heute/i })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: /missionen/i })).toBeInTheDocument();
+  });
+});
+
+describe('HomeTab when auth is not configured', () => {
+  it('still greets, but offers no Settings link to a dead backend', async () => {
+    vi.resetModules();
+    vi.doMock('../lib/auth.js', () => ({ isAuthConfigured: () => false }));
+    const { default: Tab } = await import('./HomeTab');
+    render(
+      <Tab
+        {...hubProps}
+        user={{ id: 'u1', email: 'semion@example.com' }}
+        profile={{ handle: 'semion' }}
+        cefrLevel="a2"
+      />
+    );
+    expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /settings/i })).not.toBeInTheDocument();
+    vi.doUnmock('../lib/auth.js');
   });
 });

@@ -1,3 +1,4 @@
+import { Flame } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, RADIUS, SPACE } from '../lib/theme';
 import Surface from './ui/Surface';
 import { Row, Stack } from './ui/Layout';
@@ -6,6 +7,7 @@ import { Meta } from './ui/Text';
 import { activePack } from '../packs';
 import { isAuthConfigured } from '../lib/auth.js';
 import Avatar from './ui/Avatar';
+import GoalRing from './gamification/GoalRing';
 
 const EMPTY_SCORE = {
   level: 1,
@@ -16,13 +18,20 @@ const EMPTY_SCORE = {
   totalXp: 0,
 };
 
+const AVATAR_SIZE = SPACE[16];
+const TRUNCATE = {
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+};
+
 // Who you are, and where you stand — one card at the top of Home.
 //
-// Merges the identity row with the XP glance that used to sit in a second
-// card beneath it. Both were derived from the same learner; splitting them
-// made Home open with two headers for one person, and let the level and the
-// total XP arrive as two props that could disagree. `score` is one object
-// from one read of one log, so that disagreement is unrepresentable.
+// Identity is the visual anchor: a large avatar, the greeting, and the CEFR
+// chip. XP arithmetic, streak, and the daily-goal ring used to arrive as a
+// second header-sized block (and, for streak/goal, as a loose row under the
+// hub). They are the same learner's standing, so they live here as a compact
+// secondary row rather than competing with the face and name.
 //
 // Read-only on purpose. Decision E5 keeps account MANAGEMENT — email, sign
 // out, export, danger zone — exclusive to Settings. The single interactive
@@ -33,6 +42,9 @@ export default function PersonalHub({
   cefrLevel,
   score = EMPTY_SCORE,
   learnedCount = 0,
+  streak = 0,
+  goalPct = 0,
+  goalMet = false,
   onOpenSettings,
 }) {
   const copy = activePack.content.identity ?? {};
@@ -53,23 +65,39 @@ export default function PersonalHub({
 
   return (
     <Surface elevation={1} padding={4}>
-      <Row align="center" gap={4}>
-        <Avatar profile={profile} userId={user?.id} size={40} />
+      <Row wrap={false} align="flex-start" gap={4}>
+        <div
+          style={{
+            width: AVATAR_SIZE,
+            height: AVATAR_SIZE,
+            borderRadius: '50%',
+            background: COLORS.paperDeep,
+            border: `1px solid ${COLORS.border}`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flexShrink: 0,
+            overflow: 'hidden',
+            boxSizing: 'border-box',
+          }}
+        >
+          <Avatar profile={profile} userId={user?.id} size={AVATAR_SIZE} />
+        </div>
 
         {/* minmax(0, 1fr) semantics: this column must be allowed to shrink, or
-            a long handle pushes the chip off a 320px screen. */}
+            a long handle pushes the chip off a 320px screen. Wrapping the
+            greeting (rather than nowrap) is the overflow behaviour — a handle
+            is the name, and ellipsizing it would hide the one fact the hub
+            exists to show. */}
         <Stack gap={1} style={{ minWidth: 0, flex: 1 }}>
-          <Heading level={2} style={{ margin: 0 }}>
+          <Heading
+            level={2}
+            style={{ margin: 0, overflowWrap: 'anywhere', maxWidth: '100%', lineHeight: 1.2 }}
+          >
             {copy.greeting?.(name)}
           </Heading>
           {showsAccountLine && (
-            <Meta
-              style={{
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
+            <Meta style={TRUNCATE}>
               {[
                 profile?.handle ? `@${profile.handle}` : null,
                 createdAt ? copy.memberSince?.(createdAt) : null,
@@ -125,7 +153,7 @@ export default function PersonalHub({
       <div
         style={{
           display: 'grid',
-          gridTemplateColumns: 'auto minmax(0, 1fr) auto',
+          gridTemplateColumns: 'auto minmax(0, 1fr)',
           gap: SPACE[4],
           alignItems: 'center',
           marginTop: SPACE[5],
@@ -133,43 +161,81 @@ export default function PersonalHub({
           borderTop: `1px solid ${COLORS.border}`,
         }}
       >
-        <div style={{ textAlign: 'center' }}>
-          <div
+        <Row wrap={false} gap={3} align="center" style={{ flexShrink: 0 }}>
+          <GoalRing pct={goalPct} met={goalMet} size={48} />
+          <span
+            aria-label={`Streak ${streak}`}
             style={{
-              fontFamily: FONTS.display,
-              fontWeight: FONT_WEIGHT.black,
-              fontSize: FONT_SIZE['4xl'],
-              color: COLORS.ink,
-              lineHeight: 1,
+              display: 'flex',
+              alignItems: 'center',
+              gap: SPACE[1],
+              minWidth: 0,
             }}
           >
-            {lvl.level}
-          </div>
-          <div
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              letterSpacing: LETTER_SPACING.caps,
-              color: COLORS.mute,
-            }}
-          >
-            LEVEL
-          </div>
-        </div>
+            <span style={{ color: COLORS.gold, display: 'flex' }} aria-hidden="true">
+              <Flame size={14} />
+            </span>
+            <span
+              style={{
+                fontFamily: FONTS.display,
+                fontWeight: FONT_WEIGHT.bold,
+                fontSize: FONT_SIZE.xl,
+                lineHeight: 1,
+                color: COLORS.ink,
+              }}
+            >
+              {streak}
+            </span>
+          </span>
+        </Row>
+
         <div style={{ minWidth: 0 }}>
+          <Row align="baseline" gap={2} style={{ minWidth: 0 }}>
+            <Row wrap={false} align="baseline" gap={2} style={{ flexShrink: 0 }}>
+              <span
+                style={{
+                  fontFamily: FONTS.display,
+                  fontWeight: FONT_WEIGHT.black,
+                  fontSize: FONT_SIZE.xl,
+                  color: COLORS.ink,
+                  lineHeight: 1,
+                }}
+              >
+                {lvl.level}
+              </span>
+              <Meta>Level</Meta>
+            </Row>
+            <span
+              style={{
+                fontFamily: FONTS.display,
+                fontSize: FONT_SIZE.lg,
+                fontWeight: FONT_WEIGHT.bold,
+                color: COLORS.ink,
+                overflowWrap: 'anywhere',
+                minWidth: 0,
+                flex: '1 1 8ch',
+              }}
+            >
+              {lvl.rankName}
+            </span>
+            <Row wrap={false} align="baseline" gap={2} style={{ flexShrink: 0 }}>
+              <span
+                style={{
+                  fontFamily: FONTS.display,
+                  fontWeight: FONT_WEIGHT.bold,
+                  fontSize: FONT_SIZE.lg,
+                  color: COLORS.ink,
+                  lineHeight: 1,
+                }}
+              >
+                {learnedCount}
+              </span>
+              <Meta>Learned</Meta>
+            </Row>
+          </Row>
           <div
             style={{
-              fontFamily: FONTS.display,
-              fontSize: FONT_SIZE.xl,
-              fontWeight: FONT_WEIGHT.bold,
-              color: COLORS.ink,
-            }}
-          >
-            {lvl.rankName}
-          </div>
-          <div
-            style={{
-              height: 10,
+              height: 6,
               borderRadius: RADIUS.pill,
               background: COLORS.paperDeep,
               overflow: 'hidden',
@@ -184,30 +250,17 @@ export default function PersonalHub({
               }}
             />
           </div>
-          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.sm, color: COLORS.mute }}>
-            {lvl.xpIntoLevel} / {lvl.xpToNext} XP to next · {lvl.totalXp} XP total
-          </div>
-        </div>
-        <div style={{ textAlign: 'center' }}>
-          <div
-            style={{
-              fontFamily: FONTS.display,
-              fontWeight: FONT_WEIGHT.bold,
-              fontSize: FONT_SIZE['3xl'],
-              color: COLORS.ink,
-            }}
-          >
-            {learnedCount}
-          </div>
           <div
             style={{
               fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              letterSpacing: LETTER_SPACING.caps,
+              fontSize: FONT_SIZE.sm,
               color: COLORS.mute,
+              // Wrap on spaces; only break a long number if it cannot fit.
+              // `anywhere` split "to" mid-word on a 320px XP line.
+              overflowWrap: 'break-word',
             }}
           >
-            LEARNED
+            {lvl.xpIntoLevel} / {lvl.xpToNext} XP to next · {lvl.totalXp} XP total
           </div>
         </div>
       </div>
