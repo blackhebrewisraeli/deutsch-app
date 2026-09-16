@@ -830,19 +830,13 @@ async function auditSignedIn(page, mode, tone) {
 
   // The profile card is a modal off a league row. Report when it does not open,
   // so a broken fixture cannot pass as clean coverage.
-  // Rows are clickable <li>, not <button> — searching for a button here is what
-  // made the first version of this pass report 0/4 while looking clean.
-  // BUG: those <li onClick> rows are not keyboard reachable (no role, no
-  // tabindex, no key handler), so the league table cannot be opened without a
-  // mouse. Out of scope here; flagged per AGENTS.md rather than fixed silently.
+  // Rows are real <button>s inside <li> (reachable by Tab, Enter and Space).
+  // Click the button, not the list item — matching how a keyboard user activates
+  // the row, and so a regression back to `<li onClick>` fails this pass.
   const opened =
     rowsRendered &&
     (await page.evaluate(() => {
-      // Match the handle alone. A row's textContent concatenates its spans with
-      // no separator — "1. Lernende 1900 XP" — so an anchored `Lernende 1\b`
-      // never matches, which is what made this report 0/4 while the table was
-      // rendering all 11 rows perfectly well.
-      const row = [...document.querySelectorAll('li')].find((el) =>
+      const row = [...document.querySelectorAll('li button')].find((el) =>
         /Lernende/.test(el.textContent || '')
       );
       if (!row) return false;

@@ -104,6 +104,8 @@ it('puts every league row in the tab order, in standings order', async () => {
   expect(rows).toHaveLength(threeRows.length); // the denominator
 
   for (const row of rows) {
+    expect(row).toHaveAttribute('data-ui', 'button');
+    expect(row).toHaveAttribute('data-focus-inset');
     await user.tab();
     expect(document.activeElement).toBe(row);
   }
