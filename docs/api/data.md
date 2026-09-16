@@ -16,6 +16,7 @@ Schema source of truth: `supabase/migrations/` (versioned SQL).
 | `rate_limits` | `(key, window_start)`         | AI-lane counters                                                                                | — (server-only)                                                |
 | `lessons`     | `id`                          | lesson-unit content: `pack_id`, `course_code`, `level`, `tab`, `unit_number`, `exercises jsonb` | —                                                              |
 | `progress_events_seen` | `(user_id, event_id)` | idempotency keys for `apply_progress_event`; 30-day rolling window | the client queue (`deutsch-app-progress-queue-v1`) is the pending set, not this table |
+| `feedback`    | `id`                          | in-exercise problem reports: `surface`, `cefr_level`, `deck_id`, `item_id`, `item_label`, `category`, `message`; nullable `user_id` | — (write-only; no localStorage mirror) |
 
 `lessons` is public content, not user data — nobody owns a row. It is not
 user-scoped (no `user_id`), so it appears in neither `EXPORTED_TABLES` nor
@@ -29,9 +30,20 @@ counters they protect already ship as `daily`. No client policies — the RPC
 is the only writer, matching `rate_limits`. A 30-day prune runs inside the
 RPC after a successful insert.
 
-All user tables carry `pack_id text default 'de'` (multi-language Phase 4
+`feedback` **is** user-owned when signed in (`user_id` → `auth.users` on
+delete cascade) and **excluded from export**: the rows are owner-facing bug
+reports, and `item_label` can be the concealed answer of a drill. Guest
+reports store `user_id` NULL — `FeedbackButton` has no auth gate, so `anon`
+is granted INSERT (the one exception to "anon gets nothing"). Clients have
+no SELECT / UPDATE / DELETE; `service_role` is the owner read path. Apply
+`20260916183000_feedback.sql` to production after merge — the file in this
+repo is not an applied migration.
+
+Synced user tables carry `pack_id text default 'de'` (multi-language Phase 4
 interlock) and `updated_at` (set by the writer — the B2 sync's
 last-write-wins comparison value; no server trigger overwrites it).
+`feedback` has neither: it is a report about a moment in an exercise, not a
+synced learning row.
 
 ## Guarantees (enforced by RLS, verified adversarially in CI)
 
@@ -39,6 +51,9 @@ last-write-wins comparison value; no server trigger overwrites it).
   policies allow exactly `auth.uid() = user_id` for select / insert /
   update / delete (profiles: no delete — account deletion is a B3
   server-side operation).
+- `feedback` is the exception on both axes: INSERT-only, and
+  `user_id IS NOT DISTINCT FROM auth.uid()` so a guest (`user_id` NULL,
+  `anon` role) can file a report. No client SELECT / UPDATE / DELETE.
 - `rate_limits` has **no policies** — invisible to anon and authenticated;
   only the service role reads or writes it, via
   `increment_rate_limit(key, window_start)` (SECURITY DEFINER, execute

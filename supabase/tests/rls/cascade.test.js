@@ -29,6 +29,7 @@ const USER_OWNED = [
   'settings',
   'league_members',
   'progress_events_seen',
+  'feedback',
 ];
 
 let admin;
@@ -69,6 +70,11 @@ beforeAll(async () => {
     admin.from('progress_events_seen').insert({
       user_id: userId,
       event_id: '11111111-1111-4111-8111-111111111111',
+    }),
+    admin.from('feedback').insert({
+      user_id: userId,
+      category: 'ui',
+      message: 'cascade probe',
     }),
   ];
   for (const q of seed) {

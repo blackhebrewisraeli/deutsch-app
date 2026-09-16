@@ -1,15 +1,18 @@
 /**
  * In-exercise problem reports.
  *
- * The transport is a stand-in — it logs and resolves. Everything around it is
- * built for the real one: `buildFeedbackRow` emits a flat, snake_case,
- * JSON-safe object, so swapping the mock for
+ * `buildFeedbackRow` emits a flat, snake_case, JSON-safe object. `submitFeedback`
+ * inserts it into `public.feedback`. The insert does not chain `.select()`:
+ * clients have INSERT only, and a RETURNING clause would fail the request even
+ * after a successful write.
  *
- *   await supabase.from('feedback').insert(row)
- *
- * is a one-line change inside `submitFeedback` and touches nothing else. The
- * table itself is deliberately out of scope for now.
+ * When auth/sync is unconfigured (`getSupabase()` is null) the row is logged
+ * and treated as sent, so a demo without `VITE_SUPABASE_*` still resolves the
+ * dialog. A configured backend that then errors returns `{ ok: false }` — the
+ * learner can retry. Never throws.
  */
+
+import { getSupabase } from './auth.js';
 
 /** The three problems a learner can actually hit mid-exercise. */
 export const FEEDBACK_CATEGORIES = Object.freeze([
@@ -24,6 +27,9 @@ export const FEEDBACK_CATEGORIES = Object.freeze([
  * Absent context is written as `null`, never left `undefined`: undefined keys
  * vanish through JSON.stringify, so "this surface has no deck" and "the deck
  * was lost on the way" would arrive identical and unfixable.
+ *
+ * `user_id` is attached in `submitFeedback` from the session, not here: the
+ * row shape is the exercise payload; identity is a transport concern.
  *
  * @param {{surface:string, level:string, deckId?:string|null, itemId?:string|null,
  *          itemLabel?:string|null, category:string, message:string}} report
@@ -55,13 +61,25 @@ export async function submitFeedback(report) {
   if (!row.message) return { ok: false, error: 'empty' };
 
   try {
-    // TODO(supabase): replace with an insert into the `feedback` table.
-    // The stand-in transport IS the log. warn/error would misreport a
-    // successful submission as a fault, so the rule is waived rather than the
-    // level changed.
-    // eslint-disable-next-line no-console
-    console.info('[feedback]', row);
-    return { ok: true, row };
+    const supabase = await getSupabase();
+    if (!supabase) {
+      // Demo / CI / any checkout without VITE_SUPABASE_*: keep the dialog
+      // succeeding. warn/error would misreport a successful local send as a
+      // fault, so the rule is waived rather than the level changed.
+      // eslint-disable-next-line no-console
+      console.info('[feedback]', row);
+      return { ok: true, row };
+    }
+
+    const { data: sessionData } = await supabase.auth.getSession();
+    const payload = {
+      ...row,
+      user_id: sessionData?.session?.user?.id ?? null,
+    };
+
+    const { error } = await supabase.from('feedback').insert(payload);
+    if (error) return { ok: false, error };
+    return { ok: true, row: payload };
   } catch (error) {
     return { ok: false, error };
   }

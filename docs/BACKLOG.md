@@ -240,6 +240,7 @@ checked so a stale entry is obvious.
 | 1   | Paste `supabase/templates/magic_link.html` into the **hosted** project → Authentication → Email Templates → Magic Link. Local GoTrue reads it from `config.toml`; production does not. | **Unverified from the repo** — hosted dashboard state. Procedure: `docs/AUTH_EMAIL_TEMPLATE_RUNBOOK.md`                                |
 | 2   | Confirm hosted **URL Configuration** lists production plus `http://localhost:5173` and `http://127.0.0.1:5173`.                                                                        | **Unverified from the repo** — hosted dashboard state                                                                                  |
 | 3   | Google OAuth client → Supabase Google provider → `VITE_GOOGLE_AUTH_ENABLED=true` on Preview + Production, **then redeploy**.                                                           | ✅ **Done** — flag present in the production env, Google sign-in live since 2026-08-17. Procedure: `docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md` |
+| 4   | Apply `supabase/migrations/20260916183000_feedback.sql` to Sprachschule (`xcnnlczvxmuwcqwychox`) after that PR merges. Dashboard SQL editor. Never `migration repair`.                 | **Pending merge** — a merged migration file is not an applied migration |
 
 Two traps worth keeping, both from #96:
 
