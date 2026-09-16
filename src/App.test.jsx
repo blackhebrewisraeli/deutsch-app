@@ -307,7 +307,6 @@ describe('header and daily-goal surfaces', () => {
   });
 
   // After #261 the identity panel owns the streak glance on Home.
-  // Other tabs keep the StatBlock (and its at-risk pulse).
   it('hides the header streak on the Home tab, where PersonalHub already shows one', () => {
     setViewportWidth(1280);
     renderPastEntry(<App />);
@@ -329,21 +328,23 @@ describe('header and daily-goal surfaces', () => {
         await user.click(nav.getByRole('button', { name: tabName }));
         expect(goalStrip()).toBeInTheDocument();
         expect(screen.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
+        const header = screen.getByRole('banner');
+        expect(within(header).queryByText('STREAK')).not.toBeInTheDocument();
+        expect(header.querySelector('.lucide-flame')).toBeNull();
         await user.click(nav.getByRole('button', { name: 'Home' }));
         expect(goalStrip()).not.toBeInTheDocument();
         expect(screen.getAllByTitle(/Daily goal/)).toHaveLength(1);
         expect(
           within(screen.getByRole('banner')).queryByTitle(/Daily goal/)
         ).not.toBeInTheDocument();
+        expect(screen.getByLabelText(/^Streak /)).toBeInTheDocument();
       }
     );
   });
 
   // At 320px (original iPhone SE) the cluster still overflowed by 25px after the
-  // ring came out. Nothing else in the header is expendable — the streak block
-  // carries the "streak at risk" pulse, which GoalStrip has no equivalent for —
-  // so the decorative wordmark scales with the viewport and the chrome tightens,
-  // leaving every functional widget in place.
+  // ring came out, so the decorative wordmark scales with the viewport and the
+  // chrome tightens, leaving every functional widget in place.
   it('scales the wordmark with the viewport on mobile and tightens the chrome', () => {
     // 480 is inside mobile (< bp.mobile) but past bp.tiny, so the wordmark
     // is present and still viewport-scaled.
@@ -357,28 +358,6 @@ describe('header and daily-goal surfaces', () => {
       .getByText(/Deutsch/)
       .closest('div');
     expect(wordmark.style.fontSize).toBe('min(26px, 6.5vw)');
-  });
-
-  // The streak block was 111px of the 230px cluster, most of it the caption.
-  // Dropping just the caption keeps the flame, the count and the at-risk pulse
-  // — the signal GoalStrip does not replicate — while freeing ~70px.
-  // Asserted on Chat: Home no longer mounts the StatBlock at all.
-  it('omits the STREAK caption on mobile', async () => {
-    setViewportWidth(375);
-    const user = userEvent.setup();
-    renderPastEntry(<App />);
-    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' }));
-    const header = within(screen.getByRole('banner'));
-    expect(header.queryByText('STREAK')).not.toBeInTheDocument();
-    expect(screen.getByRole('banner').querySelector('.lucide-flame')).not.toBeNull();
-  });
-
-  it('keeps the STREAK caption on desktop', async () => {
-    setViewportWidth(1280);
-    const user = userEvent.setup();
-    renderPastEntry(<App />);
-    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' }));
-    expect(within(screen.getByRole('banner')).getByText('STREAK')).toBeInTheDocument();
   });
 
   // Below 360px even the scaled wordmark cannot coexist with the widgets: a
@@ -440,26 +419,21 @@ describe('header and daily-goal surfaces', () => {
   });
 
   it.each([320, 375, 390, 1280])(
-    'keeps the populated header (with freeze chip) within %ipx without horizontal overflow',
+    'keeps the populated Chat header within %ipx without a streak StatBlock or overflow',
     async (width) => {
       setViewportWidth(width);
       seedPopulatedAccount();
       const user = userEvent.setup();
       renderPastEntry(<App />);
-      // Chat still mounts the full cluster (streak + freeze). Home no longer
-      // includes the StatBlock, so asserting overflow there would miss it.
       await user.click(
         within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' })
       );
       const header = screen.getByRole('banner');
+      expect(within(header).queryByText('STREAK')).not.toBeInTheDocument();
+      expect(header.querySelector('.lucide-flame')).toBeNull();
+      expect(goalStrip()).toBeInTheDocument();
       expect(within(header).getByTitle(/streak freeze/i)).toBeInTheDocument();
       expect(within(header).getByRole('button', { name: /^appearance$/i })).toBeInTheDocument();
-      if (width >= 640) {
-        expect(within(header).getByText('STREAK')).toBeInTheDocument();
-      } else {
-        expect(within(header).queryByText('STREAK')).not.toBeInTheDocument();
-      }
-      expect(header.querySelector('.lucide-flame')).not.toBeNull();
       // jsdom layout is approximate; still catch a cluster that refuses to shrink.
       expect(header.scrollWidth).toBeLessThanOrEqual(width + 1);
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth + 1);

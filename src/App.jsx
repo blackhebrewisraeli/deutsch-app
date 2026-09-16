@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Flame, BookOpen, MessageSquare, Type, Languages, Home } from 'lucide-react';
+import { User, BookOpen, MessageSquare, Type, Languages, Home } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
@@ -23,7 +23,6 @@ import { setSoundEnabled, playLevelUp, playAchievement, playGoalMet } from './li
 import {
   currentStreak,
   bestStreakFromHistory,
-  qualifies,
   crossedMilestone,
   reconcile,
   freezesAvailable,
@@ -31,7 +30,6 @@ import {
 } from './lib/streak';
 import { activePack } from './packs';
 const { decks: PRESET_DECKS } = activePack.content;
-import { StatBlock } from './components/UI';
 import HomeTab from './components/HomeTab';
 import SettingsRoute from './components/settings/SettingsRoute';
 import { deriveMissions } from './lib/missions';
@@ -346,9 +344,6 @@ export default function App() {
   // Icons carry the same aria-labels either way; this is the "decoration
   // gives way" rule the wordmark already follows.
   const navIconOnly = isTablet(width);
-  // Home already shows streak in PersonalHub. Other tabs keep the StatBlock
-  // and its at-risk pulse, which GoalStrip does not replicate.
-  const showHeaderStreak = tab !== 'home';
 
   // Auth
   const { user, status: authStatus } = useAuth();
@@ -867,11 +862,6 @@ export default function App() {
     />
   );
 
-  // Streak at risk: user has a run going but today hasn't qualified yet.
-  const goalNow = liveState.gamification?.goal ?? DEFAULT_GOAL;
-  const streakPulsing =
-    stats.streak > 0 && !qualifies((liveState.daily ?? {})[todayKey()], goalNow);
-
   // The guest trial is spent: block earning new progress, leave everything
   // else reachable. Every clause is load-bearing —
   //   • isAuthConfigured — a wall with no sign-in behind it is PR #79's
@@ -959,7 +949,7 @@ export default function App() {
             // so it holds its charcoal in both modes rather than following the
             // page ground. `color` is set here and inherited: everything on this
             // bar is either brand text on the charcoal, or a control carrying its
-            // own surface (StatBlock, ThemeChip, and the ring discs below).
+            // own surface (StatusChip, ThemeChip, AccountChip).
             background: COLORS.accentBlack,
             color: COLORS.accentBlackOn,
             position: 'sticky',
@@ -1045,15 +1035,6 @@ export default function App() {
                 size={mobile ? 42 : 52}
               />
             </span>
-            {showHeaderStreak && (
-              <StatBlock
-                label={mobile ? '' : 'STREAK'}
-                value={stats.streak}
-                icon={<Flame size={mobile ? 12 : 14} />}
-                accent
-                pulsing={streakPulsing}
-              />
-            )}
             {game.freezes > 0 && (
               <span
                 title={`${game.freezes} streak freeze${game.freezes > 1 ? 's' : ''} held`}
