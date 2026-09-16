@@ -17,6 +17,7 @@ describe('CACHE_TARGETS', () => {
       'dist',
       'dev-dist',
       'dist-audit',
+      'dist-smoke',
       'coverage',
       '.playwright-mcp',
       'node_modules/.cache',

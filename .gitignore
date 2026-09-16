@@ -10,6 +10,7 @@ lerna-debug.log*
 node_modules
 dist
 dist-audit
+dist-smoke
 dist-ssr
 *.local
 

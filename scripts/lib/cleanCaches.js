@@ -1,8 +1,8 @@
 // Regenerable disk-cache targets for `npm run clean`.
 //
 // Allowlist only: every path here is gitignored scratch that a later
-// `npm run dev` / `build` / `test` / `audit:contrast` / `import:lexicon` /
-// `supabase start` recreates. Secrets, source, and `supabase/migrations`
+// `npm run dev` / `build` / `test` / `audit:contrast` / `smoke:learning-path` /
+// `import:lexicon` / `supabase start` recreates. Secrets, source, and `supabase/migrations`
 // are never on this list.
 //
 // `.vercel` is deliberately absent. It is gitignored, but it is the local
@@ -20,6 +20,7 @@ export const CACHE_TARGETS = [
   'dist',
   'dev-dist',
   'dist-audit',
+  'dist-smoke',
   // Test / coverage / Playwright agent scratch
   'coverage',
   '.playwright-mcp',
