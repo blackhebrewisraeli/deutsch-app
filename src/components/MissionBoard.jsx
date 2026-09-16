@@ -5,6 +5,11 @@ import StatusNote from './ui/StatusNote';
 import { activePack } from '../packs';
 import { ListChecks } from 'lucide-react';
 
+// Compact row padding for Home list pills. InteractiveCard's default SPACE[4]
+// (16) is a deck-tile inset; on a full-width mission/quest row that reads as
+// empty vertical padding. SPACE[2]/SPACE[3] keeps the same control, shorter.
+const ROW_PADDING = `${SPACE[2]}px ${SPACE[3]}px`;
+
 // The open-tasks board on Home.
 //
 // Rows are InteractiveCard, never a Surface with onClick: it guarantees a real
@@ -29,7 +34,7 @@ export default function MissionBoard({ missions = [], onGo }) {
           letterSpacing: LETTER_SPACING.caps,
           textTransform: 'uppercase',
           color: COLORS.mute,
-          marginBottom: SPACE[3],
+          marginBottom: SPACE[2],
         }}
       >
         {chrome.heading}
@@ -42,7 +47,7 @@ export default function MissionBoard({ missions = [], onGo }) {
       ) : (
         // A real list, so a screen reader announces how many tasks are open.
         <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-          <Stack gap={2} as="div">
+          <Stack gap={1} as="div">
             {missions.map((mission) => {
               const entry = copy[mission.id];
               if (!entry) return null;
@@ -52,7 +57,7 @@ export default function MissionBoard({ missions = [], onGo }) {
                 <li key={mission.id}>
                   <InteractiveCard
                     onClick={() => onGo?.(mission.tab, mission)}
-                    style={{ width: '100%', textAlign: 'left' }}
+                    style={{ width: '100%', textAlign: 'left', padding: ROW_PADDING }}
                     // The visible row reads "⏰ 12 cards are due · Vokabeln",
                     // but an icon-only glyph carries no name, so the control
                     // gets an explicit one naming where it goes.
@@ -66,7 +71,7 @@ export default function MissionBoard({ missions = [], onGo }) {
                         // viewport instead of letting the text shrink.
                         gridTemplateColumns: 'auto minmax(0, 1fr) auto',
                         alignItems: 'center',
-                        gap: SPACE[3],
+                        gap: SPACE[2],
                       }}
                     >
                       <span aria-hidden="true" style={{ fontSize: FONT_SIZE.md }}>

@@ -48,7 +48,7 @@ export default function HomeTab({
       goalMet={goalMet}
       onOpenSettings={onOpenSettings}
       today={
-        <Stack gap={5}>
+        <Stack gap={3} data-testid="home-today-stack">
           <ErrorBoundary>
             <MissionBoard missions={remaining} onGo={onGoToTab} />
           </ErrorBoundary>

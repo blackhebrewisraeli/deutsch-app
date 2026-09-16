@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import RecommendedActions from './RecommendedActions';
 import { resolveRecommended } from './resolveRecommended';
+import { SPACE } from '../lib/theme';
 
 describe('resolveRecommended', () => {
   it('promotes the first two missions that have pack copy', () => {
@@ -58,6 +59,13 @@ describe('RecommendedActions', () => {
     expect(titles.length).toBeGreaterThan(0);
     for (const title of titles) {
       expect(title).toHaveStyle({ fontFamily: 'var(--f-body)' });
+    }
+  });
+
+  it('keeps recommended cards shorter than a tile inset', () => {
+    render(<RecommendedActions missions={[]} />);
+    for (const card of screen.getAllByRole('button')) {
+      expect(card).toHaveStyle({ padding: `${SPACE[3]}px ${SPACE[4]}px` });
     }
   });
 

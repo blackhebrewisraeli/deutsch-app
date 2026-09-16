@@ -12,6 +12,9 @@ import { resolveRecommended } from './resolveRecommended';
 // contrast are stronger than the mission/quest rows on purpose: these are the
 // hop a returning learner should take now. Pack fallbacks keep the layout
 // from collapsing on a quiet day.
+//
+// Padding is one SPACE stop under the original tile inset (SPACE[5]/SPACE[4]
+// → SPACE[3]/SPACE[4]) so the cards stay the loudest hop, just shorter.
 export default function RecommendedActions({ missions = [], onGo }) {
   const chrome = activePack.content.homeChrome ?? {};
   const tabNames = activePack.content.missionsChrome?.tabNames ?? {};
@@ -20,10 +23,10 @@ export default function RecommendedActions({ missions = [], onGo }) {
 
   return (
     <section aria-labelledby="recommended-heading">
-      <Heading id="recommended-heading" level={3} style={{ marginBottom: SPACE[4] }}>
+      <Heading id="recommended-heading" level={3} style={{ marginBottom: SPACE[3] }}>
         {chrome.recommendedHeading}
       </Heading>
-      <Grid columns="auto-fit" min={160} gap={3}>
+      <Grid columns="auto-fit" min={160} gap={2}>
         {cards.map((card) => {
           const destination = tabNames[card.tab] ?? card.tab;
           return (
@@ -32,9 +35,9 @@ export default function RecommendedActions({ missions = [], onGo }) {
               elevation={2}
               onClick={() => onGo?.(card.tab, card.mission)}
               aria-label={card.text}
-              style={{ padding: `${SPACE[5]}px ${SPACE[4]}px` }}
+              style={{ padding: `${SPACE[3]}px ${SPACE[4]}px` }}
             >
-              <Stack gap={2} style={{ minWidth: 0 }}>
+              <Stack gap={1} style={{ minWidth: 0 }}>
                 <span aria-hidden="true" style={{ fontSize: FONT_SIZE['2xl'], flexShrink: 0 }}>
                   {card.icon}
                 </span>

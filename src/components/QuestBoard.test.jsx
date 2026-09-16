@@ -3,6 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import QuestBoard from './QuestBoard';
 import { activePack } from '../packs';
+import { SPACE } from '../lib/theme';
 
 const quest = (over = {}) => ({
   id: 'answer-cards',
@@ -30,6 +31,13 @@ describe('QuestBoard', () => {
     // keyboard through a green 1,600-test suite.
     render(<QuestBoard quests={[quest()]} />);
     expect(screen.getByRole('button')).toBeInTheDocument();
+  });
+
+  it('packs each row with compact padding instead of a tile inset', () => {
+    render(<QuestBoard quests={[quest()]} />);
+    expect(screen.getByRole('button')).toHaveStyle({
+      padding: `${SPACE[2]}px ${SPACE[3]}px`,
+    });
   });
 
   it('shows progress as a ratio', () => {
