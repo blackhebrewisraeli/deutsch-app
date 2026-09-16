@@ -56,13 +56,11 @@ export default function OfflineCacheSection({
           color: COLORS.inkSoft,
           margin: 0,
           marginBottom: SPACE[3],
-          overflowWrap: 'anywhere',
+          overflowWrap: 'break-word',
         }}
       >
         Clears this device's offline copies of the app shell and lexicon. Progress, theme, and
-        account data stay. Use this if Vocab still looks stale after a deploy — disk{' '}
-        <code style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.sm }}>npm run clean</code> does
-        not touch the browser.
+        account data stay. Use this if Vocab still looks stale after a deploy.
       </p>
       <Button
         variant="secondary"
