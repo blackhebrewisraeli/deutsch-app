@@ -47,4 +47,10 @@ describe('vite-plugin-pwa manifest', () => {
     expect(vite).toMatch(/globPatterns:\s*\[[^\]]*css/);
     expect(vite).toMatch(/navigateFallback:\s*['"]\/index\.html['"]/);
   });
+
+  it('runtime-caches lexicon JSON under lexicon-json (autoUpdate does not purge it)', () => {
+    expect(vite).toMatch(/cacheName:\s*['"]lexicon-json['"]/);
+    expect(vite).toMatch(/handler:\s*['"]StaleWhileRevalidate['"]/);
+    expect(vite).toContain('urlPattern: /\\/lexicon\\/.*\\.json$/');
+  });
 });

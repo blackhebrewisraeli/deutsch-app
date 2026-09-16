@@ -44,7 +44,7 @@ describe('SettingsRoute', () => {
     expect(screen.queryByRole('button', { name: /close settings/i })).not.toBeInTheDocument();
   });
 
-  it('carries all four sections the spec lists', () => {
+  it('carries the profile, learning, appearance, device, and account sections', () => {
     renderRoute();
     // Profile — the handle is the one name now; display_name is gone.
     expect(screen.getByRole('textbox', { name: /handle/i })).toBeInTheDocument();
@@ -52,6 +52,8 @@ describe('SettingsRoute', () => {
     expect(screen.getByRole('radiogroup', { name: /level/i })).toBeInTheDocument();
     // Appearance
     expect(screen.getByLabelText(/appearance/i)).toBeInTheDocument();
+    // Device Cache Storage — guests need this too, so it is not inside Konto
+    expect(screen.getByRole('button', { name: /clear offline cache/i })).toBeInTheDocument();
     // Account: the email lives here now, with the control that changes it.
     expect(screen.getByText('sam@example.com')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /change email/i })).toBeInTheDocument();
