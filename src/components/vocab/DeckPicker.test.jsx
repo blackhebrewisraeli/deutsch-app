@@ -2,7 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import DeckPicker from './DeckPicker';
-import { AUTO_DECKS } from '../../packs/de/autoDecks';
+import { AUTO_DECKS, DECK_GROUPS } from '../../packs/de/autoDecks';
+
+const AUTO_GROUPS = DECK_GROUPS.filter((g) => g !== 'Curated');
 
 const props = {
   deckId: 'greetings',
@@ -50,26 +52,28 @@ describe('DeckPicker', () => {
     for (const d of curated) {
       expect(screen.queryByRole('button', { name: new RegExp(d.name) })).not.toBeInTheDocument();
     }
+    expect(screen.queryByRole('tab', { name: 'Curated' })).not.toBeInTheDocument();
     const other = AUTO_DECKS.find((d) => d.group !== 'Curated');
     if (other) {
       expect(screen.getByRole('button', { name: new RegExp(other.name) })).toBeInTheDocument();
     }
   });
 
-  it('names filter chips by the deck only — no emoji in the accessible name', () => {
+  it('names auto-deck rows by the deck only — no emoji in the accessible name', async () => {
     render(<DeckPicker {...props} />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Topics' }));
     const topics = AUTO_DECKS.filter((d) => d.group === 'Topics');
     for (const d of topics) {
-      const chip = screen.getByRole('button', { name: d.name });
-      expect(chip).toHaveTextContent(d.name);
-      expect(chip.textContent).not.toContain(d.icon);
+      const row = screen.getByRole('button', { name: d.name });
+      expect(row).toHaveTextContent(d.name);
+      expect(row.textContent).not.toContain(d.icon);
     }
   });
 
   it('titles groups as clean labels, without a letter box', () => {
     render(<DeckPicker {...props} />);
-    expect(screen.getByText('Frequency')).toBeInTheDocument();
-    expect(screen.getByText('Topics')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Frequency' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Topics' })).toBeInTheDocument();
     // The old SectionLabel painted a standalone letter (F, C, T, …) in a
     // black square. Those letters must not remain as their own nodes.
     for (const letter of ['F', 'C', 'T', 'A', 'P', 'G', 'B']) {
@@ -87,12 +91,12 @@ describe('DeckPicker', () => {
     });
   });
 
-  it('keeps filter chips flat — a border, no drop shadow', () => {
+  it('keeps group tabs flat — a border, no drop shadow', () => {
     render(<DeckPicker {...props} />);
-    const chip = screen.getByRole('button', { name: 'Lifestyle' });
-    expect(chip).toHaveStyle({ boxShadow: 'none' });
-    expect(chip.style.border).not.toBe('none');
-    expect(chip.style.border).not.toBe('');
+    const tab = screen.getByRole('tab', { name: 'Topics' });
+    expect(tab).toHaveStyle({ boxShadow: 'none' });
+    expect(tab.style.border).not.toBe('none');
+    expect(tab.style.border).not.toBe('');
   });
 
   it('reports the deck the user picked', async () => {
@@ -195,5 +199,155 @@ describe('DeckPicker pluralisation', () => {
   it('pluralises the preset rows on the same rule', () => {
     render(<DeckPicker {...props} />);
     expect(screen.getAllByText('10 cards').length).toBeGreaterThan(0);
+  });
+});
+
+describe('DeckPicker auto-deck tabs', () => {
+  it('exposes a labelled tablist for every non-Curated group', () => {
+    render(<DeckPicker {...props} />);
+    expect(screen.getByRole('tablist', { name: 'Auto decks' })).toBeInTheDocument();
+    expect(screen.getAllByRole('tab')).toHaveLength(AUTO_GROUPS.length);
+    for (const group of AUTO_GROUPS) {
+      expect(screen.getByRole('tab', { name: group })).toBeInTheDocument();
+    }
+  });
+
+  it('defaults to the first auto group and hides the rest of the decks', () => {
+    render(<DeckPicker {...props} />);
+    expect(screen.getByRole('tab', { name: AUTO_GROUPS[0] })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    );
+    for (const d of AUTO_DECKS.filter((deck) => deck.group === AUTO_GROUPS[0])) {
+      expect(screen.getByRole('button', { name: new RegExp(d.name) })).toBeInTheDocument();
+    }
+    const hidden = AUTO_DECKS.find((d) => d.group !== AUTO_GROUPS[0] && d.group !== 'Curated');
+    expect(screen.queryByRole('button', { name: hidden.name })).not.toBeInTheDocument();
+  });
+
+  it('points the selected tab at a stable panel id', () => {
+    render(<DeckPicker {...props} />);
+    const frequency = screen.getByRole('tab', { name: 'Frequency' });
+    expect(frequency).toHaveAttribute('id', 'deck-group-tab-frequency');
+    expect(frequency).toHaveAttribute('aria-controls', 'deck-group-panel-frequency');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'deck-group-panel-frequency');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute(
+      'aria-labelledby',
+      'deck-group-tab-frequency'
+    );
+  });
+
+  it('lists the active group as full-width rows, not a chip wrap', () => {
+    render(<DeckPicker {...props} />);
+    const row = screen.getByRole('button', { name: /Core 100/ });
+    expect(row).toHaveStyle({ width: '100%', display: 'flex' });
+    expect(row).toHaveTextContent('100 cards');
+  });
+
+  it('lets the tab strip scroll inside the picker instead of wrapping', () => {
+    render(<DeckPicker {...props} />);
+    expect(screen.getByRole('tablist', { name: 'Auto decks' })).toHaveStyle({
+      overflowX: 'auto',
+      minWidth: '0',
+      flexWrap: 'nowrap',
+    });
+  });
+
+  it('switching tabs reveals that group and hides the previous one', async () => {
+    render(<DeckPicker {...props} />);
+    expect(screen.getByRole('button', { name: /Core 100/ })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('tab', { name: 'Topics' }));
+    expect(screen.getByRole('tab', { name: 'Topics' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('button', { name: /Core 100/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Lifestyle' })).toBeInTheDocument();
+  });
+
+  it('reports the auto deck the user picked', async () => {
+    const onSelect = vi.fn();
+    render(<DeckPicker {...props} onSelect={onSelect} />);
+    await userEvent.click(screen.getByRole('tab', { name: 'Topics' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Lifestyle' }));
+    expect(onSelect).toHaveBeenCalledWith('tag-lifestyle');
+  });
+
+  it('opens the group that contains the current auto deck', () => {
+    render(<DeckPicker {...props} deckId="tag-lifestyle" />);
+    expect(screen.getByRole('tab', { name: 'Topics' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: 'Lifestyle' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(screen.queryByRole('button', { name: /Core 100/ })).not.toBeInTheDocument();
+  });
+
+  it('follows deckId onto a new auto group, but not back onto a preset', () => {
+    const { rerender } = render(<DeckPicker {...props} />);
+    expect(screen.getByRole('tab', { name: 'Frequency' })).toHaveAttribute('aria-selected', 'true');
+    rerender(<DeckPicker {...props} deckId="artikel-a1" />);
+    expect(screen.getByRole('tab', { name: 'Artikel' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: /A1 Nouns/ })).toBeInTheDocument();
+
+    rerender(<DeckPicker {...props} deckId="greetings" />);
+    expect(screen.getByRole('tab', { name: 'Artikel' })).toHaveAttribute('aria-selected', 'true');
+  });
+
+  it('is one tab stop in the strip, with arrow keys moving focus within it', async () => {
+    render(<DeckPicker {...props} />);
+    expect(screen.getByRole('tab', { name: 'Frequency' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'CEFR' })).toHaveAttribute('tabindex', '-1');
+
+    screen.getByRole('tab', { name: 'Frequency' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'CEFR' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'CEFR' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'Frequency' })).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('moves focus across groups without committing the panel', async () => {
+    render(<DeckPicker {...props} />);
+    screen.getByRole('tab', { name: 'Frequency' }).focus();
+    await userEvent.keyboard('{ArrowRight}{ArrowRight}{Home}{End}{ArrowLeft}');
+    expect(screen.getByRole('tab', { name: 'Gegenteil' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'Frequency' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('button', { name: /Core 100/ })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['{ }', 'Space'],
+    ['{Enter}', 'Enter'],
+  ])('commits the focused group on %s', async (key) => {
+    render(<DeckPicker {...props} />);
+    screen.getByRole('tab', { name: 'Frequency' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByRole('button', { name: /Core 100/ })).toBeInTheDocument();
+    await userEvent.keyboard(key);
+    expect(screen.getByRole('tab', { name: 'CEFR' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.queryByRole('button', { name: /Core 100/ })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'A1' })).toBeInTheDocument();
+  });
+
+  it('wraps at the ends and supports Home/End', async () => {
+    render(<DeckPicker {...props} />);
+    const at = (name) => screen.getByRole('tab', { name });
+    screen.getByRole('tab', { name: 'Frequency' }).focus();
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(at(AUTO_GROUPS[AUTO_GROUPS.length - 1])).toHaveFocus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(at('Frequency')).toHaveFocus();
+    await userEvent.keyboard('{End}');
+    expect(at(AUTO_GROUPS[AUTO_GROUPS.length - 1])).toHaveFocus();
+    await userEvent.keyboard('{Home}');
+    expect(at('Frequency')).toHaveFocus();
+  });
+
+  it('hands the tab stop back to the selected tab when focus leaves', async () => {
+    render(<DeckPicker {...props} />);
+    screen.getByRole('tab', { name: 'Frequency' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(screen.getByRole('tab', { name: 'CEFR' })).toHaveAttribute('tabindex', '0');
+    await userEvent.tab();
+    expect(screen.getByRole('button', { name: /Core 100/ })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: 'Frequency' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: 'CEFR' })).toHaveAttribute('tabindex', '-1');
   });
 });

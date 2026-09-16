@@ -30,6 +30,12 @@ const STORAGE_KEY = 'deutsch-app-state-v1';
 // all-new cards in deck order, so the first card is deterministic.
 const firstCard = (deckId = 'greetings') => DECKS[deckId][0];
 
+// Auto-deck groups share a tab strip on Practice. Open the group, then the row.
+async function pickAutoDeck(user, group, deckName) {
+  await user.click(screen.getByRole('tab', { name: group }));
+  await user.click(screen.getByRole('button', { name: deckName }));
+}
+
 const readSrs = () => JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}').srs ?? {};
 
 // VocabTab no longer owns the generated deck — App does, because this component
@@ -539,7 +545,7 @@ describe('VocabTab', () => {
     it('shows the bare lemma, never the article that is being asked for', async () => {
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /A1 Nouns/i }));
+      await pickAutoDeck(user, 'Artikel', /A1 Nouns/i);
       // "das Haus" is the display form everywhere else; here it must be bare.
       expect(await screen.findByText('Haus')).toBeInTheDocument();
       expect(screen.queryByText('das Haus')).not.toBeInTheDocument();
@@ -553,7 +559,7 @@ describe('VocabTab', () => {
       // "Haus" replied "house" — the meaning, which was never the question.
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /A1 Nouns/i }));
+      await pickAutoDeck(user, 'Artikel', /A1 Nouns/i);
       await screen.findByText('Haus');
       await user.click(screen.getByRole('button', { name: 'der' })); // Haus is das
       expect(screen.getByText('\u2717 NOT QUITE')).toBeInTheDocument();
@@ -567,7 +573,7 @@ describe('VocabTab', () => {
       const markLearned = vi.fn();
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
-      await user.click(screen.getByRole('button', { name: /A1 Nouns/i }));
+      await pickAutoDeck(user, 'Artikel', /A1 Nouns/i);
       await screen.findByText('Haus');
       await user.click(screen.getByRole('button', { name: 'das' }));
       expect(screen.getByText('\u2713 CORRECT')).toBeInTheDocument();
@@ -582,7 +588,7 @@ describe('VocabTab', () => {
     // n:brot. The deck is rank-ordered, so n:haus (rank 60) comes first.
     const openDeck = async (user) => {
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /A1 Plurals/i }));
+      await pickAutoDeck(user, 'Plural', /A1 Plurals/i);
       return screen.findByText('das Haus');
     };
 
@@ -607,7 +613,7 @@ describe('VocabTab', () => {
       const markLearned = vi.fn();
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
-      await user.click(screen.getByRole('button', { name: /A1 Plurals/i }));
+      await pickAutoDeck(user, 'Plural', /A1 Plurals/i);
       await screen.findByText('das Haus');
       await user.type(screen.getByRole('textbox', { name: 'Type the plural' }), 'Häuser');
       await user.click(screen.getByRole('button', { name: /CHECK/ }));
@@ -646,7 +652,7 @@ describe('VocabTab', () => {
     // The fixture's only verb is v:treffen — haben / getroffen / er trifft.
     const openDeck = async (user) => {
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /A1 Verbs/i }));
+      await pickAutoDeck(user, 'Perfekt', /A1 Verbs/i);
       return screen.findByText('treffen');
     };
 
@@ -669,7 +675,7 @@ describe('VocabTab', () => {
       const markLearned = vi.fn();
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
-      await user.click(screen.getByRole('button', { name: /A1 Verbs/i }));
+      await pickAutoDeck(user, 'Perfekt', /A1 Verbs/i);
       await screen.findByText('treffen');
       await user.type(screen.getByRole('textbox', { name: 'Type the perfect' }), 'hat getroffen');
       await user.click(screen.getByRole('button', { name: /CHECK/ }));
@@ -695,7 +701,7 @@ describe('VocabTab', () => {
     // The fixture's only verb is v:treffen — present.du = 'triffst'.
     const openDeck = async (user) => {
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /A1 du-Form/i }));
+      await pickAutoDeck(user, 'Präsens', /A1 du-Form/i);
       return screen.findByText('treffen');
     };
 
@@ -718,7 +724,7 @@ describe('VocabTab', () => {
       const markLearned = vi.fn();
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
-      await user.click(screen.getByRole('button', { name: /A1 du-Form/i }));
+      await pickAutoDeck(user, 'Präsens', /A1 du-Form/i);
       await screen.findByText('treffen');
       await user.type(screen.getByRole('textbox', { name: 'Type the du-form' }), 'triffst');
       await user.click(screen.getByRole('button', { name: /CHECK/ }));
@@ -797,7 +803,7 @@ describe('VocabTab', () => {
     // Core-ranked A1 nouns; n:haus (rank 60) is first — "das Haus".
     const openDeck = async (user) => {
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /A1 Hören/i }));
+      await pickAutoDeck(user, 'Hören', /A1 Hören/i);
       return screen.findByRole('textbox', { name: 'Type what you hear' });
     };
 
@@ -858,7 +864,7 @@ describe('VocabTab', () => {
       const markLearned = vi.fn();
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={markLearned} />);
-      await user.click(screen.getByRole('button', { name: /A1 Hören/i }));
+      await pickAutoDeck(user, 'Hören', /A1 Hören/i);
       const input = await screen.findByRole('textbox', { name: 'Type what you hear' });
       await user.type(input, 'das Haus');
       await user.click(screen.getByRole('button', { name: /CHECK/ }));
@@ -872,7 +878,7 @@ describe('VocabTab', () => {
       // suite types "Haeuser" for "Häuser". Naming this for what it checks.
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /A1 Hören/i }));
+      await pickAutoDeck(user, 'Hören', /A1 Hören/i);
       const input = await screen.findByRole('textbox', { name: 'Type what you hear' });
       await user.type(input, 'das haus');
       await user.click(screen.getByRole('button', { name: /CHECK/ }));
