@@ -2,7 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PersonalHub from './PersonalHub';
-import { SPACE } from '../lib/theme';
+import { FONT_SIZE, SPACE } from '../lib/theme';
+
+const AVATAR_DESKTOP = SPACE[16] * 4;
 
 // isAuthConfigured() reads import.meta.env.VITE_SUPABASE_*, which Vitest loads
 // from .env — true on a developer's machine and false in CI. Unmocked, this
@@ -92,27 +94,84 @@ describe('PersonalHub', () => {
     expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toBeInTheDocument();
   });
 
-  it('paints the avatar at twice the old hub chip so it is the identity mark', () => {
+  it('paints the avatar as a square that fills its column', () => {
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     const img = document.querySelector('[data-avatar]');
-    expect(img).toHaveAttribute('width', String(SPACE[16] * 2));
-    expect(img).toHaveAttribute('height', String(SPACE[16] * 2));
+    expect(img).toHaveAttribute('width', String(AVATAR_DESKTOP));
+    expect(img).toHaveAttribute('height', String(AVATAR_DESKTOP));
+    expect(img).toHaveStyle({ width: '100%', height: '100%' });
+    expect(screen.getByTestId('home-identity-avatar')).toHaveStyle({
+      width: '100%',
+      aspectRatio: '1 / 1',
+      minWidth: '0',
+    });
   });
 
-  it('lays the avatar beside identity on a wide viewport', () => {
+  it('lays a large avatar beside identity on a wide viewport', () => {
     setViewportWidth(1280);
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.getByTestId('home-identity-row')).toHaveStyle({
-      gridTemplateColumns: `${SPACE[16] * 2}px minmax(0, 1fr)`,
+      gridTemplateColumns: `${AVATAR_DESKTOP}px minmax(0, 1fr)`,
     });
   });
 
-  it('stacks the avatar above identity on a 320px viewport', () => {
+  it('gives the avatar half the identity band on a 375px viewport', () => {
+    setViewportWidth(375);
+    render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
+    expect(screen.getByTestId('home-identity-row')).toHaveStyle({
+      gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+    });
+  });
+
+  it('keeps the half-band avatar on a 320px viewport', () => {
     setViewportWidth(320);
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.getByTestId('home-identity-row')).toHaveStyle({
-      gridTemplateColumns: 'minmax(0, 1fr)',
+      gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
     });
+  });
+
+  it('sizes the greeting and standing numbers as the card display scale', () => {
+    render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} streak={4} />);
+    expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toHaveStyle({
+      fontSize: `${FONT_SIZE['4xl']}px`,
+    });
+    expect(screen.getByTestId('home-identity-streak')).toHaveStyle({
+      fontSize: `${FONT_SIZE['3xl']}px`,
+    });
+    expect(screen.getByTestId('home-identity-level')).toHaveStyle({
+      fontSize: `${FONT_SIZE['3xl']}px`,
+    });
+    expect(screen.getByTestId('home-identity-level')).toHaveTextContent('3');
+  });
+
+  it('drops today under the identity band on a narrow viewport so missions are not half-width', () => {
+    setViewportWidth(320);
+    render(
+      <PersonalHub
+        user={user}
+        profile={profile}
+        cefrLevel="a2"
+        score={score}
+        today={<div>today-slot</div>}
+      />
+    );
+    expect(screen.getByTestId('home-identity-row')).not.toHaveTextContent('today-slot');
+    expect(screen.getByRole('region', { name: /guten tag/i })).toHaveTextContent('today-slot');
+  });
+
+  it('keeps today beside the avatar on a wide viewport', () => {
+    setViewportWidth(1280);
+    render(
+      <PersonalHub
+        user={user}
+        profile={profile}
+        cefrLevel="a2"
+        score={score}
+        today={<div>today-slot</div>}
+      />
+    );
+    expect(screen.getByTestId('home-identity-row')).toHaveTextContent('today-slot');
   });
 
   it('renders today and recommended slots inside the same surface', () => {
