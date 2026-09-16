@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { useState } from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VocabTab from './VocabTab';
 import { upsertDeck, deleteDeck, liveDecks } from '../lib/customDecks.js';
@@ -30,10 +30,14 @@ const STORAGE_KEY = 'deutsch-app-state-v1';
 // all-new cards in deck order, so the first card is deterministic.
 const firstCard = (deckId = 'greetings') => DECKS[deckId][0];
 
-// Auto-deck groups share a tab strip on Practice. Open the group, then the row.
+// Auto decks are a group → deck cascade of native selects on Practice.
+const autoGroupSelect = () => screen.getByRole('combobox', { name: 'Group' });
+const autoDeckSelect = () => screen.getByRole('combobox', { name: 'Deck' });
+
 async function pickAutoDeck(user, group, deckName) {
-  await user.click(screen.getByRole('tab', { name: group }));
-  await user.click(screen.getByRole('button', { name: deckName }));
+  await user.selectOptions(autoGroupSelect(), group);
+  const option = within(autoDeckSelect()).getByRole('option', { name: deckName });
+  await user.selectOptions(autoDeckSelect(), option);
 }
 
 const readSrs = () => JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '{}').srs ?? {};
@@ -420,7 +424,7 @@ describe('VocabTab', () => {
     it('loads an auto deck and shows its cards', async () => {
       const user = userEvent.setup();
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /Core 100/i }));
+      await user.selectOptions(autoDeckSelect(), 'core-100');
       // Core 100 uses the 'top' rule (sorted by rank ascending): n:haus (rank 60) → "das Haus"
       expect(await screen.findByText('das Haus')).toBeInTheDocument();
     });
@@ -441,7 +445,7 @@ describe('VocabTab', () => {
       });
 
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /Core 100/i }));
+      await user.selectOptions(autoDeckSelect(), 'core-100');
 
       // Error UI with Retry button appears after the initial failed fetch
       const retryBtn = await screen.findByRole('button', { name: /Retry/i });
@@ -461,7 +465,7 @@ describe('VocabTab', () => {
       globalThis.fetch = vi.fn(() => Promise.resolve({ ok: false, status: 500 }));
 
       render(<VocabTab level="a1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /Core 100/i }));
+      await user.selectOptions(autoDeckSelect(), 'core-100');
 
       expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this deck.');
       expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
@@ -752,7 +756,7 @@ describe('VocabTab', () => {
     // so "waters", a correct meaning the app itself supplies, graded wrong.
     const openWasser = async (user) => {
       render(<VocabTab level="b1" learnedWords={{}} markLearned={() => {}} />);
-      await user.click(screen.getByRole('button', { name: /Core 100/i }));
+      await user.selectOptions(autoDeckSelect(), 'core-100');
       await screen.findByText('das Haus');
       const input = screen.getByRole('textbox', { name: 'Type the English meaning' });
       await user.type(input, 'house');
