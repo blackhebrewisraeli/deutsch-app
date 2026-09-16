@@ -1,14 +1,20 @@
-import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE } from '../lib/theme';
 import PersonalHub from './PersonalHub';
 import RecommendedActions from './RecommendedActions';
 import { resolveRecommended } from './resolveRecommended';
 import MissionBoard from './MissionBoard';
 import QuestBoard from './QuestBoard';
 import ErrorBoundary from './ErrorBoundary';
-import { activePack } from '../packs';
+import { Stack } from './ui/Layout';
 
 // Landing surface for every app open, guest or signed-in — who you are, what
 // to do next, and what is still open today.
+//
+// One identity card owns all three. PersonalHub is the Surface; HomeTab
+// composes MissionBoard / QuestBoard into its `today` slot (beside the avatar
+// on wide viewports, under identity on small ones) and RecommendedActions into
+// the emphasized band under that row. The old page-level stack — Recommended,
+// then a separate Heute block under the hub — is gone on purpose so those
+// zones stop competing.
 //
 // Deliberately NOT a second Stats tab and NOT a Settings page: no accuracy
 // breakdown, heatmap, leaderboard, or account MANAGEMENT here. Those stay
@@ -18,7 +24,6 @@ import { activePack } from '../packs';
 // identity that narrows it — identity, not administration.
 export default function HomeTab({
   score,
-  learnedCount,
   goalPct,
   goalMet,
   streak,
@@ -30,77 +35,33 @@ export default function HomeTab({
   onGoToTab,
   onOpenSettings,
 }) {
-  const chrome = activePack.content.homeChrome ?? {};
   const { remaining } = resolveRecommended(missions);
 
   return (
-    <div>
-      <PersonalHub
-        user={user}
-        profile={profile}
-        cefrLevel={cefrLevel}
-        score={score}
-        learnedCount={learnedCount}
-        streak={streak}
-        goalPct={goalPct}
-        goalMet={goalMet}
-        onOpenSettings={onOpenSettings}
-      />
-
-      <div style={{ marginTop: SPACE[6] }}>
-        <ErrorBoundary>
-          <RecommendedActions missions={missions} onGo={onGoToTab} />
-        </ErrorBoundary>
-      </div>
-
-      {/* Remaining Missionen and Tagesaufgaben share a day-scoped heading, but
-          keep their own labelled regions — a screen reader that jumps by
-          heading still finds each board, and the tests that pin those names
-          would otherwise go blind. */}
-      <section aria-labelledby="heute-heading" style={{ marginTop: SPACE[8] }}>
-        <div
-          id="heute-heading"
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            fontWeight: FONT_WEIGHT.bold,
-            letterSpacing: LETTER_SPACING.caps,
-            textTransform: 'uppercase',
-            color: COLORS.mute,
-          }}
-        >
-          {chrome.todayHeading}
-        </div>
-        {chrome.todaySub && (
-          <div
-            style={{
-              fontFamily: FONTS.body,
-              fontSize: FONT_SIZE.base,
-              color: COLORS.inkSoft,
-              marginTop: SPACE[1],
-            }}
-          >
-            {chrome.todaySub}
-          </div>
-        )}
-        <div
-          style={{
-            borderTop: `1px solid ${COLORS.border}`,
-            marginTop: SPACE[4],
-            paddingTop: SPACE[5],
-          }}
-        />
-
-        <ErrorBoundary>
-          <MissionBoard missions={remaining} onGo={onGoToTab} />
-        </ErrorBoundary>
-
-        <div style={{ marginTop: SPACE[8] }}>
+    <PersonalHub
+      user={user}
+      profile={profile}
+      cefrLevel={cefrLevel}
+      score={score}
+      streak={streak}
+      goalPct={goalPct}
+      goalMet={goalMet}
+      onOpenSettings={onOpenSettings}
+      today={
+        <Stack gap={5}>
+          <ErrorBoundary>
+            <MissionBoard missions={remaining} onGo={onGoToTab} />
+          </ErrorBoundary>
           <ErrorBoundary>
             <QuestBoard quests={quests} onGo={onGoToTab} />
           </ErrorBoundary>
-        </div>
-      </section>
-    </div>
+        </Stack>
+      }
+      recommended={
+        <ErrorBoundary>
+          <RecommendedActions missions={missions} onGo={onGoToTab} />
+        </ErrorBoundary>
+      }
+    />
   );
 }

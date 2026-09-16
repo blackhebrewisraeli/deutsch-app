@@ -45,11 +45,20 @@ describe('RecommendedActions', () => {
         onGo={onGo}
       />
     );
-    expect(screen.getByText(/recommended for you/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /recommended for you/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /5 cards are due/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue quiz/i })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /5 cards are due/i }));
     expect(onGo).toHaveBeenCalledWith('vocab', expect.objectContaining({ id: 'srs-due' }));
+  });
+
+  it('sets card titles in the body face, not a mono or display wall', () => {
+    render(<RecommendedActions missions={[]} />);
+    const titles = document.querySelectorAll('[data-recommended-title]');
+    expect(titles.length).toBeGreaterThan(0);
+    for (const title of titles) {
+      expect(title).toHaveStyle({ fontFamily: 'var(--f-body)' });
+    }
   });
 
   it('routes a fallback card to the tab the pack named', async () => {

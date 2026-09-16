@@ -1,12 +1,21 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import PersonalHub from './PersonalHub';
+import { SPACE } from '../lib/theme';
 
 // isAuthConfigured() reads import.meta.env.VITE_SUPABASE_*, which Vitest loads
 // from .env — true on a developer's machine and false in CI. Unmocked, this
 // file would assert a different branch depending on where it ran.
 vi.mock('../lib/auth.js', () => ({ isAuthConfigured: () => true }));
+
+const setViewportWidth = (width) => {
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: width,
+  });
+};
 
 const user = { id: 'u1', email: 'semion@example.com' };
 const profile = {
@@ -24,6 +33,10 @@ const score = {
 };
 
 describe('PersonalHub', () => {
+  beforeEach(() => {
+    setViewportWidth(1024);
+  });
+
   it('greets a signed-in learner by handle, with handle and join month', () => {
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toBeInTheDocument();
@@ -52,14 +65,14 @@ describe('PersonalHub', () => {
     expect(screen.getByLabelText(/level a2/i)).toHaveTextContent('A2');
   });
 
-  it('renders the score as one picture: level, rank, progress and total', () => {
-    render(
-      <PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} learnedCount={12} />
-    );
+  it('keeps a quiet level and rank, without XP totals or a learned counter', () => {
+    render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('Anfänger')).toBeInTheDocument();
-    expect(screen.getByText(/300 XP total/)).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.queryByText(/300 XP total/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/XP to next/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Learned')).not.toBeInTheDocument();
+    expect(screen.queryByText('12')).not.toBeInTheDocument();
   });
 
   it('keeps daily goal and streak in the same panel as identity', () => {
@@ -69,7 +82,6 @@ describe('PersonalHub', () => {
         profile={profile}
         cefrLevel="a2"
         score={score}
-        learnedCount={12}
         streak={4}
         goalPct={0.5}
         goalMet={false}
@@ -78,6 +90,46 @@ describe('PersonalHub', () => {
     expect(screen.getByTitle('Daily goal · 50%')).toBeInTheDocument();
     expect(screen.getByLabelText('Streak 4')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toBeInTheDocument();
+  });
+
+  it('paints the avatar at twice the old hub chip so it is the identity mark', () => {
+    render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
+    const img = document.querySelector('[data-avatar]');
+    expect(img).toHaveAttribute('width', String(SPACE[16] * 2));
+    expect(img).toHaveAttribute('height', String(SPACE[16] * 2));
+  });
+
+  it('lays the avatar beside identity on a wide viewport', () => {
+    setViewportWidth(1280);
+    render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
+    expect(screen.getByTestId('home-identity-row')).toHaveStyle({
+      gridTemplateColumns: `${SPACE[16] * 2}px minmax(0, 1fr)`,
+    });
+  });
+
+  it('stacks the avatar above identity on a 320px viewport', () => {
+    setViewportWidth(320);
+    render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
+    expect(screen.getByTestId('home-identity-row')).toHaveStyle({
+      gridTemplateColumns: 'minmax(0, 1fr)',
+    });
+  });
+
+  it('renders today and recommended slots inside the same surface', () => {
+    render(
+      <PersonalHub
+        user={user}
+        profile={profile}
+        cefrLevel="a2"
+        score={score}
+        today={<div>today-slot</div>}
+        recommended={<div>recommended-slot</div>}
+      />
+    );
+    const hub = screen.getByRole('region', { name: /guten tag/i });
+    expect(hub).toHaveTextContent('today-slot');
+    expect(hub).toHaveTextContent('recommended-slot');
+    expect(screen.getByTestId('home-recommended-well')).toHaveTextContent('recommended-slot');
   });
 
   // jsdom has no layout, so overflow is asserted as the styles that let a
