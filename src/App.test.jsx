@@ -268,16 +268,13 @@ describe('App navigation a11y', () => {
   });
 });
 
-// The header held logo + level badge + streak + goal ring + account chip,
-// which measured 389px on a 375px phone — a horizontal scroll on every tab.
-// The ring is dropped on mobile, so the goal strip has to cover every tab
-// there: otherwise Chat, Alphabet and Stats lose the daily-goal signal
-// entirely rather than merely relocating it.
-describe('header at mobile width', () => {
+// Home owns its daily-goal ring; all other tabs use GoalStrip at every width.
+// Keep the populated header within the viewport while preserving its controls.
+describe('header and daily-goal surfaces', () => {
   const goalStrip = () =>
     // GoalStrip renders "{current} / {target} XP" across several text nodes
     screen.queryByText((_, el) => /^\d+ \/ \d+ XP$/.test((el?.textContent ?? '').trim()), {
-      selector: 'div',
+      selector: 'span',
     });
 
   beforeEach(() => {
@@ -300,33 +297,17 @@ describe('header at mobile width', () => {
     );
   });
 
-  it('drops the goal ring from the header on mobile', () => {
-    setViewportWidth(375);
+  it.each([1280, 375, 320])('keeps Home’s single daily-goal ring at %ipx', (width) => {
+    setViewportWidth(width);
+    seedPopulatedAccount();
     renderPastEntry(<App />);
-    const header = within(screen.getByRole('banner'));
-    expect(header.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
+    expect(within(screen.getByRole('banner')).queryByTitle(/Daily goal/)).not.toBeInTheDocument();
+    expect(screen.getAllByTitle(/Daily goal/)).toHaveLength(1);
+    expect(goalStrip()).not.toBeInTheDocument();
   });
 
-  it('keeps the goal ring in the header on desktop', async () => {
-    setViewportWidth(1280);
-    const user = userEvent.setup();
-    renderPastEntry(<App />);
-    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' }));
-    const header = within(screen.getByRole('banner'));
-    expect(header.getByTitle(/Daily goal/)).toBeInTheDocument();
-  });
-
-  // Home already shows its own, bigger GoalRing — the header's compact one
-  // would be an exact duplicate sitting right above it.
-  it('hides the header goal ring on the Home tab, where HomeTab already shows one', () => {
-    setViewportWidth(1280);
-    renderPastEntry(<App />);
-    const header = within(screen.getByRole('banner'));
-    expect(header.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
-  });
-
-  // Same split as the header GoalRing: after #261 the identity panel owns the
-  // streak glance on Home. Other tabs keep the StatBlock (and its at-risk pulse).
+  // After #261 the identity panel owns the streak glance on Home.
+  // Other tabs keep the StatBlock (and its at-risk pulse).
   it('hides the header streak on the Home tab, where PersonalHub already shows one', () => {
     setViewportWidth(1280);
     renderPastEntry(<App />);
@@ -336,21 +317,27 @@ describe('header at mobile width', () => {
     expect(screen.getByLabelText(/^Streak /)).toBeInTheDocument();
   });
 
-  // Home is deliberately excluded here — it shows its own GoalRing/streak
-  // widgets instead of GoalStrip, on every viewport, covered by
-  // 'renders HomeTab content on the default landing tab' below.
-  it.each(['Chat', 'Alphabet', 'Vocab', 'Translate', 'Profile'])(
-    'shows daily-goal progress on the %s tab on mobile',
-    async (tabName) => {
-      setViewportWidth(375);
-      const user = userEvent.setup();
-      renderPastEntry(<App />);
-      await user.click(
-        within(screen.getByRole('navigation')).getByRole('button', { name: tabName })
-      );
-      expect(goalStrip()).toBeInTheDocument();
-    }
-  );
+  describe.each([1280, 375, 320])('daily-goal surfaces at %ipx', (width) => {
+    it.each(['Chat', 'Alphabet', 'Vocab', 'Translate', 'Profile'])(
+      'shows only GoalStrip on %s and restores Home’s ring on return',
+      async (tabName) => {
+        setViewportWidth(width);
+        seedPopulatedAccount();
+        const user = userEvent.setup();
+        renderPastEntry(<App />);
+        const nav = within(screen.getByRole('navigation'));
+        await user.click(nav.getByRole('button', { name: tabName }));
+        expect(goalStrip()).toBeInTheDocument();
+        expect(screen.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
+        await user.click(nav.getByRole('button', { name: 'Home' }));
+        expect(goalStrip()).not.toBeInTheDocument();
+        expect(screen.getAllByTitle(/Daily goal/)).toHaveLength(1);
+        expect(
+          within(screen.getByRole('banner')).queryByTitle(/Daily goal/)
+        ).not.toBeInTheDocument();
+      }
+    );
+  });
 
   // At 320px (original iPhone SE) the cluster still overflowed by 25px after the
   // ring came out. Nothing else in the header is expendable — the streak block
@@ -444,17 +431,6 @@ describe('header at mobile width', () => {
     expect(wordmark.style.fontSize).toBe('36px');
   });
 
-  // On desktop the header ring carries the signal, so the strip stays scoped to
-  // the two practice tabs it was built for.
-  it('leaves the strip off the chat tab on desktop, where the ring covers it', async () => {
-    setViewportWidth(1280);
-    const user = userEvent.setup();
-    renderPastEntry(<App />);
-    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' }));
-    expect(goalStrip()).not.toBeInTheDocument();
-    expect(within(screen.getByRole('banner')).getByTitle(/Daily goal/)).toBeInTheDocument();
-  });
-
   it('exposes Appearance from the header ThemeChip on every viewport', () => {
     setViewportWidth(390);
     renderPastEntry(<App />);
@@ -463,7 +439,7 @@ describe('header at mobile width', () => {
     ).toBeInTheDocument();
   });
 
-  it.each([320, 390, 1280])(
+  it.each([320, 375, 390, 1280])(
     'keeps the populated header (with freeze chip) within %ipx without horizontal overflow',
     async (width) => {
       setViewportWidth(width);
@@ -490,7 +466,7 @@ describe('header at mobile width', () => {
     }
   );
 
-  it.each([320, 390, 1280])(
+  it.each([320, 375, 390, 1280])(
     'keeps the populated Home header within %ipx without a streak StatBlock or overflow',
     (width) => {
       setViewportWidth(width);

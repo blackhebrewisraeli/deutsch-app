@@ -83,7 +83,6 @@ import Confetti from './components/ui/Confetti';
 import ToastStack from './components/ui/Toast';
 import { PageFrame } from './components/ui/Layout';
 import StatusChip from './components/StatusChip';
-import GoalRing from './components/gamification/GoalRing';
 import GoalStrip from './components/gamification/GoalStrip';
 import TutorialOverlay from './components/TutorialOverlay';
 import { Analytics } from '@vercel/analytics/react';
@@ -345,11 +344,10 @@ export default function App() {
   // against Fraunces and a fallback serif can set wider, so the headroom is
   // deliberate — at 900 the tightest label clears its button by only 6px.
   // Icons carry the same aria-labels either way; this is the "decoration
-  // gives way" rule the wordmark and the goal ring already follow.
+  // gives way" rule the wordmark already follows.
   const navIconOnly = isTablet(width);
-  // Home already shows streak in PersonalHub — same reason the header GoalRing
-  // hides on that tab. Other tabs keep the StatBlock (and its at-risk pulse,
-  // which GoalStrip does not replicate).
+  // Home already shows streak in PersonalHub. Other tabs keep the StatBlock
+  // and its at-risk pulse, which GoalStrip does not replicate.
   const showHeaderStreak = tab !== 'home';
 
   // Auth
@@ -996,7 +994,7 @@ export default function App() {
                   not the error token. Large text, so 3:1 applies. */}
                 Deutsch<span style={{ color: COLORS.flagRed }}>.</span>
               </div>
-              {/* Tagline waits for bp.wide alongside the goal ring and the chat's
+              {/* Tagline waits for bp.wide alongside the chat's
                 third column: appearing at 640 it left the header 2px wider than
                 the viewport, which is small but is still sideways scroll. */}
               {width >= bp.wide && (
@@ -1063,12 +1061,6 @@ export default function App() {
               >
                 ❄️{game.freezes}
               </span>
-            )}
-            {/* Held back until bp.wide: the desktop header wants 700px but
-              `mobile` flips at 640, so the ring overflowed by 60px in between.
-              It duplicates the goal strip under the nav, so it waits for room. */}
-            {width >= bp.wide && tab !== 'home' && (
-              <GoalRing pct={game.goal.pct} met={game.goal.met} size={48} />
             )}
             <ThemeChip />
             <AccountChip
@@ -1207,13 +1199,9 @@ export default function App() {
             bottom is PageFrame's bottomGutter default, composed with
             inset-bottom so home-indicator clearance cannot replace it. */}
         <PageFrame as="main" gutter={mobile ? 4 : 8}>
-          {/* On mobile this is the only daily-goal indicator — the header ring is
-            dropped there for width — so it has to appear on every tab except
-            Home, which already shows its own goal ring below (same reason the
-            desktop header ring hides on Home — see the GoalRing guard further
-            up in this file). On desktop the ring covers it, and the strip
-            stays scoped to the two practice tabs it was built for. */}
-          {(mobile || tab === 'translate' || tab === 'vocab') && tab !== 'home' && (
+          {/* Home owns its daily-goal ring in PersonalHub. Every other tab uses
+            the strip as its single daily-goal surface, at every viewport. */}
+          {tab !== 'home' && (
             <GoalStrip
               streak={game.streak}
               current={game.goal.current}
