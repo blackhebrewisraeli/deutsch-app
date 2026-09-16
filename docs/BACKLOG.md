@@ -313,3 +313,32 @@ button[aria-haspopup="dialog"]`) instead of selecting one by its literal
   unaffected (`VITE_SENTRY_DSN` is set correctly in Vercel and was verified
   inlined). Out of scope for the level-control work; it is a one-line local env
   fix, not a code change, which is why it is recorded here rather than patched.
+- **Home has no "streak at risk" cue, by decision (2026-09-15).**
+  `streakPulsing` in `src/App.jsx` animates the header's streak pill with
+  `pulse-gold` when a streak is alive but today has not qualified yet. After
+  #261 the masthead streak duplicates the one `PersonalHub` already shows, so
+  the header pill is hidden on Home — and the pulse is the single signal
+  `PersonalHub` has no equivalent for. The owner took that trade knowingly:
+  Home carries its own at-risk prompt through the mission board, and the
+  alternative — teaching `PersonalHub` to pulse — is a second change to a
+  just-shipped file. **Do not add a pulse to `PersonalHub` as a drive-by.** If
+  it is wanted it is its own PR, with the hub's other signals weighed against
+  it. Recorded here because the mission brief that carries this decision lives
+  in `CURSOR_TASKS.md`, which is git-excluded and therefore absent from CI and
+  fresh checkouts. Note the pulse has **never had a test** — it appears only in
+  `App.jsx` and in two `App.test.jsx` comments that claim to protect it — so
+  the suite stays green whichever way this goes and cannot enforce the
+  decision.
+- **The header streak is freeze-blind until the first progress event.**
+  `src/App.jsx` derives the streak twice. `deriveGame` passes `frozenDays` into
+  `currentStreak(daily, goal, today, frozenDays)`; the mount effect calls the
+  same function with three arguments, and `src/lib/streak.js` defaults
+  `frozenDays = {}`. So `stats.streak`, which the masthead renders, ignores
+  days a freeze rescued, while `game.streak`, which Home and `GoalStrip`
+  render, does not. Reproduced in a browser on 2026-09-15 against a seeded
+  frozen-day gap: the header read **STREAK 5** while `GoalStrip` read **12** in
+  the same viewport, on the same screen. It self-corrects on the first
+  `deutsch:progress` event, so it is only visible to a learner who reads the
+  header before practising. One missing argument. Deliberately kept out of the
+  header de-noise work, which is a UI-only diff and must not pull `src/lib/`
+  into its file list.
