@@ -132,6 +132,47 @@ describe('VocabTab', () => {
     vi.unstubAllGlobals();
   });
 
+  it('shows completion after the last card, restarts practice, and clears completion on deck change', async () => {
+    const user = userEvent.setup();
+    const cards = [{ id: 'sun', de: 'die Sonne', en: 'sun', ipa: '' }];
+    renderTab({
+      customDecks: { 'custom-finish': { deckId: 'custom-finish', name: 'Finish', cards } },
+      learnedByDeck: { 'custom-finish': { sun: true } },
+    });
+    await user.click(screen.getByRole('button', { name: 'Your Deck: Finish — 1 card' }));
+    await user.type(
+      screen.getByRole('textbox', { name: 'Type the English meaning' }),
+      'sun{Enter}'
+    );
+    await user.click(screen.getByRole('button', { name: 'GOOD' }));
+
+    expect(screen.getByText('Deck complete — 1 word learned')).toBeInTheDocument();
+    expect(screen.queryByText('Select a deck to start.')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('textbox', { name: 'Type the English meaning' })
+    ).not.toBeInTheDocument();
+    const savedSrs = readSrs();
+    expect(savedSrs[srsKey('custom-finish', 'sun')].reps).toBe(1);
+
+    await user.click(screen.getByRole('button', { name: 'PRACTICE AGAIN' }));
+    expect(screen.queryByText(/Deck complete/)).not.toBeInTheDocument();
+    expect(screen.getByText('1 card remaining')).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Type the English meaning' })).toHaveValue('');
+    expect(readSrs()).toEqual(savedSrs);
+
+    // The previous verdict's double-click guard expires before another answer.
+    await new Promise((resolve) => setTimeout(resolve, 210));
+    await user.type(
+      screen.getByRole('textbox', { name: 'Type the English meaning' }),
+      'sun{Enter}'
+    );
+    await user.click(screen.getByRole('button', { name: 'GOOD' }));
+    expect(screen.getByText(/Deck complete/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Greetings/ }));
+    expect(screen.queryByText(/Deck complete/)).not.toBeInTheDocument();
+    expect(screen.getByText(firstCard().de)).toBeInTheDocument();
+  });
+
   describe('deck picker', () => {
     it('renders the four preset decks and the first greetings card', () => {
       renderTab();

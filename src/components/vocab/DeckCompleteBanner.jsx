@@ -10,9 +10,9 @@ import {
 import Confetti from '../ui/Confetti';
 
 /**
- * @param {{ learnedCount: number, onDismiss: () => void }} props
+ * @param {{ learnedCount: number, onPracticeAgain: () => void }} props
  */
-export default function DeckCompleteBanner({ learnedCount, onDismiss }) {
+export default function DeckCompleteBanner({ learnedCount, onPracticeAgain }) {
   return (
     <div
       className="slide-up pop"
@@ -46,11 +46,11 @@ export default function DeckCompleteBanner({ learnedCount, onDismiss }) {
           textAlign: 'center',
         }}
       >
-        Deck complete — {learnedCount} words learned
+        Deck complete — {learnedCount} {learnedCount === 1 ? 'word' : 'words'} learned
       </span>
       <button
         type="button"
-        onClick={onDismiss}
+        onClick={onPracticeAgain}
         style={{
           background: 'transparent',
           border: `1px solid ${COLORS.ink}`,
@@ -63,7 +63,7 @@ export default function DeckCompleteBanner({ learnedCount, onDismiss }) {
           color: COLORS.ink,
         }}
       >
-        DISMISS
+        PRACTICE AGAIN
       </button>
     </div>
   );

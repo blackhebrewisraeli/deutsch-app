@@ -488,6 +488,22 @@ export default function VocabTab({
                 Could not load this deck.
               </StatusNote>
             )}
+            {deckComplete && (
+              <DeckCompleteBanner
+                learnedCount={learnedInDeck({
+                  learnedByDeck,
+                  learnedWords,
+                  deckId,
+                  cards: activeDeck,
+                })}
+                onPracticeAgain={() => {
+                  setQueue(
+                    getDueCards((loadState() ?? {}).srs ?? {}, activeDeck, deckId, Date.now())
+                  );
+                  setDeckComplete(false);
+                }}
+              />
+            )}
             {card && (
               <div
                 style={{
@@ -567,23 +583,6 @@ export default function VocabTab({
                     deckId={deckId}
                   />
                 </div>
-
-                {/* BUG: DeckCompleteBanner lives inside `{card && …}`, so when
-                the last GOOD empties the queue, `card` becomes null and this
-                banner unmounts with it. Move it beside the empty-deck branch
-                (or keep the last card mounted while deckComplete is true)
-                before treating "deck finished" as a real surface. */}
-                {deckComplete && (
-                  <DeckCompleteBanner
-                    learnedCount={learnedInDeck({
-                      learnedByDeck,
-                      learnedWords,
-                      deckId,
-                      cards: activeDeck,
-                    })}
-                    onDismiss={() => setDeckComplete(false)}
-                  />
-                )}
 
                 <CardFace
                   card={card}
