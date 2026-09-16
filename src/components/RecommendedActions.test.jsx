@@ -76,6 +76,21 @@ describe('RecommendedActions', () => {
     expect(onGo).toHaveBeenCalledWith('vocab', expect.objectContaining({ id: 'review-vocab' }));
   });
 
+  it('forwards the mission deckId so the destination can open that deck', async () => {
+    const onGo = vi.fn();
+    render(
+      <RecommendedActions
+        missions={[{ id: 'deck-unfinished', count: 7, tab: 'vocab', priority: 4, deckId: 'food' }]}
+        onGo={onGo}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /7 cards left in your deck/i }));
+    expect(onGo).toHaveBeenCalledWith(
+      'vocab',
+      expect.objectContaining({ id: 'deck-unfinished', deckId: 'food' })
+    );
+  });
+
   it('still renders two cards with pack fallbacks on a quiet day', () => {
     render(<RecommendedActions missions={[]} />);
     const cards = screen.getAllByRole('button');

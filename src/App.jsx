@@ -690,7 +690,8 @@ export default function App() {
       );
       const today = todayKey();
       const goal = s.gamification?.goal ?? DEFAULT_GOAL;
-      const streak = currentStreak(s.daily ?? {}, goal, today);
+      const frozenDays = s.gamification?.frozenDays ?? {};
+      const streak = currentStreak(s.daily ?? {}, goal, today, frozenDays);
       const learnedCount = learnedCountOf(
         backfillFromSrs({
           learnedWords: s.learnedWords,
@@ -738,6 +739,18 @@ export default function App() {
   };
 
   const clearReviewTarget = () => setReviewTarget(null);
+
+  // Home recommendations, missions, and quests. The second argument is the
+  // task payload already built by deriveMissions — including `deckId` when
+  // the hop is "continue this deck". VocabTab already opens a named deck
+  // through `reviewTarget.context` (the Stats review path); this reuses that
+  // slot rather than adding a second navigator.
+  const goToTab = (target, task) => {
+    if (typeof task?.deckId === 'string' && task.deckId) {
+      setReviewTarget({ tab: target, context: task.deckId });
+    }
+    setTab(target);
+  };
 
   // Sets, never toggles. This flipped (`!prev[word]`) until 2026-08-30, and
   // advanceQueue re-queues on AGAIN — so answering a card correctly, pressing
@@ -1202,7 +1215,7 @@ export default function App() {
               cefrLevel={level}
               missions={missions}
               quests={quests}
-              onGoToTab={(target) => setTab(target)}
+              onGoToTab={goToTab}
               onOpenSettings={openSettings}
             />
           )}

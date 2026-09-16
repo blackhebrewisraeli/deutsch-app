@@ -183,6 +183,24 @@ describe('VocabTab', () => {
       expect(screen.getByText(`${DECKS.greetings.length} cards remaining`)).toBeInTheDocument();
     });
 
+    it('opens the named deck from a reviewTarget that has a deck and no card', () => {
+      const onReviewConsumed = vi.fn();
+      renderTab({
+        reviewTarget: { tab: 'vocab', context: 'food' },
+        onReviewConsumed,
+      });
+      expect(screen.getByRole('button', { name: /Food & Drink/i })).toHaveAttribute(
+        'aria-pressed',
+        'true'
+      );
+      expect(screen.getByRole('button', { name: /Greetings/i })).toHaveAttribute(
+        'aria-pressed',
+        'false'
+      );
+      expect(screen.getByText(firstCard('food').de)).toBeInTheDocument();
+      expect(screen.queryByText(firstCard('greetings').de)).not.toBeInTheDocument();
+    });
+
     it('centers the section title and the remaining-count row', () => {
       renderTab();
       const hero = screen.getByRole('heading', { level: 1, name: 'Wortschatz' }).parentElement;

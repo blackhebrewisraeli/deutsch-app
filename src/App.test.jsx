@@ -316,6 +316,48 @@ describe('header and daily-goal surfaces', () => {
     expect(screen.getByLabelText(/^Streak /)).toBeInTheDocument();
   });
 
+  it('counts freeze-rescued days in stats.streak on first load, before any progress event', async () => {
+    const today = todayKey();
+    const shift = (offset) => {
+      const [y, m, d] = today.split('-').map(Number);
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      dt.setUTCDate(dt.getUTCDate() + offset);
+      const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(dt.getUTCDate()).padStart(2, '0');
+      return `${dt.getUTCFullYear()}-${mm}-${dd}`;
+    };
+    const qual = { byLevel: { a1: { correct: 6, almost: 0, wrong: 0 } } };
+    const miss = { byLevel: { a1: { correct: 0, almost: 0, wrong: 0 } } };
+    const yesterday = shift(-1);
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({
+        daily: { [shift(-3)]: qual, [shift(-2)]: qual, [yesterday]: miss },
+        gamification: {
+          goal: 50,
+          frozenDays: { [yesterday]: true },
+          lastReconcileDay: today,
+        },
+        stats: { streak: 0, learnedCount: 0 },
+      })
+    );
+
+    renderPastEntry(<App />);
+    expect(screen.getByLabelText('Streak 3')).toBeInTheDocument();
+
+    // Mount persist runs after deriveGame. Flush it so this cannot pass on the
+    // brief applyProgress write that already knew about frozenDays.
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(loadState().stats.streak).toBe(3);
+
+    await userEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
+    );
+    expect(screen.getByText(/STREAK 3/)).toBeInTheDocument();
+  });
+
   describe.each([1280, 375, 320])('daily-goal surfaces at %ipx', (width) => {
     it.each(['Chat', 'Alphabet', 'Vocab', 'Translate', 'Profile'])(
       'shows only GoalStrip on %s and restores Home’s ring on return',
@@ -1488,14 +1530,14 @@ describe('Home missions fed from real data', () => {
     authMock.status = 'anonymous';
   });
 
-  /** One card learned in the first curated deck: started, not finished. */
-  const seedStartedDeck = () => {
-    const [deckId, cards] = Object.entries(activePack.content.decks)[0];
+  /** One card learned in a curated deck: started, not finished. */
+  const seedStartedDeck = (index = 0) => {
+    const [deckId, cards] = Object.entries(activePack.content.decks)[index];
     localStorage.setItem(
       'deutsch-app-state-v1',
       JSON.stringify({ learnedWords: { [cards[0].id]: true } })
     );
-    return { deckId, remaining: cards.length - 1 };
+    return { deckId, remaining: cards.length - 1, firstCard: cards[0] };
   };
 
   it('opens deck-unfinished with the real remaining-card count', async () => {
@@ -1503,6 +1545,45 @@ describe('Home missions fed from real data', () => {
     renderPastEntry(<App />);
 
     expect(await screen.findByText(`${remaining} cards left in your deck`)).toBeInTheDocument();
+  });
+
+  it('opens Vocab on the deck a Home recommendation named, not the default', async () => {
+    const { deckId, firstCard } = seedStartedDeck(1);
+    expect(deckId).toBe('food');
+    renderPastEntry(<App />);
+
+    await userEvent.click(await screen.findByRole('button', { name: /left in your deck/i }));
+
+    const nav = within(screen.getByRole('navigation'));
+    expect(nav.getByRole('button', { name: 'Vocab' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('button', { name: /Food & Drink/i })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: /Greetings/i })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
+    expect(screen.getByText(firstCard.de)).toBeInTheDocument();
+  });
+
+  it('leaves the default Greetings deck selected when Vocab is opened from the nav', async () => {
+    seedStartedDeck(1);
+    renderPastEntry(<App />);
+    await screen.findByRole('button', { name: /left in your deck/i });
+
+    await userEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Vocab' })
+    );
+
+    expect(screen.getByRole('button', { name: /Greetings/i })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    expect(screen.getByRole('button', { name: /Food & Drink/i })).toHaveAttribute(
+      'aria-pressed',
+      'false'
+    );
   });
 
   it('opens no deck mission when nothing has been learned', async () => {
