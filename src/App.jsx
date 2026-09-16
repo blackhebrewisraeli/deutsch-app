@@ -347,6 +347,10 @@ export default function App() {
   // Icons carry the same aria-labels either way; this is the "decoration
   // gives way" rule the wordmark and the goal ring already follow.
   const navIconOnly = isTablet(width);
+  // Home already shows streak in PersonalHub — same reason the header GoalRing
+  // hides on that tab. Other tabs keep the StatBlock (and its at-risk pulse,
+  // which GoalStrip does not replicate).
+  const showHeaderStreak = tab !== 'home';
 
   // Auth
   const { user, status: authStatus } = useAuth();
@@ -1032,13 +1036,15 @@ export default function App() {
                 size={mobile ? 42 : 52}
               />
             </span>
-            <StatBlock
-              label={mobile ? '' : 'STREAK'}
-              value={stats.streak}
-              icon={<Flame size={mobile ? 12 : 14} />}
-              accent
-              pulsing={streakPulsing}
-            />
+            {showHeaderStreak && (
+              <StatBlock
+                label={mobile ? '' : 'STREAK'}
+                value={stats.streak}
+                icon={<Flame size={mobile ? 12 : 14} />}
+                accent
+                pulsing={streakPulsing}
+              />
+            )}
             {game.freezes > 0 && (
               <span
                 title={`${game.freezes} streak freeze${game.freezes > 1 ? 's' : ''} held`}
