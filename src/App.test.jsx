@@ -325,6 +325,17 @@ describe('header at mobile width', () => {
     expect(header.queryByTitle(/Daily goal/)).not.toBeInTheDocument();
   });
 
+  // Same split as the header GoalRing: after #261 the identity panel owns the
+  // streak glance on Home. Other tabs keep the StatBlock (and its at-risk pulse).
+  it('hides the header streak on the Home tab, where PersonalHub already shows one', () => {
+    setViewportWidth(1280);
+    renderPastEntry(<App />);
+    const header = screen.getByRole('banner');
+    expect(within(header).queryByText('STREAK')).not.toBeInTheDocument();
+    expect(header.querySelector('.lucide-flame')).toBeNull();
+    expect(screen.getByLabelText(/^Streak /)).toBeInTheDocument();
+  });
+
   // Home is deliberately excluded here — it shows its own GoalRing/streak
   // widgets instead of GoalStrip, on every viewport, covered by
   // 'renders HomeTab content on the default landing tab' below.
@@ -364,15 +375,22 @@ describe('header at mobile width', () => {
   // The streak block was 111px of the 230px cluster, most of it the caption.
   // Dropping just the caption keeps the flame, the count and the at-risk pulse
   // — the signal GoalStrip does not replicate — while freeing ~70px.
-  it('omits the STREAK caption on mobile', () => {
+  // Asserted on Chat: Home no longer mounts the StatBlock at all.
+  it('omits the STREAK caption on mobile', async () => {
     setViewportWidth(375);
+    const user = userEvent.setup();
     renderPastEntry(<App />);
-    expect(within(screen.getByRole('banner')).queryByText('STREAK')).not.toBeInTheDocument();
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' }));
+    const header = within(screen.getByRole('banner'));
+    expect(header.queryByText('STREAK')).not.toBeInTheDocument();
+    expect(screen.getByRole('banner').querySelector('.lucide-flame')).not.toBeNull();
   });
 
-  it('keeps the STREAK caption on desktop', () => {
+  it('keeps the STREAK caption on desktop', async () => {
     setViewportWidth(1280);
+    const user = userEvent.setup();
     renderPastEntry(<App />);
+    await user.click(within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' }));
     expect(within(screen.getByRole('banner')).getByText('STREAK')).toBeInTheDocument();
   });
 
@@ -399,6 +417,18 @@ describe('header at mobile width', () => {
     setViewportWidth(414);
     renderPastEntry(<App />);
     expect(within(screen.getByRole('banner')).getByText(/Deutsch/)).toBeInTheDocument();
+  });
+
+  // Contrast audit: signed-in Account sheet at 390 hung off the left after the
+  // Home streak hide, because the wordmark-less cluster start-aligned and
+  // AccountChip's `right: 0` sheet assumed a trailing-edge chip.
+  it('right-aligns the chip cluster so the Account sheet stays on-screen at 390', () => {
+    setViewportWidth(390);
+    renderPastEntry(<App />);
+    const cluster = screen
+      .getByRole('banner')
+      .querySelector('[data-tutorial-anchor="status"]')?.parentElement;
+    expect(cluster?.style.marginLeft).toBe('auto');
   });
 
   it('keeps the full-size wordmark and chrome on desktop', () => {
@@ -435,14 +465,42 @@ describe('header at mobile width', () => {
 
   it.each([320, 390, 1280])(
     'keeps the populated header (with freeze chip) within %ipx without horizontal overflow',
+    async (width) => {
+      setViewportWidth(width);
+      seedPopulatedAccount();
+      const user = userEvent.setup();
+      renderPastEntry(<App />);
+      // Chat still mounts the full cluster (streak + freeze). Home no longer
+      // includes the StatBlock, so asserting overflow there would miss it.
+      await user.click(
+        within(screen.getByRole('navigation')).getByRole('button', { name: 'Chat' })
+      );
+      const header = screen.getByRole('banner');
+      expect(within(header).getByTitle(/streak freeze/i)).toBeInTheDocument();
+      expect(within(header).getByRole('button', { name: /^appearance$/i })).toBeInTheDocument();
+      if (width >= 640) {
+        expect(within(header).getByText('STREAK')).toBeInTheDocument();
+      } else {
+        expect(within(header).queryByText('STREAK')).not.toBeInTheDocument();
+      }
+      expect(header.querySelector('.lucide-flame')).not.toBeNull();
+      // jsdom layout is approximate; still catch a cluster that refuses to shrink.
+      expect(header.scrollWidth).toBeLessThanOrEqual(width + 1);
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth + 1);
+    }
+  );
+
+  it.each([320, 390, 1280])(
+    'keeps the populated Home header within %ipx without a streak StatBlock or overflow',
     (width) => {
       setViewportWidth(width);
       seedPopulatedAccount();
       renderPastEntry(<App />);
       const header = screen.getByRole('banner');
+      expect(within(header).queryByText('STREAK')).not.toBeInTheDocument();
+      expect(header.querySelector('.lucide-flame')).toBeNull();
       expect(within(header).getByTitle(/streak freeze/i)).toBeInTheDocument();
-      expect(within(header).getByRole('button', { name: /^appearance$/i })).toBeInTheDocument();
-      // jsdom layout is approximate; still catch a cluster that refuses to shrink.
+      expect(screen.getByLabelText(/^Streak /)).toBeInTheDocument();
       expect(header.scrollWidth).toBeLessThanOrEqual(width + 1);
       expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth + 1);
     }
