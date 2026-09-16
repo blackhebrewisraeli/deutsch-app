@@ -158,6 +158,9 @@ describe('PersonalHub', () => {
     );
     expect(screen.getByTestId('home-identity-row')).not.toHaveTextContent('today-slot');
     expect(screen.getByRole('region', { name: /guten tag/i })).toHaveTextContent('today-slot');
+    expect(screen.getByText('today-slot').parentElement).toHaveStyle({
+      marginTop: `${SPACE[3]}px`,
+    });
   });
 
   it('keeps today beside the avatar on a wide viewport', () => {
@@ -189,6 +192,23 @@ describe('PersonalHub', () => {
     expect(hub).toHaveTextContent('today-slot');
     expect(hub).toHaveTextContent('recommended-slot');
     expect(screen.getByTestId('home-recommended-well')).toHaveTextContent('recommended-slot');
+  });
+
+  it('keeps the identity band and recommended well on the compact SPACE stops', () => {
+    render(
+      <PersonalHub
+        user={user}
+        profile={profile}
+        cefrLevel="a2"
+        score={score}
+        recommended={<div>recommended-slot</div>}
+      />
+    );
+    expect(screen.getByTestId('home-identity-row')).toHaveStyle({ gap: `${SPACE[4]}px` });
+    expect(screen.getByTestId('home-recommended-well')).toHaveStyle({
+      marginTop: `${SPACE[4]}px`,
+      paddingTop: `${SPACE[3]}px`,
+    });
   });
 
   // jsdom has no layout, so overflow is asserted as the styles that let a

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import HomeTab from './HomeTab';
+import { SPACE } from '../lib/theme';
 
 // See PersonalHub.test.jsx: isAuthConfigured() differs between a dev box and
 // CI, and PersonalHub branches on it.
@@ -140,6 +141,7 @@ describe('HomeTab', () => {
     expect(hub).toContainElement(screen.getByRole('region', { name: /missionen/i }));
     expect(hub).toContainElement(screen.getByRole('region', { name: /tagesaufgaben/i }));
     expect(hub).toContainElement(screen.getByRole('region', { name: /recommended/i }));
+    expect(screen.getByTestId('home-today-stack')).toHaveStyle({ gap: `${SPACE[3]}px` });
   });
 });
 

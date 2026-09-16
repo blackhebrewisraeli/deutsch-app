@@ -60,6 +60,11 @@ const IDENTITY_HEADING_ID = 'home-identity-heading';
 // dense Learned / XP-total counters do not — they compete with the actions.
 // Arithmetic is unchanged; this file only decides what to print.
 //
+// Spacing is denser than the first identity-card pass: #270 grew the avatar
+// and type, which left Missionen / Tagesaufgaben / Recommended sitting in
+// empty vertical air. Tokens step down one SPACE stop; the avatar column and
+// quieter XP are untouched.
+//
 // Read-only on purpose. Decision E5 keeps account MANAGEMENT — email, sign
 // out, export, danger zone — exclusive to Settings. The single interactive
 // element owned by the hub itself is the link into that Settings view.
@@ -93,9 +98,9 @@ export default function PersonalHub({
   const showsAccountLine = Boolean(user);
 
   const identityFacts = (
-    <Stack gap={3} style={{ minWidth: 0 }}>
+    <Stack gap={2} style={{ minWidth: 0 }}>
       <Stack gap={1} style={{ minWidth: 0 }}>
-        <Row wrap={false} align="flex-start" gap={3} style={{ minWidth: 0 }}>
+        <Row wrap={false} align="flex-start" gap={2} style={{ minWidth: 0 }}>
           <Heading
             id={IDENTITY_HEADING_ID}
             level={2}
@@ -144,7 +149,7 @@ export default function PersonalHub({
         )}
       </Stack>
 
-      <Row wrap gap={3} align="center" style={{ minWidth: 0 }}>
+      <Row wrap gap={2} align="center" style={{ minWidth: 0 }}>
         <GoalRing pct={goalPct} met={goalMet} size={SPACE[12]} />
         <span
           aria-label={`Streak ${streak}`}
@@ -244,7 +249,7 @@ export default function PersonalHub({
         style={{
           display: 'grid',
           gridTemplateColumns: wide ? IDENTITY_COLUMNS_WIDE : IDENTITY_COLUMNS_NARROW,
-          gap: SPACE[5],
+          gap: SPACE[4],
           alignItems: 'start',
           minWidth: 0,
         }}
@@ -282,14 +287,14 @@ export default function PersonalHub({
         {identityFacts}
       </div>
 
-      {!wide && today && <div style={{ marginTop: SPACE[5], minWidth: 0 }}>{today}</div>}
+      {!wide && today && <div style={{ marginTop: SPACE[3], minWidth: 0 }}>{today}</div>}
 
       {recommended && (
         <div
           data-testid="home-recommended-well"
           style={{
-            marginTop: SPACE[6],
-            paddingTop: SPACE[5],
+            marginTop: SPACE[4],
+            paddingTop: SPACE[3],
             borderTop: BORDER.panel,
             minWidth: 0,
           }}

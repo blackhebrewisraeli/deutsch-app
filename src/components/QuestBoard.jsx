@@ -3,6 +3,10 @@ import { Stack } from './ui/Layout';
 import InteractiveCard from './ui/InteractiveCard';
 import { activePack } from '../packs';
 
+// Compact row padding — same recipe as MissionBoard. InteractiveCard's default
+// SPACE[4] is a tile inset; on a full-width quest row it is empty height.
+const ROW_PADDING = `${SPACE[2]}px ${SPACE[3]}px`;
+
 // The daily-quest board on Home.
 //
 // A SIBLING of MissionBoard, not an extension of it. Missions rank by urgency
@@ -35,14 +39,14 @@ export default function QuestBoard({ quests = [], onGo }) {
           letterSpacing: LETTER_SPACING.caps,
           textTransform: 'uppercase',
           color: COLORS.mute,
-          marginBottom: SPACE[3],
+          marginBottom: SPACE[2],
         }}
       >
         {chrome.heading}
       </div>
 
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-        <Stack gap={2} as="div">
+        <Stack gap={1} as="div">
           {quests.map((quest) => {
             const entry = copy[quest.id];
             if (!entry) return null;
@@ -57,7 +61,7 @@ export default function QuestBoard({ quests = [], onGo }) {
               <li key={quest.id}>
                 <InteractiveCard
                   onClick={() => onGo?.(quest.tab, quest)}
-                  style={{ width: '100%', textAlign: 'left' }}
+                  style={{ width: '100%', textAlign: 'left', padding: ROW_PADDING }}
                   aria-label={
                     quest.done
                       ? `${label} — ${chrome.doneLabel ?? 'done'}`
@@ -72,7 +76,7 @@ export default function QuestBoard({ quests = [], onGo }) {
                       // viewport instead of letting the text shrink.
                       gridTemplateColumns: 'auto minmax(0, 1fr) auto',
                       alignItems: 'center',
-                      gap: SPACE[3],
+                      gap: SPACE[2],
                     }}
                   >
                     <span aria-hidden="true" style={{ fontSize: FONT_SIZE.md }}>
@@ -110,7 +114,7 @@ export default function QuestBoard({ quests = [], onGo }) {
                   <div
                     aria-hidden="true"
                     style={{
-                      marginTop: SPACE[2],
+                      marginTop: SPACE[1],
                       height: 4,
                       borderRadius: RADIUS.pill,
                       background: COLORS.track,
@@ -138,7 +142,7 @@ export default function QuestBoard({ quests = [], onGo }) {
       {allDone && (
         <div
           style={{
-            marginTop: SPACE[3],
+            marginTop: SPACE[2],
             fontFamily: FONTS.body,
             fontSize: FONT_SIZE.tag,
             color: COLORS.mute,

@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MissionBoard from './MissionBoard';
 import ErrorBoundary from './ErrorBoundary';
+import { SPACE } from '../lib/theme';
 
 const due = { id: 'srs-due', count: 12, tab: 'vocab', priority: 0 };
 const goal = { id: 'goal-remaining', count: 30, tab: 'chat', priority: 2 };
@@ -14,6 +15,13 @@ describe('MissionBoard', () => {
     expect(rows).toHaveLength(2);
     expect(rows[0]).toHaveTextContent(/12 cards are due/i);
     expect(rows[1]).toHaveTextContent(/30 XP/i);
+  });
+
+  it('packs each row with compact padding instead of a tile inset', () => {
+    render(<MissionBoard missions={[due]} />);
+    expect(screen.getByRole('button')).toHaveStyle({
+      padding: `${SPACE[2]}px ${SPACE[3]}px`,
+    });
   });
 
   // The whole reason InteractiveCard is mandated here: fourteen league rows
