@@ -206,14 +206,23 @@ export const TRANSITION = {
 // ink against every ground in both palettes, so the ring flips with the mode
 // with no code. Two offsets, both earned: `offset` for controls with air around
 // them, `inset` for elements flush to a container edge where an outset ring is
-// clipped by the parent's overflow and overlaps its neighbour. A third value
+// clipped by the parent's overflow and overlaps its neighbour. A third offset
 // needs a reason.
+//
+// `onDark` is the second RING, not a third offset. The default ink ring is
+// literally the same colour as every ink-built plane (toasts, CARD.dark, the
+// accentBlack masthead) — 1:1 in both modes. Controls on those planes opt in
+// with `data-focus-on-dark` and paint the ring in the paired ink they already
+// carry (`currentColor`: paper on an ink plane, accentBlackOn on the masthead).
+// A hardcoded paper token would vanish on the charcoal bar in dark mode, where
+// paper and accentBlack are both near-black.
 //
 // Consumed by injectGlobalStyles(), not by components: :focus-visible cannot be
 // expressed inline, so the rule lives in the one global sheet and every element
 // carrying a `data-ui` attribute picks it up.
 export const FOCUS = {
   ring: `2px solid ${COLORS.ink}`,
+  onDark: '2px solid currentColor',
   offset: 2,
   inset: -3,
 };

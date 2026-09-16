@@ -59,6 +59,10 @@ function pairsFor(mode) {
     { fg: c.fg, bg: c['surface-alt'], min: AA_NORMAL, name: `${label} fg on surface-alt` },
     { fg: c['fg-muted'], bg: c.surface, min: AA_NORMAL, name: `${label} fg-muted on surface` },
     { fg: c.ground, bg: c.fg, min: AA_NORMAL, name: `${label} ground on fg (inverted)` },
+    // Dark-plane focus ring (data-focus-on-dark). The indicator is the paired
+    // ink on the plane — paper on toast/CARD.dark. SC 1.4.11 is 3:1; the body
+    // AA pair above is a stronger floor this pairing already clears.
+    { fg: c.ground, bg: c.fg, min: AA_LARGE, name: `${label} focus ring on ink plane` },
     { fg: c.error, bg: c.surface, min: AA_NORMAL, name: `${label} error on surface` },
     { fg: c.success, bg: c.surface, min: AA_LARGE, name: `${label} success on surface (large)` },
     {
@@ -143,6 +147,7 @@ function pairsFor(mode) {
   // German-flag accent tiers. Each is a fill carrying its own paired ink, so the
   // assertion is ink-on-tier, never tier-on-ground: `accent-gold` is 3.0:1 on
   // light ivory and would fail the moment someone used it as a text colour.
+  // accent-black-on on accent-black is also the masthead's dark-plane focus ring.
   for (const tier of ['black', 'red']) {
     pairs.push({
       fg: c[`accent-${tier}-on`],

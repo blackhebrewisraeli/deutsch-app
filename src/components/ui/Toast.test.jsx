@@ -61,15 +61,17 @@ describe('Toast', () => {
     expect(screen.getByText('⭐')).toHaveAttribute('aria-hidden', 'true');
   });
 
-  // The toast plane is COLORS.ink, and the app's focus ring is also ink
-  // (var(--c-fg)) — in BOTH modes the plane IS the ring colour, so an ink ring
-  // is invisible here. The paired ink for this plane is COLORS.paper.
-  it('rings in the ink paired with the toast plane, not the page ink', () => {
+  // The toast plane is COLORS.ink, and the app's default focus ring is also
+  // ink — in BOTH modes the plane IS the ring colour. The close button opts
+  // into the shared dark-plane ring (data-focus-on-dark) instead of a scoped
+  // recipe. currentColor is paper here, inherited from the toast.
+  it('opts the close button into the shared dark-plane focus ring', () => {
     const { container } = render(<Toast icon="⭐" title="Level 7" onDone={() => {}} />);
-    const rule = container.querySelector('style')?.textContent ?? '';
-    expect(rule).toContain(':focus-visible');
-    expect(rule).toContain('var(--c-ground)');
-    expect(rule).not.toContain('var(--c-fg)');
+    const btn = screen.getByRole('button', { name: /dismiss/i });
+    expect(btn).toHaveAttribute('data-ui', 'button');
+    expect(btn).toHaveAttribute('data-focus-on-dark');
+    // No per-component <style> — the ring lives in injectGlobalStyles.
+    expect(container.querySelector('style')).toBeNull();
   });
 });
 

@@ -57,6 +57,12 @@ describe('StatusChip', () => {
     expect(trigger()).toHaveTextContent('A2');
   });
 
+  it('opts the trigger into the dark-plane focus ring', () => {
+    renderChip({ level: 'a2' });
+    expect(trigger()).toHaveAttribute('data-ui', 'button');
+    expect(trigger()).toHaveAttribute('data-focus-on-dark');
+  });
+
   it('is closed until clicked', async () => {
     renderChip();
     expect(screen.queryByRole('dialog')).toBeNull();

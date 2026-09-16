@@ -17,6 +17,15 @@ describe('AccountChip', () => {
     expect(onSignIn).toHaveBeenCalled();
   });
 
+  // Guest Sign in sits directly on the charcoal masthead. The default ink ring
+  // is 1:1 there; data-focus-on-dark is the shared dark-plane opt-in.
+  it('opts the guest Sign in control into the dark-plane focus ring', () => {
+    render(<AccountChip user={null} onSignIn={() => {}} onSignOut={() => {}} />);
+    const btn = screen.getByRole('button', { name: /sign in/i });
+    expect(btn).toHaveAttribute('data-ui', 'button');
+    expect(btn).toHaveAttribute('data-focus-on-dark');
+  });
+
   it('shows the email initial and opens a sheet with sign out for signed-in users', async () => {
     const onSignOut = vi.fn();
     render(
@@ -28,6 +37,18 @@ describe('AccountChip', () => {
     expect(screen.getByText('sam@example.com')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /sign out/i }));
     expect(onSignOut).toHaveBeenCalled();
+  });
+
+  // Own surface disc on charcoal: an outset ink ring would paint onto the
+  // masthead. Inset keeps it on the disc, same contract InteractiveCard uses.
+  it('keeps the signed-in avatar ring on its own surface', () => {
+    render(
+      <AccountChip user={{ email: 'sam@example.com' }} onSignIn={() => {}} onSignOut={() => {}} />
+    );
+    const chip = screen.getByRole('button', { name: /account/i });
+    expect(chip).toHaveAttribute('data-ui', 'button');
+    expect(chip).toHaveAttribute('data-focus-inset');
+    expect(chip).not.toHaveAttribute('data-focus-on-dark');
   });
 
   // The sheet used to advertise `aria-haspopup="true"` (menu) over a panel with

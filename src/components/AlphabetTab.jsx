@@ -463,6 +463,11 @@ export default function AlphabetTab({
                 type="button"
                 onClick={() => speak(selected.w)}
                 aria-label={`Play pronunciation for ${selected.w}`}
+                // Sits on the ink detail card. The default ring is the same
+                // token as that plane; data-focus-on-dark uses currentColor
+                // (paper, set below).
+                data-ui="button"
+                data-focus-on-dark=""
                 style={{
                   width: 80,
                   height: 80,

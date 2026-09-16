@@ -68,6 +68,17 @@ describe('injectGlobalStyles', () => {
     expect(sheet()).toMatch(/\[data-focus-inset\]:focus-visible\s*\{[^}]*outline-offset:\s*-3px/);
   });
 
+  // The default ring is var(--c-fg). Every ink-built plane (toast, CARD.dark,
+  // the charcoal masthead) IS that colour, so the ring scores 1:1 against the
+  // surface it sits on. data-focus-on-dark is the one opt-in; currentColor is
+  // the paired ink the control already carries, not a second hardcoded recipe.
+  it('offers a dark-plane ring that is not the page ink', () => {
+    injectGlobalStyles();
+    const rule = sheet().match(/\[data-focus-on-dark\]:focus-visible\s*\{([^}]*)\}/)?.[1] ?? '';
+    expect(rule).toMatch(/outline:\s*2px solid currentColor/);
+    expect(rule).not.toContain('var(--c-fg)');
+  });
+
   it('gates button hover behind a fine pointer', () => {
     injectGlobalStyles();
     // Without the gate a touch device latches the hover style on tap and keeps

@@ -25,6 +25,11 @@ export function injectGlobalStyles() {
     }
     /* Full-bleed rows and cards: an outset ring is clipped by the container. */
     [data-ui][data-focus-inset]:focus-visible { outline-offset: ${FOCUS.inset}px; }
+    /* Ink-built planes (toast, CARD.dark, charcoal masthead): the default ring
+       is var(--c-fg), which IS the plane. currentColor is the paired ink the
+       control already carries — paper on an inverting ink fill, accentBlackOn
+       on the stable charcoal bar. */
+    [data-ui][data-focus-on-dark]:focus-visible { outline: ${FOCUS.onDark}; }
     /* Hover is gated on a fine pointer: a touch device latches the hover style
        on tap and keeps it until the next tap elsewhere. brightness() rather than
        a hover token per variant — seven variants x two modes is fourteen palette

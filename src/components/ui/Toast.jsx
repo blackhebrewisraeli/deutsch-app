@@ -1,25 +1,6 @@
 import { useEffect } from 'react';
 import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOW, SPACE } from '../../lib/theme';
 
-const CLOSE_CLASS = 'toast-close';
-
-// Inline styles cannot express :focus-visible, so the ring for the close button
-// comes from a scoped rule.
-//
-// It is COLORS.paper (var(--c-ground)), NOT the app's usual ink ring. The toast
-// plane is COLORS.ink, and `ink` is var(--c-fg) — the same token a normal focus
-// ring is drawn in. In light mode both are near-black; in dark mode both are
-// near-white. Either way the ring would be invisible against the very plane it
-// sits on. `paper` is the ink this plane already pairs with for its text, which
-// is the same rule the accent tiers follow: use the ink that belongs to the
-// plane, never the page's.
-const CLOSE_FOCUS_CSS = `
-.${CLOSE_CLASS}:focus-visible {
-  outline: 2px solid ${COLORS.paper};
-  outline-offset: 2px;
-}
-`;
-
 // One auto-dismissing toast. `onDone` is called after the lifetime elapses, or
 // immediately when the learner dismisses it.
 export function Toast({ icon, title, sub, onDone, ttl = 3200 }) {
@@ -44,7 +25,6 @@ export function Toast({ icon, title, sub, onDone, ttl = 3200 }) {
         pointerEvents: 'auto',
       }}
     >
-      <style>{CLOSE_FOCUS_CSS}</style>
       {/* Decoration beside a text title — announcing it would read the toast
           twice over. */}
       <span aria-hidden="true" style={{ fontSize: 26 }}>
@@ -70,7 +50,12 @@ export function Toast({ icon, title, sub, onDone, ttl = 3200 }) {
           row of identical "Dismiss" buttons. */}
       <button
         type="button"
-        className={CLOSE_CLASS}
+        // The toast plane is COLORS.ink, which is also the default focus ring.
+        // data-focus-on-dark paints the ring in currentColor — paper here, the
+        // paired ink this plane already uses for its text. Same attribute the
+        // masthead Sign-in control carries; the global sheet is the one recipe.
+        data-ui="button"
+        data-focus-on-dark=""
         aria-label={title ? `Dismiss ${title}` : 'Dismiss notification'}
         onClick={onDone}
         style={{
@@ -85,7 +70,7 @@ export function Toast({ icon, title, sub, onDone, ttl = 3200 }) {
           border: 'none',
           borderRadius: RADIUS.pill,
           // Inherits the plane's paired ink, so it can never drift from the
-          // title it sits beside.
+          // title it sits beside — and so the dark-plane ring tracks it.
           color: 'currentColor',
           fontSize: FONT_SIZE.xl,
           lineHeight: 1,

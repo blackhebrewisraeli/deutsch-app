@@ -582,11 +582,12 @@ CSS clamps remain fine for purely decorative values no test needs to pin. `Headi
 
 ### 10.1 One focus ring
 
-A new token group in `theme.js`:
+A token group in `theme.js`:
 
 ```
 FOCUS = {
-  ring:  `2px solid ${COLORS.ink}`,
+  ring:   `2px solid ${COLORS.ink}`,
+  onDark: `2px solid currentColor`,
   offset: 2,      // outside — buttons, chips, standalone controls
   inset: -3,      // inside — full-bleed rows and cards, where an outside ring is clipped
 }
@@ -594,18 +595,30 @@ FOCUS = {
 
 Rules:
 
-1. **The ring is `COLORS.ink`** — `var(--c-fg)`, the highest-contrast ink against every ground in
-   both palettes. It flips with the mode automatically, so "the ring survives dark mode" needs no
-   code.
-2. **Two offsets, both justified.** `+2` for controls with air around them. `-3` for elements
+1. **The default ring is `COLORS.ink`** — `var(--c-fg)`, the highest-contrast ink against every
+   ground in both palettes. It flips with the mode automatically, so "the ring survives dark mode"
+   needs no code.
+2. **Ink-built planes need a second ring.** `COLORS.ink` is also the fill of toasts, `CARD.dark`,
+   and (in light mode) the charcoal masthead, so the default ring scores 1:1 against those
+   surfaces. Controls on those planes carry `data-focus-on-dark`; the global sheet then paints
+   the ring in `currentColor` — the paired ink the control already carries (`COLORS.paper` on an
+   inverting ink fill, `COLORS.accentBlackOn` on the stable charcoal bar). Do not invent a
+   per-component `<style>` for this; Toast's scoped paper recipe was the proof that a shared
+   attribute was needed.
+3. **Two offsets, both justified.** `+2` for controls with air around them. `-3` for elements
    flush to a container edge, where an outside ring is clipped by the parent's `overflow` — the
-   case `LeaderboardSection` already solved by hand. Any third value needs a reason in the PR.
-3. **It lives in `injectGlobalStyles()`** on `[data-ui]:focus-visible`, once (§7.5). Not injected
+   case `LeaderboardSection` already solved by hand. Any third offset needs a reason in the PR.
+   Chips that bring their own surface disc onto a dark parent (`ThemeChip`, signed-in
+   `AccountChip`) use `data-focus-inset` rather than `data-focus-on-dark`, so the default ink
+   ring stays on the disc.
+4. **It lives in `injectGlobalStyles()`** on `[data-ui]:focus-visible`, once (§7.5). Not injected
    per component. Not `:focus` — `:focus-visible` so a mouse click does not ring.
-4. **`outline: 'none'` is banned** unless the same rule provides an equivalent visible indicator.
+   `[data-focus-on-dark]` only overrides `outline`; `[data-focus-inset]` only overrides
+   `outline-offset`. Both may be set together.
+5. **`outline: 'none'` is banned** unless the same rule provides an equivalent visible indicator.
    The plan adds a guard test over `src/components/**` for `outline: none` / `outline: 0`,
    allow-listed only alongside a replacement.
-5. **The ring is never the only channel.** Focus and selection are different signals:
+6. **The ring is never the only channel.** Focus and selection are different signals:
    `aria-pressed`/`aria-current` plus the `borderStrong` upgrade (§8.2) carry selection; the ring
    carries focus.
 
