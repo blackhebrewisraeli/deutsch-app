@@ -302,6 +302,7 @@ npm run dev:full
 | `npm run lint`           | Run ESLint                                                   |
 | `npm run format:check`   | Check formatting                                             |
 | `npm run audit:contrast` | Audit rendered contrast with Playwright                      |
+| `npm run smoke:learning-path` | Playwright: recommendation → practice → finish → refresh |
 
 </details>
 
@@ -310,6 +311,7 @@ npm run dev:full
 The project favors invariants over happy-path demos:
 
 - Merge functions are tested independently from the sync orchestrator.
+- A Playwright smoke walks Home recommendation → Vocab practice → deck complete → reload.
 - RLS tests attack the database as anonymous users, owners, and non-owners.
 - AI request validation and per-route quota contracts are tested server-side.
 - Accessibility checks cover source structure and rendered UI.
