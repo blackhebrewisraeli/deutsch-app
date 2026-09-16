@@ -1,4 +1,10 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+
+const authMock = vi.hoisted(() => ({ client: null }));
+vi.mock('./auth.js', () => ({
+  getSupabase: () => Promise.resolve(authMock.client),
+}));
+
 import { FEEDBACK_CATEGORIES, buildFeedbackRow, submitFeedback } from './feedback';
 
 const context = {
@@ -8,6 +14,19 @@ const context = {
   itemId: 'de-zeit-noun',
   itemLabel: 'die Zeit',
 };
+
+/** Minimal PostgREST insert chain: from('feedback').insert(row). */
+function supabaseInserting({ error = null, userId = null, throwOnInsert = false } = {}) {
+  const insert = vi.fn(() => {
+    if (throwOnInsert) throw new Error('transport down');
+    return Promise.resolve({ error });
+  });
+  const from = vi.fn(() => ({ insert }));
+  const getSession = vi.fn().mockResolvedValue({
+    data: { session: userId ? { user: { id: userId } } : null },
+  });
+  return { client: { from, auth: { getSession } }, from, insert, getSession };
+}
 
 describe('FEEDBACK_CATEGORIES', () => {
   it('covers the three problems the brief names', () => {
@@ -76,39 +95,84 @@ describe('buildFeedbackRow', () => {
 });
 
 describe('submitFeedback', () => {
+  beforeEach(() => {
+    authMock.client = null;
+  });
+
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('reports success and hands back the row it sent', async () => {
-    vi.spyOn(console, 'info').mockImplementation(() => {});
+  it('falls back to a local log when auth is unconfigured, and still reports success', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
     const result = await submitFeedback({ ...context, category: 'audio', message: 'clipped' });
 
     expect(result.ok).toBe(true);
     expect(result.row).toMatchObject({ item_id: 'de-zeit-noun', category: 'audio' });
-  });
-
-  it('logs the payload so the mock transport is observable', async () => {
-    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
-    await submitFeedback({ ...context, category: 'audio', message: 'clipped' });
-
     expect(info).toHaveBeenCalledTimes(1);
     const [, row] = info.mock.calls[0];
     expect(row).toMatchObject({ surface: 'vocab', message: 'clipped' });
   });
 
-  it('refuses an empty report rather than sending a blank row', async () => {
+  it('inserts the row into feedback when a client is available', async () => {
     const info = vi.spyOn(console, 'info').mockImplementation(() => {});
-    const result = await submitFeedback({ ...context, category: 'ui', message: '   ' });
+    const s = supabaseInserting({ userId: 'user-1' });
+    authMock.client = s.client;
 
-    expect(result.ok).toBe(false);
+    const result = await submitFeedback({ ...context, category: 'audio', message: 'clipped' });
+
+    expect(result.ok).toBe(true);
+    expect(s.from).toHaveBeenCalledWith('feedback');
+    expect(s.insert).toHaveBeenCalledTimes(1);
+    expect(s.insert.mock.calls[0][0]).toMatchObject({
+      surface: 'vocab',
+      cefr_level: 'a2',
+      deck_id: 'artikel-common',
+      item_id: 'de-zeit-noun',
+      item_label: 'die Zeit',
+      category: 'audio',
+      message: 'clipped',
+      user_id: 'user-1',
+    });
+    expect(result.row).toMatchObject({ user_id: 'user-1', category: 'audio' });
     expect(info).not.toHaveBeenCalled();
   });
 
-  it('resolves rather than throwing when the transport fails', async () => {
-    vi.spyOn(console, 'info').mockImplementation(() => {
-      throw new Error('transport down');
-    });
+  it('attributes a signed-out session as a null user_id so the guest insert policy matches', async () => {
+    const s = supabaseInserting({ userId: null });
+    authMock.client = s.client;
+
+    const result = await submitFeedback({ ...context, category: 'ui', message: 'confusing' });
+
+    expect(result.ok).toBe(true);
+    expect(s.insert.mock.calls[0][0].user_id).toBeNull();
+    expect(Object.hasOwn(s.insert.mock.calls[0][0], 'user_id')).toBe(true);
+  });
+
+  it('refuses an empty report rather than sending a blank row', async () => {
+    const info = vi.spyOn(console, 'info').mockImplementation(() => {});
+    const s = supabaseInserting();
+    authMock.client = s.client;
+    const result = await submitFeedback({ ...context, category: 'ui', message: '   ' });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toBe('empty');
+    expect(s.from).not.toHaveBeenCalled();
+    expect(info).not.toHaveBeenCalled();
+  });
+
+  it('resolves rather than throwing when the insert returns an error', async () => {
+    const s = supabaseInserting({ error: { message: 'offline', code: 'PGRST301' } });
+    authMock.client = s.client;
+    const result = await submitFeedback({ ...context, category: 'ui', message: 'x' });
+
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatchObject({ message: 'offline' });
+  });
+
+  it('resolves rather than throwing when the transport throws', async () => {
+    const s = supabaseInserting({ throwOnInsert: true });
+    authMock.client = s.client;
     const result = await submitFeedback({ ...context, category: 'ui', message: 'x' });
     expect(result.ok).toBe(false);
   });

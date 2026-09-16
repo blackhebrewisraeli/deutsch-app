@@ -173,6 +173,9 @@ export const EXCLUDED_TABLES = {
   league_members: 'public competition data; pending a payload-shape decision',
   // Opaque idempotency tokens. The counters they protect already export as daily.
   progress_events_seen: 'idempotency keys for the progress RPC; counters already export as daily',
+  // In-exercise bug reports for the owner. item_label can be the concealed
+  // answer; the message is operational, not learning data.
+  feedback: 'owner-facing exercise reports; item_label can be the concealed answer',
 };
 
 // `settings` is one row per user; everything else is a collection. Keeping the

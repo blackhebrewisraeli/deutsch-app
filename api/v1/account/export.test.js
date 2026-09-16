@@ -26,6 +26,7 @@ const USER_OWNED = [
   'settings',
   'league_members',
   'progress_events_seen',
+  'feedback',
 ];
 
 // Distinct rows per table. The previous fixture returned the SAME row for every
