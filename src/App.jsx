@@ -1015,8 +1015,19 @@ export default function App() {
             </div>
           )}
 
+          {/* marginLeft auto: once the wordmark drops, this cluster is the only
+            flex child and space-between would start-align it. AccountChip's
+            sheet is `right: 0` and 200px wide — it assumes the chip is at the
+            trailing edge. Hiding the Home streak shortened the cluster enough
+            that a signed-in Account sheet measured left: -34 at 390px. */}
           <div
-            style={{ display: 'flex', gap: mobile ? 6 : 16, alignItems: 'center', flexShrink: 0 }}
+            style={{
+              display: 'flex',
+              gap: mobile ? 6 : 16,
+              alignItems: 'center',
+              flexShrink: 0,
+              marginLeft: 'auto',
+            }}
           >
             {/* One control for both "levels": the earned XP one and the chosen
               CEFR one. They stay distinct inside the sheet, under their own

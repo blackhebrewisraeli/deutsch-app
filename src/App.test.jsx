@@ -419,6 +419,18 @@ describe('header at mobile width', () => {
     expect(within(screen.getByRole('banner')).getByText(/Deutsch/)).toBeInTheDocument();
   });
 
+  // Contrast audit: signed-in Account sheet at 390 hung off the left after the
+  // Home streak hide, because the wordmark-less cluster start-aligned and
+  // AccountChip's `right: 0` sheet assumed a trailing-edge chip.
+  it('right-aligns the chip cluster so the Account sheet stays on-screen at 390', () => {
+    setViewportWidth(390);
+    renderPastEntry(<App />);
+    const cluster = screen
+      .getByRole('banner')
+      .querySelector('[data-tutorial-anchor="status"]')?.parentElement;
+    expect(cluster?.style.marginLeft).toBe('auto');
+  });
+
   it('keeps the full-size wordmark and chrome on desktop', () => {
     setViewportWidth(1280);
     renderPastEntry(<App />);
