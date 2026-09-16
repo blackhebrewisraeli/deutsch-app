@@ -207,7 +207,7 @@ describe('PersonalHub', () => {
     const greeting = screen.getByRole('heading', {
       name: new RegExp(`guten tag, ${longHandle}`, 'i'),
     });
-    expect(greeting).toHaveStyle({ overflowWrap: 'anywhere', maxWidth: '100%' });
+    expect(greeting).toHaveStyle({ overflowWrap: 'break-word', maxWidth: '100%' });
 
     const rank = screen.getByText(longRank);
     expect(rank).toHaveStyle({ overflowWrap: 'anywhere' });

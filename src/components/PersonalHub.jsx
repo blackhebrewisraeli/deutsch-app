@@ -92,46 +92,66 @@ export default function PersonalHub({
   const createdAt = profile?.created_at ? new Date(profile.created_at) : null;
   const showsAccountLine = Boolean(user);
 
+  const greeting = (
+    <Heading
+      id={IDENTITY_HEADING_ID}
+      level={2}
+      style={{
+        margin: 0,
+        // break-word, not anywhere: "Guten Tag" must wrap on spaces.
+        // anywhere split "Guten" inside the half-band column.
+        overflowWrap: 'break-word',
+        maxWidth: '100%',
+        lineHeight: 1.15,
+        flex: 1,
+        minWidth: 0,
+        // Heading level 2 is 24px — same as a section title, smaller
+        // than the wordmark. This card's greeting is the identity
+        // display line; 4xl matches the masthead without touching
+        // Heading's global scale.
+        fontSize: FONT_SIZE['4xl'],
+      }}
+    >
+      {copy.greeting?.(name)}
+    </Heading>
+  );
+
+  const cefrTag = (
+    <span
+      aria-label={copy.levelLabel?.(String(cefrLevel ?? '').toUpperCase())}
+      style={{
+        flexShrink: 0,
+        alignSelf: 'flex-start',
+        fontFamily: FONTS.mono,
+        fontSize: FONT_SIZE.tag,
+        fontWeight: FONT_WEIGHT.bold,
+        letterSpacing: LETTER_SPACING.caps,
+        color: COLORS.ink,
+        border: `1px solid ${COLORS.mute}`,
+        borderRadius: RADIUS.sm,
+        padding: `${SPACE[1]}px ${SPACE[2]}px`,
+      }}
+    >
+      {String(cefrLevel ?? '').toUpperCase()}
+    </span>
+  );
+
   const identityFacts = (
     <Stack gap={3} style={{ minWidth: 0 }}>
       <Stack gap={1} style={{ minWidth: 0 }}>
-        <Row wrap={false} align="flex-start" gap={3} style={{ minWidth: 0 }}>
-          <Heading
-            id={IDENTITY_HEADING_ID}
-            level={2}
-            style={{
-              margin: 0,
-              overflowWrap: 'anywhere',
-              maxWidth: '100%',
-              lineHeight: 1.15,
-              flex: 1,
-              minWidth: 0,
-              // Heading level 2 is 24px — same as a section title, smaller
-              // than the wordmark. This card's greeting is the identity
-              // display line; 4xl matches the masthead without touching
-              // Heading's global scale.
-              fontSize: FONT_SIZE['4xl'],
-            }}
-          >
-            {copy.greeting?.(name)}
-          </Heading>
-          <span
-            aria-label={copy.levelLabel?.(String(cefrLevel ?? '').toUpperCase())}
-            style={{
-              flexShrink: 0,
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              fontWeight: FONT_WEIGHT.bold,
-              letterSpacing: LETTER_SPACING.caps,
-              color: COLORS.ink,
-              border: `1px solid ${COLORS.mute}`,
-              borderRadius: RADIUS.sm,
-              padding: `${SPACE[1]}px ${SPACE[2]}px`,
-            }}
-          >
-            {String(cefrLevel ?? '').toUpperCase()}
-          </span>
-        </Row>
+        {/* On a half-band column the CEFR chip beside 36px type leaves ~90px
+            for the greeting and splits "Guten". Stack it under the heading. */}
+        {wide ? (
+          <Row wrap={false} align="flex-start" gap={3} style={{ minWidth: 0 }}>
+            {greeting}
+            {cefrTag}
+          </Row>
+        ) : (
+          <Stack gap={1} style={{ minWidth: 0 }}>
+            {greeting}
+            {cefrTag}
+          </Stack>
+        )}
         {showsAccountLine && (
           <Body size="sm" tone="muted" as="div" style={TRUNCATE}>
             {[
