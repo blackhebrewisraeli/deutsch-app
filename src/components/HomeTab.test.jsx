@@ -31,8 +31,11 @@ describe('HomeTab', () => {
     expect(screen.getByTitle('Daily goal · 50%')).toBeInTheDocument();
     expect(screen.getByLabelText('Streak 4')).toBeInTheDocument();
     expect(screen.getByText('4')).toBeInTheDocument();
-    expect(screen.getByText(/300 XP total/)).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
+    // Dense XP / learned counters stay off Home so the actions can breathe.
+    // Arithmetic is unchanged; this is a presentation choice.
+    expect(screen.queryByText(/300 XP total/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/XP to next/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Learned')).not.toBeInTheDocument();
   });
 
   // App.test.jsx ("renders HomeTab content on the default landing tab") pins
@@ -118,7 +121,7 @@ describe('HomeTab', () => {
     expect(screen.getByText(/alles erledigt/i)).toBeInTheDocument();
   });
 
-  it('groups the remaining boards under Heute without merging their regions', () => {
+  it('keeps Missionen, Tagesaufgaben and Recommended as regions inside one hub', () => {
     render(
       <HomeTab
         {...hubProps}
@@ -128,10 +131,15 @@ describe('HomeTab', () => {
           { id: 'goal-remaining', count: 20, tab: 'chat', priority: 2 },
           { id: 'revisit-wrong', count: 3, tab: 'translate', priority: 3 },
         ]}
+        quests={[{ id: 'answer-cards', target: 7, progress: 3, done: false, tab: 'vocab' }]}
       />
     );
-    expect(screen.getByRole('region', { name: /heute/i })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: /missionen/i })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: /heute/i })).not.toBeInTheDocument();
+
+    const hub = screen.getByRole('region', { name: /guten tag/i });
+    expect(hub).toContainElement(screen.getByRole('region', { name: /missionen/i }));
+    expect(hub).toContainElement(screen.getByRole('region', { name: /tagesaufgaben/i }));
+    expect(hub).toContainElement(screen.getByRole('region', { name: /recommended/i }));
   });
 });
 

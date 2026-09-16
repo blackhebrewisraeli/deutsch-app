@@ -1,66 +1,73 @@
-import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE } from '../lib/theme';
-import { Grid, Row } from './ui/Layout';
+import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, SPACE } from '../lib/theme';
+import { Grid, Stack } from './ui/Layout';
 import InteractiveCard from './ui/InteractiveCard';
+import Heading from './ui/Heading';
 import { activePack } from '../packs';
 import { resolveRecommended } from './resolveRecommended';
 
-// Two next-action cards under the personal hub.
+// Two next-action cards inside the Home identity card.
 //
-// Home used to list every open mission in one board. The top two are the
-// ones a returning learner should take now, so they sit above the fold as
-// cards rather than as a list, with pack fallbacks so the layout never
-// collapses to an empty state on a quiet day. Dense on purpose: the hub
-// already spent the glance, so these are a short hop, not a second hero.
+// They sit in PersonalHub's recommended slot — same Surface as identity and
+// today's boards, not an orphan section under it. Elevation, type, and
+// contrast are stronger than the mission/quest rows on purpose: these are the
+// hop a returning learner should take now. Pack fallbacks keep the layout
+// from collapsing on a quiet day.
 export default function RecommendedActions({ missions = [], onGo }) {
   const chrome = activePack.content.homeChrome ?? {};
+  const tabNames = activePack.content.missionsChrome?.tabNames ?? {};
   const { cards } = resolveRecommended(missions);
   if (cards.length === 0) return null;
 
   return (
     <section aria-labelledby="recommended-heading">
-      <div
-        id="recommended-heading"
-        style={{
-          fontFamily: FONTS.mono,
-          fontSize: FONT_SIZE.tag,
-          fontWeight: FONT_WEIGHT.bold,
-          letterSpacing: LETTER_SPACING.caps,
-          textTransform: 'uppercase',
-          color: COLORS.mute,
-          marginBottom: SPACE[3],
-        }}
-      >
+      <Heading id="recommended-heading" level={3} style={{ marginBottom: SPACE[4] }}>
         {chrome.recommendedHeading}
-      </div>
-      <Grid columns="auto-fit" min={240} gap={3}>
-        {cards.map((card) => (
-          <InteractiveCard
-            key={card.id}
-            elevation={2}
-            onClick={() => onGo?.(card.tab, card.mission)}
-            aria-label={card.text}
-            style={{ padding: `${SPACE[3]}px ${SPACE[4]}px` }}
-          >
-            <Row wrap={false} gap={3} align="center">
-              <span aria-hidden="true" style={{ fontSize: FONT_SIZE.xl, flexShrink: 0 }}>
-                {card.icon}
-              </span>
-              <span
-                style={{
-                  fontFamily: FONTS.display,
-                  fontSize: FONT_SIZE.lg,
-                  fontWeight: FONT_WEIGHT.bold,
-                  color: COLORS.ink,
-                  overflowWrap: 'anywhere',
-                  minWidth: 0,
-                  flex: 1,
-                }}
-              >
-                {card.text}
-              </span>
-            </Row>
-          </InteractiveCard>
-        ))}
+      </Heading>
+      <Grid columns="auto-fit" min={160} gap={3}>
+        {cards.map((card) => {
+          const destination = tabNames[card.tab] ?? card.tab;
+          return (
+            <InteractiveCard
+              key={card.id}
+              elevation={2}
+              onClick={() => onGo?.(card.tab, card.mission)}
+              aria-label={card.text}
+              style={{ padding: `${SPACE[5]}px ${SPACE[4]}px` }}
+            >
+              <Stack gap={2} style={{ minWidth: 0 }}>
+                <span aria-hidden="true" style={{ fontSize: FONT_SIZE['2xl'], flexShrink: 0 }}>
+                  {card.icon}
+                </span>
+                <span
+                  data-recommended-title=""
+                  style={{
+                    fontFamily: FONTS.body,
+                    fontSize: FONT_SIZE.lg,
+                    fontWeight: FONT_WEIGHT.bold,
+                    color: COLORS.ink,
+                    overflowWrap: 'anywhere',
+                    minWidth: 0,
+                    lineHeight: 1.3,
+                  }}
+                >
+                  {card.text}
+                </span>
+                {destination && (
+                  <span
+                    style={{
+                      fontFamily: FONTS.body,
+                      fontSize: FONT_SIZE.sm,
+                      color: COLORS.inkSoft,
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    {destination}
+                  </span>
+                )}
+              </Stack>
+            </InteractiveCard>
+          );
+        })}
       </Grid>
     </section>
   );
