@@ -18,6 +18,7 @@ import AppearancePicker from '../AppearancePicker';
 import AccountSection from './AccountSection';
 import EmailSection from './EmailSection';
 import ProfileSection from './ProfileSection';
+import OfflineCacheSection from './OfflineCacheSection';
 import { getThemeModeForUI, setThemePreference } from '../../lib/themeMode';
 import { writeLevel, LEVEL_NAMES, LEVEL_MODES } from '../../lib/levelPref';
 import { LEVEL_MULTIPLIERS } from '../../lib/gameConfig';
@@ -161,6 +162,12 @@ export default function SettingsRoute({
               setThemeMode(pref);
             }}
           />
+        </Section>
+
+        {/* Gerät is device Cache Storage, not account data — guests need it
+            too, and AccountSection is hidden when auth is unconfigured. */}
+        <Section label="Gerät">
+          <OfflineCacheSection onToast={onToast} />
         </Section>
 
         {/* Konto holds the ACCOUNT: which address it is reachable at, sync,
