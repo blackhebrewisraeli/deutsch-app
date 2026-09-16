@@ -65,7 +65,14 @@ export default function VocabTab({
   onDeckGenerated,
   onDeckDeleted,
 }) {
-  const [deckId, setDeckIdRaw] = useState(DEFAULT_DECK_ID);
+  // Stats review and Home "continue this deck" both arrive as reviewTarget.
+  // Honour the named deck on first paint so the picker matches DeckPicker
+  // from the start, rather than flashing the default greetings deck.
+  const [deckId, setDeckIdRaw] = useState(
+    typeof reviewTarget?.context === 'string' && reviewTarget.context
+      ? reviewTarget.context
+      : DEFAULT_DECK_ID
+  );
   const [mode, setMode] = useState('practice');
   // Snapshot once per mount so Browse/Custom never call Date.now() or loadState
   // in their own render. Refresh when the learner leaves Practice — that is
@@ -173,10 +180,11 @@ export default function VocabTab({
     }, 200);
   };
 
-  // Pick up review targets handed in from the Stats Review feed.
+  // Pick up review targets handed in from the Stats Review feed, and deck-only
+  // handoffs from Home recommendations (`context` set, no card `label`).
   useEffect(() => {
     if (!reviewTarget) return;
-    pendingReviewRef.current = reviewTarget.label;
+    if (reviewTarget.label) pendingReviewRef.current = reviewTarget.label;
 
     if (deckId === reviewTarget.context) {
       // Already on the right deck — the deck-reset effect won't fire, so
@@ -190,7 +198,7 @@ export default function VocabTab({
         setTypedAnswer('');
         pendingReviewRef.current = null;
       }
-    } else {
+    } else if (reviewTarget.context) {
       // Deck change — pendingReviewRef will be consumed by the deck-reset effect.
       selectDeck(reviewTarget.context);
     }
