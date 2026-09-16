@@ -14,6 +14,7 @@ import {
   btnSecondary,
   CARD,
   TEXT,
+  FOCUS,
 } from './theme';
 
 const HEX = /^#[0-9A-Fa-f]{3,8}$/;
@@ -120,6 +121,16 @@ describe('theme tokens', () => {
 
   it('RADIUS pill is fully round', () => {
     expect(RADIUS.pill).toBe(999);
+  });
+
+  // The default ring is the page ink, which is also the fill of every dark
+  // plane. onDark must not restate that colour — currentColor is the paired
+  // ink the control already carries (paper on toast/CARD.dark, accentBlackOn
+  // on the masthead).
+  it('exposes an on-dark focus ring that is not the page ink', () => {
+    expect(FOCUS.ring).toBe(`2px solid ${COLORS.ink}`);
+    expect(FOCUS.onDark).toBe('2px solid currentColor');
+    expect(FOCUS.onDark).not.toContain(COLORS.ink);
   });
 
   it('FONT_SIZE includes hero size for alphabet overlay', () => {

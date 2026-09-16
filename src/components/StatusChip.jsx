@@ -167,6 +167,11 @@ export default function StatusChip({
         aria-expanded={open}
         ref={buttonRef}
         onClick={() => setOpen((o) => !o)}
+        // Transparent wrapper on the charcoal masthead. The badge disc inside
+        // has its own surface, but the focus ring is on THIS button, so it
+        // paints onto charcoal. currentColor is accentBlackOn (inherited).
+        data-ui="button"
+        data-focus-on-dark=""
         style={{
           position: 'relative',
           display: 'block',

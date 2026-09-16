@@ -131,5 +131,17 @@ describe('AlphabetTab', () => {
         screen.getByRole('button', { name: `Play pronunciation for ${first.w}` })
       ).toBeInTheDocument();
     });
+
+    it('opts the detail-card play control into the dark-plane focus ring', async () => {
+      render(<AlphabetTab level="a1" />);
+      await userEvent.click(screen.getByRole('button', { name: '📋 Browse' }));
+      const first = ALPHABET[0];
+      await userEvent.click(
+        screen.getByRole('button', { name: `Select letter ${first.l} for details` })
+      );
+      const play = screen.getByRole('button', { name: `Play pronunciation for ${first.w}` });
+      expect(play).toHaveAttribute('data-ui', 'button');
+      expect(play).toHaveAttribute('data-focus-on-dark');
+    });
   });
 });

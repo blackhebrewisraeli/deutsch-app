@@ -130,18 +130,13 @@ three hand-rolled focus rings are gone.
 
 ### Known gap — the focus ring is invisible on ink-coloured planes
 
-Spec §10.1 defines one ring, `2px solid COLORS.ink`. `COLORS.ink` is
-`var(--c-fg)`, which is also the plane colour of every surface built on ink —
-toasts, `CARD.dark`, the `accentBlack` masthead. Measured in a real browser, the
-standard ring scores **1.00:1** against a toast in both modes: it is literally
-the same colour. The paired ink scores 17.69:1 in light and 16.09:1 in dark.
-
-`Toast`'s close button works around this with its own scoped rule using
-`COLORS.paper`, and that is currently the only correct treatment in the app.
-The spec should grow a dark-plane variant — probably a `data-focus-on-dark`
-attribute the global sheet matches, so the workaround does not have to be
-re-invented per component. Small, but it needs deciding before the next control
-lands on a dark plane.
+**Closed.** The global sheet now has a second ring, opted into with
+`data-focus-on-dark`. Spec §10.1 and `FOCUS.onDark` document it. Controls on
+ink-built planes (toast close, masthead Sign in, StatusChip trigger, alphabet
+detail play) carry the attribute; chips that bring their own surface disc
+(ThemeChip, signed-in AccountChip) use `data-focus-inset` instead, so the
+default ink ring stays on the disc rather than painting onto charcoal. Toast's
+scoped paper recipe is gone — one mechanism, not a per-component workaround.
 
 ### The charcoal masthead — `accentBlack`'s consumer
 
@@ -272,10 +267,10 @@ Two traps worth keeping, both from #96:
   wall. `ProfileCard` is already reached by the signed-in pass. Not covered:
   `VitalsOverlay` (dev-only) and `AuthCallbackLanding` (a post-OAuth route,
   reachable only with a real callback URL). Add new overlays to `MODALS`.
-- **League table rows are not keyboard reachable.** They are `<li onClick>` with
-  no role, tabindex or key handler, so the profile card cannot be opened without
-  a mouse. Found while writing the signed-in audit pass; flagged in
-  `scripts/dev/audit-contrast.mjs` with a `// BUG:` rather than fixed there.
+- ~~**League table rows are not keyboard reachable.**~~ Closed: each row is a
+  real `<button>` inside the `<li>` (`data-ui="button"` + `data-focus-inset`),
+  so Tab / Enter / Space open the profile card. The signed-in contrast pass
+  clicks that button rather than the list item.
 - **`card.de` is read directly by seven components.** Recorded as an accepted
   exception in `AGENTS.md`, not a defect. Do not "fix" it.
 - ~~**`npm run audit:contrast` cannot complete locally, though CI runs it fine.**~~

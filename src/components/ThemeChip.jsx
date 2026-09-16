@@ -70,6 +70,11 @@ export default function ThemeChip() {
         aria-expanded={open}
         ref={buttonRef}
         onClick={() => setOpen((o) => !o)}
+        // Own surface disc on the charcoal bar (and on the paper welcome
+        // gate). Inset keeps the ink ring on the disc instead of painting
+        // it onto whichever parent the chip happens to sit on.
+        data-ui="button"
+        data-focus-inset=""
         style={{
           width: 32,
           height: 32,

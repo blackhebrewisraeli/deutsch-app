@@ -61,6 +61,13 @@ export default function AccountChip({
   if (!user) {
     return (
       <button
+        type="button"
+        // Sits directly on the charcoal masthead, which does not invert. The
+        // default ink ring is near-black in light mode and invisible here.
+        // data-focus-on-dark paints the ring in currentColor — accentBlackOn,
+        // inherited from the header — the same shared attribute Toast uses.
+        data-ui="button"
+        data-focus-on-dark=""
         onClick={onSignIn}
         style={{
           background: 'none',
@@ -103,11 +110,16 @@ export default function AccountChip({
         />
       )}
       <button
+        type="button"
         aria-label="Account"
         aria-haspopup="dialog"
         aria-expanded={open}
         ref={buttonRef}
         onClick={() => setOpen((o) => !o)}
+        // Own surface disc on the charcoal bar. An outset ink ring would paint
+        // onto the masthead (1:1 in light); inset keeps it on the disc.
+        data-ui="button"
+        data-focus-inset=""
         style={{
           width: 32,
           height: 32,

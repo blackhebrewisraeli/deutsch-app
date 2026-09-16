@@ -21,6 +21,13 @@ describe('ThemeChip', () => {
     expect(screen.getByRole('button', { name: /^dark$/i })).toBeInTheDocument();
   });
 
+  it('opts the trigger into the global inset focus ring', () => {
+    render(<ThemeChip />);
+    const chip = screen.getByRole('button', { name: /^appearance$/i });
+    expect(chip).toHaveAttribute('data-ui', 'button');
+    expect(chip).toHaveAttribute('data-focus-inset');
+  });
+
   it('persists a mode pick and dismisses on Escape', async () => {
     render(<ThemeChip />);
     await userEvent.click(screen.getByRole('button', { name: /^appearance$/i }));
