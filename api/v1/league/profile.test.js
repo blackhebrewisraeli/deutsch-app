@@ -100,6 +100,7 @@ const passportDb = (over = {}) => {
   const rows = {
     profiles: {
       handle: 'Rival',
+      // Column still exists on the row; the handler must not echo it.
       avatar_emoji: '\u{1F98A}',
       avatar_path: 'other/a.webp',
       created_at: '2026-06-19T00:00:00Z',
@@ -160,6 +161,7 @@ describe('GET /api/v1/league/profile — the passport', () => {
       league_wins: 2,
       achievements: ['deck1', 'vol100'],
     });
+    expect(res.body).not.toHaveProperty('avatar_emoji');
   });
 
   // The client's stats.leagueWins has NEVER synced — `stats` is absent from

@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ProfileSection from './ProfileSection';
 
-const profile = { handle: 'sam', avatar_emoji: '🦊' };
+const profile = { handle: 'sam' };
 const profileWithPicture = { ...profile, avatar_path: 'u1/old.webp' };
 
 const handleField = () => screen.getByRole('textbox', { name: /handle/i });
@@ -50,7 +50,7 @@ describe('ProfileSection', () => {
     expect(saveButton()).toBeDisabled();
   });
 
-  it('sends the handle and the stored emoji, and reports success', async () => {
+  it('sends the handle and reports success', async () => {
     const save = vi.fn().mockResolvedValue(profile);
     const onToast = vi.fn();
     render(<ProfileSection profile={profile} save={save} onToast={onToast} />);
@@ -58,13 +58,9 @@ describe('ProfileSection', () => {
     await userEvent.type(handleField(), 'semion');
     await userEvent.click(saveButton());
 
-    // display_name is gone from the payload entirely — not sent as null.
-    // avatar_emoji is still sent so an existing glyph is not wiped by this
-    // UI cleanup. The learner can no longer edit it here.
-    expect(save).toHaveBeenCalledWith({
-      handle: 'semion',
-      avatar_emoji: '🦊',
-    });
+    // display_name and avatar_emoji are gone from the payload entirely —
+    // not sent as null. The columns remain; nothing here writes them.
+    expect(save).toHaveBeenCalledWith({ handle: 'semion' });
     expect(onToast).toHaveBeenCalledWith(expect.stringMatching(/saved/i));
   });
 

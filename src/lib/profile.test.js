@@ -8,7 +8,7 @@ vi.mock('./auth.js', () => ({
 
 import { fetchMyProfile, updateProfile, PROFILE_COLUMNS } from './profile';
 
-const row = { handle: 'sam', avatar_emoji: '🦊', created_at: 'x' };
+const row = { handle: 'sam', avatar_path: null, created_at: 'x' };
 
 /** Minimal PostgREST chain: from().select().eq().maybeSingle(). */
 function supabaseReturning(result) {
@@ -37,9 +37,10 @@ describe('fetchMyProfile', () => {
   it('never asks for columns it has no business reading', () => {
     expect(PROFILE_COLUMNS).not.toMatch(/user_id/);
     expect(PROFILE_COLUMNS).not.toMatch(/\*/);
-    // display_name was dropped: selecting a column nothing reads is dead weight
-    // on every profile fetch.
+    // display_name / avatar_emoji were dropped: selecting a column nothing
+    // reads is dead weight on every profile fetch. The columns remain.
     expect(PROFILE_COLUMNS).not.toMatch(/display_name/);
+    expect(PROFILE_COLUMNS).not.toMatch(/avatar_emoji/);
   });
 
   // Home is the landing tab and renders a greeting either way; an absent

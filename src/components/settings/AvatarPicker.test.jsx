@@ -46,9 +46,12 @@ describe('AvatarPicker — what it renders', () => {
     expect(img.getAttribute('src')).not.toMatch(/^https?:/);
   });
 
-  it('shows the emoji when there is one and no upload', () => {
+  it('ignores a leftover emoji and shows the identicon', () => {
     setup({ profile: { avatar_emoji: '🦊' } });
-    expect(document.querySelector('[data-avatar="emoji"]')).toHaveTextContent('🦊');
+    expect(document.querySelector('[data-avatar="emoji"]')).toBeNull();
+    const img = document.querySelector('[data-avatar="identicon"]');
+    expect(img).toBeTruthy();
+    expect(img.getAttribute('src')).toMatch(/^data:image\/svg\+xml,/);
   });
 
   it('offers Remove only once there is something to remove', () => {

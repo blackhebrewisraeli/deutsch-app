@@ -19,7 +19,7 @@ vi.mock('../../lib/leagues', async (importOriginal) => {
 vi.mock('../../lib/profile', () => ({ updateProfile: vi.fn().mockResolvedValue({}) }));
 
 const user = { id: 'u1', email: 'sam@example.com' };
-const profile = { handle: 'sam', avatar_emoji: '🦊' };
+const profile = { handle: 'sam' };
 
 const renderRoute = (props = {}) =>
   render(

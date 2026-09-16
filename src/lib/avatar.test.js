@@ -1,4 +1,6 @@
 import { describe, it, expect } from 'vitest';
+import { readdirSync, readFileSync, statSync } from 'node:fs';
+import { join, relative } from 'node:path';
 import { identicon, identiconDataUri, avatarUrl, avatarFor, hashSeed, GRID } from './avatar.js';
 
 const countRects = (svg) => (svg.match(/<rect /g) ?? []).length;
@@ -107,17 +109,18 @@ describe('avatarFor — the tier order', () => {
     expect(r.src).toContain('/avatars/u1/a.webp');
   });
 
-  it('falls back to the emoji when there is no upload', () => {
+  it('ignores a leftover emoji rather than drawing it', () => {
     const r = avatarFor({ profile: { avatar_emoji: '🦊' }, userId: 'u1', base });
-    expect(r).toEqual({ kind: 'emoji', glyph: '🦊' });
+    expect(r.kind).toBe('identicon');
+    expect(r).not.toHaveProperty('glyph');
   });
 
-  it('treats a blank emoji as absent rather than drawing a space', () => {
+  it('treats a blank leftover emoji as absent, same as a missing one', () => {
     const r = avatarFor({ profile: { avatar_emoji: '   ' }, userId: 'u1', base });
     expect(r.kind).toBe('identicon');
   });
 
-  it('generates an identicon when there is neither', () => {
+  it('generates an identicon when there is no upload', () => {
     const r = avatarFor({ profile: {}, userId: 'u1', base });
     expect(r.kind).toBe('identicon');
     expect(r.src).toMatch(/^data:image\/svg\+xml,/);
@@ -138,9 +141,58 @@ describe('avatarFor — the tier order', () => {
     expect(avatarFor({}).src).toBe(avatarFor({ userId: null }).src);
   });
 
-  it('ignores an avatar_path when no storage base is configured', () => {
-    // Local dev without VITE_SUPABASE_URL must not render a broken image.
+  it('falls through to the identicon when no storage base is configured', () => {
+    // Local dev without VITE_SUPABASE_URL must not render a broken image,
+    // and must not resurrect the dropped emoji tier to fill the gap.
     const r = avatarFor({ profile: { avatar_path: 'u1/a.webp', avatar_emoji: '🦊' }, base: null });
-    expect(r.kind).toBe('emoji');
+    expect(r.kind).toBe('identicon');
+  });
+
+  it('never returns the dropped emoji kind', () => {
+    expect(avatarFor({ profile: { avatar_emoji: '🦊' }, userId: 'u1', base }).kind).not.toBe(
+      'emoji'
+    );
+  });
+});
+
+describe('one resolver — no second fallback glyph', () => {
+  it('fails if a component invents its own fallback glyph', () => {
+    // The original bug: Home inlined 🦊 and ProfileCard inlined 🙂 for the
+    // same absence. A `?? '…'` / `|| '…'` glyph, or a leftover emoji paint
+    // branch, is that bug coming back. Comments may mention the history —
+    // they are stripped before matching.
+    const FALLBACK = /\?\?\s*['"](?:🦊|🙂)|\|\|\s*['"](?:🦊|🙂)|kind === ['"]emoji['"]/;
+
+    const stripComments = (line) => {
+      const trimmed = line.trim();
+      if (trimmed.startsWith('*')) return '';
+      return line.replace(/\/\*.*?\*\//g, '').replace(/(^|[^:])\/\/.*$/, '$1');
+    };
+
+    const walk = (dir, out = []) => {
+      for (const name of readdirSync(dir)) {
+        const full = join(dir, name);
+        if (statSync(full).isDirectory()) {
+          walk(full, out);
+          continue;
+        }
+        if (/\.(jsx|js)$/.test(name) && !/\.test\.(jsx|js)$/.test(name)) out.push(full);
+      }
+      return out;
+    };
+
+    const files = ['src/components', 'src/lib'].flatMap((root) => walk(root));
+    expect(files.length).toBeGreaterThan(20);
+
+    const offenders = [];
+    for (const file of files) {
+      const lines = readFileSync(file, 'utf8').split('\n');
+      lines.forEach((line, i) => {
+        if (FALLBACK.test(stripComments(line))) {
+          offenders.push(`${relative('.', file)}:${i + 1}: ${line.trim()}`);
+        }
+      });
+    }
+    expect(offenders, `second fallback glyph:\n${offenders.join('\n')}`).toEqual([]);
   });
 });

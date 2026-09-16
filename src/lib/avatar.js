@@ -1,7 +1,12 @@
-// Avatars: three tiers, one resolver, and a generated fallback that costs
+// Avatars: two tiers, one resolver, and a generated fallback that costs
 // nothing.
 //
-//     uploaded image  →  avatar_emoji  →  generated identicon
+//     uploaded image  →  generated identicon
+//
+// `profiles.avatar_emoji` still exists as a column. It is not read here: the
+// emoji middle tier shipped, then sat empty in production (zero non-empty
+// values), so the fallback is the identicon. Dropping the COLUMN is a
+// migration; dropping the TIER is this file.
 //
 // ONE RESOLVER. Before this, "no avatar" rendered as 🦊 on Home and 🙂
 // in ProfileCard — the same absence, drawn two different ways, because each
@@ -99,19 +104,17 @@ export function avatarUrl(path, base = import.meta.env?.VITE_SUPABASE_URL) {
 }
 
 /**
- * Resolve which of the three tiers to draw.
+ * Resolve which of the two tiers to draw.
  *
- * @returns {{kind: 'image'|'emoji'|'identicon', src?: string, glyph?: string}}
+ * @returns {{kind: 'image'|'identicon', src: string}}
  *   `kind` is what a component switches on; it never has to know the order.
  */
 export function avatarFor({ profile, userId, base } = {}) {
   const url = avatarUrl(profile?.avatar_path, base);
   if (url) return { kind: 'image', src: url };
 
-  const glyph = profile?.avatar_emoji;
-  if (typeof glyph === 'string' && glyph.trim()) return { kind: 'emoji', glyph: glyph.trim() };
-
   // Seeded by the id. A learner with no id at all (a guest) still gets a stable
-  // mark for the session rather than a blank square.
+  // mark for the session rather than a blank square. Leftover `avatar_emoji` on
+  // the row is ignored — that tier is gone.
   return { kind: 'identicon', src: identiconDataUri(userId ?? 'guest') };
 }

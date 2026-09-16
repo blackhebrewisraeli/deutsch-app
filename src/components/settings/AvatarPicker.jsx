@@ -100,31 +100,14 @@ export default function AvatarPicker({
       </span>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[3] }}>
-        {current.kind === 'emoji' ? (
-          <div
-            data-avatar="emoji"
-            style={{
-              width: PREVIEW,
-              height: PREVIEW,
-              display: 'grid',
-              placeItems: 'center',
-              fontSize: 36,
-              borderRadius: RADIUS.md,
-              border: `1px solid ${COLORS.mute}`,
-            }}
-          >
-            {current.glyph}
-          </div>
-        ) : (
-          <img
-            data-avatar={current.kind}
-            src={current.src}
-            alt=""
-            width={PREVIEW}
-            height={PREVIEW}
-            style={{ borderRadius: RADIUS.md, display: 'block' }}
-          />
-        )}
+        <img
+          data-avatar={current.kind}
+          src={current.src}
+          alt=""
+          width={PREVIEW}
+          height={PREVIEW}
+          style={{ borderRadius: RADIUS.md, display: 'block' }}
+        />
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[2] }}>
           <input

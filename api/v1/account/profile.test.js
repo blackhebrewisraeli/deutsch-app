@@ -54,7 +54,7 @@ describe('buildPatch', () => {
   });
 
   it('ignores non-strings rather than writing them', () => {
-    expect(buildPatch({ handle: 42, avatar_emoji: {} })).toEqual({});
+    expect(buildPatch({ handle: 42, avatar_path: {} })).toEqual({});
   });
 
   it('accepts a body that arrived unparsed', () => {
@@ -62,12 +62,14 @@ describe('buildPatch', () => {
     expect(buildPatch('not json')).toEqual({});
   });
 
-  it('covers exactly the columns Settings edits, and display_name is not one', () => {
-    expect(EDITABLE_FIELDS).toEqual(['handle', 'avatar_emoji', 'avatar_path']);
-    // The column still exists; it is simply no longer writable from the client.
+  it('covers exactly the columns Settings edits, and dropped fields are not among them', () => {
+    expect(EDITABLE_FIELDS).toEqual(['handle', 'avatar_path']);
+    // The columns still exist; they are simply no longer writable from the client.
     expect(EDITABLE_FIELDS).not.toContain('display_name');
-    // An old client that still sends it is IGNORED by the allowlist, never an error.
+    expect(EDITABLE_FIELDS).not.toContain('avatar_emoji');
+    // An old client that still sends them is IGNORED by the allowlist, never an error.
     expect(buildPatch({ display_name: 'Sam', handle: 'sam' })).toEqual({ handle: 'sam' });
+    expect(buildPatch({ avatar_emoji: '🦊', handle: 'sam' })).toEqual({ handle: 'sam' });
   });
 });
 
@@ -75,7 +77,7 @@ describe('PATCH /api/v1/account/profile', () => {
   beforeEach(() => {
     updates = [];
     updateError = null;
-    profileRow = { handle: 'sam', avatar_emoji: '🦊', created_at: 'x' };
+    profileRow = { handle: 'sam', avatar_path: null, created_at: 'x' };
     requireAuth.mockResolvedValue(USER);
     serviceClient.mockReturnValue(mockDb());
   });
@@ -100,7 +102,7 @@ describe('PATCH /api/v1/account/profile', () => {
   it('answers with the STORED row, not the submitted one', async () => {
     // The server owns handle uniqueness, so an optimistic client value must not
     // be echoed back as though it had been accepted.
-    profileRow = { handle: 'stored', avatar_emoji: null, created_at: 'x' };
+    profileRow = { handle: 'stored', avatar_path: null, created_at: 'x' };
     const res = createRes();
     await handler(req({ handle: 'submitted' }), res);
     expect(res.body.handle).toBe('stored');
@@ -133,8 +135,15 @@ describe('PATCH /api/v1/account/profile', () => {
 
   it('leaves league_members alone when the handle is not part of the edit', async () => {
     const res = createRes();
-    await handler(req({ avatar_emoji: '🦊' }), res);
+    await handler(req({ avatar_path: `${USER.userId}/pic.webp` }), res);
     expect(updates.map((u) => u.table)).not.toContain('league_members');
+  });
+
+  it('ignores a leftover avatar_emoji instead of writing it', async () => {
+    const res = createRes();
+    await handler(req({ avatar_emoji: '🦊' }), res);
+    expect(res.statusCode).toBe(400);
+    expect(updates).toHaveLength(0);
   });
 
   it('refuses an over-long value rather than letting the database do it', async () => {

@@ -35,18 +35,19 @@ it('updates handle on profiles AND denormalized league_members, then returns it'
   await handler(req({ handle: 'NewName07' }), res);
   expect(res.statusCode).toBe(200);
   expect(res.body.handle).toBe('NewName07');
+  expect(res.body).not.toHaveProperty('avatar_emoji');
   expect(db.updates.profiles).toEqual({ handle: 'NewName07' });
   expect(db.updates.league_members).toEqual({ handle: 'NewName07' });
 });
 
-it('does not touch league_members when only the avatar changes', async () => {
+it('ignores avatar_emoji rather than writing it', async () => {
   requireAuth.mockResolvedValue(USER);
   const db = trackingDb();
   serviceClient.mockReturnValue(db);
   const res = createRes();
   await handler(req({ avatar_emoji: '🦊' }), res);
-  expect(res.statusCode).toBe(200);
-  expect(db.updates.profiles).toEqual({ avatar_emoji: '🦊' });
+  expect(res.statusCode).toBe(400);
+  expect(db.updates.profiles).toBeUndefined();
   expect(db.updates.league_members).toBeUndefined();
 });
 
