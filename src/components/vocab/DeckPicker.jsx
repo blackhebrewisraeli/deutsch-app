@@ -26,8 +26,8 @@ const groupSlug = (group) =>
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-');
 
-export const deckGroupTabId = (group) => `deck-group-tab-${groupSlug(group)}`;
-export const deckGroupPanelId = (group) => `deck-group-panel-${groupSlug(group)}`;
+const deckGroupTabId = (group) => `deck-group-tab-${groupSlug(group)}`;
+const deckGroupPanelId = (group) => `deck-group-panel-${groupSlug(group)}`;
 
 // English pluralisation for the counts this picker renders. Local, exactly as
 // packs/de/missions.js and quests.js each keep their own: the RULE is part of a

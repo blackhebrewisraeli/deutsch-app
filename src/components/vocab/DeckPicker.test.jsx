@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import DeckPicker, { deckGroupPanelId, deckGroupTabId } from './DeckPicker';
+import DeckPicker from './DeckPicker';
 import { AUTO_DECKS, DECK_GROUPS } from '../../packs/de/autoDecks';
 
 const AUTO_GROUPS = DECK_GROUPS.filter((g) => g !== 'Curated');
@@ -228,12 +228,12 @@ describe('DeckPicker auto-deck tabs', () => {
   it('points the selected tab at a stable panel id', () => {
     render(<DeckPicker {...props} />);
     const frequency = screen.getByRole('tab', { name: 'Frequency' });
-    expect(frequency).toHaveAttribute('id', deckGroupTabId('Frequency'));
-    expect(frequency).toHaveAttribute('aria-controls', deckGroupPanelId('Frequency'));
-    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', deckGroupPanelId('Frequency'));
+    expect(frequency).toHaveAttribute('id', 'deck-group-tab-frequency');
+    expect(frequency).toHaveAttribute('aria-controls', 'deck-group-panel-frequency');
+    expect(screen.getByRole('tabpanel')).toHaveAttribute('id', 'deck-group-panel-frequency');
     expect(screen.getByRole('tabpanel')).toHaveAttribute(
       'aria-labelledby',
-      deckGroupTabId('Frequency')
+      'deck-group-tab-frequency'
     );
   });
 
