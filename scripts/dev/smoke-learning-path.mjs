@@ -22,8 +22,7 @@
  * builds and serves in the workflow so the artifact under test is the same
  * production build the other jobs produce.
  *
- * Exit 0 on a clean walk of both viewports; 1 on an assertion failure; 2 on
- * a harness error (no server, pack missing, …).
+ * Exit 0 on a clean walk of both viewports; 1 on failure.
  */
 
 import { chromium } from 'playwright';
@@ -167,14 +166,41 @@ async function stubOutboundNetwork(page) {
   await page.route('**/rest/v1/**', (r) => r.fulfill(json([])));
 }
 
-function applySeedInPage(entries) {
-  for (const [key, value] of Object.entries(entries)) {
-    localStorage.setItem(key, value);
-  }
+/**
+ * Install the guest seed BEFORE the app's first paint.
+ *
+ * A goto → evaluate(setItem) → reload race lost on CI: App's persist effect
+ * reads empty state, then `saveState({ ...current, learnedWords: {} })` after
+ * our write and clobbers `deck-unfinished`. Init scripts run before page JS.
+ *
+ * sessionStorage marks the seed as applied so the post-practice reload keeps
+ * the learner's new SRS/learned rows instead of resetting them.
+ */
+async function installGuestSeed(context, seed) {
+  await context.addInitScript((entries) => {
+    try {
+      if (sessionStorage.getItem('__smoke_learning_path_seeded') === '1') return;
+      for (const [key, value] of Object.entries(entries)) {
+        localStorage.setItem(key, value);
+      }
+      sessionStorage.setItem('__smoke_learning_path_seeded', '1');
+    } catch {
+      // private mode — dismissEntryScreens will fail loudly if the shell never appears
+    }
+  }, seed.localStorage);
 }
 
-async function seedGuest(page, seed) {
-  await page.evaluate(applySeedInPage, seed.localStorage);
+async function dumpPage(page, label) {
+  try {
+    const url = page.url();
+    const text = (await page.evaluate(() => (document.body?.innerText || '').slice(0, 800))).replace(
+      /\s+/g,
+      ' '
+    );
+    console.error(`smoke-learning-path dump (${label}) ${url}: ${text}`);
+  } catch (err) {
+    console.error(`smoke-learning-path dump (${label}) failed: ${err.message}`);
+  }
 }
 
 function horizontalOverflow() {
@@ -287,18 +313,30 @@ async function walkViewport(page, vp, seed) {
   await page.setViewportSize({ width: vp.width, height: vp.height });
   await stubOutboundNetwork(page);
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
-  await seedGuest(page, seed);
-  await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(400);
   await dismissEntryScreens(page);
 
-  await page.getByRole('heading', { name: /recommended for you/i }).waitFor({ timeout: 8000 });
+  try {
+    await page.getByRole('heading', { name: /recommended for you/i }).waitFor({ timeout: 15000 });
+  } catch (err) {
+    await dumpPage(page, `${label} home`);
+    throw new Error(
+      `smoke-learning-path: Recommended heading missing at ${label}: ${err.message}`
+    );
+  }
   await assertNoOverflow(page, `${label} home`);
 
   const rec = page
     .locator('section[aria-labelledby="recommended-heading"]')
     .getByRole('button', { name: seed.recommendation });
-  await rec.waitFor({ state: 'visible', timeout: 8000 });
+  try {
+    await rec.waitFor({ state: 'visible', timeout: 8000 });
+  } catch (err) {
+    await dumpPage(page, `${label} recommendation`);
+    throw new Error(
+      `smoke-learning-path: deck-unfinished recommendation missing at ${label}: ${err.message}`
+    );
+  }
   await rec.click();
 
   await assertNavTab(page, 'Vocab', true);
@@ -354,8 +392,9 @@ async function walkViewport(page, vp, seed) {
 }
 
 async function launchBrowser() {
+  const args = ['--disable-dev-shm-usage'];
   try {
-    return await chromium.launch({ headless: true });
+    return await chromium.launch({ headless: true, args });
   } catch (err) {
     const missing = /Executable doesn't exist|Failed to launch/i.test(String(err?.message ?? err));
     if (!missing) throw err;
@@ -363,7 +402,7 @@ async function launchBrowser() {
     // may only have system Chrome; channel:'chrome' uses that instead of
     // failing a download from cdn.playwright.dev.
     console.log('Playwright Chromium not installed; falling back to system Chrome');
-    return await chromium.launch({ headless: true, channel: 'chrome' });
+    return await chromium.launch({ headless: true, channel: 'chrome', args });
   }
 }
 
@@ -381,6 +420,7 @@ async function main() {
   try {
     for (const vp of VIEWPORTS) {
       const context = await browser.newContext();
+      await installGuestSeed(context, seed);
       const page = await context.newPage();
       await walkViewport(page, vp, seed);
       await context.close();
@@ -398,6 +438,10 @@ async function main() {
 }
 
 main().catch((err) => {
+  const message = err?.message || String(err);
+  if (!message.startsWith('smoke-learning-path:')) {
+    console.error(`smoke-learning-path: ${message}`);
+  }
   console.error(err);
-  process.exit(err.message?.startsWith('smoke-learning-path:') ? 1 : 2);
+  process.exit(1);
 });
