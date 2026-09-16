@@ -704,7 +704,6 @@ async function stubAccountNetwork(page) {
         tier: 2,
         total_xp: 4200,
         longest_streak: 31,
-        avatar_emoji: '🦊',
       })
     )
   );

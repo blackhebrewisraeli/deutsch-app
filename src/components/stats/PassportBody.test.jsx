@@ -6,7 +6,6 @@ import { COLORS } from '../../lib/theme.js';
 
 const profile = (over = {}) => ({
   handle: 'Rival',
-  avatar_emoji: '🦊',
   avatar_path: null,
   join_year: 2026,
   tier: 1,
@@ -55,24 +54,24 @@ describe('PassportBody — identity', () => {
 
   it('draws the avatar through the shared resolver', () => {
     show();
-    expect(document.querySelector('[data-avatar="emoji"]')).toHaveTextContent('🦊');
+    expect(document.querySelector('[data-avatar="identicon"]')).toBeTruthy();
   });
 
-  it('prefers an uploaded picture over the emoji', () => {
+  it('prefers an uploaded picture over the identicon', () => {
     withStorage();
-    show({ avatar_path: 'u1/a.webp', avatar_emoji: '🦊' });
+    show({ avatar_path: 'u1/a.webp' });
     // Only asserts which TIER won; the URL itself is avatar.js's contract.
-    expect(document.querySelector('[data-avatar="emoji"]')).toBeNull();
+    expect(document.querySelector('[data-avatar="identicon"]')).toBeNull();
     expect(document.querySelector('[data-avatar="image"]')).toBeTruthy();
   });
 
   // The other half of the same rule, and the branch CI was actually running:
   // with no storage base an avatar_path cannot be turned into a URL, so the
-  // card shows the emoji instead of an image that would never load.
-  it('falls back to the emoji when no storage base is configured', () => {
+  // card shows the identicon instead of an image that would never load.
+  it('falls back to the identicon when no storage base is configured', () => {
     withoutStorage();
-    show({ avatar_path: 'u1/a.webp', avatar_emoji: '🦊' });
-    expect(document.querySelector('[data-avatar="emoji"]')).toHaveTextContent('🦊');
+    show({ avatar_path: 'u1/a.webp' });
+    expect(document.querySelector('[data-avatar="identicon"]')).toBeTruthy();
     expect(document.querySelector('[data-avatar="image"]')).toBeNull();
   });
 });

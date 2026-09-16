@@ -12,10 +12,9 @@ export default async function handler(req, res) {
     return sendError(res, err.code ?? 'server_error', err.message ?? 'Unexpected error.');
   }
 
-  const { handle, avatar_emoji } = req.body ?? {};
+  const { handle } = req.body ?? {};
   const patch = {};
   if (typeof handle === 'string') patch.handle = handle.trim();
-  if (typeof avatar_emoji === 'string') patch.avatar_emoji = avatar_emoji;
   if (Object.keys(patch).length === 0) return sendError(res, 'bad_request', 'Nothing to update.');
 
   const db = serviceClient();
@@ -33,7 +32,5 @@ export default async function handler(req, res) {
     await db.from('league_members').update({ handle: patch.handle }).eq('user_id', auth.userId);
   }
 
-  return res
-    .status(200)
-    .json({ handle: patch.handle ?? null, avatar_emoji: patch.avatar_emoji ?? null });
+  return res.status(200).json({ handle: patch.handle ?? null });
 }
