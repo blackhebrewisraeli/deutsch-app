@@ -46,11 +46,6 @@ describe('AvatarPicker — what it renders', () => {
     expect(img.getAttribute('src')).not.toMatch(/^https?:/);
   });
 
-  it('shows the emoji when there is one and no upload', () => {
-    setup({ profile: { avatar_emoji: '🦊' } });
-    expect(document.querySelector('[data-avatar="emoji"]')).toHaveTextContent('🦊');
-  });
-
   it('offers Remove only once there is something to remove', () => {
     setup();
     expect(screen.queryByRole('button', { name: /remove picture/i })).not.toBeInTheDocument();

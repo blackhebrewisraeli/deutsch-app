@@ -102,7 +102,7 @@ export default async function handler(req, res) {
     ] = await Promise.all([
       db
         .from('profiles')
-        .select('handle, avatar_emoji, avatar_path, created_at')
+        .select('handle, avatar_path, created_at')
         .eq('user_id', target)
         .maybeSingle(),
       db.from('stats_daily').select('day, counters').eq('user_id', target),
@@ -129,7 +129,6 @@ export default async function handler(req, res) {
 
     return res.status(200).json({
       handle: profile?.handle ?? null,
-      avatar_emoji: profile?.avatar_emoji ?? null,
       avatar_path: profile?.avatar_path ?? null,
       join_year: joinYear(profile?.created_at),
       tier: member?.leagues?.tier ?? 0,

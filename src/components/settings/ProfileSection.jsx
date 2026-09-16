@@ -16,10 +16,8 @@ import { AlertTriangle } from 'lucide-react';
 // see. The COLUMN is left in place; dropping it is irreversible and it costs
 // nothing empty.
 //
-// The Avatar emoji INPUT is gone the same way: one identity surface, the
-// picture picker. `avatar_emoji` stays on the row and is still sent on save
-// so existing values are not wiped. This is a UI cleanup, not a data-model
-// change. Home / ProfileCard still render the stored glyph via avatarFor.
+// Avatar is a picture or a generated identicon — one identity surface, the
+// picture picker. There is no emoji field.
 //
 // Handle and avatar are PROFILE fields here, not league fields, so they are not
 // gated behind LEAGUES_ENABLED the way the old Stats editor gated them. Only
@@ -30,7 +28,6 @@ import { AlertTriangle } from 'lucide-react';
 // truth, and it is what the fields are reset to on success.
 const asForm = (profile) => ({
   handle: profile?.handle ?? '',
-  avatar_emoji: profile?.avatar_emoji ?? '',
 });
 
 const labelStyle = {
@@ -76,7 +73,6 @@ export default function ProfileSection({
     try {
       const stored = await save({
         handle: form.handle,
-        avatar_emoji: form.avatar_emoji,
       });
       // Reset to what the SERVER stored, not to what was typed.
       const next = asForm(stored);

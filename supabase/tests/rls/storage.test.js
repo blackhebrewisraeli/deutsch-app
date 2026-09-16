@@ -169,4 +169,14 @@ describe('profiles.avatar_path', () => {
     expect(error).toBeNull();
     expect(data.avatar_path).toBeNull();
   });
+
+  it('is the only avatar column — avatar_emoji has been dropped', async () => {
+    const { data, error } = await admin
+      .from('profiles')
+      .select('*')
+      .eq('user_id', alice.id)
+      .single();
+    expect(error).toBeNull();
+    expect(data).not.toHaveProperty('avatar_emoji');
+  });
 });

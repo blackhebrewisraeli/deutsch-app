@@ -12,7 +12,6 @@ const user = { id: 'u1', email: 'semion@example.com' };
 const profile = {
   display_name: 'Semion',
   handle: 'semion',
-  avatar_emoji: '🦊',
   created_at: '2026-06-14T10:00:00.000Z',
 };
 const score = {

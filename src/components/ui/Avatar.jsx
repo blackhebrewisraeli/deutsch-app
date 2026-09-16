@@ -13,26 +13,6 @@ import { avatarFor } from '../../lib/avatar.js';
 export default function Avatar({ profile, userId, size = 40, label = '', style }) {
   const resolved = avatarFor({ profile, userId });
 
-  if (resolved.kind === 'emoji') {
-    return (
-      <span
-        data-avatar="emoji"
-        role={label ? 'img' : undefined}
-        aria-label={label || undefined}
-        aria-hidden={label ? undefined : 'true'}
-        style={{
-          fontSize: Math.round(size * 0.8),
-          lineHeight: 1,
-          flexShrink: 0,
-          display: 'inline-block',
-          ...style,
-        }}
-      >
-        {resolved.glyph}
-      </span>
-    );
-  }
-
   return (
     <img
       data-avatar={resolved.kind}

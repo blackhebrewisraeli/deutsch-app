@@ -35,11 +35,13 @@ import { REAUTH_MAX_AGE_SEC } from './authTime.js';
 // display_name was dropped from EDITABLE_FIELDS: it was writable here and
 // populated on no account. The column remains, so an old client that still
 // sends the field simply has it ignored by the allowlist rather than erroring.
+// The former emoji column was dropped the same way, then removed from the
+// table: an old client that still sends it is ignored, never an error.
 
 /** Only these columns are writable. Anything else in the body is ignored. */
-export const EDITABLE_FIELDS = ['handle', 'avatar_emoji', 'avatar_path'];
+export const EDITABLE_FIELDS = ['handle', 'avatar_path'];
 
-const MAX_LEN = { handle: 24, avatar_emoji: 8, avatar_path: 200 };
+const MAX_LEN = { handle: 24, avatar_path: 200 };
 
 /**
  * `avatar_path` is the one editable field that names something OUTSIDE this
@@ -120,7 +122,7 @@ export const profileHandler = createAccountHandler({
     // optimistic value survived, because a handle can be rejected as taken.
     const { data } = await db
       .from('profiles')
-      .select('handle, avatar_emoji, avatar_path, created_at')
+      .select('handle, avatar_path, created_at')
       .eq('user_id', auth.userId)
       .maybeSingle();
 
