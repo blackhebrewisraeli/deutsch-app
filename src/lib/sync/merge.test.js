@@ -159,6 +159,43 @@ describe('mergeSettings', () => {
     expect(out.level).toBe('b1'); // level follows its own more-recent timestamp, survives the row LWW
   });
 
+  it('lets placement metadata follow the level clock, not the whole-row winner', () => {
+    const localPlacement = {
+      takenAt: 50,
+      source: 'placement',
+      level: 'a1',
+      correct: 2,
+      total: 9,
+      bands: { a1: 2, a2: 0, b1: 0 },
+    };
+    const remotePlacement = {
+      takenAt: 150,
+      source: 'placement',
+      level: 'b1',
+      correct: 8,
+      total: 9,
+      bands: { a1: 3, a2: 3, b1: 2 },
+    };
+    const local = {
+      settingsUpdatedAt: 200,
+      goal: 50,
+      level: 'a1',
+      levelUpdatedAt: 50,
+      placement: localPlacement,
+    };
+    const remote = {
+      settingsUpdatedAt: 100,
+      goal: 30,
+      level: 'b1',
+      levelUpdatedAt: 150,
+      placement: remotePlacement,
+    };
+    const out = mergeSettings(local, remote);
+    expect(out.goal).toBe(50);
+    expect(out.level).toBe('b1');
+    expect(out.placement).toEqual(remotePlacement);
+  });
+
   it('unions frozenDays and maxes bestStreak across devices (sync-safe)', () => {
     const local = {
       settingsUpdatedAt: 200,

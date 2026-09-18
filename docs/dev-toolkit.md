@@ -71,7 +71,8 @@ The app owns exactly these keys (keep this list current if you add one):
 | --- | --- | --- |
 | `deutsch-app-state-v1` | `src/lib/storage.js` | Main state blob (srs, daily, stats, gamification, learnedWords). |
 | `deutsch-app-sync-meta-v1` | `src/lib/sync/syncMeta.js` | Sync baseline/cursor metadata. |
-| `deutsch-level` | `src/App.jsx` | Selected CEFR level (a1/a2/b1). |
+| `deutsch-level` | `src/lib/levelPref.js` | CEFR practice level (a1/a2/b1). Written by placement (primary) or the Settings manual override. |
+| `deutsch-app-state-v1` → `placement` | `src/lib/placement.js` | Additive placement metadata (`takenAt`, `score` bands, `source`). Rides `levelUpdatedAt` in settings sync. Not a separate key. |
 | `deutsch-onboarded` | `src/App.jsx` | Onboarding/splash completed flag. |
 | `deutsch-welcome-dismissed` | chat welcome banner | Welcome banner dismissed flag. |
 

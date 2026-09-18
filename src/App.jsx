@@ -3,7 +3,7 @@ import { User, BookOpen, MessageSquare, Type, Languages, Home } from 'lucide-rea
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
-import { readLevel, writeLevel, LEVEL_CHANGE_EVENT } from './lib/levelPref';
+import { readLevel, writeLevel, LEVEL_CHANGE_EVENT, hasStoredLevel } from './lib/levelPref';
 import { SessionGuardContext, useSessionGuardValue } from './lib/sessionGuard';
 import { getReviewItems, todayKey, TABS } from './lib/stats';
 import { trialStatus } from './lib/trial';
@@ -56,6 +56,7 @@ import TranslateTab from './components/TranslateTab';
 import StatsTab from './components/StatsTab';
 import PracticeLane from './components/PracticeLane';
 import WelcomeGate from './components/WelcomeGate';
+import PlacementTest from './components/PlacementTest';
 import TrialWall from './components/TrialWall';
 import AuthSheet from './components/auth/AuthSheet';
 import AuthCallbackLanding from './components/auth/AuthCallbackLanding';
@@ -596,6 +597,9 @@ export default function App() {
 
   // Onboarding + level
   const [level, setLevel] = useState(readLevel);
+  // First-time learners classify instead of freely picking. Returning learners
+  // with a stored CEFR code skip this; they retake from Settings / StatusChip.
+  const [showPlacement, setShowPlacement] = useState(() => !hasStoredLevel());
 
   // Settings lives inside the Profile tab (id still `stats`). The hash keeps
   // the deep link; it is not a seventh nav tab. The WelcomeGate still wins
@@ -661,9 +665,8 @@ export default function App() {
 
   // `level` is held here and prop-drilled into every tab, so any writer that
   // is not this component (sync pulling a level from another device, the
-  // splash, a future caller of writeLevel) would move localStorage and leave
-  // the tabs rendering the old level. levelPref fires this on every write —
-  // it had no subscriber until now, which made the notifier a no-op.
+  // placement test, a future caller of writeLevel) would move localStorage and
+  // leave the tabs rendering the old level. levelPref fires this on every write.
   useEffect(() => {
     const onLevelChange = (e) => {
       const next = e.detail?.level;
@@ -729,6 +732,7 @@ export default function App() {
 
   // Review feed click handler — switches tab (and level for Translate),
   // then drops `reviewTarget` so the destination tab can pre-load the item.
+  const openPlacement = () => setShowPlacement(true);
   const handleReview = (item) => {
     if (item.tab === 'translate' && item.context && item.context !== level) {
       setLevel(item.context);
@@ -862,6 +866,7 @@ export default function App() {
       onToast={(title) => pushToasts([{ kind: 'info', title, sub: '', icon: '✅' }])}
       level={level}
       onLevelChange={setLevel}
+      onRetakePlacement={openPlacement}
       goal={loadState()?.gamification?.goal ?? DEFAULT_GOAL}
       onGoalChange={handleGoalChange}
       soundOn={loadState()?.gamification?.soundOn ?? false}
@@ -913,6 +918,19 @@ export default function App() {
           onAuth={(intent) => setAuthModal(intent)}
           onGoogle={handleGoogle}
           googleBusy={googleBusy}
+        />
+        {authOverlay}
+      </>
+    );
+  }
+
+  if (showPlacement) {
+    return (
+      <>
+        <PlacementTest
+          onComplete={() => setShowPlacement(false)}
+          onCancel={() => setShowPlacement(false)}
+          allowCancel={hasStoredLevel()}
         />
         {authOverlay}
       </>
@@ -1039,7 +1057,7 @@ export default function App() {
             <span ref={statusAnchorRef} data-tutorial-anchor="status" style={{ display: 'flex' }}>
               <StatusChip
                 level={level}
-                onLevelChange={setLevel}
+                onRetakePlacement={openPlacement}
                 xpLevel={game.lvl.level}
                 progress={game.lvl.progress}
                 rank={game.lvl.rankName}

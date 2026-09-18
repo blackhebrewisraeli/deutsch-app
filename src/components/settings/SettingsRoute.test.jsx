@@ -48,7 +48,8 @@ describe('SettingsRoute', () => {
     renderRoute();
     // Profile — the handle is the one name now; display_name is gone.
     expect(screen.getByRole('textbox', { name: /handle/i })).toBeInTheDocument();
-    // Learning — the SAME level control the header uses, not a second one
+    // Learning — placement is the primary writer; a manual override remains
+    expect(screen.getByRole('button', { name: /retake placement/i })).toBeInTheDocument();
     expect(screen.getByRole('radiogroup', { name: /level/i })).toBeInTheDocument();
     // Appearance
     expect(screen.getByLabelText(/appearance/i)).toBeInTheDocument();
@@ -75,6 +76,13 @@ describe('SettingsRoute', () => {
     const group = screen.getByRole('radiogroup', { name: /level/i });
     await userEvent.click(within(group).getByRole('radio', { name: /a2/i }));
     expect(localStorage.getItem('deutsch-level')).toBe('a2');
+  });
+
+  it('offers a retake that calls through to the host', async () => {
+    const onRetakePlacement = vi.fn();
+    renderRoute({ onRetakePlacement });
+    await userEvent.click(screen.getByRole('button', { name: /retake placement/i }));
+    expect(onRetakePlacement).toHaveBeenCalledTimes(1);
   });
 
   it('drives the daily goal', async () => {

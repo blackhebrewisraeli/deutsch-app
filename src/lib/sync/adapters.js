@@ -57,6 +57,10 @@ export function settingsToRow(local, level, levelUpdatedAt) {
       level,
       levelUpdatedAt,
       settingsUpdatedAt: local.settingsUpdatedAt,
+      // Placement metadata is additive on the same jsonb blob. It is not a
+      // new localStorage key — AGENTS.md forbids renaming those. An older
+      // client that does not name this field simply omits it (allowlist).
+      placement: local.placement,
     },
   };
 }
@@ -76,6 +80,7 @@ export function settingsFromRow(row) {
     level: d.level,
     levelUpdatedAt: d.levelUpdatedAt,
     settingsUpdatedAt: d.settingsUpdatedAt,
+    placement: d.placement,
   };
 }
 

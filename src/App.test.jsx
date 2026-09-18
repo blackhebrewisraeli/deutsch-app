@@ -25,7 +25,12 @@ vi.mock('./lib/claude', () => ({ callClaude }));
  * scrim and its "Skip tutorial" button sit over each of them, and its button
  * collides with Translate's own SKIP.
  */
-const asReturningLearner = () => localStorage.setItem(TUTORIAL_KEY, 'true');
+const asReturningLearner = () => {
+  localStorage.setItem(TUTORIAL_KEY, 'true');
+  // Returning learners already have a CEFR code. Without this, the placement
+  // screen sits in front of the shell the way the tutorial used to.
+  if (!localStorage.getItem('deutsch-level')) localStorage.setItem('deutsch-level', 'a1');
+};
 
 beforeEach(() => {
   asReturningLearner();
@@ -122,12 +127,11 @@ const setViewportWidth = (width) => {
 };
 
 // The entry gate is a function of account session, not a device flag (see
-// docs/superpowers/specs/2026-08-17-entry-flow-and-level-xp-design.md). There
-// is no longer a level-picker screen behind it — see
-// docs/superpowers/specs/2026-08-24-entry-flow-and-home-dashboard-design.md
-// §6 — so continuing past the gate lands directly on the app shell. Tests
-// below this point that only care about the app shell — not the gate itself
-// — render then dismiss the gate once, exactly as a real guest would.
+// docs/superpowers/specs/2026-08-17-entry-flow-and-level-xp-design.md). A
+// first-time learner then meets the placement test instead of a free picker;
+// tests below this point that only care about the app shell seed
+// `deutsch-level` (via asReturningLearner) so they skip it. Continuing past
+// the gate lands on the shell for anyone who already has a level.
 // `fireEvent` (not `userEvent`) for a synchronous click that avoids the
 // delay-based interactions `userEvent` schedules internally. A no-op when the
 // gate never appeared (e.g. an
@@ -824,11 +828,19 @@ describe('entry gate', () => {
     expect(gate()).toBeInTheDocument();
   });
 
-  it('lands in the app — no level picker — after the guest continues', async () => {
+  it('lands in the app — no free level picker — after the guest continues', async () => {
     localStorage.setItem('deutsch-level', 'a1');
     render(<App />);
     await userEvent.click(gate());
     expect(screen.getByRole('navigation')).toBeInTheDocument();
+  });
+
+  it('shows placement after a first-time guest continues past the gate', async () => {
+    localStorage.removeItem('deutsch-level');
+    render(<App />);
+    await userEvent.click(gate());
+    expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).toBeNull();
   });
 
   it('lets a signed-in user straight through to the app', () => {
@@ -868,29 +880,22 @@ describe('entry gate', () => {
     expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
-  it('defaults silently to a1 for anyone who has never chosen a level', () => {
+  it('sends a first-time learner to placement instead of the shell', () => {
     authMock.configured = false;
-    // The storage shim is one module-level instance shared by every test in
-    // the file (see 'guest trial wall' above) — earlier tests in this very
-    // describe set 'deutsch-level', so it must be cleared to exercise "never
-    // chosen a level".
     localStorage.removeItem('deutsch-level');
     render(<App />);
-    expect(screen.getByRole('navigation')).toBeInTheDocument();
-    expect(
-      within(screen.getByRole('banner')).getByRole('button', { name: /open status/i })
-    ).toHaveTextContent('A1');
-    // Never written until an explicit choice — the default is silent and in-memory.
+    expect(screen.queryByRole('navigation')).toBeNull();
+    expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument();
     expect(localStorage.getItem('deutsch-level')).toBeNull();
   });
 
-  it('treats a corrupt stored level as a1 rather than asking again', () => {
-    authMock.configured = false; // no gate, so the app shell is what renders
+  it('treats a corrupt stored level as unset and asks them to place', () => {
+    authMock.configured = false;
     localStorage.setItem('deutsch-level', 'c2');
     render(<App />);
-    expect(
-      within(screen.getByRole('banner')).getByRole('button', { name: /open status/i })
-    ).toHaveTextContent('A1');
+    expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).toBeNull();
   });
 
   it('enables the level XP boost for a signed-in user', () => {
@@ -1026,10 +1031,12 @@ describe('entry gate', () => {
 
     await userEvent.click(nav.getByRole('button', { name: 'Profile' }));
     await userEvent.click(screen.getByRole('button', { name: 'settings' }));
+    await userEvent.click(screen.getByText(/set level manually/i));
     await userEvent.click(screen.getByRole('radio', { name: /A1/ }));
     await userEvent.click(nav.getByRole('button', { name: 'Vocab' }));
     await userEvent.click(nav.getByRole('button', { name: 'Profile' }));
     await userEvent.click(screen.getByRole('button', { name: 'settings' }));
+    await userEvent.click(screen.getByText(/set level manually/i));
 
     // If App had dropped onLevelChange, Settings would re-mount from the stale
     // `level` prop and B1 would be checked again.
@@ -1087,7 +1094,7 @@ describe('level coordination', () => {
     expect(sheet.getByText('Practice level')).toBeInTheDocument();
   });
 
-  it('switches the level from the header and drives the Translate tab with it', async () => {
+  it('switches the level from Settings and drives the Translate tab with it', async () => {
     const user = userEvent.setup();
     renderPastEntry(<App />);
     await user.click(
@@ -1095,40 +1102,44 @@ describe('level coordination', () => {
     );
     expect(screen.getByText(/A1 — WORD TILES/)).toBeInTheDocument();
 
-    await user.click(chip());
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
+    );
+    await user.click(screen.getByRole('button', { name: 'settings' }));
+    await user.click(screen.getByText(/set level manually/i));
     await user.click(screen.getByRole('radio', { name: /B1/ }));
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Translate' })
+    );
 
     expect(screen.getByText(/B1 — FREE TYPING/)).toBeInTheDocument();
     expect(screen.queryByText(/A1 — WORD TILES/)).toBeNull();
     expect(chip()).toHaveTextContent('B1');
   });
 
-  // Mid-set, the switch is destructive, so it asks first and only then
-  // restarts. Nothing here is persisted — no XP, no SRS box — so the cost is
-  // position in the current set of ten, which is worth one question.
-  it('asks before restarting a set in progress, then restarts on confirm', async () => {
+  // Mid-set, retaking is destructive, so it asks first. Completing placement
+  // unmounts the set; declining must leave it alone.
+  it('asks before retaking while a set is in progress, then opens placement on confirm', async () => {
     const user = userEvent.setup();
     renderPastEntry(<App />);
     await user.click(
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Translate' })
     );
-    // Advance off exercise 1 so a preserved index would be visible.
     await user.click(screen.getByRole('button', { name: /skip/i }));
     expect(screen.getByText(/Exercise 2 \/ 10/)).toBeInTheDocument();
 
     await user.click(chip());
-    await user.click(screen.getByRole('radio', { name: /A2/ }));
+    await user.click(screen.getByRole('button', { name: /retake placement/i }));
 
-    // Not switched yet: still A1, still on exercise 2.
     expect(screen.getByText(/exercise 2 of 10/i)).toBeInTheDocument();
     expect(screen.getByText(/A1 — WORD TILES/)).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /switch to A2/i }));
-    expect(screen.getByText(/A2 — FILL THE BLANKS/)).toBeInTheDocument();
-    expect(screen.getByText(/Exercise 1 \/ 10/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /^retake$/i }));
+    expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).toBeNull();
   });
 
-  it('keeps the set and the level when the switch is declined', async () => {
+  it('keeps the set and the level when the retake is declined', async () => {
     const user = userEvent.setup();
     renderPastEntry(<App />);
     await user.click(
@@ -1137,35 +1148,28 @@ describe('level coordination', () => {
     await user.click(screen.getByRole('button', { name: /skip/i }));
 
     await user.click(chip());
-    await user.click(screen.getByRole('radio', { name: /B1/ }));
+    await user.click(screen.getByRole('button', { name: /retake placement/i }));
     await user.click(screen.getByRole('button', { name: /keep going/i }));
 
     expect(screen.getByText(/A1 — WORD TILES/)).toBeInTheDocument();
     expect(screen.getByText(/Exercise 2 \/ 10/)).toBeInTheDocument();
-    // Declining must not have written the level either.
-    expect(localStorage.getItem('deutsch-level')).not.toBe('b1');
+    expect(localStorage.getItem('deutsch-level')).toBe('a1');
   });
 
-  // The other half of the guardrail: with nothing in flight it must NOT ask.
-  // A confirmation that fires every time is one people learn to click through.
-  it('switches without asking when no set is in progress', async () => {
+  it('opens placement without asking when no set is in progress', async () => {
     const user = userEvent.setup();
     renderPastEntry(<App />);
     await user.click(
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Translate' })
     );
-    // Still on exercise 1 — nothing to lose.
     expect(screen.getByText(/Exercise 1 \/ 10/)).toBeInTheDocument();
 
     await user.click(chip());
-    await user.click(screen.getByRole('radio', { name: /A2/ }));
-    expect(screen.queryByRole('button', { name: /switch to A2/i })).toBeNull();
-    expect(screen.getByText(/A2 — FILL THE BLANKS/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /retake placement/i }));
+    expect(screen.queryByRole('button', { name: /keep going/i })).toBeNull();
+    expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
   });
 
-  // TranslateTab unmounts when the learner leaves the tab, so its claim must
-  // go with it. A flag pushed up to App instead of a registry would be left
-  // behind here and would ask about a session that no longer exists.
   it('stops asking once the practice tab is left', async () => {
     const user = userEvent.setup();
     renderPastEntry(<App />);
@@ -1175,11 +1179,10 @@ describe('level coordination', () => {
     await user.click(nav().getByRole('button', { name: 'Profile' }));
 
     await user.click(chip());
-    // Scoped to the sheet: Settings also renders the shared switcher, so an
-    // unscoped /B1/ radio query can match two controls if that view is open.
     const sheet = within(screen.getByRole('dialog', { name: 'Status' }));
-    await user.click(sheet.getByRole('radio', { name: /B1/ }));
-    expect(screen.queryByRole('button', { name: /switch to B1/i })).toBeNull();
+    await user.click(sheet.getByRole('button', { name: /retake placement/i }));
+    expect(screen.queryByRole('button', { name: /keep going/i })).toBeNull();
+    expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
   });
 
   it('follows a level written anywhere else, via the change notifier', async () => {
@@ -1196,12 +1199,13 @@ describe('level coordination', () => {
   it('keeps the Settings switcher and the header control on the same level', async () => {
     const user = userEvent.setup();
     renderPastEntry(<App />);
-    await user.click(chip());
-    await user.click(screen.getByRole('radio', { name: /A2/ }));
     await user.click(
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
     await user.click(screen.getByRole('button', { name: 'settings' }));
+    await user.click(screen.getByText(/set level manually/i));
+    await user.click(screen.getByRole('radio', { name: /A2/ }));
+    expect(chip()).toHaveTextContent('A2');
     expect(screen.getByRole('radio', { name: /A2/ })).toBeChecked();
   });
 });
