@@ -75,4 +75,13 @@ describe('ChatInput', () => {
     render(<ChatInput {...baseProps} listening />);
     expect(screen.getByPlaceholderText('Sprich auf Deutsch...')).toBeInTheDocument();
   });
+
+  it('sizes mic and send as 40px icon actions without a SEND label', () => {
+    render(<ChatInput {...baseProps} input="Hallo" />);
+    const send = screen.getByRole('button', { name: 'Send chat message' });
+    const mic = screen.getByRole('button', { name: 'Start voice input' });
+    expect(send).toHaveStyle({ width: '40px', height: '40px' });
+    expect(mic).toHaveStyle({ width: '40px', height: '40px' });
+    expect(send).not.toHaveTextContent('SEND');
+  });
 });

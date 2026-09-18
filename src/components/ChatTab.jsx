@@ -7,7 +7,6 @@ import {
   LETTER_SPACING,
   SPACE,
   RADIUS,
-  SHADOW,
 } from '../lib/theme';
 import { callClaude } from '../lib/claude';
 import { chatSystemPrompt } from '../lib/prompts';
@@ -31,7 +30,6 @@ import ScenarioPicker from './chat/ScenarioPicker';
 import TaskPanel from './chat/TaskPanel';
 import MessageList from './chat/MessageList';
 import ChatInput from './chat/ChatInput';
-import CorrectionPanel from './chat/CorrectionPanel';
 
 const WELCOME_KEY = 'deutsch-welcome-dismissed';
 
@@ -76,7 +74,6 @@ export default function ChatTab({
   const [input, setInput] = useState('');
   const [listening, setListening] = useState(false);
   const [thinking, setThinking] = useState(false);
-  const [correction, setCorrection] = useState(null);
   const [taskIdx, setTaskIdx] = useState(0);
   const [hintVisible, setHintVisible] = useState(false);
   const [tasksCompleted, setTasksCompleted] = useState(false);
@@ -100,6 +97,7 @@ export default function ChatTab({
 
   const tasks = CHAT_TASKS[scenario]?.[chatLevel] ?? [];
   const currentTask = tasks[taskIdx % Math.max(tasks.length, 1)] ?? null;
+  const stacked = !wide;
 
   useEffect(() => {
     if (visibleScenarios.some((s) => s.id === scenario)) return;
@@ -120,7 +118,6 @@ export default function ChatTab({
     const greeting = SCENARIOS.find((s) => s.id === scenario)?.greeting;
     if (!greeting) return;
     setMessages([{ role: 'assistant', ...greeting }]);
-    setCorrection(null);
   }, [scenario, chatLevel]);
 
   const startListening = () => {
@@ -189,8 +186,21 @@ export default function ChatTab({
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       const reply = { role: 'assistant', de: parsed.de, ipa: parsed.ipa, en: parsed.en };
-      setMessages((m) => [...m, reply]);
-      setCorrection(parsed.correction || null);
+      setMessages((m) => {
+        const next = [...m];
+        for (let i = next.length - 1; i >= 0; i--) {
+          if (next[i].role === 'user') {
+            next[i] = {
+              ...next[i],
+              graded: true,
+              correction: parsed.correction || null,
+            };
+            break;
+          }
+        }
+        next.push(reply);
+        return next;
+      });
       recordEvent('chat', chatLevel, parsed.correction ? 'wrong' : 'correct');
       if (parsed.taskComplete) {
         const nextIdx = (taskIdx + 1) % Math.max(tasks.length, 1);
@@ -213,6 +223,15 @@ export default function ChatTab({
     }
   };
 
+  const modelPicker = (
+    <ModelPicker
+      value={preferredModel}
+      onChange={onPreferredModelChange}
+      userTier={userTierOf(user)}
+      compact
+    />
+  );
+
   return (
     <>
       {welcomeVisible && <WelcomeBanner mobile={mobile} onDismiss={dismissWelcome} />}
@@ -222,16 +241,14 @@ export default function ChatTab({
           // minmax(0, …) rather than a bare 1fr: 1fr keeps min-width auto, so
           // the track refused to shrink below its content and pushed the page
           // 190px past a 375px viewport.
-          // The three-column form needs 712px (280 + 320 + 2×24 gap + 2×32 page
-          // padding), but `mobile` releases at 640 — so 640–719 rendered three
-          // columns in too little room and scrolled the page sideways. It waits
-          // for `bp.wide` instead of `!mobile`.
-          gridTemplateColumns: wide ? '280px minmax(0, 1fr) 320px' : 'minmax(0, 1fr)',
+          // Two columns (220 + conversation) wait for `bp.wide` rather than
+          // `!mobile`: 640–719 used to paint a three-column chat sideways.
+          gridTemplateColumns: wide ? '220px minmax(0, 1fr)' : 'minmax(0, 1fr)',
           gap: mobile ? 16 : 24,
           minHeight: mobile ? 'auto' : 'calc(100vh - 280px)',
         }}
       >
-        <aside>
+        <aside style={{ minWidth: 0 }}>
           <ScenarioPicker
             scenario={scenario}
             setScenario={setScenario}
@@ -240,27 +257,6 @@ export default function ChatTab({
             scenarios={visibleScenarios}
           />
 
-          <div style={{ marginTop: SPACE[5] }}>
-            <div
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: FONT_SIZE.tag,
-                letterSpacing: LETTER_SPACING.caps,
-                textTransform: 'uppercase',
-                color: COLORS.mute,
-                marginBottom: SPACE[3],
-              }}
-            >
-              Modell
-            </div>
-            <ModelPicker
-              value={preferredModel}
-              onChange={onPreferredModelChange}
-              userTier={userTierOf(user)}
-              compact
-            />
-          </div>
-
           {currentTask && (
             <TaskPanel
               currentTask={currentTask}
@@ -268,6 +264,7 @@ export default function ChatTab({
               tasksCompleted={tasksCompleted}
               hintVisible={hintVisible}
               setHintVisible={setHintVisible}
+              compact={stacked}
               level={chatLevel}
               onResetTasks={() => {
                 setTasksCompleted(false);
@@ -276,34 +273,23 @@ export default function ChatTab({
             />
           )}
 
-          <div
-            style={{
-              marginTop: 24,
-              padding: 18,
-              background: COLORS.paperDeep,
-              border: `1px solid ${COLORS.border}`,
-              borderRadius: RADIUS.lg,
-              boxShadow: SHADOW.card,
-            }}
-          >
-            <div
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: 10,
-                letterSpacing: '0.15em',
-                textTransform: 'uppercase',
-                marginBottom: 8,
-              }}
-            >
-              Tip
+          {!stacked && (
+            <div style={{ marginTop: SPACE[5] }}>
+              <div
+                style={{
+                  fontFamily: FONT_MONO,
+                  fontSize: FONT_SIZE.tag,
+                  letterSpacing: LETTER_SPACING.caps,
+                  textTransform: 'uppercase',
+                  color: COLORS.mute,
+                  marginBottom: SPACE[3],
+                }}
+              >
+                Modell
+              </div>
+              {modelPicker}
             </div>
-            <div
-              style={{ fontFamily: FONT_BODY, fontSize: 13, lineHeight: 1.5, fontStyle: 'italic' }}
-            >
-              Click the mic and speak German. {activePack.prompts.persona} corrects your mistakes —
-              don&apos;t worry about perfection.
-            </div>
-          </div>
+          )}
         </aside>
 
         <div
@@ -311,13 +297,19 @@ export default function ChatTab({
             display: 'flex',
             flexDirection: 'column',
             borderRadius: RADIUS.lg,
-            boxShadow: SHADOW.card,
             overflow: 'hidden',
             background: COLORS.surface,
             border: `1px solid ${COLORS.border}`,
+            minWidth: 0,
           }}
         >
-          <MessageList messages={messages} thinking={thinking} endRef={messagesEndRef} />
+          <MessageList
+            key={scenario}
+            messages={messages}
+            thinking={thinking}
+            endRef={messagesEndRef}
+            compact={mobile}
+          />
 
           <ChatInput
             input={input}
@@ -328,9 +320,37 @@ export default function ChatTab({
             onStartListening={startListening}
             onStopListening={stopListening}
           />
+          <div
+            style={{
+              padding: `0 ${SPACE[4]}px ${SPACE[3]}px`,
+              background: COLORS.paperDeep,
+              fontFamily: FONT_BODY,
+              fontSize: FONT_SIZE.sm,
+              fontStyle: 'italic',
+              color: COLORS.mute,
+            }}
+          >
+            {activePack.prompts.persona} corrects as you go.
+          </div>
         </div>
 
-        <CorrectionPanel correction={correction} mobile={mobile} />
+        {stacked && (
+          <details style={{ minWidth: 0 }}>
+            <summary
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: FONT_SIZE.tag,
+                letterSpacing: LETTER_SPACING.caps,
+                textTransform: 'uppercase',
+                color: COLORS.mute,
+                cursor: 'pointer',
+              }}
+            >
+              Modell
+            </summary>
+            <div style={{ marginTop: SPACE[3] }}>{modelPicker}</div>
+          </details>
+        )}
       </div>
     </>
   );

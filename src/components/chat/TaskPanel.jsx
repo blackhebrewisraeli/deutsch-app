@@ -6,12 +6,11 @@ import {
   LETTER_SPACING,
   SPACE,
   RADIUS,
-  SHADOW,
 } from '../../lib/theme';
 
-// Section C — the learner's current task card, or the "all tasks done" card
-// (gold) once the scenario's task list has cycled. Rendered by the parent only
-// when there is a current task.
+// The learner's current task card, or the "all tasks done" card (gold) once
+// the scenario's task list has cycled. Rendered by the parent only when there
+// is a current task.
 //
 // The task chrome is `COLORS.accentRed`, NOT `COLORS.red`. They looked identical
 // before the flag tiers landed because `COLORS.red` is `--c-error`, so "here is
@@ -26,49 +25,84 @@ export default function TaskPanel({
   setHintVisible,
   onResetTasks,
   level,
+  compact = false,
 }) {
-  return (
-    <div style={{ marginTop: SPACE[5] }}>
+  const kicker = `TASK ${taskIdx + 1}${level ? ` · ${String(level).toUpperCase()}` : ''}`;
+
+  if (compact && !tasksCompleted) {
+    return (
       <div
         style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: SPACE[2],
-          marginBottom: SPACE[3],
+          marginTop: SPACE[3],
+          background: COLORS.accentRed,
+          color: COLORS.accentRedOn,
+          borderRadius: RADIUS.lg,
+          padding: '10px 12px',
+          minWidth: 0,
         }}
       >
-        <span
+        <div
           style={{
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.ipa,
-            letterSpacing: LETTER_SPACING.wider,
-            background: COLORS.accentRed,
-            color: COLORS.accentRedOn,
-            padding: `2px ${SPACE[2]}px`,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: SPACE[2],
+            minWidth: 0,
           }}
         >
-          C
-        </span>
-        <span
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            letterSpacing: LETTER_SPACING.ultra,
-            textTransform: 'uppercase',
-            color: COLORS.mute,
-          }}
-        >
-          Your Task
-        </span>
+          <div style={{ minWidth: 0 }}>
+            <div
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: FONT_SIZE.tag,
+                letterSpacing: LETTER_SPACING.caps,
+                opacity: 0.85,
+              }}
+            >
+              {kicker}
+            </div>
+            <div
+              style={{
+                fontFamily: FONT_BODY,
+                fontSize: FONT_SIZE.base,
+                lineHeight: 1.4,
+                overflowWrap: 'anywhere',
+              }}
+            >
+              {currentTask.task}
+            </div>
+          </div>
+          {currentTask.hint && (
+            <HintButton hintVisible={hintVisible} setHintVisible={setHintVisible} />
+          )}
+        </div>
+        {hintVisible && currentTask.hint && (
+          <div
+            style={{
+              marginTop: SPACE[3],
+              borderTop: `1px dashed ${COLORS.paperA50}`,
+              paddingTop: SPACE[3],
+              fontFamily: FONTS.mono,
+              fontSize: FONT_SIZE.sm,
+              opacity: 0.9,
+            }}
+          >
+            {currentTask.hint}
+          </div>
+        )}
       </div>
+    );
+  }
+
+  return (
+    <div style={{ marginTop: compact ? SPACE[3] : SPACE[5] }}>
       {tasksCompleted ? (
         <div
           style={{
             borderRadius: RADIUS.lg,
-            boxShadow: SHADOW.press(COLORS.goldLipSoft),
             background: COLORS.gold,
             color: COLORS.accentOn,
-            padding: SPACE[5],
+            padding: compact ? SPACE[3] : SPACE[5],
           }}
         >
           <div
@@ -93,6 +127,8 @@ export default function TaskPanel({
           </div>
           <button
             type="button"
+            data-ui="button"
+            data-focus-on-dark=""
             onClick={onResetTasks}
             style={{
               background: 'transparent',
@@ -112,14 +148,9 @@ export default function TaskPanel({
         <div
           style={{
             borderRadius: RADIUS.lg,
-            // The lip stays `rust` (`--c-error-deep`): it is a decorative depth
-            // shadow rather than a signal, and it is the only token that is a
-            // deeper red than the tier in both modes. A dedicated accentRedDeep
-            // would be a third token with one consumer.
-            boxShadow: SHADOW.press(COLORS.rust),
             background: COLORS.accentRed,
             color: COLORS.accentRedOn,
-            padding: SPACE[5],
+            padding: SPACE[3],
           }}
         >
           <div
@@ -131,14 +162,13 @@ export default function TaskPanel({
               marginBottom: SPACE[2],
             }}
           >
-            {`TASK ${taskIdx + 1}${level ? ` · ${String(level).toUpperCase()}` : ''}`}
+            {kicker}
           </div>
           <div
             style={{
               fontFamily: FONT_BODY,
               fontSize: FONT_SIZE.base,
-              lineHeight: 1.6,
-              fontStyle: 'italic',
+              lineHeight: 1.5,
               marginBottom: currentTask.hint ? SPACE[3] : 0,
             }}
           >
@@ -146,27 +176,7 @@ export default function TaskPanel({
           </div>
           {currentTask.hint && (
             <>
-              <button
-                type="button"
-                onClick={() => setHintVisible((v) => !v)}
-                style={{
-                  background: 'transparent',
-                  // paperA60/paperA50 track `ground`, which runs the same
-                  // direction as accentRedOn in both modes — near-white on
-                  // light, near-black on dark — so they read as the tier ink
-                  // at alpha. (No hex here: the guard in noHardcodedHex.test.js
-                  // scans comments too, and it is right to.)
-                  border: `1px solid ${COLORS.paperA60}`,
-                  color: COLORS.accentRedOn,
-                  fontFamily: FONTS.mono,
-                  fontSize: FONT_SIZE.tag,
-                  letterSpacing: LETTER_SPACING.wider,
-                  padding: `${SPACE[1]}px ${SPACE[3]}px`,
-                  cursor: 'pointer',
-                }}
-              >
-                {hintVisible ? 'HIDE HINT' : 'SHOW HINT'}
-              </button>
+              <HintButton hintVisible={hintVisible} setHintVisible={setHintVisible} />
               {hintVisible && (
                 <div
                   style={{
@@ -186,5 +196,34 @@ export default function TaskPanel({
         </div>
       )}
     </div>
+  );
+}
+
+function HintButton({ hintVisible, setHintVisible }) {
+  return (
+    <button
+      type="button"
+      data-ui="button"
+      data-focus-on-dark=""
+      onClick={() => setHintVisible((v) => !v)}
+      style={{
+        background: 'transparent',
+        // paperA60/paperA50 track `ground`, which runs the same
+        // direction as accentRedOn in both modes — near-white on
+        // light, near-black on dark — so they read as the tier ink
+        // at alpha. (No hex here: the guard in noHardcodedHex.test.js
+        // scans comments too, and it is right to.)
+        border: `1px solid ${COLORS.paperA60}`,
+        color: COLORS.accentRedOn,
+        fontFamily: FONTS.mono,
+        fontSize: FONT_SIZE.tag,
+        letterSpacing: LETTER_SPACING.wider,
+        padding: `${SPACE[1]}px ${SPACE[3]}px`,
+        cursor: 'pointer',
+        flexShrink: 0,
+      }}
+    >
+      {hintVisible ? 'HIDE HINT' : 'SHOW HINT'}
+    </button>
   );
 }

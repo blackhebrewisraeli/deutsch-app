@@ -29,6 +29,14 @@ async function sendHallo() {
   await userEvent.click(screen.getByRole('button', { name: 'Send chat message' }));
 }
 
+function chatLayoutGrid(container) {
+  const grid = [...container.querySelectorAll('div')].find((el) =>
+    (el.getAttribute('style') ?? '').includes('calc(100vh - 280px)')
+  );
+  expect(grid, 'Chat layout grid').toBeTruthy();
+  return grid;
+}
+
 describe('ChatTab routing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -178,5 +186,99 @@ describe('ChatTab speech', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Play Anna response audio' }));
     expect(speak).toHaveBeenCalledTimes(1);
     expect(speak).toHaveBeenCalledWith('Hallo! Womit möchtest du heute üben?');
+  });
+});
+
+describe('ChatTab conversation-first layout', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    callClaude.mockResolvedValue(reply);
+    Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  it('does not claim there are no mistakes before a graded turn', () => {
+    render(<ChatTab />);
+    expect(screen.queryByText('Alles gut!')).not.toBeInTheDocument();
+    expect(screen.queryByText(/no mistakes/i)).not.toBeInTheDocument();
+    expect(screen.queryByText('No fix this time')).not.toBeInTheDocument();
+  });
+
+  it('does not paint A/B/C section markers or the Tip card', () => {
+    render(<ChatTab />);
+    expect(screen.queryByText(/^A$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^B$/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^C$/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Tip')).not.toBeInTheDocument();
+  });
+
+  it('attaches a correction cue to the learner turn that was graded', async () => {
+    callClaude.mockResolvedValue(
+      JSON.stringify({
+        de: 'Einen Kaffee, bitte.',
+        ipa: '[ˈaɪ̯nən]',
+        en: 'A coffee, please.',
+        correction: {
+          original: 'Hallo',
+          fixed: 'Hallo!',
+          explain: 'Add the punctuation.',
+        },
+      })
+    );
+    render(<ChatTab />);
+    await sendHallo();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Needs a fix/i })).toBeInTheDocument();
+    });
+    expect(screen.queryByText('Alles gut!')).not.toBeInTheDocument();
+  });
+
+  it('marks a clean turn quietly instead of an empty panel', async () => {
+    render(<ChatTab />);
+    await sendHallo();
+    await waitFor(() => {
+      expect(screen.getByText('Hallo!')).toBeInTheDocument();
+    });
+    expect(screen.getByText('No fix this time')).toBeInTheDocument();
+    expect(screen.queryByText('Alles gut!')).not.toBeInTheDocument();
+  });
+
+  it('keeps EN and IPA of the greeting behind disclosure', () => {
+    render(<ChatTab />);
+    expect(screen.getByText('Hallo! Womit möchtest du heute üben?')).toBeInTheDocument();
+    expect(
+      screen.queryByText('Hello! What would you like to practice today?')
+    ).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'EN' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'IPA' })).toBeInTheDocument();
+  });
+
+  it('collapses EN/IPA again when the scenario greeting is replaced', async () => {
+    render(<ChatTab />);
+    await userEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(screen.getByRole('radio', { name: 'Order Coffee scenario' }));
+    expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      screen.queryByText('Hello! What would you like to practice today?')
+    ).not.toBeInTheDocument();
+  });
+
+  it('collapses the model picker below the thread when not wide', () => {
+    render(<ChatTab wide={false} />);
+    expect(screen.getByText('Modell')).toBeInTheDocument();
+    expect(screen.getByText('Modell').closest('summary')).toBeTruthy();
+  });
+
+  it('uses a 220px rail plus a shrinking conversation track when wide', () => {
+    const { container } = render(<ChatTab wide />);
+    const grid = chatLayoutGrid(container);
+    expect(grid.style.gridTemplateColumns).toBe('220px minmax(0, 1fr)');
+  });
+
+  it('uses a single shrinking track when not wide', () => {
+    const { container } = render(<ChatTab wide={false} />);
+    const grid = chatLayoutGrid(container);
+    expect(grid.style.gridTemplateColumns).toBe('minmax(0, 1fr)');
   });
 });
