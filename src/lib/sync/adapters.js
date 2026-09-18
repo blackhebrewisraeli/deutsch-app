@@ -63,6 +63,8 @@ export function settingsToRow(local, level, levelUpdatedAt) {
       placement: local.placement,
       // Phase 4: opt-in topic ids. Additive; an older client omits the key.
       enabledInterests: local.enabledInterests,
+      // Phase 5: learner model band. Additive; missing → client treats as auto.
+      preferredModel: local.preferredModel,
     },
   };
 }
@@ -84,6 +86,7 @@ export function settingsFromRow(row) {
     settingsUpdatedAt: d.settingsUpdatedAt,
     placement: d.placement,
     enabledInterests: d.enabledInterests,
+    preferredModel: d.preferredModel,
   };
 }
 

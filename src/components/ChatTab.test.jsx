@@ -37,15 +37,32 @@ describe('ChatTab routing', () => {
     Element.prototype.scrollIntoView = vi.fn();
   });
 
-  it('sends chat routingContext, defaulting userTier to guest', async () => {
+  it('sends chat routingContext, defaulting userTier to guest and Auto', async () => {
     render(<ChatTab />);
     await sendHallo();
 
     expect(callClaude).toHaveBeenCalledWith(expect.any(String), 'Hallo', expect.any(Array), {
-      routingContext: { taskType: 'chat', userTier: 'guest' },
+      routingContext: { taskType: 'chat', userTier: 'guest', preferredModel: 'auto' },
       level: 'a1',
       vocab: expect.any(Array),
     });
+  });
+
+  it('passes a signed-in tier and the saved preferredModel', async () => {
+    render(<ChatTab user={{ id: 'u1' }} preferredModel="balanced" />);
+    await sendHallo();
+    expect(callClaude.mock.calls[0][3].routingContext).toEqual({
+      taskType: 'chat',
+      userTier: 'free',
+      preferredModel: 'balanced',
+    });
+  });
+
+  it('lets the learner change the model from Chat', async () => {
+    const onPreferredModelChange = vi.fn();
+    render(<ChatTab onPreferredModelChange={onPreferredModelChange} />);
+    await userEvent.click(screen.getByRole('button', { name: /balanced/i }));
+    expect(onPreferredModelChange).toHaveBeenCalledWith('balanced');
   });
 });
 

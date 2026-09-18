@@ -12,6 +12,7 @@ export const DEFAULT_TIER = 'guest';
 export const MODELS = Object.freeze({
   haiku: Object.freeze({
     id: 'claude-haiku-4-5-20251001',
+    provider: 'anthropic',
     capability: 1,
     cost: 1,
     latencyMs: 400,
@@ -19,6 +20,7 @@ export const MODELS = Object.freeze({
   }),
   sonnet: Object.freeze({
     id: 'claude-sonnet-4-5',
+    provider: 'anthropic',
     capability: 2,
     cost: 2,
     latencyMs: 1200,
@@ -26,6 +28,7 @@ export const MODELS = Object.freeze({
   }),
   opus: Object.freeze({
     id: 'claude-opus-4-1',
+    provider: 'anthropic',
     capability: 3,
     cost: 3,
     latencyMs: 2800,

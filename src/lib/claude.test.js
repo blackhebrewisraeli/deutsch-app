@@ -108,6 +108,26 @@ describe('callClaude', () => {
     }
   );
 
+  it('honours an in-tier preferredModel instead of the automatic pick', async () => {
+    await callClaude('sys', 'msg', [], {
+      routingContext: { taskType: 'chat', userTier: 'free', preferredModel: 'fast' },
+    });
+    expect(postedBody().model).toBe(MODELS.haiku.id);
+    expect(postedBody().max_tokens).toBe(TASKS.chat.maxTokens);
+  });
+
+  it('falls back to the automatic route when preferredModel exceeds the tier', async () => {
+    await callClaude('sys', 'msg', [], {
+      routingContext: { taskType: 'chat', userTier: 'guest', preferredModel: 'balanced' },
+    });
+    expect(postedBody().model).toBe(MODELS.haiku.id);
+
+    await callClaude('sys', 'msg', [], {
+      routingContext: { taskType: 'chat', userTier: 'free', preferredModel: 'capable' },
+    });
+    expect(postedBody().model).toBe(MODELS.sonnet.id);
+  });
+
   it('keeps endpoint routing independent of the selected model', async () => {
     await callClaude('sys', 'msg', [], {
       endpoint: 'grade',

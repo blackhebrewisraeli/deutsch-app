@@ -211,6 +211,21 @@ describe('mergeSettings', () => {
     expect(mergeSettings(remote, local).enabledInterests).toEqual(['sport']);
   });
 
+  it('lets preferredModel follow whole-row LWW so an Auto pick can stick', () => {
+    const local = {
+      settingsUpdatedAt: 200,
+      goal: 50,
+      preferredModel: 'auto',
+    };
+    const remote = {
+      settingsUpdatedAt: 100,
+      goal: 30,
+      preferredModel: 'balanced',
+    };
+    expect(mergeSettings(local, remote).preferredModel).toBe('auto');
+    expect(mergeSettings(remote, local).preferredModel).toBe('auto');
+  });
+
   it('unions frozenDays and maxes bestStreak across devices (sync-safe)', () => {
     const local = {
       settingsUpdatedAt: 200,

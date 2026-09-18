@@ -10,12 +10,15 @@ import {
   DEFAULT_TIER,
 } from './catalog.js';
 
+import { AUTO_MODEL, modelForProfile, sanitizePreferredModel } from './preference.js';
+
 /**
  * @typedef {object} RouteContext
  * @property {keyof typeof TASKS} taskType
  * @property {keyof typeof TIERS} [userTier]
  * @property {number} [complexityScore]
  * @property {number} [expectedLatency]
+ * @property {string} [preferredModel]
  *
  * @typedef {object} RouteConfig
  * @property {string} model
@@ -46,6 +49,20 @@ export function routeAiRequest(context) {
   const eligible = Object.values(MODELS).filter((m) => m.cost <= tier.maxCost);
   const capable = eligible.filter((m) => m.capability >= required);
   const chosen = pick(capable, eligible, budget);
+
+  const preferred = sanitizePreferredModel(context.preferredModel);
+  if (preferred !== AUTO_MODEL) {
+    const override = modelForProfile(preferred);
+    // Tier is a ceiling. A cheaper pick always wins; a dearer one falls back
+    // to the automatic route instead of billing past the plan.
+    if (override && override.cost <= tier.maxCost) {
+      return {
+        model: override.id,
+        maxTokens: task.maxTokens,
+        profile: override.profile,
+      };
+    }
+  }
 
   return {
     model: chosen.id,

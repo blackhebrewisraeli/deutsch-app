@@ -1,11 +1,22 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { COLORS, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from '../lib/theme';
+import {
+  COLORS,
+  FONT_MONO,
+  FONT_BODY,
+  FONT_SIZE,
+  LETTER_SPACING,
+  SPACE,
+  RADIUS,
+  SHADOW,
+} from '../lib/theme';
 import { callClaude } from '../lib/claude';
 import { chatSystemPrompt } from '../lib/prompts';
 import { classifiedLevel } from '../lib/levelGate';
 import { getUserLevel } from '../lib/levelPref';
 import { buildChatAllowlist, scenariosForLevel } from '../lib/chatVocab';
 import { interestPromptHints } from '../lib/interests';
+import { sanitizePreferredModel, userTierOf } from '../lib/ai-routing/preference.js';
+import ModelPicker from './ModelPicker';
 import { activePack } from '../packs';
 const {
   scenarios: SCENARIOS,
@@ -34,6 +45,9 @@ export default function ChatTab({
   learnedWords = {},
   learnedByDeck = {},
   enabledInterests = [],
+  preferredModel = 'auto',
+  onPreferredModelChange,
+  user = null,
 }) {
   // Classified CEFR is the source of truth. A `level` prop (still passed by
   // App for tab-API consistency) cannot raise the band.
@@ -164,7 +178,11 @@ export default function ChatTab({
 
     try {
       const raw = await callClaude(systemPrompt, text, history, {
-        routingContext: { taskType: 'chat', userTier: 'guest' },
+        routingContext: {
+          taskType: 'chat',
+          userTier: userTierOf(user),
+          preferredModel: sanitizePreferredModel(preferredModel),
+        },
         level: chatLevel,
         vocab,
       });
@@ -221,6 +239,27 @@ export default function ChatTab({
             level={chatLevel}
             scenarios={visibleScenarios}
           />
+
+          <div style={{ marginTop: SPACE[5] }}>
+            <div
+              style={{
+                fontFamily: FONT_MONO,
+                fontSize: FONT_SIZE.tag,
+                letterSpacing: LETTER_SPACING.caps,
+                textTransform: 'uppercase',
+                color: COLORS.mute,
+                marginBottom: SPACE[3],
+              }}
+            >
+              Modell
+            </div>
+            <ModelPicker
+              value={preferredModel}
+              onChange={onPreferredModelChange}
+              userTier={userTierOf(user)}
+              compact
+            />
+          </div>
 
           {currentTask && (
             <TaskPanel

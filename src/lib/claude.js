@@ -6,6 +6,9 @@
 //
 // Model + token budget come from routeAiRequest. A missing routingContext
 // is treated as guest chat so today's callers keep the cheap Haiku baseline.
+// preferredModel on that context is an optional learner override; auto/junk
+// leave the automatic pick. The POST still sends a catalog model id — never
+// a vendor key.
 
 import { routeAiRequest } from './ai-routing/router.js';
 

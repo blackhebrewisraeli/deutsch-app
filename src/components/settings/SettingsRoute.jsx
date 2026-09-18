@@ -21,6 +21,8 @@ import EmailSection from './EmailSection';
 import ProfileSection from './ProfileSection';
 import OfflineCacheSection from './OfflineCacheSection';
 import InterestPicker from './InterestPicker';
+import ModelPicker from '../ModelPicker';
+import { userTierOf } from '../../lib/ai-routing/preference.js';
 import { getThemeModeForUI, setThemePreference } from '../../lib/themeMode';
 import { writeLevel, LEVEL_NAMES, LEVEL_MODES } from '../../lib/levelPref';
 import { LEVEL_MULTIPLIERS } from '../../lib/gameConfig';
@@ -67,6 +69,8 @@ export default function SettingsRoute({
   interestTopics = [],
   enabledInterests = [],
   onInterestsChange,
+  preferredModel = 'auto',
+  onPreferredModelChange,
   levelBoost = false,
   onSignIn,
   onSignOut,
@@ -207,6 +211,36 @@ export default function SettingsRoute({
                 />
               </Stack>
             )}
+            <Stack gap={3}>
+              <div
+                style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: FONT_SIZE.tag,
+                  fontWeight: FONT_WEIGHT.bold,
+                  letterSpacing: LETTER_SPACING.caps,
+                  textTransform: 'uppercase',
+                  color: COLORS.mute,
+                }}
+              >
+                KI-Modell
+              </div>
+              <div
+                style={{
+                  fontFamily: FONTS.body,
+                  fontSize: FONT_SIZE.sm,
+                  color: COLORS.inkSoft,
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                Used for Chat with Anna. Auto keeps the current router. Fast / Balanced / Capable
+                pick a band when your plan allows it.
+              </div>
+              <ModelPicker
+                value={preferredModel}
+                onChange={onPreferredModelChange}
+                userTier={userTierOf(user)}
+              />
+            </Stack>
             <button
               type="button"
               aria-pressed={soundOn}

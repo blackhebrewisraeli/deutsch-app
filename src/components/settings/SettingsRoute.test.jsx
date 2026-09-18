@@ -58,6 +58,9 @@ describe('SettingsRoute', () => {
     // Interests — opt-in topical vocab (Phase 4)
     expect(screen.getByText('Interessen')).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Interest topics' })).toBeInTheDocument();
+    // KI-Modell — learner-facing Chat band (Phase 5)
+    expect(screen.getByText('KI-Modell')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Chat model' })).toBeInTheDocument();
     // Appearance
     expect(screen.getByLabelText(/appearance/i)).toBeInTheDocument();
     // Device Cache Storage — guests need this too, so it is not inside Konto
@@ -122,6 +125,13 @@ describe('SettingsRoute', () => {
     renderRoute({ enabledInterests: [], onInterestsChange });
     await userEvent.click(screen.getByRole('button', { name: /sport/i }));
     expect(onInterestsChange).toHaveBeenCalledWith(['sport']);
+  });
+
+  it('picks a chat model through onPreferredModelChange', async () => {
+    const onPreferredModelChange = vi.fn();
+    renderRoute({ preferredModel: 'auto', onPreferredModelChange });
+    await userEvent.click(screen.getByRole('button', { name: /fast/i }));
+    expect(onPreferredModelChange).toHaveBeenCalledWith('fast');
   });
 });
 

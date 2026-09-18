@@ -25,6 +25,12 @@ describe('AI routing catalog', () => {
     expect(MODELS.opus.profile).toBe('capable');
   });
 
+  it('names a provider on every catalog row so the server adapter can dispatch', () => {
+    for (const model of Object.values(MODELS)) {
+      expect(model.provider).toBe('anthropic');
+    }
+  });
+
   it('sets translation_check cheaper and faster than generative tasks', () => {
     expect(TASKS.translation_check.minCapability).toBeLessThan(TASKS.chat.minCapability);
     expect(TASKS.translation_check.maxTokens).toBeLessThan(TASKS.chat.maxTokens);
