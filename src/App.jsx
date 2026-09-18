@@ -29,7 +29,8 @@ import {
   multiplier,
 } from './lib/streak';
 import { activePack } from './packs';
-const { decks: PRESET_DECKS } = activePack.content;
+const { decks: PRESET_DECKS, interestTopics } = activePack.content;
+import { sanitizeEnabledInterests } from './lib/interests';
 import HomeTab from './components/HomeTab';
 import SettingsRoute from './components/settings/SettingsRoute';
 import { deriveMissions } from './lib/missions';
@@ -101,6 +102,7 @@ export default function App() {
   // map: reads fall back to it, and writes still mirror into it so a device on
   // an older app version keeps working. See lib/learnedWords.js.
   const [learnedByDeck, setLearnedByDeck] = useState({});
+  const [enabledInterests, setEnabledInterests] = useState([]);
   const [reviewTarget, setReviewTarget] = useState(null);
   const [streakBurst, setStreakBurst] = useState(false);
 
@@ -454,6 +456,15 @@ export default function App() {
     window.dispatchEvent(new CustomEvent('deutsch:progress'));
   };
 
+  const handleInterestsChange = (next) => {
+    const enabled = sanitizeEnabledInterests(next, interestTopics);
+    const current = loadState() ?? {};
+    saveState({ ...current, enabledInterests: enabled });
+    stampSettings();
+    setEnabledInterests(enabled);
+    window.dispatchEvent(new CustomEvent('deutsch:progress'));
+  };
+
   const authOverlay = (
     <>
       <AuthCallbackLanding
@@ -691,6 +702,7 @@ export default function App() {
           learnedByDeck: readLearnedByDeck(s),
         }).learnedByDeck
       );
+      setEnabledInterests(sanitizeEnabledInterests(s.enabledInterests, interestTopics));
       const today = todayKey();
       const goal = s.gamification?.goal ?? DEFAULT_GOAL;
       const frozenDays = s.gamification?.frozenDays ?? {};
@@ -868,6 +880,9 @@ export default function App() {
       onGoalChange={handleGoalChange}
       soundOn={loadState()?.gamification?.soundOn ?? false}
       onSoundChange={handleSoundToggle}
+      interestTopics={interestTopics}
+      enabledInterests={enabledInterests}
+      onInterestsChange={handleInterestsChange}
       levelBoost={authStatus === 'authenticated'}
       onSignIn={requestSignIn}
       onSignOut={handleSignOut}
@@ -1253,6 +1268,7 @@ export default function App() {
                     wide={width >= bp.wide}
                     learnedWords={learnedWords}
                     learnedByDeck={learnedByDeck}
+                    enabledInterests={enabledInterests}
                   />
                 )}
                 {tab === 'alphabet' && (
@@ -1275,6 +1291,7 @@ export default function App() {
                     customDecks={liveDecks(decks)}
                     onDeckGenerated={handleDeckGenerated}
                     onDeckDeleted={handleDeckDeleted}
+                    enabledInterests={enabledInterests}
                   />
                 )}
                 {tab === 'translate' && (

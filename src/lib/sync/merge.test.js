@@ -196,6 +196,21 @@ describe('mergeSettings', () => {
     expect(out.placement).toEqual(remotePlacement);
   });
 
+  it('lets enabledInterests follow whole-row LWW so a disable can stick', () => {
+    const local = {
+      settingsUpdatedAt: 200,
+      goal: 50,
+      enabledInterests: ['sport'],
+    };
+    const remote = {
+      settingsUpdatedAt: 100,
+      goal: 30,
+      enabledInterests: ['sport', 'tech'],
+    };
+    expect(mergeSettings(local, remote).enabledInterests).toEqual(['sport']);
+    expect(mergeSettings(remote, local).enabledInterests).toEqual(['sport']);
+  });
+
   it('unions frozenDays and maxes bestStreak across devices (sync-safe)', () => {
     const local = {
       settingsUpdatedAt: 200,

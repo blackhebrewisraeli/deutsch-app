@@ -37,6 +37,7 @@ export default function VocabBrowse({
   learnedByDeck = null,
   now,
   level,
+  interestDecks = [],
 }) {
   const showTable = !loading && !error && cards.length > 0;
   const showHeader = showSelector || Boolean(title);
@@ -71,6 +72,7 @@ export default function VocabBrowse({
               onSelect={onSelectDeck}
               customDecks={selectableCustomDecks}
               level={level}
+              interestDecks={interestDecks}
             />
           )}
           {title && (

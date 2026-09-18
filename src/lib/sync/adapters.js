@@ -61,6 +61,8 @@ export function settingsToRow(local, level, levelUpdatedAt) {
       // new localStorage key — AGENTS.md forbids renaming those. An older
       // client that does not name this field simply omits it (allowlist).
       placement: local.placement,
+      // Phase 4: opt-in topic ids. Additive; an older client omits the key.
+      enabledInterests: local.enabledInterests,
     },
   };
 }
@@ -81,6 +83,7 @@ export function settingsFromRow(row) {
     levelUpdatedAt: d.levelUpdatedAt,
     settingsUpdatedAt: d.settingsUpdatedAt,
     placement: d.placement,
+    enabledInterests: d.enabledInterests,
   };
 }
 

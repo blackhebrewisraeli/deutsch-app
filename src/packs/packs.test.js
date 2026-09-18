@@ -33,6 +33,13 @@ describe('activePack', () => {
     expect(activePack.content.lexicon).toBe(LEXICON);
     expect(activePack.content.deckDefs).toBe(DECKS);
   });
+  it('resolves opt-in interest decks from their own lexicon slice', () => {
+    expect(activePack.content.interestTopics.map((t) => t.id)).toEqual(['sport', 'tech', 'musik']);
+    const sport = activePack.content.interestDecks['interest-sport'];
+    expect(sport).toHaveLength(10);
+    expect(sport[0].id).toBe(sport[0].de);
+    expect(sport[0].en.length).toBeGreaterThan(0);
+  });
   it('preserves legacy surface-form ids on resolved cards (SRS continuity)', () => {
     const food = activePack.content.decks.food;
     expect(food[0].id).toBe('das Brot');

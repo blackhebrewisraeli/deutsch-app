@@ -98,6 +98,21 @@ describe('ChatTab classified CEFR and vocab', () => {
     expect(sparse).toContain('small starter set');
     expect(callClaude.mock.calls[0][3].vocab.length).toBeGreaterThan(0);
   });
+
+  it('includes a learned interest term and biases toward enabled topics', async () => {
+    const sport = activePack.content.interestDecks['interest-sport'];
+    const card = sport[0];
+    render(
+      <ChatTab
+        learnedByDeck={{ 'interest-sport': { [card.id]: true } }}
+        enabledInterests={['sport']}
+      />
+    );
+    await sendHallo();
+    const system = callClaude.mock.calls[0][0];
+    expect(system).toContain(card.de);
+    expect(system).toContain('sports and athletic activities');
+  });
 });
 
 describe('ChatTab speech', () => {

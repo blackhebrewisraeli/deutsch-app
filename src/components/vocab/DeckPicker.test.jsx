@@ -306,3 +306,38 @@ describe('DeckPicker — classified CEFR gates auto decks', () => {
     await userEvent.selectOptions(deckSelect(), 'cefr-b1');
   });
 });
+
+describe('DeckPicker — interest decks', () => {
+  const groupSelect = () => screen.getByRole('combobox', { name: 'Group' });
+  const deckSelect = () => screen.getByRole('combobox', { name: 'Deck' });
+  const sport = [{ id: 'interest-sport', name: 'Sport', count: 10 }];
+
+  it('hides the Interests group until a topic is enabled', () => {
+    render(<DeckPicker {...props} />);
+    expect(screen.queryByRole('option', { name: 'Interests' })).not.toBeInTheDocument();
+  });
+
+  it('lists enabled interest decks under Interests and reports the pick', async () => {
+    const onSelect = vi.fn();
+    render(<DeckPicker {...props} onSelect={onSelect} interestDecks={sport} />);
+    expect(screen.getByRole('option', { name: 'Interests' })).toBeInTheDocument();
+    await userEvent.selectOptions(groupSelect(), 'Interests');
+    expect(screen.getByRole('option', { name: /Sport \(10 cards\)/ })).toHaveValue(
+      'interest-sport'
+    );
+    await userEvent.selectOptions(deckSelect(), 'interest-sport');
+    expect(onSelect).toHaveBeenCalledWith('interest-sport');
+  });
+
+  it('opens Interests when the current deck is an enabled topic deck', () => {
+    render(<DeckPicker {...props} deckId="interest-sport" interestDecks={sport} />);
+    expect(groupSelect()).toHaveValue('Interests');
+    expect(deckSelect()).toHaveValue('interest-sport');
+  });
+
+  it('still offers unleveled interest decks to an A1 learner', async () => {
+    render(<DeckPicker {...props} level="a1" interestDecks={sport} />);
+    await userEvent.selectOptions(groupSelect(), 'Interests');
+    expect(screen.getByRole('option', { name: /Sport/ })).toHaveValue('interest-sport');
+  });
+});

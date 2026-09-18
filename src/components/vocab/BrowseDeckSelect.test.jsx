@@ -92,4 +92,23 @@ describe('BrowseDeckSelect', () => {
     const values = screen.getAllByRole('option').map((o) => o.value);
     expect(values).toContain('cefr-b1');
   });
+
+  it('hides Interests until a topic deck is passed', () => {
+    render(<BrowseDeckSelect deckId="greetings" onSelect={() => {}} />);
+    expect(screen.queryByRole('option', { name: 'Sport' })).not.toBeInTheDocument();
+  });
+
+  it('lists enabled interest decks under Interests', async () => {
+    const onSelect = vi.fn();
+    render(
+      <BrowseDeckSelect
+        deckId="greetings"
+        onSelect={onSelect}
+        interestDecks={[{ id: 'interest-sport', name: 'Sport' }]}
+      />
+    );
+    expect(screen.getByRole('option', { name: 'Sport' })).toHaveValue('interest-sport');
+    await userEvent.selectOptions(browseSelect(), 'interest-sport');
+    expect(onSelect).toHaveBeenCalledWith('interest-sport');
+  });
 });
