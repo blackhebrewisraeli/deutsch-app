@@ -2,7 +2,7 @@ import { sendError } from './respond.js';
 import { originAllowed } from './origin.js';
 import { validateAiBody } from './validate.js';
 import { createRateLimiter, defaultStore } from './ratelimit.js';
-import { forwardToAnthropic } from './anthropic.js';
+import { forwardToProvider, isAnyProviderConfigured } from './forward.js';
 
 // One factory builds every AI endpoint: same chain, per-endpoint quotas.
 // Rate limiting runs before validation on purpose — malformed requests
@@ -18,8 +18,7 @@ export function createAiHandler({ rate, afterValidate }) {
       return sendError(res, 'forbidden', 'Origin not allowed');
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
+    if (!isAnyProviderConfigured()) {
       return sendError(res, 'server_error', 'Server is not configured.');
     }
 
@@ -45,7 +44,7 @@ export function createAiHandler({ rate, afterValidate }) {
     }
 
     try {
-      const { status, data } = await forwardToAnthropic(safeBody, apiKey);
+      const { status, data } = await forwardToProvider(safeBody);
       return res.status(status).json(data);
     } catch (err) {
       console.error('AI lane upstream failure:', err.message);

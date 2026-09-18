@@ -31,6 +31,7 @@ import {
 import { activePack } from './packs';
 const { decks: PRESET_DECKS, interestTopics } = activePack.content;
 import { sanitizeEnabledInterests } from './lib/interests';
+import { AUTO_MODEL, sanitizePreferredModel } from './lib/ai-routing/preference.js';
 import HomeTab from './components/HomeTab';
 import SettingsRoute from './components/settings/SettingsRoute';
 import { deriveMissions } from './lib/missions';
@@ -103,6 +104,7 @@ export default function App() {
   // an older app version keeps working. See lib/learnedWords.js.
   const [learnedByDeck, setLearnedByDeck] = useState({});
   const [enabledInterests, setEnabledInterests] = useState([]);
+  const [preferredModel, setPreferredModel] = useState(AUTO_MODEL);
   const [reviewTarget, setReviewTarget] = useState(null);
   const [streakBurst, setStreakBurst] = useState(false);
 
@@ -465,6 +467,15 @@ export default function App() {
     window.dispatchEvent(new CustomEvent('deutsch:progress'));
   };
 
+  const handlePreferredModelChange = (next) => {
+    const preferred = sanitizePreferredModel(next);
+    const current = loadState() ?? {};
+    saveState({ ...current, preferredModel: preferred });
+    stampSettings();
+    setPreferredModel(preferred);
+    window.dispatchEvent(new CustomEvent('deutsch:progress'));
+  };
+
   const authOverlay = (
     <>
       <AuthCallbackLanding
@@ -703,6 +714,7 @@ export default function App() {
         }).learnedByDeck
       );
       setEnabledInterests(sanitizeEnabledInterests(s.enabledInterests, interestTopics));
+      setPreferredModel(sanitizePreferredModel(s.preferredModel));
       const today = todayKey();
       const goal = s.gamification?.goal ?? DEFAULT_GOAL;
       const frozenDays = s.gamification?.frozenDays ?? {};
@@ -883,6 +895,8 @@ export default function App() {
       interestTopics={interestTopics}
       enabledInterests={enabledInterests}
       onInterestsChange={handleInterestsChange}
+      preferredModel={preferredModel}
+      onPreferredModelChange={handlePreferredModelChange}
       levelBoost={authStatus === 'authenticated'}
       onSignIn={requestSignIn}
       onSignOut={handleSignOut}
@@ -1269,6 +1283,9 @@ export default function App() {
                     learnedWords={learnedWords}
                     learnedByDeck={learnedByDeck}
                     enabledInterests={enabledInterests}
+                    preferredModel={preferredModel}
+                    onPreferredModelChange={handlePreferredModelChange}
+                    user={user}
                   />
                 )}
                 {tab === 'alphabet' && (

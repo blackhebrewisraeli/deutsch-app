@@ -21,6 +21,20 @@ Prompts are client-assembled and pack-owned (platform Phase 1.3).
 }
 ```
 
+`model` is a **catalog id**, not a learner preference id. The Chat picker stores
+`preferredModel` (`auto` | `fast` | `balanced` | `capable`) on the existing
+state blob; `callClaude` / `routeAiRequest` resolve it to one of:
+
+- `claude-haiku-4-5-20251001` (Fast)
+- `claude-sonnet-4-5` (Balanced)
+- `claude-opus-4-1` (Capable)
+
+Auto leaves the router in charge. The browser never sends API keys — only
+these catalog ids, which `api/_lib/validate.js` allow-lists from the same
+catalog. The server adapter (`api/_lib/forward.js`) looks up `provider` on the
+row and forwards to Anthropic today. See
+`docs/superpowers/specs/2026-09-18-multi-model-wrapper-design.md`.
+
 Chat (`POST /api/v1/ai/chat` and the legacy `/api/chat` alias) also accepts:
 
 ```json
@@ -47,8 +61,8 @@ Constraints (requests violating any → `400 bad_request`):
 
 ## Response
 
-2xx: the Anthropic Messages response, passed through unchanged.
-Non-2xx: see the envelope table in `README.md`; Anthropic's own errors pass
+2xx: the provider Messages response (Anthropic today), passed through
+unchanged. Non-2xx: see the envelope table in `README.md`; upstream errors pass
 through with their status.
 
 ## Legacy alias

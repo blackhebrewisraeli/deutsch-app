@@ -216,4 +216,69 @@ describe('routeAiRequest', () => {
       expect(route({ userTier: 'free', endpoint: 'grade', prompt: 'secret' }).model).toBe(haiku);
     });
   });
+
+  describe('preferredModel override', () => {
+    it('leaves auto (and missing) on the automatic route', () => {
+      expect(
+        routeAiRequest({ taskType: 'chat', userTier: 'free', preferredModel: 'auto' }).model
+      ).toBe(sonnet);
+      expect(routeAiRequest({ taskType: 'chat', userTier: 'free' }).model).toBe(sonnet);
+      expect(
+        routeAiRequest({ taskType: 'chat', userTier: 'free', preferredModel: 'nope' }).model
+      ).toBe(sonnet);
+    });
+
+    it('uses a cheaper pick when the learner asks for Fast', () => {
+      const result = routeAiRequest({
+        taskType: 'chat',
+        userTier: 'free',
+        preferredModel: 'fast',
+      });
+      expect(result).toEqual({ model: haiku, profile: 'fast', maxTokens: TASKS.chat.maxTokens });
+    });
+
+    it('uses Balanced for a signed-in chat when the learner picks it', () => {
+      const result = routeAiRequest({
+        taskType: 'chat',
+        userTier: 'free',
+        preferredModel: 'balanced',
+      });
+      expect(result.model).toBe(sonnet);
+      expect(result.profile).toBe('balanced');
+    });
+
+    it('falls back to auto when the pick exceeds the tier ceiling', () => {
+      expect(
+        routeAiRequest({
+          taskType: 'chat',
+          userTier: 'guest',
+          preferredModel: 'balanced',
+        }).model
+      ).toBe(haiku);
+      expect(
+        routeAiRequest({
+          taskType: 'chat',
+          userTier: 'free',
+          preferredModel: 'capable',
+        }).model
+      ).toBe(sonnet);
+      expect(
+        routeAiRequest({
+          taskType: 'chat',
+          userTier: 'pro',
+          preferredModel: 'capable',
+        }).model
+      ).toBe(opus);
+    });
+
+    it('does not let a preference upgrade a cheap task past its auto pick when the tier forbids it', () => {
+      // Guest translation_check is already Haiku; Balanced is above the ceiling.
+      expect(route({ userTier: 'guest', preferredModel: 'balanced' }).model).toBe(haiku);
+    });
+
+    it('still honours an in-tier preference on a cheap task', () => {
+      expect(route({ userTier: 'free', preferredModel: 'balanced' }).model).toBe(sonnet);
+      expect(route({ userTier: 'pro', preferredModel: 'capable' }).model).toBe(opus);
+    });
+  });
 });

@@ -120,6 +120,18 @@ describe('settings adapter', () => {
     expect(settingsFromRow(row).enabledInterests).toEqual(['sport', 'musik']);
   });
 
+  it('carries preferredModel round-trip on the settings blob', () => {
+    const local = {
+      gamification: { goal: 50 },
+      learnedWords: {},
+      settingsUpdatedAt: 123,
+      preferredModel: 'balanced',
+    };
+    const row = settingsToRow(local, 'a1', 999);
+    expect(row.data.preferredModel).toBe('balanced');
+    expect(settingsFromRow(row).preferredModel).toBe('balanced');
+  });
+
   it('carries frozenDays / bestStreak / lastReconcileDay round-trip', () => {
     const local = {
       gamification: {
