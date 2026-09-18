@@ -1,0 +1,42 @@
+-- Close Supabase advisor WARN 0029
+-- (`authenticated_security_definer_function_executable`) for
+-- public.is_league_member(uuid, uuid).
+--
+-- DO NOT apply this to production from an agent. The owner applies it to
+-- Sprachschule (xcnnlczvxmuwcqwychox) after merge, via the dashboard SQL
+-- editor. Never `migration repair`, `db push`, or MCP apply_migration.
+--
+-- Why revoke, not SECURITY INVOKER
+-- --------------------------------
+-- The function exists so the league_members / leagues SELECT policies can
+-- test membership without RLS self-recursion. A policy on league_members
+-- cannot SELECT league_members under invoker rights — that is why
+-- 20260627000000 created it SECURITY DEFINER with search_path = ''.
+-- Switching to INVOKER would break those policies. The function body does
+-- not change.
+--
+-- Why authenticated no longer needs EXECUTE
+-- -----------------------------------------
+-- 20260627000200 granted EXECUTE to authenticated so policy evaluation
+-- could call the helper, and that grant is what PostgREST exposes as
+-- POST /rest/v1/rpc/is_league_member. Direct callers were verified before
+-- this file:
+--
+--   * api/ never RPCs is_league_member. The league profile endpoint calls
+--     shares_league (already service_role-only) and writes league tables
+--     through the service-role client.
+--   * src/lib/leagues.js only SELECTs league_members / leagues. Membership
+--     scoping is the RLS policy, not an RPC.
+--
+-- RLS policy expressions keep working because the table owner (postgres)
+-- retains EXECUTE by ownership, matching shares_league /
+-- increment_rate_limit / handle_new_user. service_role keeps EXECUTE so a
+-- server-side caller still can, even though none currently does.
+--
+-- After apply: a signed-in learner must still load their league standings.
+-- If that SELECT returns 42501, roll the GRANT to authenticated back — do
+-- not switch the function to INVOKER.
+
+revoke all on function public.is_league_member(uuid, uuid) from public;
+revoke all on function public.is_league_member(uuid, uuid) from anon, authenticated;
+grant execute on function public.is_league_member(uuid, uuid) to postgres, service_role;
