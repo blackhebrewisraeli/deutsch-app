@@ -25,6 +25,7 @@ export default function TaskPanel({
   hintVisible,
   setHintVisible,
   onResetTasks,
+  level,
 }) {
   return (
     <div style={{ marginTop: SPACE[5] }}>
@@ -130,7 +131,7 @@ export default function TaskPanel({
               marginBottom: SPACE[2],
             }}
           >
-            TASK {taskIdx + 1}
+            {`TASK ${taskIdx + 1}${level ? ` · ${String(level).toUpperCase()}` : ''}`}
           </div>
           <div
             style={{

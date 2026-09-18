@@ -1247,7 +1247,13 @@ export default function App() {
                 own content moves into the lane's collapsible. */}
               <PracticeLane level={level} tab={tab}>
                 {tab === 'chat' && (
-                  <ChatTab level={level} mobile={mobile} wide={width >= bp.wide} />
+                  <ChatTab
+                    level={level}
+                    mobile={mobile}
+                    wide={width >= bp.wide}
+                    learnedWords={learnedWords}
+                    learnedByDeck={learnedByDeck}
+                  />
                 )}
                 {tab === 'alphabet' && (
                   <AlphabetTab

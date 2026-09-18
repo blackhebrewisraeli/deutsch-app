@@ -119,6 +119,29 @@ describe('createAiHandler', () => {
     expect(sent.model).toBe('claude-haiku-4-5-20251001');
   });
 
+  it('runs afterValidate and forwards the rewritten body', async () => {
+    const afterValidate = vi.fn((safeBody) => ({
+      ok: true,
+      safeBody: { ...safeBody, system: `${safeBody.system}\n\nappendix` },
+    }));
+    const res = createRes();
+    await createAiHandler({ ...wideOpen, afterValidate })(postReq(), res);
+    expect(res.statusCode).toBe(200);
+    expect(afterValidate).toHaveBeenCalled();
+    expect(JSON.parse(fetch.mock.calls[0][1].body).system).toContain('appendix');
+  });
+
+  it('maps afterValidate failure to 400 and skips upstream', async () => {
+    const res = createRes();
+    await createAiHandler({
+      ...wideOpen,
+      afterValidate: () => ({ ok: false, message: 'Invalid vocab list' }),
+    })(postReq(), res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body.error.code).toBe('bad_request');
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it('forwards a routed Sonnet model id to Anthropic', async () => {
     const res = createRes();
     await createAiHandler(wideOpen)(

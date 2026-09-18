@@ -21,6 +21,22 @@ Prompts are client-assembled and pack-owned (platform Phase 1.3).
 }
 ```
 
+Chat (`POST /api/v1/ai/chat` and the legacy `/api/chat` alias) also accepts:
+
+```json
+{
+  "level": "a1",
+  "vocab": ["Hallo", "Danke"]
+}
+```
+
+`level` is a lowercase CEFR code (`a1` | `a2` | `b1`); unknown strings clamp
+to `a1`, a non-string is `400`. `vocab` is a string array (trimmed, deduped,
+capped); a non-array is `400`. Neither field is forwarded to Anthropic — the
+handler folds a language-blind appendix into `system` so a client cannot raise
+the band by rewriting the prompt alone. Grade and deck ignore these extras
+(unknown fields are stripped).
+
 Constraints (requests violating any → `400 bad_request`):
 
 - `model` must be on the allow-list (`api/_lib/validate.js`)

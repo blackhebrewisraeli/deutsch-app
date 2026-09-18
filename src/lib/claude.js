@@ -28,20 +28,29 @@ export const callClaude = async (
   systemPrompt,
   userMessage,
   conversationHistory = [],
-  { endpoint = 'chat', routingContext } = {}
+  { endpoint = 'chat', routingContext, level, vocab } = {}
 ) => {
   const messages = [...conversationHistory, { role: 'user', content: userMessage }];
   const { model, maxTokens } = routeAiRequest(routingContextFor(routingContext));
 
+  const body = {
+    model,
+    max_tokens: maxTokens,
+    system: systemPrompt,
+    messages,
+  };
+  // Chat extras are validated/clamped server-side and never forwarded to
+  // Anthropic as fields — only folded into the system prompt. Grade/deck
+  // omit them so a leaked allowlist cannot hitch a ride on those quotas.
+  if (endpoint === 'chat') {
+    if (level != null) body.level = level;
+    if (Array.isArray(vocab)) body.vocab = vocab;
+  }
+
   const response = await fetch(ENDPOINTS[endpoint], {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      system: systemPrompt,
-      messages,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {

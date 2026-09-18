@@ -43,6 +43,11 @@ describe('TaskPanel', () => {
     expect(screen.getByText('Order a coffee politely.')).toBeInTheDocument();
   });
 
+  it('labels the task with the classified CEFR code when given', () => {
+    render(<TaskPanel {...baseProps} level="a1" />);
+    expect(screen.getByText('TASK 1 · A1')).toBeInTheDocument();
+  });
+
   it('hides the hint until requested, then toggles via setHintVisible', async () => {
     const setHintVisible = vi.fn();
     render(<TaskPanel {...baseProps} setHintVisible={setHintVisible} />);

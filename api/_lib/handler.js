@@ -7,7 +7,7 @@ import { forwardToAnthropic } from './anthropic.js';
 // One factory builds every AI endpoint: same chain, per-endpoint quotas.
 // Rate limiting runs before validation on purpose — malformed requests
 // still consume quota, so garbage cannot be free.
-export function createAiHandler({ rate }) {
+export function createAiHandler({ rate, afterValidate }) {
   const checkRate = createRateLimiter({ ...rate, store: defaultStore() });
 
   return async function handler(req, res) {
@@ -35,8 +35,17 @@ export function createAiHandler({ rate }) {
       return sendError(res, 'bad_request', result.message);
     }
 
+    let safeBody = result.safeBody;
+    if (typeof afterValidate === 'function') {
+      const extra = afterValidate(result.safeBody, req.body);
+      if (!extra.ok) {
+        return sendError(res, 'bad_request', extra.message);
+      }
+      safeBody = extra.safeBody;
+    }
+
     try {
-      const { status, data } = await forwardToAnthropic(result.safeBody, apiKey);
+      const { status, data } = await forwardToAnthropic(safeBody, apiKey);
       return res.status(status).json(data);
     } catch (err) {
       console.error('AI lane upstream failure:', err.message);

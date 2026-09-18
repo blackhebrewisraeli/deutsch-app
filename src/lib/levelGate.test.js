@@ -5,6 +5,7 @@ import {
   allowedModes,
   isModeAllowed,
   clampMode,
+  classifiedLevel,
   cefrOfDeckDef,
   isDeckAllowedForLevel,
   isDeckIdAllowed,
@@ -59,6 +60,24 @@ describe('isModeAllowed / clampMode', () => {
     expect(clampMode('b1')).toBe('a1');
     setUserLevel('b1');
     expect(clampMode('b1')).toBe('b1');
+  });
+});
+
+describe('classifiedLevel', () => {
+  it('returns the stored classification, not a lower requested mode', () => {
+    expect(classifiedLevel('b1')).toBe('b1');
+    expect(classifiedLevel('a2')).toBe('a2');
+    expect(classifiedLevel('a1')).toBe('a1');
+  });
+
+  it('treats junk as a1', () => {
+    expect(classifiedLevel('c2')).toBe('a1');
+    expect(classifiedLevel(null)).toBe('a1');
+  });
+
+  it('reads the stored classification when the arg is omitted', () => {
+    setUserLevel('a2');
+    expect(classifiedLevel()).toBe('a2');
   });
 });
 
