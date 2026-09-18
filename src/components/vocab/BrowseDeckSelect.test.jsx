@@ -78,4 +78,18 @@ describe('BrowseDeckSelect', () => {
     expect(screen.queryByRole('button', { name: /Remove/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
+
+  it('hides B1 CEFR decks from an A1 learner', () => {
+    render(<BrowseDeckSelect deckId="greetings" onSelect={() => {}} level="a1" />);
+    const values = screen.getAllByRole('option').map((o) => o.value);
+    expect(values).toContain('cefr-a1');
+    expect(values).not.toContain('cefr-b1');
+    expect(values).not.toContain('artikel-b1');
+  });
+
+  it('offers the B1 CEFR deck once classified B1', () => {
+    render(<BrowseDeckSelect deckId="greetings" onSelect={() => {}} level="b1" />);
+    const values = screen.getAllByRole('option').map((o) => o.value);
+    expect(values).toContain('cefr-b1');
+  });
 });

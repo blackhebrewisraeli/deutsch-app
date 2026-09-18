@@ -3,21 +3,26 @@ import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../../lib/theme
 import { AUTO_DECKS, DECK_GROUPS } from '../../packs/de/autoDecks';
 import { DECKS as PRESET_DECKS } from '../../packs/de/decks';
 import SectionLabel from '../ui/SectionLabel';
+import { filterCatalogByLevel } from '../../lib/levelGate';
+import { getUserLevel } from '../../lib/levelPref';
 
 export const BROWSE_SCOPE_LABEL = 'Choose a deck';
 
-const GROUPS = [
-  {
-    label: 'Preset decks',
-    items: Object.entries(PRESET_DECKS).map(([id, deck]) => ({ id, name: deck.name })),
-  },
-  ...DECK_GROUPS.filter((g) => g !== 'Curated').map((label) => ({
-    label,
-    items: AUTO_DECKS.filter((d) => d.group === label).map(({ id, name }) => ({ id, name })),
-  })),
-];
-
-const KNOWN_IDS = new Set(GROUPS.flatMap((g) => g.items.map((d) => d.id)));
+const groupsFor = (level) => {
+  const allowed = filterCatalogByLevel(AUTO_DECKS, level);
+  return [
+    {
+      label: 'Preset decks',
+      items: Object.entries(PRESET_DECKS).map(([id, deck]) => ({ id, name: deck.name })),
+    },
+    ...DECK_GROUPS.filter((g) => g !== 'Curated')
+      .map((label) => ({
+        label,
+        items: allowed.filter((d) => d.group === label).map(({ id, name }) => ({ id, name })),
+      }))
+      .filter((g) => g.items.length > 0),
+  ];
+};
 
 const customItems = (customDecks) =>
   Object.entries(customDecks ?? {}).map(([id, deck]) => ({
@@ -35,11 +40,18 @@ const customItems = (customDecks) =>
  * Custom decks are options, not a placeholder: if Browse is showing a custom
  * deck's rows, the closed select names that deck.
  */
-export default function BrowseDeckSelect({ deckId, onSelect, customDecks = {} }) {
+export default function BrowseDeckSelect({
+  deckId,
+  onSelect,
+  customDecks = {},
+  level = getUserLevel(),
+}) {
   const selectId = useId();
   const extras = customItems(customDecks);
   const extraIds = new Set(extras.map((d) => d.id));
-  const value = KNOWN_IDS.has(deckId) || extraIds.has(deckId) ? deckId : '';
+  const groups = groupsFor(level);
+  const knownIds = new Set(groups.flatMap((g) => g.items.map((d) => d.id)));
+  const value = knownIds.has(deckId) || extraIds.has(deckId) ? deckId : '';
 
   return (
     <>
@@ -88,7 +100,7 @@ export default function BrowseDeckSelect({ deckId, onSelect, customDecks = {} })
             ))}
           </optgroup>
         )}
-        {GROUPS.map((g) => (
+        {groups.map((g) => (
           <optgroup key={g.label} label={g.label}>
             {g.items.map((d) => (
               <option key={d.id} value={d.id}>

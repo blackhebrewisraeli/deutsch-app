@@ -35,6 +35,31 @@ describe('resolveRecommended', () => {
     expect(remaining.map((m) => m.id)).toEqual(['not-a-real-mission']);
     expect(cards.map((c) => c.id)).toEqual(['continue-quiz', 'review-vocab']);
   });
+
+  it('drops a CEFR-tagged deck above the classified level', () => {
+    const missions = [
+      { id: 'deck-unfinished', count: 7, tab: 'vocab', priority: 4, deckId: 'cefr-b1' },
+    ];
+    const { cards, remaining } = resolveRecommended(missions, 2, { classifiedLevel: 'a1' });
+    expect(remaining).toEqual([]);
+    expect(cards.map((c) => c.id)).not.toContain('deck-unfinished');
+    expect(cards[0].tab).not.toBeUndefined();
+  });
+
+  it('drops a mission that names a mode above classified', () => {
+    const missions = [
+      { id: 'goal-remaining', count: 20, tab: 'translate', priority: 2, mode: 'b1' },
+    ];
+    const { cards, remaining } = resolveRecommended(missions, 2, { classifiedLevel: 'a1' });
+    expect(cards.map((c) => c.id)).not.toContain('goal-remaining');
+    expect(remaining.map((m) => m.id)).not.toContain('goal-remaining');
+  });
+
+  it('keeps tab-only fallbacks for an A1 learner — they inherit classified mode', () => {
+    const { cards } = resolveRecommended([], 2, { classifiedLevel: 'a1' });
+    expect(cards.map((c) => c.id)).toEqual(['continue-quiz', 'review-vocab']);
+    expect(cards[0].tab).toBe('translate');
+  });
 });
 
 describe('RecommendedActions', () => {

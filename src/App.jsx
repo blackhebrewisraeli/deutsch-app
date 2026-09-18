@@ -3,7 +3,7 @@ import { User, BookOpen, MessageSquare, Type, Languages, Home } from 'lucide-rea
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
-import { readLevel, writeLevel, LEVEL_CHANGE_EVENT, hasStoredLevel } from './lib/levelPref';
+import { readLevel, LEVEL_CHANGE_EVENT, hasStoredLevel } from './lib/levelPref';
 import { SessionGuardContext, useSessionGuardValue } from './lib/sessionGuard';
 import { getReviewItems, todayKey, TABS } from './lib/stats';
 import { trialStatus } from './lib/trial';
@@ -730,14 +730,11 @@ export default function App() {
     }
   }, [stats, learnedWords, decks, learnedByDeck]);
 
-  // Review feed click handler — switches tab (and level for Translate),
-  // then drops `reviewTarget` so the destination tab can pre-load the item.
+  // Review feed click handler — switches tab, then drops `reviewTarget` so
+  // the destination can pre-load the item. Must NOT writeLevel: a leftover
+  // B1 translate item used to reclassify an A1 learner into free typing.
   const openPlacement = () => setShowPlacement(true);
   const handleReview = (item) => {
-    if (item.tab === 'translate' && item.context && item.context !== level) {
-      setLevel(item.context);
-      writeLevel(item.context);
-    }
     setReviewTarget(item);
     setTab(item.tab);
   };

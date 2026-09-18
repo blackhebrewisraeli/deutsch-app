@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import VocabTab from './VocabTab';
 import TranslateTab from './TranslateTab';
 import { activePack } from '../packs';
+import { setUserLevel } from '../lib/levelPref';
 
 const submitFeedback = vi.hoisted(() => vi.fn());
 vi.mock('../lib/feedback', async (importOriginal) => ({
@@ -45,6 +46,7 @@ describe('reporting an issue from inside an exercise', () => {
 
     it('captures the card, the deck and the level the learner was on', async () => {
       const user = userEvent.setup();
+      setUserLevel('a2');
       renderTab({ level: 'a2' });
       // Empty SRS ⇒ the queue is the deck in order, so the first card is fixed.
       const card = DECKS.greetings[0];
@@ -132,6 +134,7 @@ describe('reporting an issue from inside an exercise', () => {
 
     it('captures the sentence and the level the learner was on', async () => {
       const user = userEvent.setup();
+      setUserLevel('b1');
       render(<TranslateTab key="b1" level="b1" />);
 
       const payload = await report(user, 'my translation was also correct');
@@ -147,6 +150,7 @@ describe('reporting an issue from inside an exercise', () => {
 
     it('sends the expected German answer for triage without showing it', async () => {
       const user = userEvent.setup();
+      setUserLevel('b1');
       render(<TranslateTab key="b1" level="b1" />);
 
       await user.click(screen.getByRole('button', { name: /report an issue/i }));

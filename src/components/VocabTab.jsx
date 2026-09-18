@@ -33,6 +33,8 @@ import { drillFor } from './vocab/drills';
 import { speak } from '../lib/speech';
 import useAutoDeck from './vocab/useAutoDeck';
 import { AUTO_DECKS } from '../packs/de/autoDecks';
+import { clampMode, isDeckAllowedForLevel } from '../lib/levelGate';
+import { getUserLevel } from '../lib/levelPref';
 
 // The verdict is where the other meanings can be taught — the card face must
 // not show them, since that would print the answer above the question.
@@ -117,6 +119,7 @@ export default function VocabTab({
   // deck. With one deck in the map this is exactly the old behaviour.
   const customCards = customDecks?.[deckId]?.cards ?? null;
   const activeDeck = customCards ?? (isAuto ? (asyncDeck ?? []) : (PRESET_DECKS[deckId] ?? []));
+  const practiceLevel = clampMode(level, getUserLevel());
 
   // Deck changes must not keep the previous queue. React applies the id write
   // before the reset effect, so one render can pair a new (smaller) deck with
@@ -142,6 +145,13 @@ export default function VocabTab({
     const isKnown = customDecks?.[deckId] || isAuto || Object.hasOwn(PRESET_DECKS, deckId ?? '');
     if (!isKnown) selectDeck(DEFAULT_DECK_ID);
   }, [deckId, customDecks, isAuto]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const def = AUTO_DECKS.find((d) => d.id === deckId);
+    if (def && !isDeckAllowedForLevel(def, practiceLevel)) {
+      selectDeck(DEFAULT_DECK_ID);
+    }
+  }, [deckId, practiceLevel]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const target = pendingReviewRef.current;
@@ -254,7 +264,7 @@ export default function VocabTab({
     setAnswered(true);
     setResult(res);
     if (res === 'correct' || res === 'almost') markLearned(deckId, card.id);
-    recordEvent('vocab', level, res);
+    recordEvent('vocab', practiceLevel, res);
     recordItem('vocab', deckId, card.id, card.en, res);
   };
 
@@ -265,7 +275,7 @@ export default function VocabTab({
     setAnswered(true);
     setResult(verdict);
     if (correct) markLearned(deckId, card.id);
-    recordEvent('vocab', level, verdict);
+    recordEvent('vocab', practiceLevel, verdict);
     recordItem('vocab', deckId, card.id, card.en, verdict);
   };
 
@@ -287,7 +297,7 @@ export default function VocabTab({
       : 'wrong';
     setAnswered(true);
     setResult(verdict);
-    recordEvent('vocab', level, verdict);
+    recordEvent('vocab', practiceLevel, verdict);
     recordItem('vocab', deckId, card.id, expected, verdict);
   };
 
@@ -335,7 +345,7 @@ export default function VocabTab({
   // Spelled out rather than derived as `!showChoices`, which would additionally
   // show the input for any level outside a1/a2/b1 — not reachable through the
   // pack's cefrLevels today, but a behaviour change either way.
-  const isBeginner = level === 'a1' || level === 'a2';
+  const isBeginner = practiceLevel === 'a1' || practiceLevel === 'a2';
   // Artikel decks drill gender rather than meaning. Keyed off the deck's group
   // so adding a deck to the group is enough — no second list to keep in sync.
   // One table lookup replaces a flag, a conceal branch and an answer branch per
@@ -355,7 +365,7 @@ export default function VocabTab({
   // the loudest thing on the card, plus a caption that distinguishes the first
   // listen from a replay. See `played` below.
   const showChoices = !isDrill && isBeginner && activeDeck.length >= 4;
-  const showTyped = !isDrill && (level === 'b1' || (isBeginner && activeDeck.length < 4));
+  const showTyped = !isDrill && (practiceLevel === 'b1' || (isBeginner && activeDeck.length < 4));
 
   const deckTitle =
     customDecks?.[deckId]?.name ||
@@ -386,6 +396,7 @@ export default function VocabTab({
     now: browseNow,
     onPractice: practiseRow,
     selectableCustomDecks: customDecks,
+    level: practiceLevel,
   };
 
   return (
@@ -458,7 +469,12 @@ export default function VocabTab({
             marginTop: SPACE[8],
           }}
         >
-          <DeckPicker deckId={deckId} onSelect={selectDeck} customDecks={customDecks} />
+          <DeckPicker
+            deckId={deckId}
+            onSelect={selectDeck}
+            customDecks={customDecks}
+            level={practiceLevel}
+          />
 
           {/* ── Right column: active recall UI ── */}
           <div
@@ -577,7 +593,7 @@ export default function VocabTab({
                     <FeedbackButton
                       context={{
                         surface: 'vocab',
-                        level,
+                        level: practiceLevel,
                         deckId,
                         itemId: card.id,
                         itemLabel: card.de ?? null,

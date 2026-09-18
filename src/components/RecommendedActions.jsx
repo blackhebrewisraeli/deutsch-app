@@ -15,10 +15,10 @@ import { resolveRecommended } from './resolveRecommended';
 //
 // Padding is one SPACE stop under the original tile inset (SPACE[5]/SPACE[4]
 // → SPACE[3]/SPACE[4]) so the cards stay the loudest hop, just shorter.
-export default function RecommendedActions({ missions = [], onGo }) {
+export default function RecommendedActions({ missions = [], classifiedLevel, onGo }) {
   const chrome = activePack.content.homeChrome ?? {};
   const tabNames = activePack.content.missionsChrome?.tabNames ?? {};
-  const { cards } = resolveRecommended(missions);
+  const { cards } = resolveRecommended(missions, 2, { classifiedLevel });
   if (cards.length === 0) return null;
 
   return (

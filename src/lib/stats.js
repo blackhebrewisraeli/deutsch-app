@@ -21,6 +21,8 @@ import { currentStreak, multiplier } from './streak';
 import { DEFAULT_GOAL, XP_PER_VERDICT, LEVEL_MULTIPLIERS } from './gameConfig';
 import { isLevelBoostEnabled } from './xpEntitlement';
 import { TABS } from './tabs.js';
+import { clampMode } from './levelGate.js';
+import { getUserLevel } from './levelPref.js';
 
 export { TABS };
 export const LEVELS = ['a1', 'a2', 'b1'];
@@ -243,13 +245,16 @@ export function recordEvent(tab, level, verdict) {
     const frozenDays = state.gamification?.frozenDays ?? {};
     const streakLen = currentStreak(state.daily ?? {}, goal, today, frozenDays);
     const streakMult = multiplier(streakLen);
-    // Unknown level → ×1, never NaN: `level` reaches here straight from a
-    // component prop.
-    const levelMult = isLevelBoostEnabled() ? (LEVEL_MULTIPLIERS[level] ?? 1) : 1;
+    // Classified CEFR is the source of truth. A caller that passes b1 for an
+    // A1 learner must not bank the B1 multiplier or a byLevel.b1 bucket —
+    // that was the "pick harder for more XP" path. Unknown codes → a1 via
+    // clampMode, never NaN.
+    const gatedLevel = clampMode(level, getUserLevel());
+    const levelMult = isLevelBoostEnabled() ? (LEVEL_MULTIPLIERS[gatedLevel] ?? 1) : 1;
     const mult = streakMult * levelMult;
     const base = XP_PER_VERDICT[verdict] ?? 0;
     const bonus = Math.round(base * (mult - 1));
-    const daily = applyEvent(state.daily ?? {}, today, tab, level, verdict, bonus);
+    const daily = applyEvent(state.daily ?? {}, today, tab, gatedLevel, verdict, bonus);
     saveState({ ...state, daily });
     try {
       enqueue({
@@ -257,7 +262,7 @@ export function recordEvent(tab, level, verdict) {
         dateKey: today,
         packId: 'de',
         tab,
-        level,
+        level: gatedLevel,
         verdict,
         bonusXp: bonus,
       });
@@ -277,10 +282,15 @@ export function recordEvent(tab, level, verdict) {
 export function recordItem(tab, context, label, detail, verdict) {
   try {
     const state = loadState() ?? {};
+    // Translate keys review items on the CEFR code. Vocab keys them on a
+    // deck id, which is not a level — only clamp when the context itself is
+    // one of the engine's codes, or an A1 learner reviewing would mint a B1
+    // key that handleReview used to reclassify them with.
+    const gatedContext = LEVELS.includes(context) ? clampMode(context, getUserLevel()) : context;
     const items = applyItemEvent(
       state.items ?? {},
       tab,
-      context,
+      gatedContext,
       label,
       detail,
       verdict,

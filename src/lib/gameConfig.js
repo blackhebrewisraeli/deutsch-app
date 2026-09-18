@@ -37,9 +37,11 @@ export const MULTIPLIER_TIERS = [
   { minStreak: 30, mult: 2.0 },
 ];
 
-// XP multiplier by practice level — a harder level pays more for the same
-// answer. Account holders only (see lib/xpEntitlement.js); composes
-// multiplicatively with MULTIPLIER_TIERS above.
+// XP multiplier by classified CEFR — account holders only (see
+// lib/xpEntitlement.js); composes multiplicatively with MULTIPLIER_TIERS.
+// Bound to placement, not a free difficulty pick: recordEvent clamps the
+// event's level to allowedModes(classified) before applying this, so an A1
+// learner cannot bank the B1 1.5× by selecting a harder control.
 export const LEVEL_MULTIPLIERS = { a1: 1, a2: 1.25, b1: 1.5 };
 
 // How many custom decks a learner may CREATE. A legibility limit, not a storage

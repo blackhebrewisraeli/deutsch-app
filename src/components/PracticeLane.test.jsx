@@ -168,11 +168,22 @@ describe('PracticeLane — progress wiring (E5.5)', () => {
 
   it('reports the tab it is mounted on, not a hardcoded one', async () => {
     const user = userEvent.setup();
+    localStorage.setItem('deutsch-level', 'b1');
     warmCache([unit('u9', 1, [flashcard('a', 'Hallo')])], { level: 'b1', tab: 'translate' });
     vi.stubGlobal('fetch', pending());
     renderLane({ level: 'b1', tab: 'translate' });
     await revealAndRate('Got it', user);
     expect(recordEvent).toHaveBeenCalledWith('translate', 'b1', 'correct');
+  });
+
+  it('records the classified level when the prop asks for a higher band', async () => {
+    const user = userEvent.setup();
+    localStorage.setItem('deutsch-level', 'a1');
+    warmCache([unit('u9', 1, [flashcard('a', 'Hallo')])], { level: 'a1', tab: 'translate' });
+    vi.stubGlobal('fetch', pending());
+    renderLane({ level: 'b1', tab: 'translate' });
+    await revealAndRate('Got it', user);
+    expect(recordEvent).toHaveBeenCalledWith('translate', 'a1', 'correct');
   });
 });
 

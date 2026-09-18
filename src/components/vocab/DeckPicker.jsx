@@ -11,6 +11,8 @@ import {
 } from '../../lib/theme';
 import SectionLabel from '../ui/SectionLabel';
 import { AUTO_DECKS, DECK_GROUPS } from '../../packs/de/autoDecks';
+import { filterCatalogByLevel } from '../../lib/levelGate';
+import { getUserLevel } from '../../lib/levelPref';
 
 // Tailwind max-w-md — keeps the picker a single readable column on a wide screen.
 const PICKER_MAX_WIDTH = 448;
@@ -83,9 +85,9 @@ const PRESETS = [
  * the group does not. Presets stay a vertical list above the cascade.
  *
  * @param {{ deckId: string, onSelect: (id: string) => void,
- *           customDecks?: object }} props
+ *           customDecks?: object, level?: string }} props
  */
-export default function DeckPicker({ deckId, onSelect, customDecks = {} }) {
+export default function DeckPicker({ deckId, onSelect, customDecks = {}, level = getUserLevel() }) {
   const groupSelectId = useId();
   const deckSelectId = useId();
   const [activeGroup, setActiveGroup] = useState(() => groupForDeck(deckId) ?? AUTO_GROUPS[0]);
@@ -96,7 +98,8 @@ export default function DeckPicker({ deckId, onSelect, customDecks = {} }) {
   }, [deckId]);
 
   const current = AUTO_GROUPS.includes(activeGroup) ? activeGroup : AUTO_GROUPS[0];
-  const activeDecks = AUTO_DECKS.filter((d) => d.group === current);
+  const allowedAuto = filterCatalogByLevel(AUTO_DECKS, level);
+  const activeDecks = allowedAuto.filter((d) => d.group === current);
   const deckValue = activeDecks.some((d) => d.id === deckId) ? deckId : '';
 
   return (
