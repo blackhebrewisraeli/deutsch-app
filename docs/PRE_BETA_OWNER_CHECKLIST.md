@@ -115,14 +115,19 @@ local `supabase start`.
 
 Repo file: `supabase/migrations/20260918200000_revoke_is_league_member_execute.sql`.
 
+Moves `is_league_member` to schema `private` (not in PostgREST's exposed
+schemas) and points both league RLS policies at it. `authenticated` keeps
+`EXECUTE` there — PostgreSQL checks that privilege when evaluating RLS,
+so revoking it in `public` 42501'd every league SELECT. Dropping the
+public function is what closes `/rpc/is_league_member`.
+
 1. Open the production SQL editor for Sprachschule.
 2. Paste the file **verbatim**. Run it.
 3. Do **not** `supabase migration repair`, `db push`, `db pull`, or
    `db reset`. Do not apply via MCP.
 4. Smoke-test leagues: sign in, open Stats → Ligen, confirm standings
-   load. The change only revokes `EXECUTE` on
-   `public.is_league_member` from `anon` / `authenticated`; it must not
-   42501 the RLS-scoped `league_members` SELECT.
+   load. A 42501 on that SELECT means the private-schema grants did not
+   land; do not recreate `public.is_league_member`.
 5. Confirm Migration Drift (`.github/workflows/migration-drift.yml`) sees
    the new name. Ignore a red **Supabase Preview** check — that asks the
    inverse question and is stale on `main` on purpose (`AGENTS.md`).

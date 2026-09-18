@@ -76,11 +76,13 @@ describe('league RLS policies do not re-evaluate auth.uid() per row', () => {
     expect(offenders).toEqual([]);
   });
 
-  it('still routes membership through the security-definer helper', () => {
+  it('still routes membership through the private security-definer helper', () => {
     // The initplan fix must not accidentally inline the membership test and
     // reintroduce the RLS self-recursion that is_league_member exists to avoid.
+    // public.is_league_member is gone (advisor 0029); the helper lives in
+    // schema private, which PostgREST does not expose.
     for (const p of policies) {
-      expect(p.qual).toMatch(/is_league_member\(/);
+      expect(p.qual).toMatch(/private\.is_league_member\(/);
     }
   });
 });
