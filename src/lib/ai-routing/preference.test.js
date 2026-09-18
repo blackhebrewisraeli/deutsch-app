@@ -50,6 +50,11 @@ describe('userTierOf', () => {
     expect(userTierOf({ id: 'u1' })).toBe('free');
   });
 
+  it('does not treat isAdmin as a paid plan', () => {
+    expect(userTierOf({ id: 'u1', isAdmin: true, isSystemAccount: true })).toBe('free');
+    expect(userTierOf({ id: 'u1', role: 'admin' })).toBe('free');
+  });
+
   it('reserves pro for an explicit plan/tier flag', () => {
     expect(userTierOf({ id: 'u1', plan: 'pro' })).toBe('pro');
     expect(userTierOf({ id: 'u1', tier: 'pro' })).toBe('pro');

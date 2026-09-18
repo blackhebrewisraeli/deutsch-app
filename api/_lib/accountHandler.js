@@ -4,6 +4,18 @@ import { createRateLimiter, defaultStore } from './ratelimit.js';
 import { requireAuth } from './auth-middleware.js';
 import { serviceClient } from './supabase.js';
 import { isRecentAuth } from './authTime.js';
+import { classifyAuthUser } from './roles.js';
+
+/** Default: a blocked profile cannot use the account lane. */
+export async function defaultReadBlockedAt(db, userId) {
+  const { data, error } = await db
+    .from('profiles')
+    .select('blocked_at')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) throw error;
+  return data?.blocked_at ?? null;
+}
 
 // One factory builds every account-lane endpoint, the way createAiHandler builds
 // the AI lane. Before this existed, `delete` and `export` each hand-rolled their
@@ -29,6 +41,13 @@ export function createAccountHandler({
   // Optional: demand that the caller authenticated within this many seconds.
   // Omitted means ungated, which is every endpoint that is not destructive.
   recentAuthMaxAgeSec,
+  // Admin APIs set this. Classification is computed from verified emails on
+  // auth.user, never from the request body or profile fields.
+  requireAdmin = false,
+  // Export, delete, and admin `me` stay reachable when the account is blocked.
+  allowBlocked = false,
+  // Injectable for tests only. Production reads profiles.blocked_at.
+  readBlockedAt,
   // Both injectable for tests only; production reads the env var and the
   // configured store, same as the AI lane.
   allowedOrigins,
@@ -80,7 +99,22 @@ export function createAccountHandler({
     const db = serviceClient();
     if (!db) return sendError(res, 'server_error', 'Server is not configured.');
 
+    const identity = classifyAuthUser(auth.user);
+    auth.isAdmin = identity.isAdmin;
+    auth.isSystemAccount = identity.isSystemAccount;
+
+    if (requireAdmin && !auth.isAdmin) {
+      return sendError(res, 'forbidden', 'Admin only.');
+    }
+
     try {
+      if (!allowBlocked) {
+        const lookup = readBlockedAt ?? defaultReadBlockedAt;
+        const blockedAt = await lookup(db, auth.userId);
+        if (blockedAt) {
+          return sendError(res, 'forbidden', 'This account is blocked.');
+        }
+      }
       return await run({ req, res, auth, db });
     } catch (err) {
       // Bind the error. Both endpoints previously used a bare `catch {}`, so a

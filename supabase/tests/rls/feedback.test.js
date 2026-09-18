@@ -109,6 +109,13 @@ describe('RLS: feedback', () => {
     expect(data.every((r) => r.message !== 'pwned')).toBe(true);
   });
 
+  it('A cannot change status on any row through PostgREST', async () => {
+    await A.client.from('feedback').update({ status: 'handled' }).eq('user_id', A.id);
+    const { data } = await admin.from('feedback').select('status').eq('user_id', A.id);
+    expect(data.length).toBeGreaterThan(0);
+    expect(data.every((r) => r.status === 'open')).toBe(true);
+  });
+
   it('rejects an empty message at the constraint, not after insert', async () => {
     const { error } = await A.client.from('feedback').insert(row({ message: '' }));
     expect(error).not.toBeNull();

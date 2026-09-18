@@ -138,6 +138,14 @@ describe('RLS: profiles', () => {
     expect(error).toBeNull();
     expect(data).toEqual([]);
   });
+
+  it('A can still update an allowed column on their own row', async () => {
+    const { error } = await A.client
+      .from('profiles')
+      .update({ display_name: 'Allowed' })
+      .eq('user_id', A.id);
+    expect(error).toBeNull();
+  });
 });
 
 describe('RLS: leagues + league_members', () => {

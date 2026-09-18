@@ -16,7 +16,7 @@ Schema source of truth: `supabase/migrations/` (versioned SQL).
 | `rate_limits` | `(key, window_start)`         | AI-lane counters                                                                                | — (server-only)                                                |
 | `lessons`     | `id`                          | lesson-unit content: `pack_id`, `course_code`, `level`, `tab`, `unit_number`, `exercises jsonb` | —                                                              |
 | `progress_events_seen` | `(user_id, event_id)` | idempotency keys for `apply_progress_event`; 30-day rolling window | the client queue (`deutsch-app-progress-queue-v1`) is the pending set, not this table |
-| `feedback`    | `id`                          | in-exercise problem reports: `surface`, `cefr_level`, `deck_id`, `item_id`, `item_label`, `category`, `message`; nullable `user_id` | — (write-only; no localStorage mirror) |
+| `feedback`    | `id`                          | in-exercise problem reports: `surface`, `cefr_level`, `deck_id`, `item_id`, `item_label`, `category`, `message`, `status` (`open` \| `handled`), `handled_at`, `handled_by`; nullable `user_id` | — (write-only for learners; admin API is the owner read/triage path) |
 
 `lessons` is public content, not user data — nobody owns a row. It is not
 user-scoped (no `user_id`), so it appears in neither `EXPORTED_TABLES` nor
@@ -35,9 +35,16 @@ delete cascade) and **excluded from export**: the rows are owner-facing bug
 reports, and `item_label` can be the concealed answer of a drill. Guest
 reports store `user_id` NULL — `FeedbackButton` has no auth gate, so `anon`
 is granted INSERT (the one exception to "anon gets nothing"). Clients have
-no SELECT / UPDATE / DELETE; `service_role` is the owner read path. Apply
-`20260916183000_feedback.sql` to production after merge — the file in this
-repo is not an applied migration.
+no SELECT / UPDATE / DELETE; the admin API (`docs/api/admin.md`) is the
+owner read/triage path via `service_role`. `status` / `handled_at` /
+`handled_by` were added in `20260918153000_user_roles.sql` (owner applies
+after merge). The original table (`20260916183000_feedback.sql`) is already
+applied in production.
+
+`profiles.blocked_at` is set only by the admin API. Authenticated UPDATE is
+column-limited to `display_name`, `handle`, `avatar_path` so a learner cannot
+clear a block (or invent one). Admin permission is **not** a profile column —
+it is computed from verified emails on the server.
 
 Synced user tables carry `pack_id text default 'de'` (multi-language Phase 4
 interlock) and `updated_at` (set by the writer — the B2 sync's

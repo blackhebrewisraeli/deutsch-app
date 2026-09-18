@@ -22,10 +22,12 @@ import ProfileSection from './ProfileSection';
 import OfflineCacheSection from './OfflineCacheSection';
 import InterestPicker from './InterestPicker';
 import ModelPicker from '../ModelPicker';
+import AdminSection from '../admin/AdminSection';
 import { userTierOf } from '../../lib/ai-routing/preference.js';
 import { getThemeModeForUI, setThemePreference } from '../../lib/themeMode';
 import { writeLevel, LEVEL_NAMES, LEVEL_MODES } from '../../lib/levelPref';
 import { LEVEL_MULTIPLIERS } from '../../lib/gameConfig';
+import { useAdminSession } from '../../lib/useAdminSession.js';
 
 // Settings as a panel inside the Profile tab — not a seventh nav tab, and
 // not a modal. Six tabs already ship; the 320px header budget is a measured
@@ -83,6 +85,7 @@ export default function SettingsRoute({
   // a second source for one device setting.
   const [themeMode, setThemeMode] = useState(() => getThemeModeForUI());
   const [showLevelOverride, setShowLevelOverride] = useState(false);
+  const adminSession = useAdminSession(user);
 
   return (
     <div>
@@ -91,6 +94,21 @@ export default function SettingsRoute({
       </Heading>
 
       <Stack gap={8}>
+        {adminSession.me?.blocked ? (
+          <Section label="Account status">
+            <div
+              style={{
+                fontFamily: FONTS.body,
+                fontSize: FONT_SIZE.base,
+                color: COLORS.ink,
+                overflowWrap: 'anywhere',
+              }}
+            >
+              This account is blocked. You can still export or delete your data below.
+            </div>
+          </Section>
+        ) : null}
+
         <Section label="Profil">
           <ProfileSection
             profile={profile}
@@ -296,6 +314,12 @@ export default function SettingsRoute({
             />
           </Stack>
         </Section>
+
+        {adminSession.me?.isAdmin ? (
+          <Section label="Admin">
+            <AdminSection me={adminSession.me} />
+          </Section>
+        ) : null}
       </Stack>
     </div>
   );

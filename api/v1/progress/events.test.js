@@ -37,6 +37,13 @@ const VALID = {
 let rpcResult;
 let rpcArgs;
 const mockDb = () => ({
+  from: vi.fn(() => ({
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        maybeSingle: vi.fn().mockResolvedValue({ data: { blocked_at: null }, error: null }),
+      })),
+    })),
+  })),
   rpc: vi.fn((name, args) => {
     rpcArgs = { name, args };
     return Promise.resolve(rpcResult);

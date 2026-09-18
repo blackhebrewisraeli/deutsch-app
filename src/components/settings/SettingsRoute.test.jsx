@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SettingsRoute from './SettingsRoute';
@@ -18,6 +18,24 @@ vi.mock('../../lib/leagues', async (importOriginal) => {
   return { ...actual, LEAGUES_ENABLED: true, updateHandle: vi.fn().mockResolvedValue({}) };
 });
 vi.mock('../../lib/profile', () => ({ updateProfile: vi.fn().mockResolvedValue({}) }));
+vi.mock('../../lib/adminApi.js', () => ({
+  fetchAdminMe: vi.fn(),
+  fetchFeedback: vi.fn().mockResolvedValue({ items: [] }),
+  updateFeedbackStatus: vi.fn(),
+  deleteFeedback: vi.fn(),
+  fetchAdminUsers: vi.fn().mockResolvedValue({ items: [] }),
+  setUserBlocked: vi.fn(),
+}));
+
+const adminState = vi.hoisted(() => ({
+  me: { isAdmin: false, isSystemAccount: false, blocked: false },
+  status: 'ready',
+}));
+
+vi.mock('../../lib/useAdminSession.js', () => ({
+  useAdminSession: (user) =>
+    user ? { status: adminState.status, me: adminState.me } : { status: 'idle', me: null },
+}));
 
 const user = { id: 'u1', email: 'sam@example.com' };
 const profile = { handle: 'sam' };
@@ -181,5 +199,37 @@ describe('SettingsRoute — Learning level', () => {
     renderRoute({ level: 'a1', levelBoost: true });
     expect(screen.getByText('Beginner')).toBeInTheDocument();
     expect(screen.queryByText(/XP per answer/)).toBeNull();
+  });
+});
+
+describe('SettingsRoute — Admin', () => {
+  beforeEach(() => {
+    adminState.me = { isAdmin: false, isSystemAccount: false, blocked: false };
+    adminState.status = 'ready';
+  });
+
+  it('hides Admin for a regular signed-in user', () => {
+    renderRoute();
+    expect(screen.queryByText('Admin')).not.toBeInTheDocument();
+  });
+
+  it('hides Admin for a guest even if leftover state claimed admin', () => {
+    adminState.me = { isAdmin: true, isSystemAccount: true, blocked: false };
+    renderRoute({ user: null });
+    expect(screen.queryByText('Admin')).not.toBeInTheDocument();
+  });
+
+  it('shows Admin only after the server says isAdmin', async () => {
+    adminState.me = { isAdmin: true, isSystemAccount: true, blocked: false };
+    renderRoute();
+    expect(screen.getByText('Admin')).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /feedback/i })).toBeInTheDocument();
+  });
+
+  it('shows a blocked banner without admin chrome', () => {
+    adminState.me = { isAdmin: false, isSystemAccount: false, blocked: true };
+    renderRoute();
+    expect(screen.getByText(/this account is blocked/i)).toBeInTheDocument();
+    expect(screen.queryByText('Admin')).not.toBeInTheDocument();
   });
 });

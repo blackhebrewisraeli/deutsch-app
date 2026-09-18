@@ -19,6 +19,10 @@
     { "source": "/api/v1/account/delete", "destination": "/api/v1/account" },
     { "source": "/api/v1/ai/chat", "destination": "/api/v1/ai?op=chat" },
     { "source": "/api/v1/ai/deck", "destination": "/api/v1/ai?op=deck" },
-    { "source": "/api/v1/ai/grade", "destination": "/api/v1/ai?op=grade" }
+    { "source": "/api/v1/ai/grade", "destination": "/api/v1/ai?op=grade" },
+    { "source": "/api/v1/admin/me", "destination": "/api/v1/admin?op=me" },
+    { "source": "/api/v1/admin/feedback", "destination": "/api/v1/admin?op=feedback" },
+    { "source": "/api/v1/admin/users", "destination": "/api/v1/admin?op=users" },
+    { "source": "/api/v1/admin/block", "destination": "/api/v1/admin?op=block" }
   ]
 }

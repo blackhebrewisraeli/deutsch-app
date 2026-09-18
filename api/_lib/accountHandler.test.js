@@ -26,6 +26,8 @@ const req = (overrides = {}) => ({
 });
 
 // Generous quotas so the guard-ordering tests never trip the limiter by accident.
+const notBlocked = async () => null;
+
 const build = (run, opts = {}) =>
   createAccountHandler({
     method: 'DELETE',
@@ -33,6 +35,7 @@ const build = (run, opts = {}) =>
     userRate: { windowMs: 60_000, max: 100 },
     run,
     store: new MemoryStore(),
+    readBlockedAt: notBlocked,
     ...opts,
   });
 
@@ -79,6 +82,7 @@ describe('createAccountHandler', () => {
       userRate: { windowMs: 60_000, max: 100 },
       run,
       store: new MemoryStore(),
+      readBlockedAt: notBlocked,
     });
     const ip = '10.9.9.9';
     const mk = () => ({
@@ -105,6 +109,7 @@ describe('createAccountHandler', () => {
       userRate: { windowMs: 60_000, max: 1 },
       run,
       store: new MemoryStore(),
+      readBlockedAt: notBlocked,
     });
 
     // Two different IPs, same authenticated user.
@@ -141,7 +146,7 @@ describe('createAccountHandler', () => {
     await build(run)(req(), res);
     expect(run).toHaveBeenCalledTimes(1);
     const arg = run.mock.calls[0][0];
-    expect(arg.auth).toEqual(USER);
+    expect(arg.auth).toEqual({ ...USER, isAdmin: false, isSystemAccount: false });
     expect(arg.db).toEqual({ marker: 'db' });
     expect(arg.res).toBe(res);
   });
@@ -199,6 +204,7 @@ describe('createAccountHandler — re-auth gate', () => {
       recentAuthMaxAgeSec: 900,
       run,
       store: new MemoryStore(),
+      readBlockedAt: notBlocked,
     });
 
   it('lets a freshly authenticated caller through', async () => {
@@ -251,5 +257,72 @@ describe('createAccountHandler — re-auth gate', () => {
     const res = createRes();
     await build(run)(reqWithToken(tokenAuthedAgo(30 * 24 * 3600)), res);
     expect(run).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('createAccountHandler — admin gate and blocks', () => {
+  afterEach(() => vi.clearAllMocks());
+
+  const ADMIN = {
+    userId: 'admin-1',
+    email: 'esterkinshimon712@gmail.com',
+    user: {
+      id: 'admin-1',
+      email: 'esterkinshimon712@gmail.com',
+      email_confirmed_at: '2026-09-18T00:00:00Z',
+    },
+  };
+
+  it('rejects a non-admin when requireAdmin is set, ignoring body.isAdmin', async () => {
+    requireAuth.mockResolvedValue(USER);
+    serviceClient.mockReturnValue({ marker: 'db' });
+    const run = vi.fn();
+    const res = createRes();
+    await build(run, { requireAdmin: true })(req({ body: { isAdmin: true } }), res);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error.code).toBe('forbidden');
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('lets a verified admin through when requireAdmin is set', async () => {
+    requireAuth.mockResolvedValue(ADMIN);
+    serviceClient.mockReturnValue({ marker: 'db' });
+    const run = vi.fn().mockResolvedValue(undefined);
+    const res = createRes();
+    await build(run, { requireAdmin: true })(req(), res);
+    expect(run).toHaveBeenCalledTimes(1);
+    expect(run.mock.calls[0][0].auth.isAdmin).toBe(true);
+    expect(run.mock.calls[0][0].auth.isSystemAccount).toBe(true);
+  });
+
+  it('rejects a blocked account before run', async () => {
+    requireAuth.mockResolvedValue(USER);
+    serviceClient.mockReturnValue({ marker: 'db' });
+    const run = vi.fn();
+    const res = createRes();
+    await build(run, { readBlockedAt: async () => '2026-09-18T00:00:00Z' })(req(), res);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error.message).toMatch(/blocked/i);
+    expect(run).not.toHaveBeenCalled();
+  });
+
+  it('does not grant admin from user_metadata', async () => {
+    requireAuth.mockResolvedValue({
+      userId: 'uid-meta',
+      email: 'a@b.com',
+      user: {
+        id: 'uid-meta',
+        email: 'a@b.com',
+        email_confirmed_at: '2026-09-18T00:00:00Z',
+        user_metadata: { isAdmin: true, role: 'admin' },
+        app_metadata: { role: 'admin' },
+      },
+    });
+    serviceClient.mockReturnValue({ marker: 'db' });
+    const run = vi.fn();
+    const res = createRes();
+    await build(run, { requireAdmin: true })(req(), res);
+    expect(res.statusCode).toBe(403);
+    expect(run).not.toHaveBeenCalled();
   });
 });
