@@ -1,0 +1,132 @@
+import { describe, it, expect } from 'vitest';
+import { execFileSync } from 'node:child_process';
+import { adminClient } from './helpers.js';
+
+// Catalog + service-role check for 20260918213000: rate_limits and
+// progress_events_seen stay RLS-on, server-only. Deny-all policies for
+// anon/authenticated silence advisor 0008 without granting Data API access.
+// service_role keeps BYPASSRLS + GRANT ALL so the existing RPCs and admin
+// cleanup still work.
+//
+// WHY psql AND NOT supabase-js for the catalog: pg_policies, pg_class, and
+// table ACLs live in pg_catalog, which PostgREST does not expose. Data API
+// denials for these tables live in policies.test.js.
+
+const DB_URL = process.env.DB_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
+
+const TABLES = ['rate_limits', 'progress_events_seen'];
+const CLIENT_ROLES = ['anon', 'authenticated'];
+const DML = ['SELECT', 'INSERT', 'UPDATE', 'DELETE'];
+
+function sql(q) {
+  return execFileSync('psql', [DB_URL, '-At', '-c', q], { encoding: 'utf8' }).trim();
+}
+
+// has_table_privilege()::text is 'true'/'false' in SQL, but psql's boolean
+// display is not a contract we want to depend on. Same helper as
+// league-fn-grants.test.js.
+function flag(expr) {
+  return sql(`select case when (${expr}) then 't' else 'f' end`);
+}
+
+function queryJson(q) {
+  return JSON.parse(sql(q));
+}
+
+describe('server-only tables: catalog (advisor 0008 hygiene)', () => {
+  const tables = queryJson(`
+    select coalesce(json_agg(json_build_object(
+             'relname', c.relname,
+             'rls', c.relrowsecurity,
+             'force_rls', c.relforcerowsecurity
+           ) order by c.relname), '[]'::json)
+      from pg_class c
+      join pg_namespace n on n.oid = c.relnamespace
+     where n.nspname = 'public'
+       and c.relkind = 'r'
+       and c.relname in (${TABLES.map((t) => `'${t}'`).join(', ')});
+  `);
+
+  const policies = queryJson(`
+    select coalesce(json_agg(json_build_object(
+             'tablename', tablename,
+             'policyname', policyname,
+             'cmd', cmd,
+             'roles', (select coalesce(json_agg(r order by r), '[]'::json)
+                         from unnest(roles) as r),
+             'qual', coalesce(qual, ''),
+             'with_check', coalesce(with_check, '')
+           ) order by tablename, policyname), '[]'::json)
+      from pg_policies
+     where schemaname = 'public'
+       and tablename in (${TABLES.map((t) => `'${t}'`).join(', ')});
+  `);
+
+  it('inspected both server-only tables — the denominator, not just the findings', () => {
+    expect(tables.map((t) => t.relname).sort()).toEqual([...TABLES].sort());
+    expect(tables).toHaveLength(TABLES.length);
+  });
+
+  it('keeps RLS enabled and does not FORCE it (service_role / postgres bypass)', () => {
+    for (const t of tables) {
+      expect(t.rls, `${t.relname} RLS`).toBe(true);
+      expect(t.force_rls, `${t.relname} FORCE RLS`).toBe(false);
+    }
+  });
+
+  it('has exactly one deny-all Data API policy per table, and no granting policy', () => {
+    expect(policies.map((p) => `${p.tablename}.${p.policyname}`).sort()).toEqual([
+      'progress_events_seen.no client access',
+      'rate_limits.no client access',
+    ]);
+    for (const p of policies) {
+      expect(p.cmd, `${p.tablename} cmd`).toBe('ALL');
+      expect(p.roles, `${p.tablename} roles`).toEqual(['anon', 'authenticated']);
+      expect(p.qual, `${p.tablename} USING`).toBe('false');
+      expect(p.with_check, `${p.tablename} WITH CHECK`).toBe('false');
+    }
+  });
+
+  it('revokes every DML privilege from anon and authenticated', () => {
+    for (const table of TABLES) {
+      for (const role of CLIENT_ROLES) {
+        for (const priv of DML) {
+          expect(
+            flag(`has_table_privilege('${role}', 'public.${table}', '${priv}')`),
+            `${role} ${priv} on ${table}`
+          ).toBe('f');
+        }
+      }
+    }
+  });
+
+  it('keeps service_role DML so existing server code still works', () => {
+    for (const table of TABLES) {
+      for (const priv of DML) {
+        expect(
+          flag(`has_table_privilege('service_role', 'public.${table}', '${priv}')`),
+          `service_role ${priv} on ${table}`
+        ).toBe('t');
+      }
+    }
+  });
+});
+
+describe('server-only tables: service_role still writes', () => {
+  it('can insert, read, and delete a rate_limits row (direct table, not only the RPC)', async () => {
+    const admin = adminClient();
+    const key = `hygiene:${Date.now()}:${Math.floor(Math.random() * 1e6)}`;
+    const { error: insErr } = await admin
+      .from('rate_limits')
+      .insert({ key, window_start: 1, count: 1 });
+    expect(insErr).toBeNull();
+
+    const { data, error: selErr } = await admin.from('rate_limits').select('count').eq('key', key);
+    expect(selErr).toBeNull();
+    expect(data).toHaveLength(1);
+    expect(data[0].count).toBe(1);
+
+    const { error: delErr } = await admin.from('rate_limits').delete().eq('key', key);
+    expect(delErr).toBeNull();
+  });
+});
