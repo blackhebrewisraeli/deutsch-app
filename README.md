@@ -15,41 +15,38 @@ gamification, secure cross-device sync, and AI where it genuinely helps.**
 [![License: MIT](https://img.shields.io/badge/License-MIT-F5C518?style=for-the-badge)](./LICENSE)
 
 [Try the app](https://deutsch-app-dusky.vercel.app) ·
-[Explore the superpowers](#-engineering-superpowers) ·
 [Run it locally](#-quick-start) ·
-[See the architecture](#-system-at-a-glance)
+[See the architecture](#-system-at-a-glance) ·
+[Read the wiki](https://github.com/blackhebrewisraeli/deutsch-app/wiki)
 
-<!-- Screenshot placeholder: add docs/images/hero-dashboard.png -->
+![Deutsch· — the Home dashboard](docs/images/home-dashboard.png)
 
-![Deutsch· dashboard — screenshot coming soon](docs/images/hero-dashboard.png)
-
-<sub>One app, six learning surfaces, and considerably more thought about merge semantics than a language app has any right to contain.</sub>
+<sub>Six surfaces, an offline CEFR placement test, and considerably more thought about merge semantics than a language app has any right to contain.</sub>
 
 </div>
 
 > [!NOTE]
-> **Accounts are optional.** Core lessons, vocabulary, speech, SRS, progress,
-> streaks, and quests work locally. Signing in adds cross-device sync, leagues,
-> and a portable profile; generative features require the server API.
+> **Accounts are optional.** Placement, lessons, vocabulary, speech, SRS,
+> progress, streaks, and quests all work locally. Signing in adds cross-device
+> sync, leagues, and a portable profile; generative features require the server
+> API.
 
 ## ✨ What learners get
 
-| Experience                                  | What it does                                                                                  |
-| ------------------------------------------- | --------------------------------------------------------------------------------------------- |
-| 💬 **Guided conversation**                  | An AI tutor sets level-aware scenarios, responds in character, and explains corrections.      |
-| 🔤 **Alphabet & listening**                 | German speech synthesis, confusable-letter quizzes, and a browsable pronunciation grid.       |
-| 🧠 **Vocabulary & SRS**                     | Active recall over preset, lexicon, grammar, and custom decks using Leitner scheduling.       |
-| ✍️ **Adaptive translation**                 | A1 word tiles, A2 fill-in-the-blank drills, and meaning-aware B1 grading.                     |
-| 🎮 **Motivation that respects the learner** | XP, streak freezes, achievements, daily quests, and optional weekly leagues.                  |
-| 🛂 **Learning Passport**                    | A portable identity with handle, level, progress, league profile, and a secure custom avatar. |
+| Experience                                  | What it does                                                                                |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 🧭 **Offline placement**                    | Nine questions drawn from the course itself place you at A1, A2, or B1 — no account, no AI. |
+| 💬 **Guided conversation**                  | An AI tutor sets level-aware scenarios, responds in character, and explains corrections.    |
+| 🔤 **Alphabet & listening**                 | German speech synthesis, confusable-letter quizzes, and a browsable pronunciation grid.     |
+| 🧠 **Vocabulary & SRS**                     | Practice, browse, and generate decks — preset, lexicon, grammar, and custom — on Leitner.   |
+| ✍️ **Adaptive translation**                 | A1 word tiles, A2 fill-in-the-blank drills, and meaning-aware B1 grading.                   |
+| 🎮 **Motivation that respects the learner** | XP, streak freezes, achievements, daily quests, and optional weekly leagues.                |
 
-<!-- Screenshot placeholders: replace these files as product captures become available. -->
+|                          Vocabulary practice                          |
+| :-------------------------------------------------------------------: |
+| ![Practice, Browse, and Custom decks](docs/images/vocab-practice.png) |
 
-|                                    Practice                                     |                                Learning Passport                                 |
-| :-----------------------------------------------------------------------------: | :------------------------------------------------------------------------------: |
-| ![Vocabulary practice — screenshot coming soon](docs/images/vocab-practice.png) | ![Learning Passport — screenshot coming soon](docs/images/learning-passport.png) |
-
-## 🦸 Engineering superpowers
+## 🦸 Two things that make it unusual
 
 <details open>
 <summary><strong>🔌 Offline-first sync that understands different kinds of data</strong></summary>
@@ -73,10 +70,7 @@ absence, so a stale device would recreate a deleted deck. Deutsch· keeps a
 timestamped tombstone; the same per-deck LWW comparison then decides whether an
 edit or deletion is newer.
 
-Signed-in browser access to learner tables and avatar writes is protected by
-Supabase Row Level Security. Adversarial tests exercise those policies through
-real PostgREST requests, including cross-user reads, writes, updates, deletes,
-and avatar-object ownership.
+→ [Offline-First Sync Model](https://github.com/blackhebrewisraeli/deutsch-app/wiki/Offline-First-Sync-Model) in the wiki.
 
 </details>
 
@@ -104,65 +98,6 @@ actual graded practice, protecting the balance of a small, real learning loop.
 
 </details>
 
-<details>
-<summary><strong>🤖 AI behind a narrow, validated server boundary</strong></summary>
-
-AI powers conversational scenarios, custom deck generation, and B1
-meaning-aware grading. Deterministic exercises remain deterministic: vocabulary,
-A1 tiles, and A2 blanks do not call a model just to check an answer.
-
-The browser calls only versioned same-origin endpoints:
-
-```text
-React client
-   └── /api/v1/ai/{chat,grade,deck}
-          ├── origin validation
-          ├── per-route rate limiting
-          ├── request schema validation
-          └── Anthropic API (server-side key only)
-```
-
-The Anthropic key never enters the Vite bundle. Production quotas use an atomic
-Postgres RPC when Supabase server credentials are configured, with an in-memory
-development fallback.
-
-</details>
-
-<details>
-<summary><strong>♿ Accessibility treated as a regression surface</strong></summary>
-
-The accessibility bar is enforced by focused automated checks and semantic
-components—not a promise in a footer.
-
-- A Playwright CI audit checks rendered color contrast across themes, tones,
-  tabs, viewports, modals, and drawers.
-- A shared focus-trap hook keeps keyboard navigation inside active dialogs and
-  restores focus to the opener.
-- Source tests reject nested buttons and hardcoded component colors.
-- Icon-only controls require accessible names.
-- Interactive rows use native semantic controls with visible focus states.
-
-The result is a UI designed for keyboard and screen-reader use while retaining
-its bold editorial visual language.
-
-</details>
-
-<details>
-<summary><strong>🖼️ Secure avatars without trusting the uploaded file</strong></summary>
-
-The Learning Passport avatar pipeline is deliberately ordered:
-
-1. The client validates and re-encodes the image as WebP, stripping EXIF data.
-2. It uploads to a random, user-owned path in Supabase Storage.
-3. The profile API records the new path.
-4. The previous object is removed on a best-effort basis.
-
-Storage policies restrict writes and deletes to the authenticated user's folder.
-If no image exists, a deterministic identicon provides a stable, zero-storage
-fallback.
-
-</details>
-
 ## 🧭 System at a glance
 
 ```mermaid
@@ -176,7 +111,7 @@ flowchart LR
     end
 
     subgraph Vercel["Vercel"]
-        API["Versioned serverless API\nvalidation · quotas"]
+        API["Versioned serverless API\nai · content · progress\nleague · account"]
     end
 
     subgraph Supabase["Supabase"]
@@ -187,35 +122,21 @@ flowchart LR
 
     AI["Anthropic"]
 
-    UI -->|"optional AI"| API --> AI
-    API -->|"rate-limit RPC / account ops"| DB
+    UI -->|"lessons · progress · leagues · AI"| API
+    API --> AI
+    API -->|"RPC · the only progress writer"| DB
     UI -.->|"optional signed-in sync via PostgREST"| DB
     UI -.-> Auth
     UI -.-> Storage
 ```
 
-> The server stores reconciled state; it does not perform learner-progress
-> merges. Keeping merge rules in pure client-side functions makes them
-> deterministic, testable, and usable before the network returns.
-
-## 🛠️ Tech stack
-
-| Layer            | Technology                                                      | Role                                                                |
-| ---------------- | --------------------------------------------------------------- | ------------------------------------------------------------------- |
-| UI               | **React 18**, Vite 5                                            | Component architecture, fast local development, production bundling |
-| Offline          | **PWA / Workbox**, `localStorage`                               | App-shell caching and local-first learner state                     |
-| Data             | **Supabase Postgres**                                           | Durable account data, rate limits, leagues, and sync tables         |
-| Data API         | **PostgREST** via Supabase                                      | RLS-protected browser reads and writes                              |
-| Identity & media | **Supabase Auth + Storage**                                     | Optional accounts and user-owned avatars                            |
-| Server           | **Vercel Functions**                                            | Versioned AI and account endpoints; secrets stay server-side        |
-| AI               | **Anthropic Claude**                                            | Conversation, deck generation, and B1 grading                       |
-| Quality          | **Vitest, React Testing Library, Playwright, ESLint, Prettier** | Unit, integration, policy, contrast, lint, and format checks        |
+> Learner-progress merges stay in pure client-side functions — deterministic,
+> testable, and usable before the network returns. Server-side progress writes
+> go through a single Postgres RPC, so the database has exactly one writer.
 
 ## ⚡ Quick start
 
-### Core app (no account or AI secrets required)
-
-**Prerequisites:** Node.js 20+ and npm.
+**Prerequisites:** Node.js 20 (see `.nvmrc`) and npm.
 
 ```bash
 git clone https://github.com/blackhebrewisraeli/deutsch-app.git
@@ -225,126 +146,46 @@ npm run dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173). The offline-first learning
-flows work without Supabase, Vercel, or Anthropic credentials.
+flows work with no Supabase, Vercel, or Anthropic credentials at all.
 
-### Accounts, sync, leagues, and avatars
+| Command            | Purpose                          |
+| ------------------ | -------------------------------- |
+| `npm run dev`      | Start the Vite UI                |
+| `npm run dev:full` | Start Vite plus Vercel functions |
+| `npm test`         | Run the main Vitest suite        |
+| `npm run lint`     | Run ESLint                       |
 
-**Additional prerequisite:** Docker and the Supabase CLI.
+Accounts, sync, leagues, avatars, and the AI endpoints each need a little more
+setup — local Supabase via Docker, a few `VITE_*` flags, and an
+`ANTHROPIC_API_KEY`. The full matrix, every npm script, and the usual
+"why is sync doing nothing locally?" answer live in
+**[Local Development](https://github.com/blackhebrewisraeli/deutsch-app/wiki/Local-Development)**.
 
-```bash
-supabase start
-cp .env.example .env
-supabase status -o env
-```
+## 📚 Where to learn more
 
-`.env.example` intentionally contains this dummy value:
+Deep documentation lives in the **[project wiki](https://github.com/blackhebrewisraeli/deutsch-app/wiki)**.
 
-```dotenv
-SUPABASE_SERVICE_ROLE_KEY=your_local_service_role_key_here
-```
+| Page                                                                                                                  | What's there                                                    |
+| --------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| [Architecture Overview](https://github.com/blackhebrewisraeli/deutsch-app/wiki/Architecture-Overview)                 | The two-lane design, tech stack, and repository map             |
+| [Offline-First Sync Model](https://github.com/blackhebrewisraeli/deutsch-app/wiki/Offline-First-Sync-Model)           | Merge semantics, tombstones, and independent LWW clocks         |
+| [Lesson Engine](https://github.com/blackhebrewisraeli/deutsch-app/wiki/Lesson-Engine)                                 | Data-driven lessons, the exercise registry, and progress events |
+| [Security & Role Architecture](https://github.com/blackhebrewisraeli/deutsch-app/wiki/Security-and-Role-Architecture) | Key boundaries, RLS, the AI boundary, and the avatar pipeline   |
+| [Operations Runbooks](https://github.com/blackhebrewisraeli/deutsch-app/wiki/Operations-Runbooks)                     | OAuth, email templates, migrations, and the production drill    |
+| [Local Development](https://github.com/blackhebrewisraeli/deutsch-app/wiki/Local-Development)                         | Full setup, every npm script, and troubleshooting               |
+| [Contributing & Quality](https://github.com/blackhebrewisraeli/deutsch-app/wiki/Contributing-and-Quality)             | Testing philosophy, conventions, and the PR flow                |
 
-After `supabase start`, copy the local `SERVICE_ROLE_KEY` printed by
-`supabase status -o env` into `SUPABASE_SERVICE_ROLE_KEY` in `.env`. It belongs
-only to the local `127.0.0.1` stack. **Never place a cloud service-role key in a
-local environment file**—that role bypasses RLS.
+Versioned material stays in the repository, where it is reviewed alongside the
+code it describes: API contracts in [`docs/api/`](./docs/api/), and design specs
+and implementation plans in [`docs/superpowers/`](./docs/superpowers/).
 
-Enable only the client features you want to exercise:
-
-```dotenv
-VITE_SYNC_ENABLED=true
-VITE_LEAGUES_ENABLED=true
-```
-
-Then restart `npm run dev`. Vite reads `.env` once at startup, so a running dev
-server will not pick either flag up.
-
-> **Sync looks dead locally? It is configuration, not a code path.** Nothing in
-> the app checks for `development`, `localhost`, or `navigator.onLine` — the
-> only gate is `VITE_SYNC_ENABLED === 'true'` in `src/lib/sync.js`, and it
-> behaves identically on a laptop and in production. Two settings switch it off,
-> and missing both is the default for a fresh clone, because `.env` is
-> git-ignored and only `.env.example` is tracked:
->
-> - **No `.env` at all** — `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are
->   then undefined, so `isAuthConfigured()` is false, sign-in never appears, and
->   with no session there is nothing to sync. This is the usual cause.
-> - **`.env` present but `VITE_SYNC_ENABLED` unset or `false`** — you can sign
->   in, but `start()` and `markDirty()` are no-ops.
->
-> Sync is deliberately not gated on connectivity. `navigator.onLine` reports
-> whether a network interface is attached, not whether Supabase is reachable,
-> and gating on it would stop the engine from ever starting for someone who
-> opens the app offline — which is the case the offline-first design exists to
-> serve. Writes go to localStorage first and reconcile when a push succeeds.
-
-### Full app with AI endpoints
-
-Add a development `ANTHROPIC_API_KEY`, link the repository to Vercel, and run:
-
-```bash
-npx vercel link
-npm run dev:full
-```
-
-`npm run dev:full` serves the Vite app and `/api` functions together. Use
-`npm run dev` for UI and offline-first work that does not need AI.
-
-<details>
-<summary><strong>Useful commands</strong></summary>
-
-| Command                  | Purpose                                                      |
-| ------------------------ | ------------------------------------------------------------ |
-| `npm run dev`            | Start the Vite UI                                            |
-| `npm run dev:full`       | Start Vite plus Vercel functions                             |
-| `npm run build`          | Create the production PWA                                    |
-| `npm test`               | Run the main Vitest suite                                    |
-| `npm run test:rls`       | Run PostgREST/RLS adversarial tests; requires local Supabase |
-| `npm run lint`           | Run ESLint                                                   |
-| `npm run format:check`   | Check formatting                                             |
-| `npm run audit:contrast` | Audit rendered contrast with Playwright                      |
-| `npm run smoke:learning-path` | Playwright: recommendation → practice → finish → refresh |
-
-</details>
-
-## 🧪 Quality philosophy
-
-The project favors invariants over happy-path demos:
-
-- Merge functions are tested independently from the sync orchestrator.
-- A Playwright smoke walks Home recommendation → Vocab practice → deck complete → reload.
-- RLS tests attack the database as anonymous users, owners, and non-owners.
-- AI request validation and per-route quota contracts are tested server-side.
-- Accessibility checks cover source structure and rendered UI.
-- The pre-commit hook runs lint-staged checks plus the complete main test suite.
-
-Every pull request also runs CI against the same architecture that ships.
-
-## 🗺️ Repository map
-
-```text
-api/                    Vercel functions and shared server middleware
-src/components/         Learning surfaces and accessible UI primitives
-src/lib/                SRS, sync, gamification, quests, auth, and avatars
-src/packs/de/           German content-pack behavior
-supabase/migrations/    Schema, grants, RLS policies, functions, and Storage
-supabase/tests/rls/     Adversarial PostgREST policy tests
-docs/api/               Versioned API contracts
-docs/superpowers/       Architecture decisions and implementation plans
-```
-
-## 🤝 Explore, learn, contribute
-
-This repository is both a working product and a study in local-first application
-design. Good starting points include:
-
-- tracing one state slice through `src/lib/sync/`,
-- reading the adversarial policy tests in `supabase/tests/rls/`,
-- exploring deterministic quest generation in `src/lib/quests.js`, or
-- trying a preset vocabulary deck offline.
+## 🤝 Contributing
 
 Bug reports, accessibility findings, architecture questions, and focused pull
-requests are welcome. Please read [`AGENTS.md`](./AGENTS.md) before making code
-changes; it records the project's conventions and product boundaries.
+requests are all welcome. Please read [`AGENTS.md`](./AGENTS.md) first — it is
+the single source of truth for this project's conventions and product
+boundaries — and [Contributing & Quality](https://github.com/blackhebrewisraeli/deutsch-app/wiki/Contributing-and-Quality)
+for the testing philosophy behind them.
 
 ## 📄 License
 
@@ -357,6 +198,6 @@ are documented separately in [`CONTENT_LICENSE.md`](./CONTENT_LICENSE.md).
 engineering visible.**
 
 [Launch Deutsch·](https://deutsch-app-dusky.vercel.app) ·
-[Back to top](#deutsch-german-practice-with-engineering-depth)
+[Back to top](#deutsch--german-practice-with-engineering-depth)
 
 </div>
