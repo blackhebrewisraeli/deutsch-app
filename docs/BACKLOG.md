@@ -224,6 +224,11 @@ silently land on A1. Design kept at
 
 ## Owner actions — nobody with repo access can do these
 
+When returning from time away, walk `docs/PRE_BETA_OWNER_CHECKLIST.md` first
+(key rotation, secret-scanning, Auth template/URLs, custom domain, signup
+policy, leaked-password protection, pending migrations). The table below is
+the durable queue; the checklist is the once-per-return pass.
+
 ### Sentry source-map upload — needs a token only the account owner can mint
 
 The build side is done and merged; it is dormant until this exists. Without it
@@ -259,6 +264,7 @@ checked so a stale entry is obvious.
 | 3   | Google OAuth client → Supabase Google provider → `VITE_GOOGLE_AUTH_ENABLED=true` on Preview + Production, **then redeploy**.                                                           | ✅ **Done** — flag present in the production env, Google sign-in live since 2026-08-17. Procedure: `docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md` |
 | 4   | Apply `supabase/migrations/20260916183000_feedback.sql` to Sprachschule (`xcnnlczvxmuwcqwychox`) after that PR merges. Dashboard SQL editor. Never `migration repair`.                 | ✅ **Done** — table is live in production. `status` / `handled_*` arrived with action #5. |
 | 5   | Apply `supabase/migrations/20260918153000_user_roles.sql` to Sprachschule after the roles/admin PR merges. Dashboard SQL editor. Never `migration repair`. Adds `feedback.status` / `handled_*` and `profiles.blocked_at`, and narrows profile UPDATE grants. **Do not exclude system accounts from stats/leagues.** | ✅ **Done** — applied 2026-09-18. Production has schema_migrations name `user_roles`; Migration Drift is green. Never `migration repair`. **Do not exclude system accounts from stats/leagues.** |
+| 6   | Apply `supabase/migrations/20260918200000_revoke_is_league_member_execute.sql` to Sprachschule after that PR merges. Dashboard SQL editor. Never `migration repair`. Moves `is_league_member` to schema `private` and retargets both league RLS policies (advisor 0029). Then confirm Stats → Ligen still loads for a signed-in user. | **Unapplied** — owner-only after return. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §8 |
 
 Two traps worth keeping, both from #96:
 

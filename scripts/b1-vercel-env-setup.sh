@@ -61,7 +61,7 @@ if [[ -z "${SUPABASE_SERVICE_ROLE_KEY:-}" ]]; then
   echo "  Instead, open Settings → API Keys:" >&2
   echo "    https://supabase.com/dashboard/project/xcnnlczvxmuwcqwychox/settings/api-keys" >&2
   echo "  Option A (easiest): tab 'Legacy anon, service_role API keys' → Reveal service_role → Copy." >&2
-  echo "  Option B: tab 'Publishable and secret API keys' → Create secret key named e.g. vercel_b1 → Copy sb_secret_..." >&2
+  echo "  Option B: tab 'Publishable and secret API keys' → Create secret key named e.g. vercel_b1 → Copy the secret key (never a publishable key)." >&2
   echo "  Then: export SUPABASE_SERVICE_ROLE_KEY='...'" >&2
   exit 1
 fi
