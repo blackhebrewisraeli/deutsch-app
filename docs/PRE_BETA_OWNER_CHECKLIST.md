@@ -79,9 +79,10 @@ Do **not** disable the Google provider while doing this. The live flag
 
 ## 5. Registration policy (optional email allowlist)
 
-Google signup is currently **open**. That is how `fateevvl@gmail.com` got an
-account. The repo now has an optional allowlist so you can lock signup for
-beta **without a code change and without touching the Google provider**.
+**After #294.** The gate is in the repo; enabling it is Vercel env, not
+another PR. Google signup is currently **open**. That is how
+`fateevvl@gmail.com` got an account. The optional allowlist locks signup
+for beta **without a code change and without touching the Google provider**.
 
 **Default (do nothing):** `SIGNUP_EMAIL_ALLOWLIST` and
 `VITE_SIGNUP_EMAIL_ALLOWLIST` unset or empty → current behaviour. Anyone
@@ -140,15 +141,18 @@ local `supabase start`.
 
 ## 8. Apply pending security-hardening migrations
 
-Two files, in this order. Open the production SQL editor for Sprachschule.
-Paste each file **verbatim**. Run it. Do **not** `supabase migration
-repair`, `db push`, `db pull`, or `db reset`. Do not apply via MCP.
+Two files, in this order: **#290 then #293** (BACKLOG owner actions #6
+then #7). Both PRs are on `main`; neither migration is applied in
+production. Open the production SQL editor for Sprachschule. Paste each
+file **verbatim**. Run it. Do **not** `supabase migration repair`, `db
+push`, `db pull`, or `db reset`. Do not apply via MCP. Do not mark either
+row Done until the SQL has actually run.
 
 ### 8a. `#290` — `is_league_member` off the PostgREST surface
 
 Repo file: `supabase/migrations/20260918200000_revoke_is_league_member_execute.sql`.
 
-Still unapplied as of 2026-09-18. Moves `is_league_member` to schema
+**Unapplied.** Code landed as #290. Moves `is_league_member` to schema
 `private` (not in PostgREST's exposed schemas) and points both league RLS
 policies at it. `authenticated` keeps `EXECUTE` there — PostgreSQL checks
 that privilege when evaluating RLS, so revoking it in `public` 42501'd
@@ -159,16 +163,17 @@ After it runs: sign in, open Stats → Ligen, confirm standings load. A
 42501 on that SELECT means the private-schema grants did not land; do not
 recreate `public.is_league_member`.
 
-### 8b. Advisor 0008 — deny-all policies on server-only tables
+### 8b. `#293` — deny-all policies on server-only tables
 
 Repo file: `supabase/migrations/20260918213000_server_only_rls_deny_policies.sql`.
 
-Apply **after** 8a. Adds deny-all RLS policies (`USING false` /
-`WITH CHECK false`) for `anon` and `authenticated` on `rate_limits` and
-`progress_events_seen`. RLS stays enabled. No client grants. `service_role`
-keeps `GRANT ALL` (it bypasses RLS). Learners never hit these tables;
-there is no UI smoke test. Confirm advisor INFO `rls_enabled_no_policy`
-clears for both tables, and Migration Drift sees the new name.
+**Unapplied.** Code landed as #293. Apply **after** 8a / the #290
+migration. Adds deny-all RLS policies (`USING false` / `WITH CHECK false`)
+for `anon` and `authenticated` on `rate_limits` and `progress_events_seen`.
+RLS stays enabled. No client grants. `service_role` keeps `GRANT ALL` (it
+bypasses RLS). Learners never hit these tables; there is no UI smoke test.
+Confirm advisor INFO `rls_enabled_no_policy` clears for both tables, and
+Migration Drift sees the new name.
 
 Ignore a red **Supabase Preview** check — that asks the inverse question
 and is stale on `main` on purpose (`AGENTS.md`).
