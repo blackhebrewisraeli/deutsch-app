@@ -26,9 +26,9 @@ account cascade. Served read-only via `GET /api/v1/content/lessons`
 
 `progress_events_seen` **is** user-owned (`user_id` → `auth.users` on delete
 cascade) but is **excluded from export**: the keys are opaque, and the
-counters they protect already ship as `daily`. No client policies — the RPC
-is the only writer, matching `rate_limits`. A 30-day prune runs inside the
-RPC after a successful insert.
+counters they protect already ship as `daily`. Deny-all client policies —
+the RPC is the only writer, matching `rate_limits`. A 30-day prune runs
+inside the RPC after a successful insert.
 
 `feedback` **is** user-owned when signed in (`user_id` → `auth.users` on
 delete cascade) and **excluded from export**: the rows are owner-facing bug
@@ -61,10 +61,13 @@ synced learning row.
 - `feedback` is the exception on both axes: INSERT-only, and
   `user_id IS NOT DISTINCT FROM auth.uid()` so a guest (`user_id` NULL,
   `anon` role) can file a report. No client SELECT / UPDATE / DELETE.
-- `rate_limits` has **no policies** — invisible to anon and authenticated;
-  only the service role reads or writes it, via
-  `increment_rate_limit(key, window_start)` (SECURITY DEFINER, execute
-  revoked from client roles).
+- `rate_limits` and `progress_events_seen` are service_role / server-only.
+  RLS stays enabled. Deny-all policies for `anon` and `authenticated`
+  (`USING (false)` / `WITH CHECK (false)`) make that explicit for advisor
+  0008 (`rls_enabled_no_policy`); those roles also have no table grants.
+  `service_role` bypasses RLS and keeps `GRANT ALL`. Writes go through
+  `increment_rate_limit` / `apply_progress_event` (SECURITY DEFINER,
+  execute revoked from client roles).
 - The CI job `rls-policy-tests` boots the real stack and attempts every
   cross-user operation; any success fails the build.
 

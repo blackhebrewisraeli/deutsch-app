@@ -266,13 +266,56 @@ describe('RLS: anonymous access', () => {
   });
 });
 
-describe('RLS: rate_limits', () => {
-  it('is denied to authenticated users at the privilege layer', async () => {
-    // rate_limits is service-role only: no grants for authenticated, on top
-    // of its deliberately policy-free RLS.
-    const { data, error } = await A.client.from('rate_limits').select('*');
-    expect(error).not.toBeNull();
-    expect(error.code).toBe('42501'); // permission denied
-    expect(data).toBeNull();
+const SERVER_ONLY = {
+  rate_limits: {
+    insert: { key: 'deny', window_start: 0, count: 1 },
+    update: { count: 99 },
+    filterCol: 'key',
+    filterVal: 'deny',
+  },
+  progress_events_seen: {
+    insert: { user_id: null, event_id: '00000000-0000-4000-8000-000000000000' },
+    update: { event_id: '00000000-0000-4000-8000-000000000001' },
+    filterCol: 'event_id',
+    filterVal: '00000000-0000-4000-8000-000000000000',
+  },
+};
+
+async function expectEveryVerbDenied(client, table, spec) {
+  const select = await client.from(table).select('*');
+  expect(select.error, `${table} select`).not.toBeNull();
+  expect(select.error.code, `${table} select`).toBe('42501');
+  expect(select.data, `${table} select`).toBeNull();
+
+  const insert = await client.from(table).insert(spec.insert);
+  expect(insert.error, `${table} insert`).not.toBeNull();
+  expect(insert.error.code, `${table} insert`).toBe('42501');
+
+  const update = await client.from(table).update(spec.update).eq(spec.filterCol, spec.filterVal);
+  expect(update.error, `${table} update`).not.toBeNull();
+  expect(update.error.code, `${table} update`).toBe('42501');
+
+  const del = await client.from(table).delete().eq(spec.filterCol, spec.filterVal);
+  expect(del.error, `${table} delete`).not.toBeNull();
+  expect(del.error.code, `${table} delete`).toBe('42501');
+}
+
+describe('RLS: server-only tables', () => {
+  // rate_limits and progress_events_seen are service-role only: no grants
+  // for Data API roles, plus deny-all RLS policies (advisor 0008 hygiene).
+  it('authenticated is denied every Data API verb', async () => {
+    for (const [table, spec] of Object.entries(SERVER_ONLY)) {
+      await expectEveryVerbDenied(A.client, table, {
+        ...spec,
+        insert: table === 'progress_events_seen' ? { ...spec.insert, user_id: A.id } : spec.insert,
+      });
+    }
+  });
+
+  it('anon is denied every Data API verb', async () => {
+    const anon = anonClient();
+    for (const [table, spec] of Object.entries(SERVER_ONLY)) {
+      await expectEveryVerbDenied(anon, table, spec);
+    }
   });
 });
