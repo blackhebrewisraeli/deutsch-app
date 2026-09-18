@@ -10,6 +10,19 @@ so production emails stay in sync with the repo.
 Companion to Phase C of
 `docs/superpowers/specs/2026-08-02-auth-overhaul-design.md`.
 
+## Current production (Sprachschule)
+
+Owner-applied 2026-09-18:
+
+- **Magic Link** subject + body pasted from the repo template (6-digit
+  code + link; footer says the code expires in five minutes).
+- **Email OTP / magic-link expiry** = 300 seconds (5 minutes). Repo
+  `supabase/config.toml` `[auth.email] otp_expiry` matches. JWT expiry is
+  unchanged.
+
+Re-paste the template after any future `magic_link.html` edit — hosted
+Auth does not read the file automatically.
+
 ## Why this exists
 
 B2 designed every sign-in email to carry **both** a magic link
@@ -44,7 +57,9 @@ one-time (and on-change) sync into production.
 2. Confirm the message shows the **6-digit code** and a working **link**.
 3. Enter the code in the installed PWA; separately open the link in a
    browser — both should sign in.
-4. Optional: the uptime auth monitor still only asserts the OTP round trip;
+4. Confirm the footer says the code expires in **five minutes** (matches
+   hosted OTP expiry of 300 seconds).
+5. Optional: the uptime auth monitor still only asserts the OTP round trip;
    it does **not** scrape email bodies. Body checks stay manual until that
    is extended.
 
