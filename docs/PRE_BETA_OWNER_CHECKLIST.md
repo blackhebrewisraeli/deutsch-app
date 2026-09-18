@@ -47,17 +47,24 @@ GitHub → **Security → Secret scanning**. Open every alert.
 
 ## 3. Magic Link template + redirect URLs
 
-Hosted Auth does not pick up `supabase/templates/magic_link.html` by itself.
+**Magic Link template + OTP expiry — owner-applied 2026-09-18** in project
+Sprachschule. Hosted Magic Link body matches the repo template (footer:
+"This code expires in five minutes."). Email OTP / magic-link expiry is
+**300 seconds (5 minutes)** in the dashboard; `supabase/config.toml`
+`[auth.email] otp_expiry` matches. JWT expiry is unchanged.
 
-1. Follow `docs/AUTH_EMAIL_TEMPLATE_RUNBOOK.md` — paste the repo template
-   into **Authentication → Email Templates → Magic Link**.
-2. **Authentication → URL Configuration**:
+Hosted Auth still does not pick up later repo edits by itself. After any
+future template change, re-paste via `docs/AUTH_EMAIL_TEMPLATE_RUNBOOK.md`.
+
+**Redirect URLs — still owner-only / unverified from the repo:**
+
+1. **Authentication → URL Configuration**:
    - Site URL → `https://deutsch-app-dusky.vercel.app`
    - Redirect URLs → production origin, `http://localhost:5173`,
      `http://127.0.0.1:5173` (exact match, no wildcards for the local pair)
 
-Send one real magic-link email and confirm both the 6-digit code and the
-link still sign in.
+Send one real magic-link email after any later template paste and confirm
+both the 6-digit code and the link still sign in.
 
 ## 4. Auth custom domain / Google OAuth branding
 
