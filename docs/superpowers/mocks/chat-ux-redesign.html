@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Deutsch. Chat — proposed direction (design mock)</title>
+    <style>
+      /* Vendored faces — relative to this file in docs/superpowers/mocks/. */
+      @font-face {
+        font-family: 'Fraunces';
+        font-style: normal;
+        font-weight: 300 900;
+        font-display: swap;
+        src: url('../../../public/fonts/fraunces/fraunces-latin-normal-300-900.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'Plus Jakarta Sans';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url('../../../public/fonts/plus-jakarta-sans/plus-jakarta-sans-latin-normal-400-700.woff2')
+          format('woff2');
+      }
+      @font-face {
+        font-family: 'JetBrains Mono';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url('../../../public/fonts/jetbrains-mono/jetbrains-mono-latin-normal-400-700.woff2')
+          format('woff2');
+      }
+      @font-face {
+        font-family: 'JetBrains Mono';
+        font-style: normal;
+        font-weight: 400 700;
+        font-display: swap;
+        src: url('../../../public/fonts/jetbrains-mono/jetbrains-mono-greek-normal-400-700.woff2')
+          format('woff2');
+        unicode-range: U+0370-03FF;
+      }
+
+      :root {
+        --c-ground: #fbf8f1;
+        --c-surface: #ffffff;
+        --c-surface-alt: #f0ece1;
+        --c-border: #e2ddd2;
+        --c-fg: #16110b;
+        --c-fg-muted: #5c5142;
+        --c-accent-black: #1a1816;
+        --c-accent-black-on: #fbf8f1;
+        --c-accent-black-on-muted: #9a948c;
+        --c-flag-red: #dd0000;
+        --c-accent-red: #c92a2a;
+        --c-accent-red-on: #ffffff;
+        --c-gold: #ffce00;
+        --c-accent-on: #0d0d0f;
+        --c-error: #c41e1e;
+        --c-error-fill: #fce8e8;
+        --c-error-deep: #a82020;
+        --c-success: #2f7d3a;
+        --c-success-deep: #246330;
+        --c-press: #000000;
+        --c-lip: #e5dfd0;
+        --f-display: 'Fraunces', Georgia, serif;
+        --f-body: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+        --f-mono: 'JetBrains Mono', 'Courier New', monospace;
+        --radius-md: 14px;
+        --radius-lg: 16px;
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        background: #d9d2c3;
+        color: var(--c-fg);
+        font-family: var(--f-body);
+      }
+
+      .stage {
+        background: var(--c-ground);
+        min-height: 100vh;
+      }
+      .stage.desktop {
+        width: 1280px;
+        min-height: 800px;
+        margin: 0 auto;
+      }
+      .stage.mobile {
+        width: 375px;
+        min-height: 812px;
+        margin: 0 auto;
+      }
+
+      .banner {
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        background: var(--c-gold);
+        color: var(--c-accent-on);
+        padding: 6px 16px;
+        text-align: center;
+      }
+
+      header.mast {
+        background: var(--c-accent-black);
+        color: var(--c-accent-black-on);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 32px;
+      }
+      .stage.mobile header.mast {
+        padding: 10px 12px;
+      }
+      .wordmark {
+        font-family: var(--f-display);
+        font-weight: 900;
+        letter-spacing: -0.04em;
+        font-size: 36px;
+        line-height: 1;
+      }
+      .stage.mobile .wordmark {
+        font-size: 22px;
+      }
+      .wordmark span {
+        color: var(--c-flag-red);
+      }
+      .tag {
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--c-accent-black-on-muted);
+        margin-left: 12px;
+      }
+      .stage.mobile .tag {
+        display: none;
+      }
+      .chip {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        background: var(--c-gold);
+        color: var(--c-accent-on);
+        display: grid;
+        place-items: center;
+        font-family: var(--f-display);
+        font-weight: 700;
+        font-size: 14px;
+      }
+
+      nav.tabs {
+        display: flex;
+        gap: 8px;
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--c-border);
+        background: var(--c-ground);
+      }
+      .stage.mobile nav.tabs {
+        gap: 6px;
+        padding: 8px 10px;
+      }
+      nav.tabs button {
+        flex: 1;
+        min-width: 0;
+        border: none;
+        background: transparent;
+        color: var(--c-fg);
+        border-radius: var(--radius-md);
+        padding: 14px 18px;
+        font-family: var(--f-mono);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: default;
+      }
+      .stage.mobile nav.tabs button {
+        padding: 10px 4px;
+        font-size: 16px;
+        letter-spacing: 0;
+        text-transform: none;
+      }
+      nav.tabs button[aria-current='page'] {
+        background: var(--c-fg);
+        color: var(--c-ground);
+      }
+
+      main.page {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 24px 32px 32px;
+      }
+      .stage.mobile main.page {
+        padding: 16px 16px 24px;
+      }
+
+      .chat {
+        display: grid;
+        grid-template-columns: 220px minmax(0, 1fr);
+        gap: 24px;
+        min-height: 560px;
+      }
+      .stage.mobile .chat {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 12px;
+        min-height: 0;
+      }
+
+      .rail h2,
+      .meta-label {
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.2em;
+        text-transform: uppercase;
+        color: var(--c-fg-muted);
+        margin: 0 0 8px;
+        font-weight: 400;
+      }
+
+      .scenarios {
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--c-border);
+        border-radius: var(--radius-lg);
+        background: var(--c-surface);
+      }
+      .stage.mobile .scenarios {
+        flex-direction: row;
+        overflow-x: auto;
+      }
+      .scenarios button {
+        border: none;
+        background: var(--c-surface);
+        color: var(--c-fg);
+        text-align: left;
+        padding: 12px 14px;
+        font-family: var(--f-display);
+        font-weight: 600;
+        font-size: 15px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border-bottom: 1px solid rgba(22, 17, 11, 0.07);
+        cursor: default;
+        white-space: nowrap;
+      }
+      .stage.mobile .scenarios button {
+        flex-shrink: 0;
+        border-bottom: none;
+        border-right: 1px solid rgba(22, 17, 11, 0.07);
+        padding: 10px 14px;
+        font-size: 14px;
+      }
+      .scenarios button[aria-checked='true'] {
+        background: var(--c-fg);
+        color: var(--c-ground);
+      }
+
+      .task {
+        margin-top: 16px;
+        background: var(--c-accent-red);
+        color: var(--c-accent-red-on);
+        border-radius: var(--radius-lg);
+        padding: 12px 14px;
+      }
+      .stage.mobile .task {
+        margin-top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        padding: 10px 12px;
+      }
+      .task .kicker {
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        opacity: 0.85;
+        margin-bottom: 4px;
+      }
+      .stage.mobile .task .kicker {
+        margin: 0;
+      }
+      .task p {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.45;
+      }
+      .stage.mobile .task p {
+        display: none;
+      }
+      .hint {
+        margin-top: 8px;
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.55);
+        color: inherit;
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        padding: 4px 10px;
+        cursor: default;
+      }
+      .stage.mobile .hint {
+        margin: 0;
+        flex-shrink: 0;
+      }
+
+      .models {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .models button {
+        border: none;
+        border-radius: var(--radius-md);
+        background: var(--c-surface);
+        color: var(--c-fg);
+        padding: 10px 8px;
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        box-shadow: 0 3px 0 var(--c-lip);
+      }
+      .models button.active {
+        background: var(--c-success);
+        color: var(--c-ground);
+        box-shadow: 0 3px 0 var(--c-success-deep);
+      }
+      .models .sub {
+        display: block;
+        opacity: 0.7;
+        font-size: 9px;
+        letter-spacing: 0.04em;
+        text-transform: none;
+        margin-top: 2px;
+      }
+      .stage.mobile .model-wrap {
+        order: 5;
+      }
+      .stage.mobile .model-wrap details {
+        font-size: 13px;
+        color: var(--c-fg-muted);
+      }
+      .stage.mobile .model-wrap summary {
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.15em;
+        text-transform: uppercase;
+        cursor: default;
+      }
+
+      .thread {
+        display: flex;
+        flex-direction: column;
+        background: var(--c-surface);
+        border: 1px solid var(--c-border);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        min-width: 0;
+      }
+      .stage.mobile .thread {
+        order: 3;
+        min-height: 420px;
+      }
+      .messages {
+        flex: 1;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+      .stage.mobile .messages {
+        padding: 16px;
+        gap: 16px;
+      }
+
+      .row {
+        display: flex;
+        gap: 10px;
+        align-items: flex-start;
+      }
+      .row.me {
+        justify-content: flex-end;
+      }
+      .avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 999px;
+        background: var(--c-gold);
+        display: grid;
+        place-items: center;
+        flex-shrink: 0;
+        font-size: 18px;
+      }
+      .who {
+        font-family: var(--f-mono);
+        font-size: 9px;
+        letter-spacing: 0.2em;
+        color: var(--c-fg-muted);
+        margin-bottom: 6px;
+      }
+      .row.me .who {
+        text-align: right;
+      }
+      .bubble {
+        max-width: min(640px, 100%);
+        padding: 14px 18px;
+        border-radius: 20px 20px 20px 6px;
+        background: var(--c-gold);
+        color: var(--c-accent-on);
+      }
+      .row.me .bubble {
+        background: var(--c-fg);
+        color: var(--c-ground);
+        border-radius: 20px 20px 6px 20px;
+      }
+      .de {
+        font-family: var(--f-body);
+        font-size: 17px;
+        line-height: 1.5;
+        font-weight: 500;
+      }
+      .speak {
+        border: none;
+        background: transparent;
+        color: var(--c-accent-red);
+        cursor: default;
+        vertical-align: middle;
+        margin-left: 6px;
+        padding: 0;
+      }
+      .disclosure {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+      }
+      .disclosure button {
+        border: 1px solid color-mix(in srgb, currentColor 35%, transparent);
+        background: transparent;
+        color: inherit;
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        padding: 3px 8px;
+        border-radius: 999px;
+        cursor: default;
+      }
+      .disclosure button[aria-expanded='true'] {
+        background: color-mix(in srgb, currentColor 12%, transparent);
+      }
+      .ipa {
+        font-family: var(--f-mono);
+        font-size: 12px;
+        letter-spacing: 0.05em;
+        line-height: 1.5;
+        opacity: 0.75;
+        margin-top: 6px;
+      }
+      .en {
+        font-family: var(--f-body);
+        font-style: italic;
+        font-size: 13px;
+        opacity: 0.8;
+        margin-top: 6px;
+        padding-top: 6px;
+        border-top: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+      }
+
+      .fix {
+        margin-top: 8px;
+        max-width: min(640px, 100%);
+        margin-left: auto;
+        background: var(--c-error-fill);
+        color: var(--c-error);
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+      }
+      .fix summary {
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        cursor: default;
+        list-style: none;
+      }
+      .fix summary::-webkit-details-marker {
+        display: none;
+      }
+      .fix .fixed {
+        font-family: var(--f-body);
+        font-weight: 600;
+        text-transform: none;
+        letter-spacing: 0;
+        font-size: 14px;
+        margin-left: 8px;
+      }
+      .fix .detail {
+        margin-top: 10px;
+        padding-top: 10px;
+        border-top: 1px dashed color-mix(in srgb, currentColor 40%, transparent);
+      }
+      .orig {
+        text-decoration: line-through;
+        opacity: 0.75;
+        margin-bottom: 6px;
+      }
+      .hear {
+        margin-top: 8px;
+        border: 1px solid currentColor;
+        background: transparent;
+        color: inherit;
+        font-family: var(--f-mono);
+        font-size: 10px;
+        letter-spacing: 0.12em;
+        padding: 4px 8px;
+      }
+
+      .typing {
+        font-family: var(--f-mono);
+        font-size: 12px;
+        color: var(--c-fg-muted);
+      }
+
+      .composer {
+        border-top: 1px solid var(--c-border);
+        padding: 12px 16px;
+        display: flex;
+        gap: 8px;
+        background: var(--c-surface-alt);
+        align-items: center;
+      }
+      .icon-btn {
+        width: 40px;
+        height: 40px;
+        flex-shrink: 0;
+        border: none;
+        border-radius: var(--radius-md);
+        display: grid;
+        place-items: center;
+        background: var(--c-fg);
+        color: var(--c-ground);
+      }
+      .icon-btn.send {
+        background: var(--c-success);
+      }
+      .composer input {
+        flex: 1;
+        min-width: 0;
+        height: 40px;
+        border: 1px solid var(--c-border);
+        border-radius: var(--radius-md);
+        background: var(--c-surface);
+        padding: 0 14px;
+        font-family: var(--f-body);
+        font-size: 16px;
+        color: var(--c-fg);
+        box-shadow: inset 0 2px 5px rgba(22, 17, 11, 0.06);
+      }
+      .helper {
+        padding: 0 16px 10px;
+        font-size: 12px;
+        font-style: italic;
+        color: var(--c-fg-muted);
+        background: var(--c-surface-alt);
+      }
+
+      .hidden {
+        display: none;
+      }
+      .stage.desktop .mobile-only {
+        display: none;
+      }
+      .stage.mobile .desktop-only {
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage desktop" id="stage">
+      <div class="banner">Proposed Chat direction — not shipped · pending visual approval</div>
+      <header class="mast">
+        <div style="display: flex; align-items: baseline">
+          <div class="wordmark">Deutsch<span>.</span></div>
+          <div class="tag">Sprachschule × Est. 2026</div>
+        </div>
+        <div class="chip" title="Level">1</div>
+      </header>
+      <nav class="tabs" aria-label="App">
+        <button type="button" aria-label="Home"><span class="desktop-only">01 Home</span><span class="mobile-only">⌂</span></button>
+        <button type="button" aria-current="page" aria-label="Chat"><span class="desktop-only">02 Chat</span><span class="mobile-only">✎</span></button>
+        <button type="button" aria-label="Alphabet"><span class="desktop-only">03 Alphabet</span><span class="mobile-only">A</span></button>
+        <button type="button" aria-label="Vocab"><span class="desktop-only">04 Vocab</span><span class="mobile-only">文</span></button>
+        <button type="button" aria-label="Translate"><span class="desktop-only">05 Translate</span><span class="mobile-only">↦</span></button>
+        <button type="button" aria-label="Profile"><span class="desktop-only">06 Profile</span><span class="mobile-only">●</span></button>
+      </nav>
+      <main class="page">
+        <div class="chat">
+          <aside class="rail">
+            <h2>Scenario · A1</h2>
+            <div class="scenarios" role="radiogroup" aria-label="Choose chat scenario">
+              <button type="button" role="radio" aria-checked="false">◆ Free Chat</button>
+              <button type="button" role="radio" aria-checked="true">☕ Order Coffee</button>
+              <button type="button" role="radio" aria-checked="false">✶ Meet Someone</button>
+              <button type="button" role="radio" aria-checked="false">✈ At the Airport</button>
+            </div>
+
+            <div class="task">
+              <div>
+                <div class="kicker">Task 1 · A1</div>
+                <p>Order a coffee.</p>
+              </div>
+              <button class="hint" type="button">Hint</button>
+            </div>
+
+            <div class="model-wrap desktop-only">
+              <div class="meta-label" style="margin-top: 16px">Modell</div>
+              <div class="models" role="group" aria-label="Chat model">
+                <button type="button" class="active">
+                  Auto<span class="sub">Router</span>
+                </button>
+                <button type="button">Fast<span class="sub">Haiku</span></button>
+                <button type="button">Balanced<span class="sub">Sonnet</span></button>
+                <button type="button">Capable<span class="sub">Opus</span></button>
+              </div>
+            </div>
+          </aside>
+
+          <section class="thread" aria-label="Conversation">
+            <div class="messages">
+              <div class="row">
+                <div class="avatar" aria-hidden="true">🧑‍🏫</div>
+                <div>
+                  <div class="who">— ANNA</div>
+                  <div class="bubble">
+                    <div class="de">
+                      Willkommen im Café! Was möchten Sie bestellen?
+                      <button class="speak" type="button" aria-label="Play Anna response audio">
+                        ♪
+                      </button>
+                    </div>
+                    <div class="disclosure">
+                      <button type="button" aria-expanded="false" data-for="g-en">EN</button>
+                      <button type="button" aria-expanded="false" data-for="g-ipa">IPA</button>
+                    </div>
+                    <div class="en hidden" id="g-en">Welcome to the café! What would you like to order?</div>
+                    <div class="ipa hidden" id="g-ipa">[vɪlˈkɔmən ɪm kaˈfeː vas ˈmœçtən ziː bəˈʃtɛlən]</div>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div class="row me">
+                  <div>
+                    <div class="who">DU</div>
+                    <div class="bubble">
+                      <div class="de">Ich möchte ein kaffee</div>
+                    </div>
+                  </div>
+                </div>
+                <details class="fix" open>
+                  <summary>
+                    Needs a fix
+                    <span class="fixed">Ich möchte einen Kaffee</span>
+                  </summary>
+                  <div class="detail">
+                    <div class="orig">You said: Ich möchte ein kaffee</div>
+                    <div><strong>Correct:</strong> Ich möchte einen Kaffee</div>
+                    <button class="hear" type="button">Hear it</button>
+                    <p class="en" style="border: 0; padding: 8px 0 0; margin: 0">
+                      Kaffee is masculine, so the accusative is einen, and nouns are capitalized.
+                    </p>
+                  </div>
+                </details>
+              </div>
+
+              <div class="row">
+                <div class="avatar" aria-hidden="true">🧑‍🏫</div>
+                <div>
+                  <div class="who">— ANNA</div>
+                  <div class="bubble">
+                    <div class="de">
+                      Einen Kaffee, bitte. Kommt sofort!
+                      <button class="speak" type="button" aria-label="Play Anna response audio">
+                        ♪
+                      </button>
+                    </div>
+                    <div class="disclosure">
+                      <button type="button" aria-expanded="true" data-for="r-en">EN</button>
+                      <button type="button" aria-expanded="false" data-for="r-ipa">IPA</button>
+                    </div>
+                    <div class="en" id="r-en">A coffee, please. Coming right up!</div>
+                    <div class="ipa hidden" id="r-ipa">[ˈaɪ̯nən kaˈfeː ˈbɪtə kɔmt ˈzɔfɔrt]</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="composer">
+              <button class="icon-btn" type="button" aria-label="Start voice input">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <rect x="9" y="2" width="6" height="12" rx="3" />
+                  <path d="M5 11a7 7 0 0 0 14 0M12 18v3" />
+                </svg>
+              </button>
+              <input aria-label="Chat message in German" placeholder="Schreib auf Deutsch..." />
+              <button class="icon-btn send" type="button" aria-label="Send chat message">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </button>
+            </div>
+            <div class="helper">Anna corrects as you go — tap a turn for the details.</div>
+          </section>
+
+          <div class="model-wrap mobile-only">
+            <details>
+              <summary>Modell · Auto</summary>
+              <div class="models" style="margin-top: 8px">
+                <button type="button" class="active">Auto<span class="sub">Router</span></button>
+                <button type="button">Fast<span class="sub">Haiku</span></button>
+                <button type="button">Balanced<span class="sub">Sonnet</span></button>
+                <button type="button">Capable<span class="sub">Opus</span></button>
+              </div>
+            </details>
+          </div>
+        </div>
+      </main>
+    </div>
+    <script>
+      const stage = document.getElementById('stage');
+      const v = new URLSearchParams(location.search).get('v');
+      if (v === 'mobile') {
+        stage.classList.remove('desktop');
+        stage.classList.add('mobile');
+        const fix = document.querySelector('details.fix');
+        if (fix) fix.removeAttribute('open');
+        const en = document.getElementById('r-en');
+        const enBtn = document.querySelector('[data-for="r-en"]');
+        if (en) en.classList.add('hidden');
+        if (enBtn) enBtn.setAttribute('aria-expanded', 'false');
+      }
+      document.querySelectorAll('.disclosure button').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const el = document.getElementById(btn.dataset.for);
+          const open = btn.getAttribute('aria-expanded') === 'true';
+          btn.setAttribute('aria-expanded', String(!open));
+          el.classList.toggle('hidden', open);
+        });
+      });
+    </script>
+  </body>
+</html>
