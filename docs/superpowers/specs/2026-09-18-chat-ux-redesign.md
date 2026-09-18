@@ -30,11 +30,11 @@ Desktop grid today (`ChatTab.jsx`): `280px minmax(0, 1fr) 320px` once `width >= 
 
 A/B/C markers are live: `SectionLabel` on Scenario (A) and Correction (B); TaskPanel paints its own **C**. They do not aid the task.
 
-Reference captures (live app, not the proposal):
+Reference captures of the **current** live app (not the proposal):
 
-- [Desktop, correction present](../mocks/audit-desktop-correction.png)
-- [Desktop, error + empty “Alles gut!”](../mocks/audit-desktop-error.png)
-- [Mobile 375, coffee — thread below the fold](../mocks/audit-mobile-coffee.png)
+- [Desktop, correction present](../mocks/current-chat-desktop-correction.png)
+- [Desktop, error + empty “Alles gut!”](../mocks/current-chat-desktop-error.png)
+- [Mobile 375, coffee — thread below the fold](../mocks/current-chat-mobile-coffee.png)
 
 ---
 
