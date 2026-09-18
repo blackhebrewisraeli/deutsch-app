@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import SettingsRoute from './SettingsRoute';
+import { INTEREST_TOPICS } from '../../packs/de/interests';
 
 // AccountSection branches on this, and it differs between a dev box and CI.
 vi.mock('../../lib/auth.js', () => ({
@@ -32,6 +33,8 @@ const renderRoute = (props = {}) =>
       onSignOut={() => {}}
       onExport={() => {}}
       onDelete={() => {}}
+      interestTopics={INTEREST_TOPICS}
+      enabledInterests={[]}
       {...props}
     />
   );
@@ -52,6 +55,9 @@ describe('SettingsRoute', () => {
     expect(screen.getByRole('button', { name: /retake placement/i })).toBeInTheDocument();
     expect(screen.getByText(/override classification/i)).toBeInTheDocument();
     expect(screen.queryByRole('radiogroup', { name: /level/i })).not.toBeInTheDocument();
+    // Interests — opt-in topical vocab (Phase 4)
+    expect(screen.getByText('Interessen')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Interest topics' })).toBeInTheDocument();
     // Appearance
     expect(screen.getByLabelText(/appearance/i)).toBeInTheDocument();
     // Device Cache Storage — guests need this too, so it is not inside Konto
@@ -109,6 +115,13 @@ describe('SettingsRoute', () => {
     renderRoute({ soundOn: false, onSoundChange });
     await userEvent.click(screen.getByRole('button', { name: /sound: off/i }));
     expect(onSoundChange).toHaveBeenCalledTimes(1);
+  });
+
+  it('toggles an interest topic through onInterestsChange', async () => {
+    const onInterestsChange = vi.fn();
+    renderRoute({ enabledInterests: [], onInterestsChange });
+    await userEvent.click(screen.getByRole('button', { name: /sport/i }));
+    expect(onInterestsChange).toHaveBeenCalledWith(['sport']);
   });
 });
 

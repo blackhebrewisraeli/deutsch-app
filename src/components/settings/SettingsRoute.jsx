@@ -20,6 +20,7 @@ import AccountSection from './AccountSection';
 import EmailSection from './EmailSection';
 import ProfileSection from './ProfileSection';
 import OfflineCacheSection from './OfflineCacheSection';
+import InterestPicker from './InterestPicker';
 import { getThemeModeForUI, setThemePreference } from '../../lib/themeMode';
 import { writeLevel, LEVEL_NAMES, LEVEL_MODES } from '../../lib/levelPref';
 import { LEVEL_MULTIPLIERS } from '../../lib/gameConfig';
@@ -63,6 +64,9 @@ export default function SettingsRoute({
   onGoalChange,
   soundOn = false,
   onSoundChange,
+  interestTopics = [],
+  enabledInterests = [],
+  onInterestsChange,
   levelBoost = false,
   onSignIn,
   onSignOut,
@@ -171,6 +175,38 @@ export default function SettingsRoute({
               )}
             </details>
             <GoalPicker goal={goal} onPick={onGoalChange} />
+            {interestTopics.length > 0 && (
+              <Stack gap={3}>
+                <div
+                  style={{
+                    fontFamily: FONTS.mono,
+                    fontSize: FONT_SIZE.tag,
+                    fontWeight: FONT_WEIGHT.bold,
+                    letterSpacing: LETTER_SPACING.caps,
+                    textTransform: 'uppercase',
+                    color: COLORS.mute,
+                  }}
+                >
+                  Interessen
+                </div>
+                <div
+                  style={{
+                    fontFamily: FONTS.body,
+                    fontSize: FONT_SIZE.sm,
+                    color: COLORS.inkSoft,
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  Optional topical vocabulary. Enabled decks appear under Interests in Vocab
+                  Practice.
+                </div>
+                <InterestPicker
+                  topics={interestTopics}
+                  enabled={enabledInterests}
+                  onChange={onInterestsChange}
+                />
+              </Stack>
+            )}
             <button
               type="button"
               aria-pressed={soundOn}

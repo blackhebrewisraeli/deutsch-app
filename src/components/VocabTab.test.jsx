@@ -1228,3 +1228,24 @@ describe('VocabTab', () => {
     });
   });
 });
+
+describe('VocabTab — interest decks', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    setUserLevel('a1');
+  });
+
+  it('lets an A1 learner practice an enabled Sport deck', async () => {
+    const user = userEvent.setup();
+    const sport = activePack.content.interestDecks['interest-sport'][0];
+    renderTab({ enabledInterests: ['sport'] });
+    await pickAutoDeck(user, 'Interests', /Sport \(10 cards\)/);
+    expect(screen.getByText(sport.de)).toBeInTheDocument();
+    expect(screen.getByText('10 cards remaining')).toBeInTheDocument();
+  });
+
+  it('hides Interests until a topic is enabled', () => {
+    renderTab();
+    expect(screen.queryByRole('option', { name: 'Interests' })).not.toBeInTheDocument();
+  });
+});

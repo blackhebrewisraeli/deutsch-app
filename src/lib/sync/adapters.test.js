@@ -108,6 +108,18 @@ describe('settings adapter', () => {
     expect(settingsFromRow(row).placement).toEqual(placement);
   });
 
+  it('carries enabledInterests round-trip on the settings blob', () => {
+    const local = {
+      gamification: { goal: 50 },
+      learnedWords: {},
+      settingsUpdatedAt: 123,
+      enabledInterests: ['sport', 'musik'],
+    };
+    const row = settingsToRow(local, 'a1', 999);
+    expect(row.data.enabledInterests).toEqual(['sport', 'musik']);
+    expect(settingsFromRow(row).enabledInterests).toEqual(['sport', 'musik']);
+  });
+
   it('carries frozenDays / bestStreak / lastReconcileDay round-trip', () => {
     const local = {
       gamification: {

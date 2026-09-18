@@ -60,6 +60,20 @@ export function chatServerConstraint({ level, vocab } = {}) {
 }
 
 /**
+ * Optional one-line bias toward enabled interest topics. Language-blind:
+ * the caller supplies already-authored hints (pack English `promptHint`).
+ * Empty hints → no sentence, so a learner with nothing enabled is unchanged.
+ *
+ * @param {{ hints?: string[] }} [args]
+ * @returns {string}
+ */
+export function chatInterestBias({ hints } = {}) {
+  const labels = (hints ?? []).filter((h) => typeof h === 'string' && h.trim());
+  if (!labels.length) return '';
+  return `The learner has opted into these interest topics: ${labels.join(', ')}. When it fits the current scenario, prefer related vocabulary they already know. Do not force a topic that does not fit.`;
+}
+
+/**
  * Anna's system prompt. `task` is optional — when absent the task sentence is
  * omitted entirely rather than left as an empty clause, which a model reads as
  * a task with no content.
@@ -67,10 +81,18 @@ export function chatServerConstraint({ level, vocab } = {}) {
  * `level` is the classified CEFR code. Unknown keys fall back to a1 pedagogy
  * rather than interpolating the string "undefined".
  *
- * @param {{ prompts: Prompts, scenarioDesc: string, task?: string, level: string, vocab?: string[], sparse?: boolean }} args
+ * @param {{ prompts: Prompts, scenarioDesc: string, task?: string, level: string, vocab?: string[], sparse?: boolean, interestHints?: string[] }} args
  * @returns {string}
  */
-export function chatSystemPrompt({ prompts, scenarioDesc, task, level, vocab, sparse } = {}) {
+export function chatSystemPrompt({
+  prompts,
+  scenarioDesc,
+  task,
+  level,
+  vocab,
+  sparse,
+  interestHints,
+} = {}) {
   const { persona, targetLanguage, levels } = prompts ?? {};
 
   const taskLine = task
@@ -79,13 +101,14 @@ export function chatSystemPrompt({ prompts, scenarioDesc, task, level, vocab, sp
 
   const pedagogy = levels?.[level] || levels?.a1 || '';
   const vocabBlock = chatVocabConstraint({ vocab, sparse });
+  const interestBlock = chatInterestBias({ hints: interestHints });
 
   return `You are a friendly ${targetLanguage} tutor named ${persona} for a language learner. The current scenario is: ${scenarioDesc}. ${taskLine}
 
 ${pedagogy}
 
 ${vocabBlock}
-
+${interestBlock ? `\n${interestBlock}\n` : ''}
 You MUST always respond with strict JSON only (no markdown, no extra text):
 {
   "de": "your reply in ${targetLanguage} (1-2 sentences)",

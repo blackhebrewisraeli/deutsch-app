@@ -13,6 +13,7 @@ import SectionLabel from '../ui/SectionLabel';
 import { AUTO_DECKS, DECK_GROUPS } from '../../packs/de/autoDecks';
 import { filterCatalogByLevel } from '../../lib/levelGate';
 import { getUserLevel } from '../../lib/levelPref';
+import { INTERESTS_GROUP } from '../../lib/interests';
 
 // Tailwind max-w-md — keeps the picker a single readable column on a wide screen.
 const PICKER_MAX_WIDTH = 448;
@@ -42,13 +43,19 @@ const SELECT_STYLE = {
 // would quietly impose "one vs many" on a language that does not work that way.
 const plural = (n, one, many) => (n === 1 ? one : many);
 
-const groupForDeck = (deckId) => {
+const groupForDeck = (deckId, interestIds) => {
+  if (interestIds.has(deckId)) return INTERESTS_GROUP;
   const group = AUTO_DECKS.find((d) => d.id === deckId)?.group;
   return AUTO_GROUPS.includes(group) ? group : null;
 };
 
 const deckOptionLabel = (d) => {
-  const count = typeof d.auto?.count === 'number' ? d.auto.count : undefined;
+  const count =
+    typeof d.auto?.count === 'number'
+      ? d.auto.count
+      : typeof d.count === 'number'
+        ? d.count
+        : undefined;
   if (count == null) return d.name;
   return `${d.name} (${count} ${plural(count, 'card', 'cards')})`;
 };
@@ -85,21 +92,33 @@ const PRESETS = [
  * the group does not. Presets stay a vertical list above the cascade.
  *
  * @param {{ deckId: string, onSelect: (id: string) => void,
- *           customDecks?: object, level?: string }} props
+ *           customDecks?: object, level?: string,
+ *           interestDecks?: Array<{ id: string, name: string, count?: number }> }} props
  */
-export default function DeckPicker({ deckId, onSelect, customDecks = {}, level = getUserLevel() }) {
+export default function DeckPicker({
+  deckId,
+  onSelect,
+  customDecks = {},
+  level = getUserLevel(),
+  interestDecks = [],
+}) {
+  const interestIds = new Set(interestDecks.map((d) => d.id));
+  const groups = interestDecks.length > 0 ? [INTERESTS_GROUP, ...AUTO_GROUPS] : AUTO_GROUPS;
   const groupSelectId = useId();
   const deckSelectId = useId();
-  const [activeGroup, setActiveGroup] = useState(() => groupForDeck(deckId) ?? AUTO_GROUPS[0]);
+  const [activeGroup, setActiveGroup] = useState(
+    () => groupForDeck(deckId, interestIds) ?? groups[0]
+  );
 
   useEffect(() => {
-    const group = groupForDeck(deckId);
+    const group = groupForDeck(deckId, interestIds);
     if (group) setActiveGroup(group);
-  }, [deckId]);
+  }, [deckId]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const current = AUTO_GROUPS.includes(activeGroup) ? activeGroup : AUTO_GROUPS[0];
+  const current = groups.includes(activeGroup) ? activeGroup : groups[0];
   const allowedAuto = filterCatalogByLevel(AUTO_DECKS, level);
-  const activeDecks = allowedAuto.filter((d) => d.group === current);
+  const activeDecks =
+    current === INTERESTS_GROUP ? interestDecks : allowedAuto.filter((d) => d.group === current);
   const deckValue = activeDecks.some((d) => d.id === deckId) ? deckId : '';
 
   return (
@@ -240,7 +259,7 @@ export default function DeckPicker({ deckId, onSelect, customDecks = {}, level =
           value={current}
           onChange={(e) => setActiveGroup(e.target.value)}
         >
-          {AUTO_GROUPS.map((group) => (
+          {groups.map((group) => (
             <option key={group} value={group}>
               {group}
             </option>

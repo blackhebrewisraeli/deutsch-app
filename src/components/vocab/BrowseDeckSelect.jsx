@@ -5,23 +5,33 @@ import { DECKS as PRESET_DECKS } from '../../packs/de/decks';
 import SectionLabel from '../ui/SectionLabel';
 import { filterCatalogByLevel } from '../../lib/levelGate';
 import { getUserLevel } from '../../lib/levelPref';
+import { INTERESTS_GROUP } from '../../lib/interests';
 
 export const BROWSE_SCOPE_LABEL = 'Choose a deck';
 
-const groupsFor = (level) => {
+const groupsFor = (level, interestDecks) => {
   const allowed = filterCatalogByLevel(AUTO_DECKS, level);
-  return [
+  const groups = [
     {
       label: 'Preset decks',
       items: Object.entries(PRESET_DECKS).map(([id, deck]) => ({ id, name: deck.name })),
     },
+  ];
+  if (interestDecks.length > 0) {
+    groups.push({
+      label: INTERESTS_GROUP,
+      items: interestDecks.map(({ id, name }) => ({ id, name })),
+    });
+  }
+  groups.push(
     ...DECK_GROUPS.filter((g) => g !== 'Curated')
       .map((label) => ({
         label,
         items: allowed.filter((d) => d.group === label).map(({ id, name }) => ({ id, name })),
       }))
-      .filter((g) => g.items.length > 0),
-  ];
+      .filter((g) => g.items.length > 0)
+  );
+  return groups;
 };
 
 const customItems = (customDecks) =>
@@ -45,11 +55,12 @@ export default function BrowseDeckSelect({
   onSelect,
   customDecks = {},
   level = getUserLevel(),
+  interestDecks = [],
 }) {
   const selectId = useId();
   const extras = customItems(customDecks);
   const extraIds = new Set(extras.map((d) => d.id));
-  const groups = groupsFor(level);
+  const groups = groupsFor(level, interestDecks);
   const knownIds = new Set(groups.flatMap((g) => g.items.map((d) => d.id)));
   const value = knownIds.has(deckId) || extraIds.has(deckId) ? deckId : '';
 

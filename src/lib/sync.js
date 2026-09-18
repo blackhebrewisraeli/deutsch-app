@@ -72,6 +72,7 @@ export async function pullAndMerge(userId) {
       levelUpdatedAt: s.levelUpdatedAt,
       settingsUpdatedAt: s.settingsUpdatedAt,
       placement: s.placement,
+      enabledInterests: s.enabledInterests,
     },
     setRemote.settingsUpdatedAt == null ? null : setRemote
   );
@@ -126,6 +127,7 @@ export async function pullAndMerge(userId) {
     levelUpdatedAt: cur.levelUpdatedAt,
     settingsUpdatedAt: cur.settingsUpdatedAt,
     placement: cur.placement,
+    enabledInterests: cur.enabledInterests,
   };
   const adoptedSettings = mergeSettings(
     curSettings,
@@ -149,6 +151,7 @@ export async function pullAndMerge(userId) {
     levelUpdatedAt: adoptedSettings.levelUpdatedAt ?? cur.levelUpdatedAt,
     settingsUpdatedAt: adoptedSettings.settingsUpdatedAt ?? cur.settingsUpdatedAt,
     placement: adoptedSettings.placement ?? cur.placement,
+    enabledInterests: adoptedSettings.enabledInterests ?? cur.enabledInterests,
   });
   if (adoptedSettings.level) localStorage.setItem(LEVEL_KEY, adoptedSettings.level);
   saveSyncMeta({ lastSyncedCounters: nextLastSynced, lastSyncedAt: Date.now() });
@@ -167,6 +170,7 @@ export async function pullAndMerge(userId) {
           learnedWords: setMerged.learnedWords,
           settingsUpdatedAt: setMerged.settingsUpdatedAt,
           placement: setMerged.placement,
+          enabledInterests: setMerged.enabledInterests,
         },
         setMerged.level,
         setMerged.levelUpdatedAt

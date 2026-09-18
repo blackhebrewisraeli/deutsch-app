@@ -3,6 +3,7 @@ import {
   chatSystemPrompt,
   chatVocabConstraint,
   chatServerConstraint,
+  chatInterestBias,
   graderSystemPrompt,
   deckPrompts,
   sentencePrompts,
@@ -90,6 +91,16 @@ describe('chatSystemPrompt', () => {
     expect(out).toContain('no learned vocabulary yet');
     expect(out).not.toContain('undefined');
   });
+
+  it('names enabled interest topics only when hints are supplied', () => {
+    const biased = chatSystemPrompt({
+      ...base,
+      interestHints: ['sports and athletic activities'],
+    });
+    expect(biased).toContain('interest topics: sports and athletic activities');
+    expect(biased).toContain('Do not force a topic');
+    expect(chatSystemPrompt(base)).not.toContain('interest topics');
+  });
 });
 
 describe('chatVocabConstraint / chatServerConstraint', () => {
@@ -105,6 +116,12 @@ describe('chatVocabConstraint / chatServerConstraint', () => {
     expect(out).toContain('Learner CEFR band: a1');
     expect(out).toContain('hello');
     expect(out).not.toContain('undefined');
+  });
+
+  it('omits the interest bias when there are no hints', () => {
+    expect(chatInterestBias()).toBe('');
+    expect(chatInterestBias({ hints: [] })).toBe('');
+    expect(chatInterestBias({ hints: ['  ', null] })).toBe('');
   });
 });
 

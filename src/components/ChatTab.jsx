@@ -5,8 +5,15 @@ import { chatSystemPrompt } from '../lib/prompts';
 import { classifiedLevel } from '../lib/levelGate';
 import { getUserLevel } from '../lib/levelPref';
 import { buildChatAllowlist, scenariosForLevel } from '../lib/chatVocab';
+import { interestPromptHints } from '../lib/interests';
 import { activePack } from '../packs';
-const { scenarios: SCENARIOS, chatTasks: CHAT_TASKS, decks: PACK_DECKS } = activePack.content;
+const {
+  scenarios: SCENARIOS,
+  chatTasks: CHAT_TASKS,
+  decks: PACK_DECKS,
+  interestDecks: PACK_INTEREST_DECKS,
+  interestTopics: INTEREST_TOPICS,
+} = activePack.content;
 import { recordEvent } from '../lib/stats';
 import WelcomeBanner from './chat/WelcomeBanner';
 import ScenarioPicker from './chat/ScenarioPicker';
@@ -26,6 +33,7 @@ export default function ChatTab({
   wide = true,
   learnedWords = {},
   learnedByDeck = {},
+  enabledInterests = [],
 }) {
   // Classified CEFR is the source of truth. A `level` prop (still passed by
   // App for tab-API consistency) cannot raise the band.
@@ -39,10 +47,14 @@ export default function ChatTab({
       buildChatAllowlist({
         learnedByDeck,
         learnedWords,
-        decks: PACK_DECKS,
+        decks: { ...PACK_DECKS, ...PACK_INTEREST_DECKS },
         termOf,
       }),
     [learnedByDeck, learnedWords]
+  );
+  const interestHints = useMemo(
+    () => interestPromptHints(INTEREST_TOPICS, enabledInterests),
+    [enabledInterests]
   );
 
   const [scenario, setScenario] = useState(() => visibleScenarios[0]?.id ?? 'free');
@@ -142,6 +154,7 @@ export default function ChatTab({
       level: chatLevel,
       vocab,
       sparse,
+      interestHints,
     });
 
     const history = messages.slice(1).map((m) => ({

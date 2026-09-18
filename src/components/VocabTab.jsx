@@ -5,7 +5,11 @@ import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
 import { newDeckId, MAX_CUSTOM_DECKS } from '../lib/customDecks';
 import { isLearned, learnedInDeck } from '../lib/learnedWords';
-const { decks: PRESET_DECKS } = activePack.content;
+const {
+  decks: PRESET_DECKS,
+  interestDecks: PACK_INTEREST_DECKS,
+  interestTopics,
+} = activePack.content;
 const DEFAULT_DECK_ID = 'greetings';
 import { AlertTriangle } from 'lucide-react';
 import StatusNote from './ui/StatusNote';
@@ -35,6 +39,7 @@ import useAutoDeck from './vocab/useAutoDeck';
 import { AUTO_DECKS } from '../packs/de/autoDecks';
 import { clampMode, isDeckAllowedForLevel } from '../lib/levelGate';
 import { getUserLevel } from '../lib/levelPref';
+import { interestPickerDecks, isEnabledInterestDeck } from '../lib/interests';
 
 // The verdict is where the other meanings can be taught — the card face must
 // not show them, since that would print the answer above the question.
@@ -66,6 +71,7 @@ export default function VocabTab({
   customDecks = {},
   onDeckGenerated,
   onDeckDeleted,
+  enabledInterests = [],
 }) {
   // Stats review and Home "continue this deck" both arrive as reviewTarget.
   // Honour the named deck on first paint so the picker matches DeckPicker
@@ -117,8 +123,13 @@ export default function VocabTab({
 
   // A membership test, not a literal: any id in the collection is a custom
   // deck. With one deck in the map this is exactly the old behaviour.
+  const interestPicker = interestPickerDecks(interestTopics, enabledInterests, PACK_INTEREST_DECKS);
   const customCards = customDecks?.[deckId]?.cards ?? null;
-  const activeDeck = customCards ?? (isAuto ? (asyncDeck ?? []) : (PRESET_DECKS[deckId] ?? []));
+  const interestCards = isEnabledInterestDeck(deckId, interestTopics, enabledInterests)
+    ? (PACK_INTEREST_DECKS[deckId] ?? [])
+    : null;
+  const activeDeck =
+    customCards ?? (isAuto ? (asyncDeck ?? []) : (PRESET_DECKS[deckId] ?? interestCards ?? []));
   const practiceLevel = clampMode(level, getUserLevel());
 
   // Deck changes must not keep the previous queue. React applies the id write
@@ -142,9 +153,13 @@ export default function VocabTab({
   useEffect(() => {
     // Covers a deck deleted here AND one tombstoned on another device and
     // pulled in by a sync: either way the selected id stops resolving.
-    const isKnown = customDecks?.[deckId] || isAuto || Object.hasOwn(PRESET_DECKS, deckId ?? '');
+    const isKnown =
+      customDecks?.[deckId] ||
+      isAuto ||
+      Object.hasOwn(PRESET_DECKS, deckId ?? '') ||
+      isEnabledInterestDeck(deckId, interestTopics, enabledInterests);
     if (!isKnown) selectDeck(DEFAULT_DECK_ID);
-  }, [deckId, customDecks, isAuto]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [deckId, customDecks, isAuto, enabledInterests]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const def = AUTO_DECKS.find((d) => d.id === deckId);
@@ -371,6 +386,7 @@ export default function VocabTab({
     customDecks?.[deckId]?.name ||
     AUTO_DECKS.find((d) => d.id === deckId)?.name ||
     activePack.content.deckDefs?.[deckId]?.name ||
+    activePack.content.interestDeckDefs?.[deckId]?.name ||
     deckId;
 
   const practiseRow = (row) => {
@@ -397,6 +413,7 @@ export default function VocabTab({
     onPractice: practiseRow,
     selectableCustomDecks: customDecks,
     level: practiceLevel,
+    interestDecks: interestPicker,
   };
 
   return (
@@ -474,6 +491,7 @@ export default function VocabTab({
             onSelect={selectDeck}
             customDecks={customDecks}
             level={practiceLevel}
+            interestDecks={interestPicker}
           />
 
           {/* ── Right column: active recall UI ── */}

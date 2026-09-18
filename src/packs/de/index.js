@@ -11,6 +11,7 @@ import {
 } from './translate.js';
 import { LEXICON } from './lexicon.js';
 import { DECKS } from './decks.js';
+import { INTEREST_TOPICS, INTEREST_DECK_DEFS, INTEREST_LEXICON } from './interests.js';
 import { MISSIONS, MISSIONS_CHROME } from './missions.js';
 import { QUESTS, QUESTS_CHROME } from './quests.js';
 import { IDENTITY } from './identity.js';
@@ -47,6 +48,11 @@ export const dePack = {
     lexicon: LEXICON,
     deckDefs: DECKS,
     decks: resolveDecks(DECKS, LEXICON, grammar),
+    // Opt-in topical vocab (Phase 4). Separate from the 40 curated cards so
+    // greetings/food/travel/numbers stay the always-on presets.
+    interestTopics: INTEREST_TOPICS,
+    interestDeckDefs: INTEREST_DECK_DEFS,
+    interestDecks: resolveDecks(INTEREST_DECK_DEFS, INTEREST_LEXICON, grammar),
     scenarios: SCENARIOS,
     chatTasks: CHAT_TASKS,
     translateSentences: {
