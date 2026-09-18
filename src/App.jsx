@@ -717,6 +717,9 @@ export default function App() {
       setPreferredModel(sanitizePreferredModel(s.preferredModel));
       const today = todayKey();
       const goal = s.gamification?.goal ?? DEFAULT_GOAL;
+      // Same fourth argument as deriveGame. Omitting it defaults frozenDays to
+      // {} and stats.streak ignores freeze-rescued days; applyProgress then
+      // writes the freeze-aware value, and this hydrate overwrites it.
       const frozenDays = s.gamification?.frozenDays ?? {};
       const streak = currentStreak(s.daily ?? {}, goal, today, frozenDays);
       const learnedCount = learnedCountOf(

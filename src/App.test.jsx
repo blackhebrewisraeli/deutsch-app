@@ -347,10 +347,20 @@ describe('header and daily-goal surfaces', () => {
     );
 
     renderPastEntry(<App />);
+    // deriveGame already passed frozenDays, so Home's glance is freeze-aware
+    // even without the hydrate fix. This is the control: the two surfaces must
+    // agree on 3, not 0.
     expect(screen.getByLabelText('Streak 3')).toBeInTheDocument();
 
-    // Mount persist runs after deriveGame. Flush it so this cannot pass on the
-    // brief applyProgress write that already knew about frozenDays.
+    await userEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Vocab' })
+    );
+    expect(goalStrip()).toBeInTheDocument();
+    expect(goalStrip().parentElement).toHaveTextContent(/^3\b/);
+
+    // Mount persist runs after deriveGame AND after applyProgress (which also
+    // passes frozenDays). Flush so this cannot pass on that brief write — the
+    // hydrate effect previously overwrote it with frozenDays defaulted to {}.
     await act(async () => {
       await Promise.resolve();
     });

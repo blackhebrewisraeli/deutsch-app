@@ -343,16 +343,11 @@ button[aria-haspopup="dialog"]`) instead of selecting one by its literal
   `App.jsx` and in two `App.test.jsx` comments that claim to protect it — so
   the suite stays green whichever way this goes and cannot enforce the
   decision.
-- **The header streak is freeze-blind until the first progress event.**
-  `src/App.jsx` derives the streak twice. `deriveGame` passes `frozenDays` into
-  `currentStreak(daily, goal, today, frozenDays)`; the mount effect calls the
-  same function with three arguments, and `src/lib/streak.js` defaults
-  `frozenDays = {}`. So `stats.streak`, which the masthead renders, ignores
-  days a freeze rescued, while `game.streak`, which Home and `GoalStrip`
-  render, does not. Reproduced in a browser on 2026-09-15 against a seeded
-  frozen-day gap: the header read **STREAK 5** while `GoalStrip` read **12** in
-  the same viewport, on the same screen. It self-corrects on the first
-  `deutsch:progress` event, so it is only visible to a learner who reads the
-  header before practising. One missing argument. Deliberately kept out of the
-  header de-noise work, which is a UI-only diff and must not pull `src/lib/`
-  into its file list.
+- ~~**The header streak is freeze-blind until the first progress event.**~~
+  Closed: the mount hydrate now passes `frozenDays` into `currentStreak` the
+  same way `deriveGame` does, so `stats.streak` counts freeze-rescued days on
+  first load instead of waiting for `deutsch:progress`. Guarded by the App
+  test that seeds a frozen-day gap, flushes the persist that used to overwrite
+  the freeze-aware `applyProgress` write, and asserts Profile `STREAK N`. The
+  one-argument miss was first corrected in #277; this entry stayed open
+  because that PR's subject was the named-deck hop.
