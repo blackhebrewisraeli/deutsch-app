@@ -29,22 +29,22 @@ Nothing queued.
 
 ## In review
 
-### User roles + admin v1
-
-Design at `docs/superpowers/specs/2026-09-18-user-roles-design.md`, plan at
-`docs/superpowers/plans/2026-09-18-user-roles.md`. Admin permission is computed
-from verified email (`esterkinshimon712@gmail.com`); system-account
-classification is a separate label for the same mailbox in v1.
-`blackhebrewisraeli@gmail.com` is a regular user. Guest path unchanged.
-
-v1 can list/handle/delete feedback, list users read-only, and block a user.
-Not in v1: shared content management, a full permissions UI. System/test
-activity stays in stats and leagues. Admin does not raise AI quotas.
-
-**Owner after merge:** apply `20260918153000_user_roles.sql` (backlog action #5).
-Do not apply it from an agent.
+Nothing in review.
 
 ## Recently shipped
+
+### User roles + admin v1
+
+**Shipped as #288.** Identity-based admin (verified email
+`esterkinshimon712@gmail.com`), feedback inbox, and user block. Design at
+`docs/superpowers/specs/2026-09-18-user-roles-design.md`, plan at
+`docs/superpowers/plans/2026-09-18-user-roles.md`. System-account
+classification is a separate label for the same mailbox; it does not exclude
+anyone from stats or leagues. Admin does not raise AI quotas. Guest path
+unchanged. Not in v1: shared content management, a full permissions UI.
+
+Production has `20260918153000_user_roles.sql` (schema_migrations name
+`user_roles`); Migration Drift is green. See owner action #5.
 
 ### UI sub-project 2 — the page skeleton
 
@@ -257,8 +257,8 @@ checked so a stale entry is obvious.
 | 1   | Paste `supabase/templates/magic_link.html` into the **hosted** project → Authentication → Email Templates → Magic Link. Local GoTrue reads it from `config.toml`; production does not. | **Unverified from the repo** — hosted dashboard state. Procedure: `docs/AUTH_EMAIL_TEMPLATE_RUNBOOK.md`                                |
 | 2   | Confirm hosted **URL Configuration** lists production plus `http://localhost:5173` and `http://127.0.0.1:5173`.                                                                        | **Unverified from the repo** — hosted dashboard state                                                                                  |
 | 3   | Google OAuth client → Supabase Google provider → `VITE_GOOGLE_AUTH_ENABLED=true` on Preview + Production, **then redeploy**.                                                           | ✅ **Done** — flag present in the production env, Google sign-in live since 2026-08-17. Procedure: `docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md` |
-| 4   | Apply `supabase/migrations/20260916183000_feedback.sql` to Sprachschule (`xcnnlczvxmuwcqwychox`) after that PR merges. Dashboard SQL editor. Never `migration repair`.                 | ✅ **Done** — table is live in production (read-only check 2026-09-18: `public.feedback` exists, RLS insert-only, no `status` yet). |
-| 5   | Apply `supabase/migrations/20260918153000_user_roles.sql` to Sprachschule after the roles/admin PR merges. Dashboard SQL editor. Never `migration repair`. Adds `feedback.status` / `handled_*` and `profiles.blocked_at`, and narrows profile UPDATE grants. **Do not exclude system accounts from stats/leagues.** | **Pending merge** — a merged migration file is not an applied migration |
+| 4   | Apply `supabase/migrations/20260916183000_feedback.sql` to Sprachschule (`xcnnlczvxmuwcqwychox`) after that PR merges. Dashboard SQL editor. Never `migration repair`.                 | ✅ **Done** — table is live in production. `status` / `handled_*` arrived with action #5. |
+| 5   | Apply `supabase/migrations/20260918153000_user_roles.sql` to Sprachschule after the roles/admin PR merges. Dashboard SQL editor. Never `migration repair`. Adds `feedback.status` / `handled_*` and `profiles.blocked_at`, and narrows profile UPDATE grants. **Do not exclude system accounts from stats/leagues.** | ✅ **Done** — applied 2026-09-18. Production has schema_migrations name `user_roles`; Migration Drift is green. Never `migration repair`. **Do not exclude system accounts from stats/leagues.** |
 
 Two traps worth keeping, both from #96:
 
