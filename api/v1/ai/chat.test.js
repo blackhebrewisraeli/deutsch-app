@@ -57,6 +57,31 @@ describe('POST /api/v1/ai/chat', () => {
     expect(other.statusCode).toBe(200);
   });
 
+  it('does not raise the quota for an admin JWT or an isAdmin body field', async () => {
+    const results = [];
+    for (let i = 0; i < 21; i++) {
+      const res = createRes();
+      await handler(
+        postReq('10.0.0.30', {
+          headers: {
+            'x-forwarded-for': '10.0.0.30',
+            authorization: 'Bearer admin-token',
+          },
+          body: {
+            model: 'claude-haiku-4-5-20251001',
+            max_tokens: 100,
+            messages: [{ role: 'user', content: 'Hallo' }],
+            isAdmin: true,
+          },
+        }),
+        res
+      );
+      results.push(res);
+    }
+    expect(results[20].statusCode).toBe(429);
+    expect(results[20].body.error.code).toBe('rate_limited');
+  });
+
   it('folds validated level and vocab into the system prompt, never as Anthropic fields', async () => {
     const res = createRes();
     await handler(

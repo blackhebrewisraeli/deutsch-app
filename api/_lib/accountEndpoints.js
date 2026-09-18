@@ -188,6 +188,8 @@ export const exportHandler = createAccountHandler({
   userRate: { windowMs: 60 * 60 * 1000, max: 10 },
   name: 'account.export',
   failureMessage: 'Failed to export data.',
+  // A blocked account can still take a copy of their data.
+  allowBlocked: true,
   run: async ({ res, auth, db }) => {
     const tables = Object.keys(EXPORTED_TABLES);
 
@@ -296,6 +298,8 @@ export const deleteHandler = createAccountHandler({
   name: 'account.delete',
   failureMessage: 'Failed to delete account.',
   recentAuthMaxAgeSec: REAUTH_MAX_AGE_SEC,
+  // Right to erasure still applies when the account is blocked.
+  allowBlocked: true,
   run: async ({ req, res, auth, db }) => {
     if (readConfirm(req.body) !== CONFIRM_PHRASE) {
       return sendError(res, 'bad_request', `Type ${CONFIRM_PHRASE} to confirm.`);

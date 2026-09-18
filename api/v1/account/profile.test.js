@@ -67,9 +67,15 @@ describe('buildPatch', () => {
     // The column still exists; it is simply no longer writable from the client.
     expect(EDITABLE_FIELDS).not.toContain('display_name');
     expect(EDITABLE_FIELDS).not.toContain('avatar_emoji');
+    expect(EDITABLE_FIELDS).not.toContain('blocked_at');
+    expect(EDITABLE_FIELDS).not.toContain('role');
+    expect(EDITABLE_FIELDS).not.toContain('isAdmin');
     // An old client that still sends either is IGNORED by the allowlist, never an error.
     expect(buildPatch({ display_name: 'Sam', handle: 'sam' })).toEqual({ handle: 'sam' });
     expect(buildPatch({ avatar_emoji: '🦊', handle: 'sam' })).toEqual({ handle: 'sam' });
+    expect(buildPatch({ blocked_at: null, role: 'admin', isAdmin: true, handle: 'sam' })).toEqual({
+      handle: 'sam',
+    });
   });
 });
 

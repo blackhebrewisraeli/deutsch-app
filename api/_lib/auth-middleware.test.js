@@ -34,17 +34,18 @@ describe('requireAuth', () => {
     });
   });
 
-  it('returns userId and email for a valid token', async () => {
+  it('returns userId, email, and the getUser payload for a valid token', async () => {
+    const user = { id: 'uid-1', email: 'a@b.com', email_confirmed_at: '2026-09-18T00:00:00Z' };
     serviceClient.mockReturnValue({
       auth: {
         getUser: vi.fn().mockResolvedValue({
-          data: { user: { id: 'uid-1', email: 'a@b.com' } },
+          data: { user },
           error: null,
         }),
       },
     });
     const result = await requireAuth(makeReq('good-token'));
-    expect(result).toEqual({ userId: 'uid-1', email: 'a@b.com' });
+    expect(result).toEqual({ userId: 'uid-1', email: 'a@b.com', user });
   });
 
   it('throws server_error when serviceClient is unavailable', async () => {

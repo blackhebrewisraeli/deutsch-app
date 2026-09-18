@@ -2,7 +2,9 @@ import { serviceClient } from './supabase.js';
 
 /**
  * Validates the Bearer JWT in req.headers.authorization.
- * Returns { userId, email } on success.
+ * Returns { userId, email, user } on success. `user` is the Supabase user from
+ * getUser — classifyAuthUser reads verified emails off it. Callers must not
+ * take admin flags from the request body or from user_metadata.
  * Throws { code, message } on failure — callers pass this to sendError.
  */
 export async function requireAuth(req) {
@@ -16,5 +18,5 @@ export async function requireAuth(req) {
   const { data, error } = await client.auth.getUser(token);
   if (error || !data?.user) throw { code: 'unauthorized', message: 'Invalid or expired token.' };
 
-  return { userId: data.user.id, email: data.user.email };
+  return { userId: data.user.id, email: data.user.email, user: data.user };
 }
