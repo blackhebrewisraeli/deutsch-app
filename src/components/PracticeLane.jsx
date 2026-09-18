@@ -9,6 +9,8 @@ import { currentStreak } from '../lib/streak';
 import { DEFAULT_GOAL } from '../lib/gameConfig';
 import { loadState } from '../lib/storage';
 import { activePack } from '../packs';
+import { clampMode } from '../lib/levelGate';
+import { getUserLevel } from '../lib/levelPref';
 
 function readStreak() {
   try {
@@ -41,7 +43,8 @@ function readStreak() {
  * it.
  */
 export default function PracticeLane({ courseCode = 'de', level, tab, packId = 'de', children }) {
-  const { status, lessons } = useLessons({ courseCode, level, tab, packId });
+  const practiceLevel = clampMode(level, getUserLevel());
+  const { status, lessons } = useLessons({ courseCode, level: practiceLevel, tab, packId });
   const chrome = activePack.content.lessonChrome ?? {};
 
   // One event per exercise. Each renderer already locks itself after grading,
@@ -53,7 +56,7 @@ export default function PracticeLane({ courseCode = 'de', level, tab, packId = '
   const graded = useRef(new Set());
   const [grades, setGrades] = useState({});
   const [streak, setStreak] = useState(readStreak);
-  const laneKey = `${packId}:${courseCode}:${level}:${tab}`;
+  const laneKey = `${packId}:${courseCode}:${practiceLevel}:${tab}`;
   useEffect(() => {
     graded.current = new Set();
     setGrades({});
@@ -79,7 +82,7 @@ export default function PracticeLane({ courseCode = 'de', level, tab, packId = '
     // The same single entry point every other tab uses: it writes local daily
     // through applyEvent AND enqueues the event for the RPC. Going near
     // applyEvent directly would write one and skip the other.
-    recordEvent(tab, level, verdict);
+    recordEvent(tab, practiceLevel, verdict);
     setStreak(readStreak());
   }
 

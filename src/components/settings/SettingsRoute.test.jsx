@@ -48,9 +48,10 @@ describe('SettingsRoute', () => {
     renderRoute();
     // Profile — the handle is the one name now; display_name is gone.
     expect(screen.getByRole('textbox', { name: /handle/i })).toBeInTheDocument();
-    // Learning — placement is the primary writer; a manual override remains
+    // Learning — placement is the primary writer; the switcher is advanced
     expect(screen.getByRole('button', { name: /retake placement/i })).toBeInTheDocument();
-    expect(screen.getByRole('radiogroup', { name: /level/i })).toBeInTheDocument();
+    expect(screen.getByText(/override classification/i)).toBeInTheDocument();
+    expect(screen.queryByRole('radiogroup', { name: /level/i })).not.toBeInTheDocument();
     // Appearance
     expect(screen.getByLabelText(/appearance/i)).toBeInTheDocument();
     // Device Cache Storage — guests need this too, so it is not inside Konto
@@ -63,9 +64,17 @@ describe('SettingsRoute', () => {
     expect(screen.getByText(/danger zone/i)).toBeInTheDocument();
   });
 
+  it('hides the level switcher until the advanced override is opened', async () => {
+    renderRoute();
+    expect(screen.queryByRole('radiogroup', { name: /level/i })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText(/override classification/i));
+    expect(screen.getByRole('radiogroup', { name: /level/i })).toBeInTheDocument();
+  });
+
   it('drives the level through the shared control', async () => {
     const onLevelChange = vi.fn();
     renderRoute({ onLevelChange });
+    await userEvent.click(screen.getByText(/override classification/i));
     const group = screen.getByRole('radiogroup', { name: /level/i });
     await userEvent.click(within(group).getByRole('radio', { name: /b1/i }));
     expect(onLevelChange).toHaveBeenCalledWith('b1');
@@ -73,6 +82,7 @@ describe('SettingsRoute', () => {
 
   it('persists the chosen level', async () => {
     renderRoute({ level: 'a1', onLevelChange: () => {} });
+    await userEvent.click(screen.getByText(/override classification/i));
     const group = screen.getByRole('radiogroup', { name: /level/i });
     await userEvent.click(within(group).getByRole('radio', { name: /a2/i }));
     expect(localStorage.getItem('deutsch-level')).toBe('a2');

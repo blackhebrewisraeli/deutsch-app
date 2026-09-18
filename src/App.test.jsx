@@ -1031,12 +1031,12 @@ describe('entry gate', () => {
 
     await userEvent.click(nav.getByRole('button', { name: 'Profile' }));
     await userEvent.click(screen.getByRole('button', { name: 'settings' }));
-    await userEvent.click(screen.getByText(/set level manually/i));
+    await userEvent.click(screen.getByText(/override classification/i));
     await userEvent.click(screen.getByRole('radio', { name: /A1/ }));
     await userEvent.click(nav.getByRole('button', { name: 'Vocab' }));
     await userEvent.click(nav.getByRole('button', { name: 'Profile' }));
     await userEvent.click(screen.getByRole('button', { name: 'settings' }));
-    await userEvent.click(screen.getByText(/set level manually/i));
+    await userEvent.click(screen.getByText(/override classification/i));
 
     // If App had dropped onLevelChange, Settings would re-mount from the stale
     // `level` prop and B1 would be checked again.
@@ -1106,7 +1106,7 @@ describe('level coordination', () => {
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
     await user.click(screen.getByRole('button', { name: 'settings' }));
-    await user.click(screen.getByText(/set level manually/i));
+    await user.click(screen.getByText(/override classification/i));
     await user.click(screen.getByRole('radio', { name: /B1/ }));
     await user.click(
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Translate' })
@@ -1115,6 +1115,28 @@ describe('level coordination', () => {
     expect(screen.getByText(/B1 — FREE TYPING/)).toBeInTheDocument();
     expect(screen.queryByText(/A1 — WORD TILES/)).toBeNull();
     expect(chip()).toHaveTextContent('B1');
+  });
+
+  it('does not put B1 free typing in front of an A1 learner without the override', async () => {
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Translate' })
+    );
+    expect(screen.getByText(/A1 — WORD TILES/)).toBeInTheDocument();
+    expect(screen.queryByText(/B1 — FREE TYPING/)).toBeNull();
+    expect(screen.queryByRole('textbox')).toBeNull();
+
+    await user.click(chip());
+    expect(screen.queryByRole('radiogroup', { name: /level/i })).toBeNull();
+    expect(screen.getByRole('button', { name: /retake placement/i })).toBeInTheDocument();
+
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
+    );
+    await user.click(screen.getByRole('button', { name: 'settings' }));
+    expect(screen.queryByRole('radiogroup', { name: /level/i })).not.toBeInTheDocument();
+    expect(screen.getByText(/override classification/i)).toBeInTheDocument();
   });
 
   // Mid-set, retaking is destructive, so it asks first. Completing placement
@@ -1203,7 +1225,7 @@ describe('level coordination', () => {
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
     await user.click(screen.getByRole('button', { name: 'settings' }));
-    await user.click(screen.getByText(/set level manually/i));
+    await user.click(screen.getByText(/override classification/i));
     await user.click(screen.getByRole('radio', { name: /A2/ }));
     expect(chip()).toHaveTextContent('A2');
     expect(screen.getByRole('radio', { name: /A2/ })).toBeChecked();

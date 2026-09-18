@@ -35,7 +35,7 @@ export default function HomeTab({
   onGoToTab,
   onOpenSettings,
 }) {
-  const { remaining } = resolveRecommended(missions);
+  const { remaining } = resolveRecommended(missions, 2, { classifiedLevel: cefrLevel });
 
   return (
     <PersonalHub
@@ -59,7 +59,7 @@ export default function HomeTab({
       }
       recommended={
         <ErrorBoundary>
-          <RecommendedActions missions={missions} onGo={onGoToTab} />
+          <RecommendedActions missions={missions} classifiedLevel={cefrLevel} onGo={onGoToTab} />
         </ErrorBoundary>
       }
     />

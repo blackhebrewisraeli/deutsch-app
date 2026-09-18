@@ -74,6 +74,7 @@ export default function SettingsRoute({
   // lives in localStorage, not in App state, so threading it through would add
   // a second source for one device setting.
   const [themeMode, setThemeMode] = useState(() => getThemeModeForUI());
+  const [showLevelOverride, setShowLevelOverride] = useState(false);
 
   return (
     <div>
@@ -91,9 +92,9 @@ export default function SettingsRoute({
           />
         </Section>
 
-        {/* Placement is the primary way CEFR is set. The switcher stays as a
-            narrow advanced override so existing tests, signed-in sync, and a
-            stuck learner can still write a level without retaking. */}
+        {/* Placement is the learner path. The switcher is an advanced
+            override (sync debug / tests / stuck learner) — Phase 2 gating
+            treats classified CEFR as the source of truth. */}
         <Section label="Lernen">
           <Stack gap={5}>
             <Button variant="secondary" onClick={onRetakePlacement}>
@@ -128,24 +129,47 @@ export default function SettingsRoute({
                 {LEVEL_MODES[level].detail}.
               </div>
             )}
-            <div
-              style={{
-                fontFamily: FONTS.mono,
-                fontSize: FONT_SIZE.tag,
-                letterSpacing: LETTER_SPACING.caps,
-                textTransform: 'uppercase',
-                color: COLORS.mute,
-              }}
+            <details
+              open={showLevelOverride}
+              onToggle={(e) => setShowLevelOverride(e.currentTarget.open)}
             >
-              Set level manually
-            </div>
-            <LevelSwitcher
-              value={level}
-              onChange={(next) => {
-                writeLevel(next);
-                onLevelChange?.(next);
-              }}
-            />
+              <summary
+                style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: FONT_SIZE.tag,
+                  letterSpacing: LETTER_SPACING.caps,
+                  textTransform: 'uppercase',
+                  color: COLORS.mute,
+                  cursor: 'pointer',
+                  minWidth: 0,
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                Advanced — override classification
+              </summary>
+              {showLevelOverride && (
+                <Stack gap={3} style={{ marginTop: SPACE[3] }}>
+                  <div
+                    style={{
+                      fontFamily: FONTS.body,
+                      fontSize: FONT_SIZE.sm,
+                      color: COLORS.inkSoft,
+                      overflowWrap: 'anywhere',
+                    }}
+                  >
+                    Writes CEFR without a placement test. Learners should retake placement. This
+                    override exists for sync debugging and tests.
+                  </div>
+                  <LevelSwitcher
+                    value={level}
+                    onChange={(next) => {
+                      writeLevel(next);
+                      onLevelChange?.(next);
+                    }}
+                  />
+                </Stack>
+              )}
+            </details>
             <GoalPicker goal={goal} onPick={onGoalChange} />
             <button
               type="button"

@@ -23,7 +23,7 @@ const CODE_OVERHANG = 6;
 // The header's single "my status" control: the XP badge and the CEFR practice
 // level behind one trigger, opening one sheet.
 //
-// They are genuinely different things — one is earned, one is chosen — and an
+// They are genuinely different things — one is earned, one is classified — and an
 // earlier pass gave them separate header chips for exactly that reason. That
 // was the wrong trade. The masthead is the tightest row in the app (it already
 // drops the wordmark below 360px after a 34px overflow at 320px, see App.jsx),

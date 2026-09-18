@@ -66,9 +66,10 @@ a blank. Classification lives in `src/lib/placement.js` (`classifyBands`,
 
 ### Remaining manual override
 
-Settings still exposes "Set level manually" (`LevelSwitcher`) so a stuck
-learner, a test, or a sync-debugging session can write a level without
-retaking. StatusChip no longer switches freely — retake is the header path.
+Phase 2 demotes this: Settings keeps `LevelSwitcher` only behind **Advanced —
+override classification**. StatusChip and Translate have no free switcher —
+retake is the learner path. See
+`2026-09-18-practice-level-gating-design.md`.
 
 ## Out of scope (later phases)
 

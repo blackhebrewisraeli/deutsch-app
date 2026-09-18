@@ -19,6 +19,7 @@ import {
 import { loadState, saveState } from './storage';
 import { setLevelBoostEnabled } from './xpEntitlement';
 import { LEVEL_MULTIPLIERS } from './gameConfig';
+import { setUserLevel } from './levelPref';
 
 const STORAGE_KEY = 'deutsch-app-state-v1';
 
@@ -568,6 +569,20 @@ describe('recordItem', () => {
     });
   });
 
+  it('clamps a CEFR review context to the classified level', () => {
+    setUserLevel('a1');
+    recordItem('translate', 'b1', 'I drink water.', 'Ich trinke Wasser.', 'wrong');
+    const state = loadState();
+    expect(state.items['translate:a1:I drink water.']).toBeDefined();
+    expect(state.items['translate:b1:I drink water.']).toBeUndefined();
+  });
+
+  it('leaves a vocab deck id alone — it is not a CEFR code', () => {
+    setUserLevel('a1');
+    recordItem('vocab', 'food', 'das Brot', 'bread', 'wrong');
+    expect(loadState().items['vocab:food:das Brot']).toBeDefined();
+  });
+
   it('preserves daily, stats, and learnedWords on the saved state', () => {
     localStorage.setItem(
       STORAGE_KEY,
@@ -620,18 +635,30 @@ describe('recordEvent — XP by level', () => {
   }
 
   it('pays flat XP to an unentitled learner even at b1', () => {
+    setUserLevel('b1');
     expect(recordEvent('vocab', 'b1', 'correct')).toEqual({ xp: 10, mult: 1 });
   });
 
   it('pays the level multiplier to an entitled learner', () => {
+    setUserLevel('b1');
     setLevelBoostEnabled(true);
     // base 10 × 1.5 = 15
     expect(recordEvent('vocab', 'b1', 'correct')).toEqual({ xp: 15, mult: 1.5 });
   });
 
   it('pays a1 the same either way, entitled or not', () => {
+    setUserLevel('a1');
     setLevelBoostEnabled(true);
     expect(recordEvent('vocab', 'a1', 'correct')).toEqual({ xp: 10, mult: 1 });
+  });
+
+  it('does not pay B1 XP when the learner is classified A1', () => {
+    setUserLevel('a1');
+    setLevelBoostEnabled(true);
+    expect(recordEvent('vocab', 'b1', 'correct')).toEqual({ xp: 10, mult: 1 });
+    const state = loadState();
+    expect(state.daily[todayKey()].byLevel.b1.correct).toBe(0);
+    expect(state.daily[todayKey()].byLevel.a1.correct).toBe(1);
   });
 
   it('composes with the streak multiplier rather than adding to it', () => {
@@ -640,6 +667,7 @@ describe('recordEvent — XP by level', () => {
     // actually tell the two apart. A 3-day streak and a2 could not: 1.2 × 1.25
     // and 1.2 + 1.25 − 1 both round to the same XP.
     seedStreak(7);
+    setUserLevel('b1');
     setLevelBoostEnabled(true);
     const { xp, mult } = recordEvent('vocab', 'b1', 'correct');
     expect(mult).toBeCloseTo(2.25);

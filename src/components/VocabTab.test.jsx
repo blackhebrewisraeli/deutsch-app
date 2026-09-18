@@ -14,6 +14,7 @@ import indexJson from '../packs/__fixtures__/lexicon/index.json';
 import chunk0 from '../packs/__fixtures__/lexicon/chunk-00.json';
 import chunk1 from '../packs/__fixtures__/lexicon/chunk-01.json';
 import { __resetCache } from '../packs/lexiconStore';
+import { setUserLevel } from '../lib/levelPref';
 
 vi.mock('../lib/claude', () => ({
   callClaude: vi.fn(),
@@ -369,6 +370,8 @@ describe('VocabTab', () => {
   });
 
   describe('typed answer flow (b1)', () => {
+    beforeEach(() => setUserLevel('b1'));
+
     it('disables CHECK while empty and grades a correct typed answer', async () => {
       render(<StatefulHost level="b1" />);
       const card = firstCard();
@@ -808,7 +811,10 @@ describe('VocabTab', () => {
   });
 
   describe('meaning drill accepts every gloss', () => {
-    beforeEach(mockLexiconFetch);
+    beforeEach(() => {
+      mockLexiconFetch();
+      setUserLevel('b1');
+    });
 
     // Core 100 is rank-ordered: n:haus (60) then n:wasser (88). n:wasser ships
     // en: ['water', 'waters, body of water'] — only the first was ever accepted,

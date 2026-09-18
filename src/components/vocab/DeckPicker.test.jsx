@@ -286,3 +286,23 @@ describe('DeckPicker auto-deck cascade', () => {
     expect(deckSelect()).toHaveFocus();
   });
 });
+
+describe('DeckPicker — classified CEFR gates auto decks', () => {
+  const groupSelect = () => screen.getByRole('combobox', { name: 'Group' });
+  const deckSelect = () => screen.getByRole('combobox', { name: 'Deck' });
+
+  it('hides B1 CEFR decks from an A1 learner', async () => {
+    render(<DeckPicker {...props} level="a1" />);
+    await userEvent.selectOptions(groupSelect(), 'CEFR');
+    expect(screen.getByRole('option', { name: 'A1' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'B1' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'A2' })).not.toBeInTheDocument();
+  });
+
+  it('lets a B1 learner open the B1 CEFR deck', async () => {
+    render(<DeckPicker {...props} level="b1" />);
+    await userEvent.selectOptions(groupSelect(), 'CEFR');
+    expect(screen.getByRole('option', { name: 'B1' })).toHaveValue('cefr-b1');
+    await userEvent.selectOptions(deckSelect(), 'cefr-b1');
+  });
+});

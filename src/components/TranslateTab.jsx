@@ -17,6 +17,8 @@ import BlankExercise from './translate/BlankExercise';
 import TypingExercise from './translate/TypingExercise';
 import { generateMoreSentences } from './translate/generateSentences';
 import { useDirtySession } from '../lib/sessionGuard';
+import { clampMode } from '../lib/levelGate';
+import { getUserLevel } from '../lib/levelPref';
 
 // Module-level constant — avoids stale closure in useCallback/useEffect
 const BANK_MAP = {
@@ -41,22 +43,26 @@ export default function TranslateTab({
   reviewTarget = null,
   onReviewConsumed,
 }) {
-  const [exercises, setExercises] = useState(() => shuffle(BANK_MAP[level]));
+  // Classified CEFR wins over the prop. App keys this component by `level`,
+  // so a real switch remounts; this clamp is the engine gate for a caller
+  // that still hands down b1 while deutsch-level is a1.
+  const practiceLevel = clampMode(level, getUserLevel());
+  const [exercises, setExercises] = useState(() => shuffle(BANK_MAP[practiceLevel] ?? BANK_MAP.a1));
   const [idx, setIdx] = useState(0);
   const [score, setScore] = useState(0);
   const [generating, setGenerating] = useState(false);
 
   // Pick up review targets handed in from the Stats Review feed.
-  // Level mismatch is handled in App.jsx: it switches level first, so this
-  // instance is already the new level's — mounted with the new bank — by the
-  // time the target arrives, and this effect only has to locate the exercise.
+  // App no longer rewrites classification to match the item; a leftover B1
+  // review on an A1 learner is ignored here (context !== practiceLevel) and
+  // the tab still opens at the classified mode.
   useEffect(() => {
     if (!reviewTarget) return;
-    if (reviewTarget.context !== level) return; // still mid-level-switch
+    if (reviewTarget.context !== practiceLevel) return;
     const targetIdx = exercises.findIndex((e) => e.en === reviewTarget.label);
     if (targetIdx >= 0) setIdx(targetIdx);
     onReviewConsumed?.();
-  }, [reviewTarget, level, exercises, onReviewConsumed]);
+  }, [reviewTarget, practiceLevel, exercises, onReviewConsumed]);
 
   const exercise = exercises[idx];
 
@@ -67,11 +73,11 @@ export default function TranslateTab({
     if (next >= exercises.length) {
       setGenerating(true);
       try {
-        const more = await generateMoreSentences(level);
+        const more = await generateMoreSentences(practiceLevel);
         setExercises((prev) => [...prev, ...more]);
         setScore(0);
       } catch {
-        setExercises(shuffle(BANK_MAP[level]));
+        setExercises(shuffle(BANK_MAP[practiceLevel] ?? BANK_MAP.a1));
         setIdx(0);
         setScore(0);
         setGenerating(false);
@@ -80,7 +86,7 @@ export default function TranslateTab({
       setGenerating(false);
     }
     setIdx(next);
-  }, [idx, exercises.length, level]);
+  }, [idx, exercises.length, practiceLevel]);
 
   const SET_SIZE = 10;
   const setIdx_ = idx % SET_SIZE;
@@ -119,7 +125,7 @@ export default function TranslateTab({
       <div style={{ marginTop: SPACE[8], maxWidth: 760 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[2] }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <ExerciseHeader level={level} idx={setIdx_} total={SET_SIZE} />
+            <ExerciseHeader level={practiceLevel} idx={setIdx_} total={SET_SIZE} />
           </div>
           {/* itemId is the English prompt: these rows carry no id of their own
             (the review feed already keys them by `en`). itemLabel is the
@@ -129,7 +135,7 @@ export default function TranslateTab({
           <FeedbackButton
             context={{
               surface: 'translate',
-              level,
+              level: practiceLevel,
               itemId: exercise.en,
               itemLabel: exercise.de ?? null,
             }}
@@ -156,29 +162,29 @@ export default function TranslateTab({
 
         <PromptCard text={exercise.en} />
 
-        {level === 'a1' && (
+        {practiceLevel === 'a1' && (
           <TileExercise
             key={idx}
             exercise={exercise}
-            level={level}
+            level={practiceLevel}
             onCorrect={handleCorrect}
             onSkip={handleNext}
           />
         )}
-        {level === 'a2' && (
+        {practiceLevel === 'a2' && (
           <BlankExercise
             key={idx}
             exercise={exercise}
-            level={level}
+            level={practiceLevel}
             onCorrect={handleCorrect}
             onSkip={handleNext}
           />
         )}
-        {level === 'b1' && (
+        {practiceLevel === 'b1' && (
           <TypingExercise
             key={idx}
             exercise={exercise}
-            level={level}
+            level={practiceLevel}
             onCorrect={handleCorrect}
             onSkip={handleNext}
           />
