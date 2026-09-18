@@ -76,8 +76,9 @@ const BASE = EXPLICIT_BASE ?? `http://localhost:${AUDIT_PORT}`;
 // the run fails if it does not appear, so a modal that stops being reachable
 // reports that instead of silently dropping out of the audit.
 //
-// Both of these were unaudited before: the guest walk never signed in and never
-// exhausted the trial, so neither surface had been measured in any mode.
+// These were unaudited before: the guest walk never signed in, never exhausted
+// the trial, and never landed on a callback URL, so none of the surfaces had
+// been measured in any mode.
 
 /** The guest "Sign in" affordance lives in the header. */
 function clickHeaderSignIn() {
@@ -178,6 +179,45 @@ const MODALS = [
       return true;
     },
     close: async (page) => page.evaluate(restoreTrial),
+  },
+  {
+    name: 'auth callback',
+    // Error phase is `alertdialog` (actionable). Pending/success are `status`
+    // and self-dismiss, so they are the wrong seed: the overlay would vanish
+    // before measurement, and the run would report "did not open".
+    selector: '[role="alertdialog"][aria-label="That link expired — request a new one"]',
+    // Same query `authCallbackKind` already treats as `'error'` in
+    // `src/lib/auth.test.js` — the shape Supabase uses for an expired magic
+    // link. No live OAuth round-trip. Kind is captured at mount, so this
+    // has to be a navigation, not a history.pushState on a live tree.
+    timeout: 8000,
+    open: async (page) => {
+      const origin = new URL(page.url()).origin;
+      await page.goto(`${origin}/?error=access_denied&error_code=otp_expired`, {
+        waitUntil: 'domcontentloaded',
+      });
+      await page.waitForTimeout(400);
+      // Native click: Playwright's actionability would refuse, because the
+      // landing's scrim covers the WelcomeGate guest button. handleGuest only
+      // flips React state; the landing remounts on the shell and re-reads the
+      // still-present query, so the alertdialog stays. Without this, the gate
+      // would ride along in collectFindings — a surface the tab walk never
+      // measures, and a false-failure risk this entry does not own.
+      await page.evaluate(() => {
+        const gate = document.querySelector('[data-entry="guest"]');
+        if (gate) gate.click();
+      });
+      return true;
+    },
+    close: async (page) => {
+      // Strip the callback query so the next combination does not keep the
+      // overlay. applyTheme reloads the current URL; a leftover `?error=`
+      // would block header sheets and the Sign in chip.
+      const origin = new URL(page.url()).origin;
+      await page.goto(`${origin}/`, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(400);
+      await dismissEntryScreens(page);
+    },
   },
 ];
 

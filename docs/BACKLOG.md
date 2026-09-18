@@ -192,28 +192,17 @@ recorded here so nobody re-adds them reasoning from first principles:
 `COLORS.accentAlt` has sat unused since the theme arc began. One unused accent
 in a palette is a rounding error; four is how a palette stops being trustworthy.
 
-## Decided but not adopted — the body sans
+## Body sans — adopted
 
-**A sans body face is vendored and one line from shipping, deliberately unflipped.**
+**Shipped as #221 (2026-09-01).** Plus Jakarta Sans is the body face;
+Fraunces stays display; JetBrains Mono stays labels and IPA. `AGENTS.md`
+records this. Do not flip body back to Fraunces as a drive-by.
 
-`AGENTS.md` fixes the typography — Fraunces for display, JetBrains Mono for
-uppercase labels — and body copy currently renders in Fraunces too. Plus Jakarta
-Sans (47.8 KB, `latin` + `latin-ext`) is vendored into `public/fonts/` and
-exported as `BODY_SANS` from `src/packs/de/theme.js`. Adopting it means setting
-`body: BODY_SANS` in that file's `font` object **and amending the AGENTS.md
-typography rule in the same change**, because the rule as written forbids it.
-
-Recorded here rather than left in `CURSOR_TASKS.md` because it governs future
-work: the next agent to read the AGENTS.md rule needs to know the family is
-already paid for, and that the remaining cost is a brand decision, not an
-implementation.
-
-The tradeoff, so it does not need re-deriving: Fraunces is a display serif with
-an `opsz` axis, and it is doing double duty as body copy at 13–15px, where its
-contrast modulation is what makes long prose feel dense. A sans would loosen
-paragraph texture in chat and exercise copy. It would also make the display
-headings read as _deliberate_ rather than as the default, which is the actual
-argument for the change.
+The tradeoff that was weighed, so it does not need re-deriving: Fraunces is a
+display serif with an `opsz` axis, and it was doing double duty as body copy at
+13–15px, where its contrast modulation is what makes long prose feel dense. A
+sans loosens paragraph texture in chat and exercise copy, and it makes the
+display headings read as _deliberate_ rather than as the default.
 
 Recently shipped: **`hasStoredLevel()` now means "has a _valid_ level"** (#121,
 #123) — a device holding a corrupt level value used to skip the picker and
@@ -226,8 +215,9 @@ silently land on A1. Design kept at
 
 When returning from time away, walk `docs/PRE_BETA_OWNER_CHECKLIST.md` first
 (key rotation, secret-scanning, Auth template/URLs, custom domain, signup
-policy, leaked-password protection, pending migrations). The table below is
-the durable queue; the checklist is the once-per-return pass.
+policy / allowlist enable after #294, leaked-password protection, pending
+#290 then #293 migrations). The table below is the durable queue; the
+checklist is the once-per-return pass.
 
 ### Sentry source-map upload — needs a token only the account owner can mint
 
@@ -264,8 +254,9 @@ checked so a stale entry is obvious.
 | 3   | Google OAuth client → Supabase Google provider → `VITE_GOOGLE_AUTH_ENABLED=true` on Preview + Production, **then redeploy**.                                                           | ✅ **Done** — flag present in the production env, Google sign-in live since 2026-08-17. Procedure: `docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md` |
 | 4   | Apply `supabase/migrations/20260916183000_feedback.sql` to Sprachschule (`xcnnlczvxmuwcqwychox`) after that PR merges. Dashboard SQL editor. Never `migration repair`.                 | ✅ **Done** — table is live in production. `status` / `handled_*` arrived with action #5. |
 | 5   | Apply `supabase/migrations/20260918153000_user_roles.sql` to Sprachschule after the roles/admin PR merges. Dashboard SQL editor. Never `migration repair`. Adds `feedback.status` / `handled_*` and `profiles.blocked_at`, and narrows profile UPDATE grants. **Do not exclude system accounts from stats/leagues.** | ✅ **Done** — applied 2026-09-18. Production has schema_migrations name `user_roles`; Migration Drift is green. Never `migration repair`. **Do not exclude system accounts from stats/leagues.** |
-| 6   | Apply `supabase/migrations/20260918200000_revoke_is_league_member_execute.sql` to Sprachschule after that PR merges. Dashboard SQL editor. Never `migration repair`. Moves `is_league_member` to schema `private` and retargets both league RLS policies (advisor 0029). Then confirm Stats → Ligen still loads for a signed-in user. | **Unapplied** — owner-only after return. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §8 |
-| 7   | Apply `supabase/migrations/20260918213000_server_only_rls_deny_policies.sql` to Sprachschule after that PR merges, **alongside #6 if #6 is still unapplied** (apply #6 first). Dashboard SQL editor. Never `migration repair`. Adds deny-all RLS policies on `rate_limits` and `progress_events_seen` (advisor INFO 0008). Learners never hit these tables. | **Unapplied** — owner-only after return. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §8 |
+| 6   | Apply `supabase/migrations/20260918200000_revoke_is_league_member_execute.sql` to Sprachschule (**#290**, first). Code is on `main`; production apply is still pending. Dashboard SQL editor. Never `migration repair`. Moves `is_league_member` to schema `private` and retargets both league RLS policies (advisor 0029). Then confirm Stats → Ligen still loads for a signed-in user. | **Unapplied** — owner-only after return. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §8a |
+| 7   | Apply `supabase/migrations/20260918213000_server_only_rls_deny_policies.sql` to Sprachschule (**#293**, after #6 / the #290 migration). Code is on `main`; production apply is still pending. Dashboard SQL editor. Never `migration repair`. Adds deny-all RLS policies on `rate_limits` and `progress_events_seen` (advisor INFO 0008). Learners never hit these tables. | **Unapplied** — owner-only after return. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §8b |
+| 8   | Enable the closed-beta email allowlist via Vercel when you want signup locked (**after #294**). Set `SIGNUP_EMAIL_ALLOWLIST` and `VITE_SIGNUP_EMAIL_ALLOWLIST` on Production + Preview to the same list, then redeploy. Unset = open signup (current production default). Do not disable the Google provider. | **Not enabled** — owner-only. Code shipped as #294; production stays open until the vars are set. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §5 |
 
 Two traps worth keeping, both from #96:
 
@@ -284,15 +275,17 @@ Two traps worth keeping, both from #96:
   session and stubbed league responses. The freeze chip named in the original
   entry was never actually a gap — the existing seed yields two freezes, so the
   guest walk already rendered it.
-- **The contrast gate covers header sheets and two modals, not every overlay.**
+- **The contrast gate covers header sheets and listed modals, not every overlay.**
   Header sheets are DISCOVERED (`header button[aria-haspopup="dialog"]`); full
   modals are LISTED, because reaching one is an app state rather than a button
   in a fixed place — but each entry opens the modal itself and the run fails if
   it does not appear, so a modal that stops being reachable reports that rather
-  than dropping out silently. Covered today: the sign-in sheet and the trial
-  wall. `ProfileCard` is already reached by the signed-in pass. Not covered:
-  `VitalsOverlay` (dev-only) and `AuthCallbackLanding` (a post-OAuth route,
-  reachable only with a real callback URL). Add new overlays to `MODALS`.
+  than dropping out silently. Covered today: the sign-in sheet, the trial wall,
+  and `AuthCallbackLanding` (seeded via the real expired-magic-link query
+  `?error=access_denied&error_code=otp_expired` — no live OAuth required; the
+  error phase is the durable overlay, pending/success self-dismiss).
+  `ProfileCard` is already reached by the signed-in pass. Not covered:
+  `VitalsOverlay` (dev-only). Add new overlays to `MODALS`.
 - ~~**League table rows are not keyboard reachable.**~~ Closed: each row is a
   real `<button>` inside the `<li>` (`data-ui="button"` + `data-focus-inset`),
   so Tab / Enter / Space open the profile card. The signed-in contrast pass
