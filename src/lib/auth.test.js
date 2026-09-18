@@ -56,6 +56,25 @@ describe('auth actions', () => {
     expect(mockAuth.signInWithOtp).not.toHaveBeenCalled();
   });
 
+  it('refuses a magic-link send for an unlisted email when the client allowlist is closed', async () => {
+    vi.stubEnv('VITE_SIGNUP_EMAIL_ALLOWLIST', 'esterkinshimon712@gmail.com');
+    vi.resetModules();
+    const { signInWithMagicLink } = await import('./auth.js');
+    const { error } = await signInWithMagicLink('fateevvl@gmail.com');
+    expect(error.code).toBe('signup_not_allowed');
+    expect(error.message).toMatch(/isn't invited to the beta/i);
+    expect(mockAuth.signInWithOtp).not.toHaveBeenCalled();
+  });
+
+  it('still sends a magic link for the admin mailbox when the client allowlist is closed', async () => {
+    vi.stubEnv('VITE_SIGNUP_EMAIL_ALLOWLIST', 'esterkinshimon712@gmail.com');
+    vi.resetModules();
+    const { signInWithMagicLink } = await import('./auth.js');
+    const { error } = await signInWithMagicLink('esterkinshimon712@gmail.com');
+    expect(error).toBeNull();
+    expect(mockAuth.signInWithOtp).toHaveBeenCalled();
+  });
+
   it('signOut reports success (not an error) when auth is not configured', async () => {
     vi.stubEnv('VITE_SUPABASE_URL', '');
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
@@ -95,6 +114,8 @@ describe('useAuth', () => {
     vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
     vi.resetModules();
     Object.values(mockAuth).forEach((fn) => fn.mockClear?.());
+    mockAuth.getSession.mockResolvedValue({ data: { session: null } });
+    mockAuth.signOut.mockResolvedValue({ error: null });
   });
   afterEach(() => vi.unstubAllEnvs());
 
@@ -137,6 +158,69 @@ describe('useAuth', () => {
     const { useAuth } = await import('./auth.js');
     const { result } = renderHook(() => useAuth());
     await waitFor(() => expect(result.current.status).toBe('anonymous'));
+  });
+
+  it('keeps a restored stranger signed in when the client allowlist is unset', async () => {
+    localStorage.setItem('sb-xcnn-auth-token', JSON.stringify({ access_token: 'x' }));
+    const session = {
+      access_token: 'tok',
+      user: {
+        id: 'u-stranger',
+        email: 'fateevvl@gmail.com',
+        email_confirmed_at: '2026-09-18T00:00:00Z',
+      },
+    };
+    mockAuth.getSession.mockResolvedValue({ data: { session } });
+    const { useAuth } = await import('./auth.js');
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.status).toBe('authenticated'));
+    expect(result.current.user.email).toBe('fateevvl@gmail.com');
+    expect(result.current.signupRejected).toBe(false);
+    expect(mockAuth.signOut).not.toHaveBeenCalled();
+    localStorage.clear();
+  });
+
+  it('signs out a restored stranger when the client allowlist is closed', async () => {
+    vi.stubEnv('VITE_SIGNUP_EMAIL_ALLOWLIST', 'esterkinshimon712@gmail.com');
+    vi.resetModules();
+    localStorage.setItem('sb-xcnn-auth-token', JSON.stringify({ access_token: 'x' }));
+    const session = {
+      access_token: 'tok',
+      user: {
+        id: 'u-stranger',
+        email: 'fateevvl@gmail.com',
+        email_confirmed_at: '2026-09-18T00:00:00Z',
+      },
+    };
+    mockAuth.getSession.mockResolvedValue({ data: { session } });
+    const { useAuth } = await import('./auth.js');
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.status).toBe('anonymous'));
+    expect(result.current.signupRejected).toBe(true);
+    expect(result.current.user).toBeNull();
+    expect(mockAuth.signOut).toHaveBeenCalled();
+    localStorage.clear();
+  });
+
+  it('lets the admin mailbox through a closed client allowlist', async () => {
+    vi.stubEnv('VITE_SIGNUP_EMAIL_ALLOWLIST', 'esterkinshimon712@gmail.com');
+    vi.resetModules();
+    localStorage.setItem('sb-xcnn-auth-token', JSON.stringify({ access_token: 'x' }));
+    const session = {
+      access_token: 'tok',
+      user: {
+        id: 'u-admin',
+        email: 'esterkinshimon712@gmail.com',
+        email_confirmed_at: '2026-09-18T00:00:00Z',
+      },
+    };
+    mockAuth.getSession.mockResolvedValue({ data: { session } });
+    const { useAuth } = await import('./auth.js');
+    const { result } = renderHook(() => useAuth());
+    await waitFor(() => expect(result.current.status).toBe('authenticated'));
+    expect(result.current.signupRejected).toBe(false);
+    expect(mockAuth.signOut).not.toHaveBeenCalled();
+    localStorage.clear();
   });
 });
 
@@ -239,6 +323,18 @@ describe('humanAuthError', () => {
       'Something went wrong — try again.'
     );
     expect(humanAuthError(null)).toBe('');
+  });
+
+  it('maps a closed-signup reject without leaking the mailbox', async () => {
+    const { humanAuthError } = await import('./auth.js');
+    const { SIGNUP_NOT_ALLOWED_CODE, SIGNUP_NOT_ALLOWED_MESSAGE } =
+      await import('./signupAllowlist.js');
+    expect(humanAuthError({ code: SIGNUP_NOT_ALLOWED_CODE, message: 'raw sdk' })).toBe(
+      SIGNUP_NOT_ALLOWED_MESSAGE
+    );
+    expect(humanAuthError({ code: SIGNUP_NOT_ALLOWED_CODE, message: 'raw sdk' })).not.toMatch(
+      /fateevvl|gmail/i
+    );
   });
 });
 

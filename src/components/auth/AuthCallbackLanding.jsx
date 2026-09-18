@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../../lib/theme';
 import { authCallbackKind, authCallbackReason, isAuthConfigured } from '../../lib/auth.js';
+import { SIGNUP_NOT_ALLOWED_MESSAGE } from '../../lib/signupAllowlist.js';
 import Button from '../ui/Button';
 import useFocusTrap from '../../lib/useFocusTrap.js';
 
@@ -16,7 +17,12 @@ function clearAuthParamsFromUrl() {
  * Explicit UI for the magic-link / PKCE auth callback.
  * Detection lives in authCallbackKind() — this is the visible half only.
  */
-export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }) {
+export default function AuthCallbackLanding({
+  status,
+  signupRejected = false,
+  onSignedIn,
+  onRequestNew,
+}) {
   const [kind] = useState(() => (isAuthConfigured() ? authCallbackKind() : null));
   // Captured at mount: clearAuthParamsFromUrl() wipes the URL, so reading the
   // reason lazily later would always come back null.
@@ -35,10 +41,11 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
   // Every error phase sets copy.action below; pending and success never do.
   // Derived from `phase` rather than from `copy` because the effects below sit
   // before the early return, and hooks cannot be conditional.
-  const actionable = phase === 'error';
+  const actionable = phase === 'error' || phase === 'rejected';
 
   useEffect(() => {
     if (kind !== 'pending' || phase !== 'pending') return undefined;
+    if (signupRejected) return undefined;
     if (status === 'authenticated') {
       setPhase('success');
       clearAuthParamsFromUrl();
@@ -52,7 +59,13 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
       clearAuthParamsFromUrl();
     }, 15000);
     return () => clearTimeout(t);
-  }, [kind, phase, status, onSignedIn]);
+  }, [kind, phase, status, onSignedIn, signupRejected]);
+
+  useEffect(() => {
+    if (!signupRejected) return;
+    setPhase('rejected');
+    clearAuthParamsFromUrl();
+  }, [signupRejected]);
 
   useEffect(() => {
     // The success copy has no button (action: null), so nothing else ever
@@ -96,6 +109,12 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
     copy = { title: 'Signing you in…', body: null, action: null };
   } else if (phase === 'success') {
     copy = { title: 'Signed in', body: 'Welcome back.', action: null };
+  } else if (phase === 'rejected') {
+    copy = {
+      title: "This email isn't invited",
+      body: `${SIGNUP_NOT_ALLOWED_MESSAGE} You can keep using the app as a guest.`,
+      action: 'Continue as guest',
+    };
   } else if (reason === 'cancelled') {
     copy = {
       title: 'Sign-in cancelled',
@@ -181,7 +200,9 @@ export default function AuthCallbackLanding({ status, onSignedIn, onRequestNew }
               onClick={() => {
                 clearAuthParamsFromUrl();
                 setPhase(null);
-                onRequestNew?.();
+                // Closed-list reject: stay a guest. Opening the sheet again
+                // would just bounce the same mailbox.
+                if (phase !== 'rejected') onRequestNew?.();
               }}
             >
               {copy.action}

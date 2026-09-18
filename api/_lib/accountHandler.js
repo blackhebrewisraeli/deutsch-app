@@ -73,6 +73,8 @@ export function createAccountHandler({
 
     let auth;
     try {
+      // requireAuth is the signup-allowlist gate (SIGNUP_EMAIL_ALLOWLIST).
+      // Putting it there, not only here, covers league/progress/admin too.
       auth = await requireAuth(req);
     } catch (err) {
       return sendError(res, err.code ?? 'server_error', err.message ?? 'Unexpected error.');

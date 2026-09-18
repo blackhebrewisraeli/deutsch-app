@@ -79,6 +79,20 @@ describe('MagicLinkForm', () => {
     expect(screen.queryByText(/GoTrueClient/i)).not.toBeInTheDocument();
   });
 
+  it('shows the closed-beta copy when send is rejected as signup_not_allowed', async () => {
+    signInWithMagicLink.mockResolvedValueOnce({
+      error: {
+        code: 'signup_not_allowed',
+        message: "This email isn't invited to the beta. Ask the owner for access.",
+      },
+    });
+    render(<MagicLinkForm heading="Sign in" onSuccess={() => {}} />);
+    await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'fateevvl@gmail.com');
+    await userEvent.click(screen.getByRole('button', { name: /email me a sign-in code/i }));
+    expect(await screen.findByText(/isn't invited to the beta/i)).toBeInTheDocument();
+    expect(screen.queryByText(/fateevvl/i)).not.toBeInTheDocument();
+  });
+
   it('offers a resend in the inbox state and re-requests the email', async () => {
     render(<MagicLinkForm heading="Sign in" onSuccess={() => {}} />);
     await userEvent.type(screen.getByRole('textbox', { name: /email/i }), 'a@b.com');

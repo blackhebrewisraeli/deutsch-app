@@ -240,6 +240,13 @@ it is sorted out: Supabase's account-linking behaviour is configured under
 **Authentication → Providers** / identity linking, and merging two real
 accounts after the fact is far more painful than preventing the split.
 
+## Closed signup (beta allowlist)
+
+Do **not** disable the Google provider to lock beta. The optional env
+allowlist in `docs/PRE_BETA_OWNER_CHECKLIST.md` §5 is the switch:
+`SIGNUP_EMAIL_ALLOWLIST` + `VITE_SIGNUP_EMAIL_ALLOWLIST`, then redeploy.
+Unset, signup stays open (production default). Google stays on.
+
 ## Rollback
 
 Set `VITE_GOOGLE_AUTH_ENABLED=false` (or remove it) and redeploy. The button

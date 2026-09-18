@@ -31,6 +31,47 @@ describe('AuthCallbackLanding', () => {
     expect(container).toBeEmptyDOMElement();
   });
 
+  it('explains a closed-list reject and stays a guest', async () => {
+    const onSignedIn = vi.fn();
+    const onRequestNew = vi.fn();
+    render(
+      <AuthCallbackLanding
+        status="anonymous"
+        signupRejected
+        onSignedIn={onSignedIn}
+        onRequestNew={onRequestNew}
+      />
+    );
+    expect(
+      await screen.findByRole('heading', { name: /this email isn't invited/i })
+    ).toBeInTheDocument();
+    expect(screen.getByText(/ask the owner for access/i)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Continue as guest' }));
+    expect(onRequestNew).not.toHaveBeenCalled();
+    expect(onSignedIn).not.toHaveBeenCalled();
+  });
+
+  it('does not celebrate a pending callback that the allowlist then rejects', async () => {
+    authCallbackKind.mockReturnValue('pending');
+    const onSignedIn = vi.fn();
+    const { rerender } = render(
+      <AuthCallbackLanding status="loading" onSignedIn={onSignedIn} onRequestNew={() => {}} />
+    );
+    rerender(
+      <AuthCallbackLanding
+        status="anonymous"
+        signupRejected
+        onSignedIn={onSignedIn}
+        onRequestNew={() => {}}
+      />
+    );
+    expect(
+      await screen.findByRole('heading', { name: /this email isn't invited/i })
+    ).toBeInTheDocument();
+    expect(onSignedIn).not.toHaveBeenCalled();
+    expect(screen.queryByText('Signed in')).not.toBeInTheDocument();
+  });
+
   it('renders nothing when auth is unconfigured', () => {
     isAuthConfigured.mockReturnValue(false);
     authCallbackKind.mockReturnValue('pending');

@@ -77,20 +77,47 @@ Decide and, if shipping, do both:
 Do **not** disable the Google provider while doing this. The live flag
 `VITE_GOOGLE_AUTH_ENABLED` stays on.
 
-## 5. Registration policy
+## 5. Registration policy (optional email allowlist)
 
-Google signup is currently open. That is how `fateevvl@gmail.com` got an
-account.
+Google signup is currently **open**. That is how `fateevvl@gmail.com` got an
+account. The repo now has an optional allowlist so you can lock signup for
+beta **without a code change and without touching the Google provider**.
 
-Decide one of:
+**Default (do nothing):** `SIGNUP_EMAIL_ALLOWLIST` and
+`VITE_SIGNUP_EMAIL_ALLOWLIST` unset or empty → current behaviour. Anyone
+who completes Google or magic-link can keep a session. Production stays
+open until you set these.
 
-- Keep open signup (anyone with a Google account can join).
-- Allowlist (Supabase Auth hooks / disable provider for unknown emails —
-  needs a short spec; do not invent this in the dashboard without one).
-- Disable public signup and issue invites only.
+**To close signup for beta:**
 
-Record the decision here or in `docs/BACKLOG.md` once it is made. Do not
-flip `enable_signup` in production as a drive-by.
+1. Vercel → project → **Settings → Environment Variables**.
+2. Add **`SIGNUP_EMAIL_ALLOWLIST`** (server, not `VITE_`) on Production
+   and Preview, comma-separated. Example:
+   `esterkinshimon712@gmail.com,friend@example.com`
+   - Exact match after trim + lowercase. No plus-address aliasing.
+   - Always include `esterkinshimon712@gmail.com` or you lock yourself out
+     of account/admin APIs.
+3. Add **`VITE_SIGNUP_EMAIL_ALLOWLIST`** with the **same list**. Vite
+   inlines `VITE_*` at build time; this is the client UX so a rejected
+   user sees "This email isn't invited" instead of a generic failure.
+   Server enforcement still holds if you only set the non-`VITE_` var
+   (privileged `/api/v1/*` calls 403 `signup_not_allowed`), but the
+   session can look signed-in until they hit an API.
+4. **Redeploy.** Env edits do not rebuild the client bundle on their own.
+5. Smoke-test: sign in as the admin mailbox (must work). Try a second
+   Google account that is not on the list — the app must sign that
+   session out and explain closed beta. Guests (Continue without account)
+   must still work. Google itself stays enabled.
+
+Do **not** flip `enable_signup` in the Supabase dashboard. Do **not**
+disable the Google provider. Do **not** delete users from an agent
+session. Existing Auth users (including `fateevvl@gmail.com`) stay in
+`auth.users`; they simply cannot keep a session while the list is on
+unless you add them. Remove both vars and redeploy to re-open signup.
+
+The gate lives in `requireAuth` (`api/_lib/auth-middleware.js`), which
+every account / league / progress / admin handler already calls. Guests
+never present a JWT.
 
 ## 6. Decision on `fateevvl@gmail.com`
 
