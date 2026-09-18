@@ -351,7 +351,7 @@ export default function App() {
   const navIconOnly = isTablet(width);
 
   // Auth
-  const { user, status: authStatus } = useAuth();
+  const { user, status: authStatus, signupRejected } = useAuth();
   // applyProgress is registered once (empty deps) but needs the CURRENT user to
   // reconstruct quest history — a stale closure would evaluate quest badges
   // against the guest seed while the board shows the signed-in one. A ref keeps
@@ -480,6 +480,7 @@ export default function App() {
     <>
       <AuthCallbackLanding
         status={authStatus}
+        signupRejected={signupRejected}
         onSignedIn={handleAuthDone}
         onRequestNew={requestSignIn}
       />

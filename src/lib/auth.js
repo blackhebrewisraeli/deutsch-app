@@ -4,6 +4,13 @@
 // (CI, or any environment before B2.3 wires them), the module no-ops and
 // isAuthConfigured() is false, so the app behaves exactly as it does today.
 import { useState, useEffect } from 'react';
+import {
+  readClientSignupAllowlist,
+  userAllowedBySignupList,
+  typedEmailAllowedForSignup,
+  SIGNUP_NOT_ALLOWED_CODE,
+  SIGNUP_NOT_ALLOWED_MESSAGE,
+} from './signupAllowlist.js';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -153,6 +160,7 @@ const NOT_CONFIGURED = { error: { message: 'Sign-in is not available right now.'
 /** Map Supabase/auth errors to short human copy — never surface raw SDK text. */
 export function humanAuthError(error) {
   if (!error) return '';
+  if (error.code === SIGNUP_NOT_ALLOWED_CODE) return SIGNUP_NOT_ALLOWED_MESSAGE;
   const raw = `${error.message || ''} ${error.code || ''} ${error.error_description || ''}`;
   const msg = raw.toLowerCase();
   if (error.status === 429 || /rate.?limit|too many|over_email_send_rate_limit/.test(msg)) {
@@ -164,7 +172,16 @@ export function humanAuthError(error) {
   return 'Something went wrong — try again.';
 }
 
+const SIGNUP_BLOCKED = {
+  error: { code: SIGNUP_NOT_ALLOWED_CODE, message: SIGNUP_NOT_ALLOWED_MESSAGE },
+};
+
+function clientSignupList() {
+  return readClientSignupAllowlist();
+}
+
 export async function signInWithMagicLink(email) {
+  if (!typedEmailAllowedForSignup(email, clientSignupList())) return SIGNUP_BLOCKED;
   const c = await getClient();
   if (!c) return NOT_CONFIGURED;
   return c.auth.signInWithOtp({
@@ -193,6 +210,7 @@ export async function signInWithGoogle() {
 }
 
 export async function verifyCode(email, token) {
+  if (!typedEmailAllowedForSignup(email, clientSignupList())) return SIGNUP_BLOCKED;
   const c = await getClient();
   if (!c) return NOT_CONFIGURED;
   return c.auth.verifyOtp({ email, token, type: 'email' });
@@ -240,29 +258,46 @@ export async function signOut() {
   return c.auth.signOut();
 }
 
-// React hook exposing { session, user, status }. status ∈
+// React hook exposing { session, user, status, signupRejected }. status ∈
 // 'loading' | 'authenticated' | 'anonymous'. When auth is not configured the
 // hook settles on 'anonymous' immediately and never subscribes.
+//
+// `signupRejected` is true when a session arrived whose verified email is
+// not on VITE_SIGNUP_EMAIL_ALLOWLIST. The hook signs that session out and
+// never reports `authenticated`, so the rest of the app stays guest. Empty
+// / unset flag → current behaviour, including restored stranger sessions.
 export function useAuth() {
   const [session, setSession] = useState(null);
   const [status, setStatus] = useState('loading');
+  const [signupRejected, setSignupRejected] = useState(false);
 
   useEffect(() => {
     let active = true;
     let unsubscribe = null;
+
+    const applySession = (c, next) => {
+      if (next && !userAllowedBySignupList(next.user, clientSignupList())) {
+        setSignupRejected(true);
+        setSession(null);
+        setStatus('anonymous');
+        c.auth.signOut();
+        return;
+      }
+      if (next) setSignupRejected(false);
+      setSession(next);
+      setStatus(next ? 'authenticated' : 'anonymous');
+    };
 
     const attach = (c) => {
       // The effect can be torn down while the client chunk is still in flight.
       if (!active || !c || unsubscribe) return;
       c.auth.getSession().then(({ data }) => {
         if (!active) return;
-        setSession(data.session);
-        setStatus(data.session ? 'authenticated' : 'anonymous');
+        applySession(c, data.session);
       });
       const { data: sub } = c.auth.onAuthStateChange((_event, next) => {
         if (!active) return;
-        setSession(next);
-        setStatus(next ? 'authenticated' : 'anonymous');
+        applySession(c, next);
       });
       unsubscribe = () => sub.subscription.unsubscribe();
     };
@@ -290,7 +325,7 @@ export function useAuth() {
     };
   }, []);
 
-  return { session, user: session?.user ?? null, status };
+  return { session, user: session?.user ?? null, status, signupRejected };
 }
 
 /**

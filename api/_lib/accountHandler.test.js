@@ -131,6 +131,20 @@ describe('createAccountHandler', () => {
     expect(run).not.toHaveBeenCalled();
   });
 
+  it('returns 403 signup_not_allowed when requireAuth rejects a closed-list miss', async () => {
+    requireAuth.mockRejectedValue({
+      code: 'signup_not_allowed',
+      message: "This email isn't invited to the beta. Ask the owner for access.",
+    });
+    const run = vi.fn();
+    const res = createRes();
+    await build(run)(req(), res);
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error.code).toBe('signup_not_allowed');
+    expect(res.body.error.message).toMatch(/isn't invited to the beta/i);
+    expect(run).not.toHaveBeenCalled();
+  });
+
   it('returns 500 when the service client is unconfigured', async () => {
     serviceClient.mockReturnValue(null);
     const run = vi.fn();

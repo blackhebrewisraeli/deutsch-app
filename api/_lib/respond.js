@@ -9,6 +9,10 @@ export const ERROR_CODES = {
   // re-authenticate and retry rather than treat the session as expired.
   reauth_required: 401,
   forbidden: 403,
+  // Distinct from `forbidden`: the token IS valid, but this verified email is
+  // not on SIGNUP_EMAIL_ALLOWLIST. The client must sign the user out and
+  // explain closed beta rather than treat it as an origin/admin miss.
+  signup_not_allowed: 403,
   method_not_allowed: 405,
   rate_limited: 429,
   upstream_error: 502,

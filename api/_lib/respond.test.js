@@ -27,6 +27,7 @@ describe('sendError', () => {
       unauthorized: 401,
       reauth_required: 401,
       forbidden: 403,
+      signup_not_allowed: 403,
       method_not_allowed: 405,
       rate_limited: 429,
       upstream_error: 502,
@@ -47,6 +48,18 @@ describe('sendError', () => {
     expect(res.statusCode).toBe(401);
     expect(res.body.error.code).toBe('reauth_required');
     expect(res.body.error.code).not.toBe('unauthorized');
+  });
+
+  it('keeps signup_not_allowed distinguishable from forbidden at the same status', () => {
+    const res = createRes();
+    sendError(
+      res,
+      'signup_not_allowed',
+      "This email isn't invited to the beta. Ask the owner for access."
+    );
+    expect(res.statusCode).toBe(403);
+    expect(res.body.error.code).toBe('signup_not_allowed');
+    expect(res.body.error.code).not.toBe('forbidden');
   });
 
   it('sets extra headers when provided', () => {

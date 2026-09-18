@@ -13,14 +13,16 @@ contract, arriving in phase B1). Spec:
   { "error": { "code": "<machine_code>", "message": "<human text>" } }
   ```
 
-  | code                 | HTTP | meaning                                          |
-  | -------------------- | ---- | ------------------------------------------------ |
-  | `bad_request`        | 400  | body failed validation                           |
-  | `unauthorized`       | 401  | reserved for B2 (JWT auth)                       |
-  | `forbidden`          | 403  | Origin present but not allow-listed              |
-  | `method_not_allowed` | 405  | only POST is accepted                            |
-  | `rate_limited`       | 429  | quota exceeded — honor `Retry-After` (seconds)   |
-  | `upstream_error`     | 502  | Anthropic unreachable / network failure          |
+  | code                 | HTTP | meaning                                            |
+  | -------------------- | ---- | -------------------------------------------------- |
+  | `bad_request`        | 400  | body failed validation                             |
+  | `unauthorized`       | 401  | reserved for B2 (JWT auth)                         |
+  | `reauth_required`    | 401  | valid token, but the action needs a fresh sign-in  |
+  | `forbidden`          | 403  | Origin present but not allow-listed                |
+  | `signup_not_allowed` | 403  | valid token, email not on `SIGNUP_EMAIL_ALLOWLIST` |
+  | `method_not_allowed` | 405  | only POST is accepted                              |
+  | `rate_limited`       | 429  | quota exceeded — honor `Retry-After` (seconds)     |
+  | `upstream_error`     | 502  | Anthropic unreachable / network failure            |
   | `server_error`       | 500  | missing server configuration or unexpected failure |
 
   Upstream Anthropic **error responses pass through unchanged** (their own
