@@ -132,6 +132,19 @@ describe('settings adapter', () => {
     expect(settingsFromRow(row).preferredModel).toBe('balanced');
   });
 
+  it('carries placementOffer round-trip on the settings blob', () => {
+    const placementOffer = { milestone: 3, shownAt: 50, dismissedAt: 80 };
+    const local = {
+      gamification: { goal: 50 },
+      learnedWords: {},
+      settingsUpdatedAt: 123,
+      placementOffer,
+    };
+    const row = settingsToRow(local, 'a1', 999);
+    expect(row.data.placementOffer).toEqual(placementOffer);
+    expect(settingsFromRow(row).placementOffer).toEqual(placementOffer);
+  });
+
   it('carries frozenDays / bestStreak / lastReconcileDay round-trip', () => {
     const local = {
       gamification: {

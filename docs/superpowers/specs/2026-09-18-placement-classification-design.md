@@ -13,9 +13,12 @@ A2 blanks, B1 free typing).
 ### When it runs
 
 - **First-time:** `!hasStoredLevel()` after the WelcomeGate (or immediately
-  when auth is unconfigured). There is no free A1/A2/B1 picker on entry.
+  when auth is unconfigured), including a newly signed-in account with no
+  CEFR code yet. There is no free A1/A2/B1 picker on entry.
 - **Retake:** Settings → "Retake placement", or the StatusChip sheet in the
   header. A live practice session asks before the overlay opens.
+- **After 3 completed decks:** a one-shot Home invite. See
+  `2026-09-18-placement-access-paths-design.md`.
 
 A stored but corrupt `deutsch-level` is treated as unset and shows placement.
 

@@ -65,6 +65,8 @@ export function settingsToRow(local, level, levelUpdatedAt) {
       enabledInterests: local.enabledInterests,
       // Phase 5: learner model band. Additive; missing → client treats as auto.
       preferredModel: local.preferredModel,
+      // One-shot 3-deck placement retake invite. Additive; older clients omit it.
+      placementOffer: local.placementOffer,
     },
   };
 }
@@ -87,6 +89,7 @@ export function settingsFromRow(row) {
     placement: d.placement,
     enabledInterests: d.enabledInterests,
     preferredModel: d.preferredModel,
+    placementOffer: d.placementOffer,
   };
 }
 

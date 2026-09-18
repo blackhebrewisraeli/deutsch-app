@@ -908,6 +908,16 @@ describe('entry gate', () => {
     expect(screen.queryByRole('navigation')).toBeNull();
   });
 
+  it('shows placement to a signed-in account that has no level yet', () => {
+    authMock.status = 'authenticated';
+    authMock.mayHaveSession = true;
+    localStorage.removeItem('deutsch-level');
+    render(<App />);
+    expect(gate()).toBeNull();
+    expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).toBeNull();
+  });
+
   it('enables the level XP boost for a signed-in user', () => {
     authMock.status = 'authenticated';
     authMock.mayHaveSession = true;
@@ -1051,6 +1061,80 @@ describe('entry gate', () => {
     // If App had dropped onLevelChange, Settings would re-mount from the stale
     // `level` prop and B1 would be checked again.
     expect(screen.getByRole('radio', { name: /A1/ })).toBeChecked();
+  });
+});
+
+describe('placement access after completed decks', () => {
+  const seedCompletedPresetDecks = (n) => {
+    const learnedWords = {};
+    Object.values(activePack.content.decks)
+      .slice(0, n)
+      .forEach((cards) => {
+        for (const card of cards) learnedWords[card.id] = true;
+      });
+    const current = loadState() ?? {};
+    localStorage.setItem('deutsch-app-state-v1', JSON.stringify({ ...current, learnedWords }));
+  };
+
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.clear();
+    asReturningLearner();
+    authMock.configured = true;
+    authMock.status = 'anonymous';
+    authMock.mayHaveSession = false;
+    setViewportWidth(1280);
+  });
+
+  it('does not invite a retake before three decks are finished', async () => {
+    seedCompletedPresetDecks(2);
+    renderPastEntry(<App />);
+    await screen.findByRole('heading', { name: /guten tag/i });
+    expect(screen.queryByRole('region', { name: /ready to retake placement/i })).toBeNull();
+  });
+
+  it('invites a retake on Home once three distinct decks are complete', async () => {
+    seedCompletedPresetDecks(3);
+    renderPastEntry(<App />);
+    expect(
+      await screen.findByRole('region', { name: /ready to retake placement/i })
+    ).toBeInTheDocument();
+    expect(loadState()?.placementOffer?.shownAt).toEqual(expect.any(Number));
+  });
+
+  it('does not spam the invite after dismiss, even with more completed decks', async () => {
+    seedCompletedPresetDecks(3);
+    const first = renderPastEntry(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: /not now/i }));
+    expect(screen.queryByRole('region', { name: /ready to retake placement/i })).toBeNull();
+    expect(loadState()?.placementOffer?.dismissedAt).toEqual(expect.any(Number));
+
+    first.unmount();
+    seedCompletedPresetDecks(4);
+    renderPastEntry(<App />);
+    await screen.findByRole('heading', { name: /guten tag/i });
+    expect(screen.queryByRole('region', { name: /ready to retake placement/i })).toBeNull();
+  });
+
+  it('still opens placement from Settings after the Home invite is dismissed', async () => {
+    seedCompletedPresetDecks(3);
+    renderPastEntry(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: /not now/i }));
+
+    await userEvent.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'settings' }));
+    await userEvent.click(screen.getByRole('button', { name: /retake placement/i }));
+    expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
+  });
+
+  it('opens placement from the Home invite', async () => {
+    seedCompletedPresetDecks(3);
+    renderPastEntry(<App />);
+    await userEvent.click(await screen.findByRole('button', { name: /retake placement/i }));
+    expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
+    expect(loadState()?.placementOffer?.dismissedAt).toEqual(expect.any(Number));
   });
 });
 
