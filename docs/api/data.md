@@ -37,9 +37,9 @@ reports store `user_id` NULL — `FeedbackButton` has no auth gate, so `anon`
 is granted INSERT (the one exception to "anon gets nothing"). Clients have
 no SELECT / UPDATE / DELETE; the admin API (`docs/api/admin.md`) is the
 owner read/triage path via `service_role`. `status` / `handled_at` /
-`handled_by` were added in `20260918153000_user_roles.sql` (owner applies
-after merge). The original table (`20260916183000_feedback.sql`) is already
-applied in production.
+`handled_by` were added in `20260918153000_user_roles.sql` (applied in
+production 2026-09-18). The original table (`20260916183000_feedback.sql`) is
+already applied in production.
 
 `profiles.blocked_at` is set only by the admin API. Authenticated UPDATE is
 column-limited to `display_name`, `handle`, `avatar_path` so a learner cannot
