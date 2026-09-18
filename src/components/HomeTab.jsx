@@ -5,6 +5,7 @@ import MissionBoard from './MissionBoard';
 import QuestBoard from './QuestBoard';
 import ErrorBoundary from './ErrorBoundary';
 import { Stack } from './ui/Layout';
+import PlacementOfferBanner from './PlacementOfferBanner';
 
 // Landing surface for every app open, guest or signed-in — who you are, what
 // to do next, and what is still open today.
@@ -34,34 +35,42 @@ export default function HomeTab({
   quests = [],
   onGoToTab,
   onOpenSettings,
+  showPlacementOffer = false,
+  onRetakePlacement,
+  onDismissPlacementOffer,
 }) {
   const { remaining } = resolveRecommended(missions, 2, { classifiedLevel: cefrLevel });
 
   return (
-    <PersonalHub
-      user={user}
-      profile={profile}
-      cefrLevel={cefrLevel}
-      score={score}
-      streak={streak}
-      goalPct={goalPct}
-      goalMet={goalMet}
-      onOpenSettings={onOpenSettings}
-      today={
-        <Stack gap={3} data-testid="home-today-stack">
+    <Stack gap={5}>
+      {showPlacementOffer ? (
+        <PlacementOfferBanner onRetake={onRetakePlacement} onDismiss={onDismissPlacementOffer} />
+      ) : null}
+      <PersonalHub
+        user={user}
+        profile={profile}
+        cefrLevel={cefrLevel}
+        score={score}
+        streak={streak}
+        goalPct={goalPct}
+        goalMet={goalMet}
+        onOpenSettings={onOpenSettings}
+        today={
+          <Stack gap={3} data-testid="home-today-stack">
+            <ErrorBoundary>
+              <MissionBoard missions={remaining} onGo={onGoToTab} />
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <QuestBoard quests={quests} onGo={onGoToTab} />
+            </ErrorBoundary>
+          </Stack>
+        }
+        recommended={
           <ErrorBoundary>
-            <MissionBoard missions={remaining} onGo={onGoToTab} />
+            <RecommendedActions missions={missions} classifiedLevel={cefrLevel} onGo={onGoToTab} />
           </ErrorBoundary>
-          <ErrorBoundary>
-            <QuestBoard quests={quests} onGo={onGoToTab} />
-          </ErrorBoundary>
-        </Stack>
-      }
-      recommended={
-        <ErrorBoundary>
-          <RecommendedActions missions={missions} classifiedLevel={cefrLevel} onGo={onGoToTab} />
-        </ErrorBoundary>
-      }
-    />
+        }
+      />
+    </Stack>
   );
 }

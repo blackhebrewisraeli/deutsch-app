@@ -120,6 +120,8 @@ describe('SettingsRoute', () => {
     renderRoute({ onRetakePlacement });
     await userEvent.click(screen.getByRole('button', { name: /retake placement/i }));
     expect(onRetakePlacement).toHaveBeenCalledTimes(1);
+    expect(screen.getByText(/three vocab decks/i)).toBeInTheDocument();
+    expect(screen.getByText(/override classification/i)).toBeInTheDocument();
   });
 
   it('drives the daily goal', async () => {

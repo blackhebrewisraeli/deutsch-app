@@ -226,6 +226,25 @@ describe('mergeSettings', () => {
     expect(mergeSettings(remote, local).preferredModel).toBe('auto');
   });
 
+  it('lets placementOffer follow whole-row LWW so a dismiss can stick', () => {
+    const local = {
+      settingsUpdatedAt: 200,
+      goal: 50,
+      placementOffer: { milestone: 3, shownAt: 10, dismissedAt: 20 },
+    };
+    const remote = {
+      settingsUpdatedAt: 100,
+      goal: 30,
+      placementOffer: { milestone: 3, shownAt: 10 },
+    };
+    expect(mergeSettings(local, remote).placementOffer).toEqual({
+      milestone: 3,
+      shownAt: 10,
+      dismissedAt: 20,
+    });
+    expect(mergeSettings(remote, local).placementOffer.dismissedAt).toBe(20);
+  });
+
   it('unions frozenDays and maxes bestStreak across devices (sync-safe)', () => {
     const local = {
       settingsUpdatedAt: 200,

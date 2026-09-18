@@ -122,6 +122,25 @@ describe('HomeTab', () => {
     expect(screen.getByText(/alles erledigt/i)).toBeInTheDocument();
   });
 
+  it('shows the placement retake invite when asked, and hides it otherwise', async () => {
+    const { default: userEvent } = await import('@testing-library/user-event');
+    const onRetakePlacement = vi.fn();
+    const onDismissPlacementOffer = vi.fn();
+    const { rerender } = render(<HomeTab {...hubProps} />);
+    expect(screen.queryByRole('region', { name: /ready to retake placement/i })).toBeNull();
+
+    rerender(
+      <HomeTab
+        {...hubProps}
+        showPlacementOffer
+        onRetakePlacement={onRetakePlacement}
+        onDismissPlacementOffer={onDismissPlacementOffer}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /retake placement/i }));
+    expect(onRetakePlacement).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps Missionen, Tagesaufgaben and Recommended as regions inside one hub', () => {
     render(
       <HomeTab

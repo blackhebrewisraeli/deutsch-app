@@ -32,3 +32,29 @@ export function deckProgressFor({ decks = null, learnedWords = null, learnedByDe
       total: cards.length,
     }));
 }
+
+/**
+ * A deck is complete when every card is learned. Same finished-deck test
+ * missions use (`deck-unfinished` skips `done === total`) and Vocab's
+ * DeckCompleteBanner celebrates. Empty/malformed rows are not complete.
+ *
+ * @param {{ done?: number, total?: number } | null | undefined} row
+ * @returns {boolean}
+ */
+export function isDeckComplete(row) {
+  const total = row?.total;
+  const done = row?.done;
+  return Number.isFinite(total) && total > 0 && Number.isFinite(done) && done >= total;
+}
+
+/**
+ * Distinct completed decks in a `deckProgressFor` result. Callers decide
+ * which deck map they passed in — App counts the pack's preset decks.
+ *
+ * @param {Array<{ done?: number, total?: number }> | null | undefined} rows
+ * @returns {number}
+ */
+export function completedDeckCount(rows) {
+  if (!Array.isArray(rows)) return 0;
+  return rows.filter(isDeckComplete).length;
+}

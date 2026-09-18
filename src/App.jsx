@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { User, BookOpen, MessageSquare, Type, Languages, Home } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
@@ -36,7 +36,13 @@ import HomeTab from './components/HomeTab';
 import SettingsRoute from './components/settings/SettingsRoute';
 import { deriveMissions } from './lib/missions';
 import { deriveQuests, questHistory } from './lib/quests';
-import { deckProgressFor } from './lib/deckProgress';
+import { deckProgressFor, completedDeckCount } from './lib/deckProgress';
+import {
+  shouldStartPlacementOffer,
+  readPlacementOffer,
+  recordPlacementOfferShown,
+  recordPlacementOfferDismissed,
+} from './lib/placementOffer';
 import { readDecks, upsertDeck, deleteDeck, liveDecks, CUSTOM_DECK_ID } from './lib/customDecks';
 import {
   readLearnedByDeck,
@@ -621,8 +627,31 @@ export default function App() {
   // Onboarding + level
   const [level, setLevel] = useState(readLevel);
   // First-time learners classify instead of freely picking. Returning learners
-  // with a stored CEFR code skip this; they retake from Settings / StatusChip.
+  // with a stored CEFR code skip this; they retake from Settings / StatusChip
+  // or from the 3-deck Home invite. Re-assert when auth settles so a newly
+  // signed-in account with no code cannot skip into the shell.
   const [showPlacement, setShowPlacement] = useState(() => !hasStoredLevel());
+  useEffect(() => {
+    if (!hasStoredLevel()) setShowPlacement(true);
+  }, [authStatus, user?.id]);
+  // One-shot Home invite after 3 completed preset decks. Session-visible
+  // until dismiss; `shownAt` on the blob stops it coming back next load.
+  const [placementOfferVisible, setPlacementOfferVisible] = useState(false);
+
+  useEffect(() => {
+    if (showPlacement || !hasStoredLevel()) return;
+    const count = completedDeckCount(
+      deckProgressFor({ decks: PRESET_DECKS, learnedWords, learnedByDeck })
+    );
+    if (shouldStartPlacementOffer({ completedCount: count, offer: readPlacementOffer() })) {
+      setPlacementOfferVisible(true);
+    }
+  }, [learnedWords, learnedByDeck, showPlacement]);
+
+  useEffect(() => {
+    if (tab !== 'home' || !placementOfferVisible || showPlacement) return;
+    recordPlacementOfferShown();
+  }, [tab, placementOfferVisible, showPlacement]);
 
   // Settings lives inside the Profile tab (id still `stats`). The hash keeps
   // the deep link; it is not a seventh nav tab. The WelcomeGate still wins
@@ -762,6 +791,15 @@ export default function App() {
   // the destination can pre-load the item. Must NOT writeLevel: a leftover
   // B1 translate item used to reclassify an A1 learner into free typing.
   const openPlacement = () => setShowPlacement(true);
+  const dismissPlacementOffer = useCallback(() => {
+    recordPlacementOfferDismissed();
+    setPlacementOfferVisible(false);
+  }, []);
+  const acceptPlacementOffer = useCallback(() => {
+    recordPlacementOfferDismissed();
+    setPlacementOfferVisible(false);
+    setShowPlacement(true);
+  }, []);
   const handleReview = (item) => {
     setReviewTarget(item);
     setTab(item.tab);
@@ -834,12 +872,14 @@ export default function App() {
   // `league` comes from two RLS-scoped reads; it stays null when leagues are
   // off, when signed out, or when this week has no membership — in which case
   // the mission simply does not fire.
+  const deckRows = deckProgressFor({ decks: PRESET_DECKS, learnedWords, learnedByDeck });
+
   const missions = deriveMissions({
     srsDue: getDueCount(liveState.srs ?? {}, PRESET_DECKS, Date.now()),
     goal: game.goal,
     streak: game.streak,
     reviewItems: getReviewItems(liveState.items ?? {}),
-    decks: deckProgressFor({ decks: PRESET_DECKS, learnedWords, learnedByDeck }),
+    decks: deckRows,
     league: leagueStanding,
     achievements: ACHIEVEMENTS,
     achievementCtx: gamificationContext(liveState, questCtx),
@@ -1265,6 +1305,9 @@ export default function App() {
               quests={quests}
               onGoToTab={goToTab}
               onOpenSettings={openSettings}
+              showPlacementOffer={placementOfferVisible}
+              onRetakePlacement={acceptPlacementOffer}
+              onDismissPlacementOffer={dismissPlacementOffer}
             />
           )}
           {/* The four practice tabs share one positioned wrapper so the trial

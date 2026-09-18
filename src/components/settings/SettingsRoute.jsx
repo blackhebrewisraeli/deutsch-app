@@ -128,6 +128,17 @@ export default function SettingsRoute({
             </Button>
             <div
               style={{
+                fontFamily: FONTS.body,
+                fontSize: FONT_SIZE.sm,
+                color: COLORS.inkSoft,
+                overflowWrap: 'anywhere',
+              }}
+            >
+              The learner path for changing practice level. Also offered on Home after you finish
+              three vocab decks.
+            </div>
+            <div
+              style={{
                 fontFamily: FONTS.mono,
                 fontSize: FONT_SIZE.tag,
                 letterSpacing: LETTER_SPACING.caps,
