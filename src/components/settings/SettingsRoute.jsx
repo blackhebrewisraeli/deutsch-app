@@ -13,6 +13,7 @@ import { Stack } from '../ui/Layout';
 import Heading from '../ui/Heading';
 import Surface from '../ui/Surface';
 import LevelSwitcher from '../ui/LevelSwitcher';
+import Button from '../ui/Button';
 import GoalPicker from '../gamification/GoalPicker';
 import AppearancePicker from '../AppearancePicker';
 import AccountSection from './AccountSection';
@@ -57,6 +58,7 @@ export default function SettingsRoute({
   onToast,
   level,
   onLevelChange,
+  onRetakePlacement,
   goal,
   onGoalChange,
   soundOn = false,
@@ -89,18 +91,14 @@ export default function SettingsRoute({
           />
         </Section>
 
-        {/* Level reuses the SAME control the header uses. A second level UI
-            would be a second write path, and level carries its own LWW
-            timestamp precisely because a stale device once clobbered it. */}
+        {/* Placement is the primary way CEFR is set. The switcher stays as a
+            narrow advanced override so existing tests, signed-in sync, and a
+            stuck learner can still write a level without retaking. */}
         <Section label="Lernen">
           <Stack gap={5}>
-            <LevelSwitcher
-              value={level}
-              onChange={(next) => {
-                writeLevel(next);
-                onLevelChange?.(next);
-              }}
-            />
+            <Button variant="secondary" onClick={onRetakePlacement}>
+              Retake placement
+            </Button>
             <div
               style={{
                 fontFamily: FONTS.mono,
@@ -130,6 +128,24 @@ export default function SettingsRoute({
                 {LEVEL_MODES[level].detail}.
               </div>
             )}
+            <div
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: FONT_SIZE.tag,
+                letterSpacing: LETTER_SPACING.caps,
+                textTransform: 'uppercase',
+                color: COLORS.mute,
+              }}
+            >
+              Set level manually
+            </div>
+            <LevelSwitcher
+              value={level}
+              onChange={(next) => {
+                writeLevel(next);
+                onLevelChange?.(next);
+              }}
+            />
             <GoalPicker goal={goal} onPick={onGoalChange} />
             <button
               type="button"

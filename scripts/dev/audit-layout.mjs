@@ -138,6 +138,10 @@ async function run() {
   for (const width of WIDTHS) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto(BASE, { waitUntil: 'networkidle' });
+    await page.evaluate(() => {
+      localStorage.setItem('deutsch-level', 'a1');
+    });
+    await page.reload({ waitUntil: 'networkidle' });
     await dismissEntryScreens(page);
     for (const tab of TABS) {
       await openTab(page, tab);

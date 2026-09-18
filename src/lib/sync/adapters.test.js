@@ -88,6 +88,26 @@ describe('settings adapter', () => {
     expect(back.settingsUpdatedAt).toBe(123);
   });
 
+  it('carries placement metadata round-trip on the settings blob', () => {
+    const placement = {
+      takenAt: 1_700_000_000_000,
+      source: 'placement',
+      level: 'a2',
+      correct: 5,
+      total: 9,
+      bands: { a1: 3, a2: 2, b1: 0 },
+    };
+    const local = {
+      gamification: { goal: 50 },
+      learnedWords: {},
+      settingsUpdatedAt: 123,
+      placement,
+    };
+    const row = settingsToRow(local, 'a2', 999);
+    expect(row.data.placement).toEqual(placement);
+    expect(settingsFromRow(row).placement).toEqual(placement);
+  });
+
   it('carries frozenDays / bestStreak / lastReconcileDay round-trip', () => {
     const local = {
       gamification: {

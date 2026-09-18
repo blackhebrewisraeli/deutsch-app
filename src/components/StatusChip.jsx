@@ -9,10 +9,10 @@ import {
   SHADOW,
   SPACE,
 } from '../lib/theme';
-import { writeLevel, LEVEL_NAMES, LEVEL_MODES } from '../lib/levelPref';
+import { LEVEL_NAMES, LEVEL_MODES } from '../lib/levelPref';
 import { useSessionGuard } from '../lib/sessionGuard';
 import LevelBadge from './gamification/LevelBadge';
-import LevelSwitcher from './ui/LevelSwitcher';
+import Button from './ui/Button';
 
 const SHEET_WIDTH = 264;
 const SHEET_GUTTER = 12;
@@ -41,7 +41,7 @@ const CODE_OVERHANG = 6;
 // corner pill costs the 6px it overhangs by.
 export default function StatusChip({
   level,
-  onLevelChange,
+  onRetakePlacement,
   xpLevel,
   progress,
   rank,
@@ -102,22 +102,19 @@ export default function StatusChip({
     };
   }, [open, place]);
 
-  const commit = (next) => {
-    writeLevel(next);
-    onLevelChange?.(next);
+  const commitRetake = () => {
     setPending(null);
     setOpen(false);
     buttonRef.current?.focus();
+    onRetakePlacement?.();
   };
 
-  // Switching restarts whatever the current tab has in flight. Ask first, but
-  // only when there is genuinely something to lose — a confirmation that fires
-  // every time trains people to dismiss it. The control is never disabled:
-  // a dead control with no explanation is worse than a question.
-  const handleChange = (next) => {
+  // Retaking restarts whatever the current tab has in flight. Ask first, but
+  // only when there is genuinely something to lose.
+  const handleRetake = () => {
     const session = guard?.activeSession();
-    if (session) setPending({ level: next, session });
-    else commit(next);
+    if (session) setPending({ session });
+    else commitRetake();
   };
 
   // Focus has to move with the sheet's body, or a keyboard user is left on a
@@ -130,7 +127,7 @@ export default function StatusChip({
       confirmRef.current?.focus();
     } else if (restoreFocusRef.current) {
       restoreFocusRef.current = false;
-      sheetRef.current?.querySelector('[role="radio"][aria-checked="true"]')?.focus();
+      sheetRef.current?.querySelector('[data-entry="retake-placement"]')?.focus();
     }
   }, [pending]);
 
@@ -233,7 +230,7 @@ export default function StatusChip({
         >
           {pending ? (
             <>
-              {caption('Switch level?')}
+              {caption('Retake placement?')}
               <div
                 style={{
                   fontFamily: FONTS.mono,
@@ -243,13 +240,13 @@ export default function StatusChip({
                   overflowWrap: 'anywhere',
                 }}
               >
-                {`Moving to ${pending.level.toUpperCase()} restarts your current set — you are on ${pending.session}.`}
+                {`Retaking placement restarts your current set — you are on ${pending.session}.`}
               </div>
               <div style={{ display: 'flex', gap: SPACE[2], marginTop: SPACE[4] }}>
                 <button
                   type="button"
                   ref={confirmRef}
-                  onClick={() => commit(pending.level)}
+                  onClick={commitRetake}
                   style={{
                     flex: 1,
                     minWidth: 0,
@@ -267,7 +264,7 @@ export default function StatusChip({
                     textTransform: 'uppercase',
                   }}
                 >
-                  {`Switch to ${pending.level.toUpperCase()}`}
+                  Retake
                 </button>
                 <button
                   type="button"
@@ -346,7 +343,18 @@ export default function StatusChip({
               />
 
               {caption('Practice level')}
-              <LevelSwitcher value={level} onChange={handleChange} variant="compact" />
+              <div
+                style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: FONT_SIZE.sm,
+                  fontWeight: FONT_WEIGHT.bold,
+                  color: COLORS.ink,
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                {level.toUpperCase()}
+                {LEVEL_NAMES[level] ? ` · ${LEVEL_NAMES[level]}` : ''}
+              </div>
               <div
                 style={{
                   marginTop: SPACE[3],
@@ -357,9 +365,16 @@ export default function StatusChip({
                   overflowWrap: 'anywhere',
                 }}
               >
-                {LEVEL_NAMES[level] ?? ''}
-                {LEVEL_MODES[level] ? ` · ${LEVEL_MODES[level].label}` : ''}
+                {LEVEL_MODES[level] ? `${LEVEL_MODES[level].label}` : ''}
               </div>
+              <Button
+                variant="secondary"
+                data-entry="retake-placement"
+                onClick={handleRetake}
+                style={{ marginTop: SPACE[4], width: '100%', minWidth: 0 }}
+              >
+                Retake placement
+              </Button>
             </>
           )}
         </div>

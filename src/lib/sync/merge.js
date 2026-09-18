@@ -83,6 +83,9 @@ export function mergeSettings(local, remote) {
     const levelWinner = llt > rlt ? local : remote;
     out.level = levelWinner.level;
     out.levelUpdatedAt = levelWinner.levelUpdatedAt;
+    // Placement is how that level was set. It follows the same clock so a
+    // stale device cannot keep an older score next to a newer CEFR code.
+    out.placement = levelWinner.placement;
   }
 
   // learnedWords: union — a word stays learned if either device has it (#41).

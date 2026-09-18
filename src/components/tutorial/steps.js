@@ -2,16 +2,14 @@
  * The three surfaces a first-time learner needs pointed out, in the order they
  * meet them.
  *
- * `status` is the header StatusChip, not a bare level switcher: the A1/A2/B1
- * control lives *inside* that chip's popover (see StatusChip.jsx), so the chip
- * is the only always-visible surface the level lives on, and the copy has to
- * say that tapping is what opens the switcher.
+ * `status` is the header StatusChip: CEFR code plus XP live on its face, and
+ * retaking the placement test is what changes the practice level.
  */
 export const TUTORIAL_STEPS = Object.freeze([
   {
     id: 'status',
     title: 'Your level',
-    body: 'A1, A2 or B1, alongside the XP you have earned. Tap it any time to switch level or check your rank.',
+    body: 'A1, A2 or B1, alongside the XP you have earned. Tap it any time to retake placement or check your rank.',
   },
   {
     id: 'chat',
