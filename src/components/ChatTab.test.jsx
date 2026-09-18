@@ -253,6 +253,17 @@ describe('ChatTab conversation-first layout', () => {
     expect(screen.getByRole('button', { name: 'IPA' })).toBeInTheDocument();
   });
 
+  it('collapses EN/IPA again when the scenario greeting is replaced', async () => {
+    render(<ChatTab />);
+    await userEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-expanded', 'true');
+    await userEvent.click(screen.getByRole('radio', { name: 'Order Coffee scenario' }));
+    expect(screen.getByRole('button', { name: 'EN' })).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      screen.queryByText('Hello! What would you like to practice today?')
+    ).not.toBeInTheDocument();
+  });
+
   it('collapses the model picker below the thread when not wide', () => {
     render(<ChatTab wide={false} />);
     expect(screen.getByText('Modell')).toBeInTheDocument();

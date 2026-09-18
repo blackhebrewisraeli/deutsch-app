@@ -304,6 +304,7 @@ export default function ChatTab({
           }}
         >
           <MessageList
+            key={scenario}
             messages={messages}
             thinking={thinking}
             endRef={messagesEndRef}

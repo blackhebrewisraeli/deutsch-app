@@ -11,11 +11,14 @@ export default function MessageList({ messages, thinking, endRef, compact = fals
       style={{
         flex: 1,
         padding: compact ? SPACE[4] : SPACE[6],
-        overflowY: 'auto',
+        overflowY: compact ? 'visible' : 'auto',
         display: 'flex',
         flexDirection: 'column',
         gap: compact ? SPACE[4] : SPACE[5],
-        maxHeight: 'calc(100vh - 400px)',
+        // Desktop keeps an inner pane so the composer stays in view. Compact
+        // (narrow) lets the thread grow with the page — 100vh − 400px left a
+        // ~168px scroller at 320×568 and hid the turn that was just graded.
+        maxHeight: compact ? 'none' : 'calc(100vh - 400px)',
         minWidth: 0,
       }}
     >
