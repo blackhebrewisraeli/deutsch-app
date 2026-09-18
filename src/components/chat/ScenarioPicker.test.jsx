@@ -55,13 +55,14 @@ describe('ScenarioPicker', () => {
     expect(screen.queryByRole('radio', { name: 'Order Coffee scenario' })).not.toBeInTheDocument();
   });
 
-  it('hides the scenario descriptions on mobile', () => {
+  it('does not render scenario descriptions', () => {
     const withDesc = SCENARIOS.find((s) => s.desc);
-    const { rerender } = render(
-      <ScenarioPicker scenario={SCENARIOS[0].id} setScenario={() => {}} mobile={false} />
-    );
-    expect(screen.getByText(withDesc.desc)).toBeInTheDocument();
-    rerender(<ScenarioPicker scenario={SCENARIOS[0].id} setScenario={() => {}} mobile />);
+    render(<ScenarioPicker scenario={SCENARIOS[0].id} setScenario={() => {}} mobile={false} />);
     expect(screen.queryByText(withDesc.desc)).not.toBeInTheDocument();
+  });
+
+  it('does not paint A/B/C section markers', () => {
+    render(<ScenarioPicker scenario={SCENARIOS[0].id} setScenario={() => {}} mobile={false} />);
+    expect(screen.queryByText(/^A$/)).not.toBeInTheDocument();
   });
 });

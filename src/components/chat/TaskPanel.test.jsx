@@ -27,7 +27,7 @@ describe('TaskPanel', () => {
     const filled = [...container.querySelectorAll('*')].filter((el) =>
       /background:\s*var\(--c-accent-red\)/.test(el.getAttribute('style') ?? '')
     );
-    expect(filled.length, 'task marker + task card should both use accent-red').toBe(2);
+    expect(filled.length, 'task card should use accent-red').toBe(1);
 
     for (const el of container.querySelectorAll('*')) {
       const style = el.getAttribute('style') ?? '';
@@ -66,6 +66,18 @@ describe('TaskPanel', () => {
     render(<TaskPanel {...baseProps} currentTask={{ task: 'Say hello.' }} />);
     expect(screen.getByText('Say hello.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'SHOW HINT' })).not.toBeInTheDocument();
+  });
+
+  it('omits the A/B/C section marker', () => {
+    render(<TaskPanel {...baseProps} />);
+    expect(screen.queryByText(/^C$/)).not.toBeInTheDocument();
+  });
+
+  it('renders a one-line compact strip without dropping the task text', () => {
+    render(<TaskPanel {...baseProps} compact />);
+    expect(screen.getByText('TASK 1')).toBeInTheDocument();
+    expect(screen.getByText('Order a coffee politely.')).toBeInTheDocument();
+    expect(screen.queryByText('Your Task')).not.toBeInTheDocument();
   });
 
   it('renders the completed card with CONTINUE resetting the cycle', async () => {

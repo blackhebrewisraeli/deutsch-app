@@ -1,6 +1,6 @@
 # Chat UX redesign — conversation first
 
-**Status:** design, pending owner visual approval. **Do not implement until approved.**
+**Status:** implemented
 **Date:** 2026-09-18
 **Branch:** `cursor/chat-ux-redesign-design-7ed1`
 **Audited against:** live Chat at `npm run dev` (no AI backend). Correction and waiting states were exercised with a page-local `fetch` mock; error used the real 404 from missing `/api`.
@@ -150,9 +150,9 @@ Verified with `npm run where`. Blast radius is Chat-local except `App.jsx` impor
 
 ---
 
-## 8 · Out of scope
+## 8 · Out of scope (for later work)
 
-Implementing this layout; API/JSON contract; auth, sync, quotas; model routing; CEFR/vocab gating; new fonts or CSS libraries; header/nav; production Supabase; merging.
+API/JSON contract; auth, sync, quotas; model routing; CEFR/vocab gating; new fonts or CSS libraries; header/nav; production Supabase.
 
 ---
 

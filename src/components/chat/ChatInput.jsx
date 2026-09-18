@@ -1,5 +1,5 @@
 import { Mic, MicOff, ArrowRight } from 'lucide-react';
-import { COLORS, FONT_BODY, FONT_MONO, RADIUS, SHADOW } from '../../lib/theme';
+import { COLORS, FONT_BODY, RADIUS, SHADOW } from '../../lib/theme';
 
 // Bottom input bar: mic toggle, text field, send button.
 // All behavior (speech recognition, sending) lives in the parent and is passed
@@ -13,28 +13,31 @@ export default function ChatInput({
   onStartListening,
   onStopListening,
 }) {
+  const canSend = Boolean(input.trim()) && !thinking;
   return (
     <div
       style={{
         borderTop: `1px solid ${COLORS.border}`,
-        padding: 16,
+        padding: 12,
         display: 'flex',
-        gap: 12,
+        gap: 8,
         background: COLORS.paperDeep,
+        alignItems: 'center',
       }}
     >
       <button
         type="button"
+        data-ui="button"
+        data-focus-on-dark=""
         onClick={listening ? onStopListening : onStartListening}
         aria-label={listening ? 'Stop voice input' : 'Start voice input'}
         style={{
-          width: 56,
-          height: 56,
+          width: 40,
+          height: 40,
           background: listening ? COLORS.red : COLORS.ink,
           color: COLORS.paper,
           border: 'none',
           borderRadius: RADIUS.md,
-          boxShadow: SHADOW.press(listening ? COLORS.rust : COLORS.press),
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -42,7 +45,7 @@ export default function ChatInput({
           flexShrink: 0,
         }}
       >
-        {listening ? <MicOff size={22} /> : <Mic size={22} />}
+        {listening ? <MicOff size={18} /> : <Mic size={18} />}
       </button>
       <input
         aria-label="Chat message in German"
@@ -53,11 +56,12 @@ export default function ChatInput({
         style={{
           flex: 1,
           minWidth: 0,
+          height: 40,
           background: COLORS.surface,
           border: `1px solid ${COLORS.border}`,
           borderRadius: RADIUS.md,
           boxShadow: SHADOW.inset,
-          padding: '0 18px',
+          padding: '0 14px',
           fontFamily: FONT_BODY,
           fontSize: 16,
           color: COLORS.ink,
@@ -65,26 +69,26 @@ export default function ChatInput({
       />
       <button
         type="button"
+        data-ui="button"
+        data-focus-on-dark=""
         onClick={() => onSend()}
-        disabled={!input.trim() || thinking}
+        disabled={!canSend}
         aria-label="Send chat message"
         style={{
-          padding: '0 24px',
-          background: input.trim() && !thinking ? COLORS.green : COLORS.mute,
+          width: 40,
+          height: 40,
+          flexShrink: 0,
+          padding: 0,
+          background: canSend ? COLORS.green : COLORS.mute,
           color: COLORS.paper,
           border: 'none',
           borderRadius: RADIUS.md,
-          boxShadow: SHADOW.press(input.trim() && !thinking ? COLORS.greenDeep : COLORS.muteDeep),
-          fontFamily: FONT_MONO,
-          fontWeight: 700,
-          fontSize: 12,
-          letterSpacing: '0.15em',
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
+          justifyContent: 'center',
         }}
       >
-        SEND <ArrowRight size={14} aria-hidden="true" />
+        <ArrowRight size={18} aria-hidden="true" />
       </button>
     </div>
   );

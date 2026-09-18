@@ -1,12 +1,21 @@
+import { useId, useState } from 'react';
 import { Volume2 } from 'lucide-react';
-import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW, TEXT } from '../../lib/theme';
+import { COLORS, FONT_MONO, FONT_BODY, FONT_SIZE, RADIUS, TEXT, SPACE } from '../../lib/theme';
 import { speak } from '../../lib/speech';
 import { activePack } from '../../packs';
+import InlineCorrection from './InlineCorrection';
 
 // A single chat message — the tutor's (gold, left, with avatar) or the learner's
-// (ink, right).
+// (ink, right). German is the default line; EN and IPA wait behind toggles.
 export default function MessageBubble({ msg }) {
   const isUser = msg.role === 'user';
+  const ipaId = useId();
+  const enId = useId();
+  const [showIpa, setShowIpa] = useState(false);
+  const [showEn, setShowEn] = useState(false);
+  const hasIpa = Boolean(msg.ipa);
+  const hasEn = Boolean(msg.en);
+
   return (
     <div
       className="slide-up"
@@ -20,22 +29,21 @@ export default function MessageBubble({ msg }) {
       {!isUser && (
         <div
           style={{
-            width: 40,
-            height: 40,
+            width: 36,
+            height: 36,
             borderRadius: RADIUS.pill,
             background: COLORS.gold,
-            boxShadow: SHADOW.press(COLORS.goldLipSoft),
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 20,
+            fontSize: 18,
             flexShrink: 0,
           }}
         >
           🧑‍🏫
         </div>
       )}
-      <div style={{ maxWidth: '78%' }}>
+      <div style={{ maxWidth: '78%', minWidth: 0, marginLeft: isUser ? 'auto' : 0 }}>
         <div
           style={{
             fontFamily: FONT_MONO,
@@ -59,22 +67,21 @@ export default function MessageBubble({ msg }) {
             // here rendered near-white on gold in dark mode at 1.25:1.
             color: isUser ? COLORS.paper : COLORS.accentOn,
             borderRadius: isUser ? '20px 20px 6px 20px' : '20px 20px 20px 6px',
-            boxShadow: SHADOW.press(isUser ? COLORS.press : COLORS.goldLipSoft),
           }}
         >
           <div
             style={{
-              fontFamily: FONT_DISPLAY,
-              fontSize: 20,
+              fontFamily: FONT_BODY,
+              fontSize: FONT_SIZE.lg,
               fontWeight: 500,
-              lineHeight: 1.3,
-              marginBottom: msg.ipa ? 6 : 0,
+              lineHeight: 1.5,
             }}
           >
             {msg.de}
             {!isUser && (
               <button
                 type="button"
+                data-ui="button"
                 onClick={() => speak(msg.de)}
                 aria-label={`Play ${activePack.prompts.persona} response audio`}
                 style={{
@@ -90,27 +97,71 @@ export default function MessageBubble({ msg }) {
               </button>
             )}
           </div>
-          {msg.ipa && <div style={{ ...TEXT.ipa, marginBottom: 4 }}>{msg.ipa}</div>}
-          {msg.en && (
+          {!isUser && (hasIpa || hasEn) && (
+            <div style={{ display: 'flex', gap: SPACE[2], marginTop: SPACE[2] }}>
+              {hasEn && (
+                <button
+                  type="button"
+                  data-ui="button"
+                  aria-expanded={showEn}
+                  aria-controls={enId}
+                  onClick={() => setShowEn((v) => !v)}
+                  style={disclosureStyle}
+                >
+                  EN
+                </button>
+              )}
+              {hasIpa && (
+                <button
+                  type="button"
+                  data-ui="button"
+                  aria-expanded={showIpa}
+                  aria-controls={ipaId}
+                  onClick={() => setShowIpa((v) => !v)}
+                  style={disclosureStyle}
+                >
+                  IPA
+                </button>
+              )}
+            </div>
+          )}
+          {hasIpa && showIpa && (
+            <div id={ipaId} style={{ ...TEXT.ipa, marginTop: SPACE[2] }}>
+              {msg.ipa}
+            </div>
+          )}
+          {hasEn && showEn && (
             <div
+              id={enId}
               style={{
-                fontFamily: FONT_BODY,
-                fontStyle: 'italic',
-                fontSize: 13,
-                opacity: 0.75,
+                ...TEXT.translation,
+                marginTop: SPACE[2],
+                paddingTop: SPACE[2],
                 // Derived from the bubble's own text colour rather than a token:
                 // the two bubbles have different foregrounds and both flip by
                 // mode. Appending '30' to a token stopped working when colours
                 // became CSS variables — `var(--c-fg)30` is not a colour.
                 borderTop: '1px solid color-mix(in srgb, currentColor 30%, transparent)',
-                paddingTop: 6,
               }}
             >
               {msg.en}
             </div>
           )}
         </div>
+        {isUser && msg.graded ? <InlineCorrection correction={msg.correction ?? null} /> : null}
       </div>
     </div>
   );
 }
+
+const disclosureStyle = {
+  background: 'transparent',
+  border: '1px solid color-mix(in srgb, currentColor 35%, transparent)',
+  color: 'inherit',
+  fontFamily: FONT_MONO,
+  fontSize: FONT_SIZE.tag,
+  letterSpacing: '0.12em',
+  padding: '3px 8px',
+  borderRadius: RADIUS.pill,
+  cursor: 'pointer',
+};
