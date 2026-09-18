@@ -20,23 +20,71 @@
  */
 
 /**
+ * Vocabulary constraint block for chat. Language-blind: names no target
+ * language and gives no language-specific examples. Empty vocab is a
+ * first-session scaffold, not an error.
+ *
+ * @param {{ vocab?: string[], sparse?: boolean }} [args]
+ * @returns {string}
+ */
+export function chatVocabConstraint({ vocab, sparse } = {}) {
+  if (!vocab?.length) {
+    return 'The learner is new and has no learned vocabulary yet. Stay with the simplest everyday words. Introduce at most one new word per reply and mark it in the English translation.';
+  }
+  const list = vocab.join(', ');
+  const head = sparse
+    ? 'The learner knows only a few words; this list includes a small starter set. Stay very simple.'
+    : "Stay within the learner's known vocabulary.";
+  return `${head} Prefer these terms: ${list}. Function words (articles, pronouns, auxiliaries) may be used freely. When you must introduce a new word, mark it clearly in the English translation and keep new words rare — at most one per turn.`;
+}
+
+/**
+ * Short appendix the chat API folds into the system prompt after validating
+ * the client-supplied level and vocab. Authoritative over client prose that
+ * tries to raise the band.
+ *
+ * @param {{ level?: string, vocab?: string[] }} [args]
+ * @returns {string}
+ */
+export function chatServerConstraint({ level, vocab } = {}) {
+  const parts = ['Server constraint (authoritative):'];
+  if (level) {
+    parts.push(`Learner CEFR band: ${level}. Do not raise complexity above this band.`);
+  }
+  if (vocab?.length) {
+    parts.push(
+      `Prefer these known terms: ${vocab.join(', ')}. New words are rare and must be marked.`
+    );
+  }
+  return parts.join(' ');
+}
+
+/**
  * Anna's system prompt. `task` is optional — when absent the task sentence is
  * omitted entirely rather than left as an empty clause, which a model reads as
  * a task with no content.
  *
- * @param {{ prompts: Prompts, scenarioDesc: string, task?: string, level: string }} args
+ * `level` is the classified CEFR code. Unknown keys fall back to a1 pedagogy
+ * rather than interpolating the string "undefined".
+ *
+ * @param {{ prompts: Prompts, scenarioDesc: string, task?: string, level: string, vocab?: string[], sparse?: boolean }} args
  * @returns {string}
  */
-export function chatSystemPrompt({ prompts, scenarioDesc, task, level }) {
-  const { persona, targetLanguage, levels } = prompts;
+export function chatSystemPrompt({ prompts, scenarioDesc, task, level, vocab, sparse } = {}) {
+  const { persona, targetLanguage, levels } = prompts ?? {};
 
   const taskLine = task
     ? `The learner's current task is: "${task}". Stay in this scenario and guide them toward completing this task. When the task is naturally complete, include "taskComplete": true in your JSON response; otherwise omit it or set it to false.`
     : '';
 
+  const pedagogy = levels?.[level] || levels?.a1 || '';
+  const vocabBlock = chatVocabConstraint({ vocab, sparse });
+
   return `You are a friendly ${targetLanguage} tutor named ${persona} for a language learner. The current scenario is: ${scenarioDesc}. ${taskLine}
 
-${levels[level]}
+${pedagogy}
+
+${vocabBlock}
 
 You MUST always respond with strict JSON only (no markdown, no extra text):
 {

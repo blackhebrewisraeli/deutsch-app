@@ -1,4 +1,5 @@
 import { createAiHandler } from './handler.js';
+import { applyChatConstraints } from './chatConstraint.js';
 
 // chatHandler, deckHandler and gradeHandler live in one file — not three
 // api/v1/ai/*.js files — because Vercel's Hobby plan caps a deployment at 12
@@ -13,7 +14,10 @@ import { createAiHandler } from './handler.js';
 // collapsing them into one shared limiter would be a real regression.
 
 // Anna conversation turns.
-export const chatHandler = createAiHandler({ rate: { windowMs: 5 * 60 * 1000, max: 20 } });
+export const chatHandler = createAiHandler({
+  rate: { windowMs: 5 * 60 * 1000, max: 20 },
+  afterValidate: applyChatConstraints,
+});
 
 // Custom deck generation.
 export const deckHandler = createAiHandler({ rate: { windowMs: 60 * 60 * 1000, max: 5 } });

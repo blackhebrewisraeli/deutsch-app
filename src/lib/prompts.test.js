@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { chatSystemPrompt, graderSystemPrompt, deckPrompts, sentencePrompts } from './prompts';
+import {
+  chatSystemPrompt,
+  chatVocabConstraint,
+  chatServerConstraint,
+  graderSystemPrompt,
+  deckPrompts,
+  sentencePrompts,
+} from './prompts';
 
 const prompts = {
   persona: 'Anna',
@@ -54,9 +61,50 @@ describe('chatSystemPrompt', () => {
   // The level-key trap: cefrLevels is uppercase, components pass lowercase.
   // A mismatch does not throw — it interpolates the string "undefined".
   it('never emits the literal string undefined', () => {
-    for (const level of ['a1', 'a2', 'b1']) {
+    for (const level of ['a1', 'a2', 'b1', 'nope']) {
       expect(chatSystemPrompt({ ...base, level })).not.toContain('undefined');
     }
+  });
+
+  it('falls back to a1 pedagogy when the level key is missing', () => {
+    expect(chatSystemPrompt({ ...base, level: 'nope' })).toContain('The learner is A1 BEGINNER');
+  });
+
+  it('includes the learned-vocab allowlist and the sparse starter note', () => {
+    const learned = chatSystemPrompt({ ...base, vocab: ['hello', 'please'] });
+    expect(learned).toContain("Stay within the learner's known vocabulary.");
+    expect(learned).toContain('Prefer these terms: hello, please.');
+    expect(learned).not.toContain('starter set');
+
+    const sparse = chatSystemPrompt({
+      ...base,
+      vocab: ['hello'],
+      sparse: true,
+    });
+    expect(sparse).toContain('small starter set');
+    expect(sparse).toContain('hello');
+  });
+
+  it('still composes when the allowlist is empty', () => {
+    const out = chatSystemPrompt({ ...base, vocab: [] });
+    expect(out).toContain('no learned vocabulary yet');
+    expect(out).not.toContain('undefined');
+  });
+});
+
+describe('chatVocabConstraint / chatServerConstraint', () => {
+  it('describes function words without naming a language', () => {
+    const out = chatVocabConstraint({ vocab: ['hello'] });
+    expect(out).toContain('articles, pronouns, auxiliaries');
+    expect(out).not.toMatch(/\bsein\b|\bhaben\b/);
+  });
+
+  it('pins the CEFR band on the server appendix', () => {
+    const out = chatServerConstraint({ level: 'a1', vocab: ['hello'] });
+    expect(out).toContain('Server constraint (authoritative)');
+    expect(out).toContain('Learner CEFR band: a1');
+    expect(out).toContain('hello');
+    expect(out).not.toContain('undefined');
   });
 });
 

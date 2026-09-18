@@ -70,19 +70,24 @@ export function forgetDeck(learnedByDeck, deckId) {
 }
 
 /**
- * How many DISTINCT words the learner knows, across both maps.
+ * Distinct learned card ids across both maps.
  *
  * Distinct is the point. During the transition the same word can appear as a
  * legacy flat key AND under one or more decks; counting keys would report it
  * two or three times and inflate the number on Home.
  */
-export function learnedCountOf(learnedByDeck, learnedWords) {
+export function learnedIdsOf(learnedByDeck, learnedWords) {
   const words = new Set();
   for (const [word, on] of Object.entries(learnedWords ?? {})) if (on) words.add(word);
   for (const cards of Object.values(learnedByDeck ?? {})) {
     for (const [word, on] of Object.entries(cards ?? {})) if (on === true) words.add(word);
   }
-  return words.size;
+  return words;
+}
+
+/** How many DISTINCT words the learner knows, across both maps. */
+export function learnedCountOf(learnedByDeck, learnedWords) {
+  return learnedIdsOf(learnedByDeck, learnedWords).size;
 }
 
 /** How many of a deck's cards are learned, under the dual read. */

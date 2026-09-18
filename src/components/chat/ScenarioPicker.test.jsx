@@ -35,6 +35,26 @@ describe('ScenarioPicker', () => {
     expect(setScenario).toHaveBeenCalledWith(target.id);
   });
 
+  it('labels the section with the classified CEFR code', () => {
+    render(
+      <ScenarioPicker scenario={SCENARIOS[0].id} setScenario={() => {}} mobile={false} level="a1" />
+    );
+    expect(screen.getByText(/Scenario · A1/i)).toBeInTheDocument();
+  });
+
+  it('renders only the scenarios it is given', () => {
+    render(
+      <ScenarioPicker
+        scenario="free"
+        setScenario={() => {}}
+        mobile={false}
+        scenarios={[SCENARIOS[0]]}
+      />
+    );
+    expect(screen.getAllByRole('radio')).toHaveLength(1);
+    expect(screen.queryByRole('radio', { name: 'Order Coffee scenario' })).not.toBeInTheDocument();
+  });
+
   it('hides the scenario descriptions on mobile', () => {
     const withDesc = SCENARIOS.find((s) => s.desc);
     const { rerender } = render(

@@ -1,9 +1,12 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { COLORS, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from '../lib/theme';
 import { callClaude } from '../lib/claude';
 import { chatSystemPrompt } from '../lib/prompts';
+import { classifiedLevel } from '../lib/levelGate';
+import { getUserLevel } from '../lib/levelPref';
+import { buildChatAllowlist, scenariosForLevel } from '../lib/chatVocab';
 import { activePack } from '../packs';
-const { scenarios: SCENARIOS, chatTasks: CHAT_TASKS } = activePack.content;
+const { scenarios: SCENARIOS, chatTasks: CHAT_TASKS, decks: PACK_DECKS } = activePack.content;
 import { recordEvent } from '../lib/stats';
 import WelcomeBanner from './chat/WelcomeBanner';
 import ScenarioPicker from './chat/ScenarioPicker';
@@ -14,8 +17,35 @@ import CorrectionPanel from './chat/CorrectionPanel';
 
 const WELCOME_KEY = 'deutsch-welcome-dismissed';
 
-export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
-  const [scenario, setScenario] = useState('free');
+// Pack field `de` is the surface form (recorded AGENTS.md exception). The
+// engine never reads it; this callback is how Chat resolves card ids.
+const termOf = (card) => card.de;
+
+export default function ChatTab({
+  mobile = false,
+  wide = true,
+  learnedWords = {},
+  learnedByDeck = {},
+}) {
+  // Classified CEFR is the source of truth. A `level` prop (still passed by
+  // App for tab-API consistency) cannot raise the band.
+  const chatLevel = classifiedLevel(getUserLevel());
+  const visibleScenarios = useMemo(
+    () => scenariosForLevel(SCENARIOS, CHAT_TASKS, chatLevel),
+    [chatLevel]
+  );
+  const { vocab, sparse } = useMemo(
+    () =>
+      buildChatAllowlist({
+        learnedByDeck,
+        learnedWords,
+        decks: PACK_DECKS,
+        termOf,
+      }),
+    [learnedByDeck, learnedWords]
+  );
+
+  const [scenario, setScenario] = useState(() => visibleScenarios[0]?.id ?? 'free');
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [listening, setListening] = useState(false);
@@ -42,8 +72,13 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
 
-  const tasks = CHAT_TASKS[scenario]?.[level] ?? [];
+  const tasks = CHAT_TASKS[scenario]?.[chatLevel] ?? [];
   const currentTask = tasks[taskIdx % Math.max(tasks.length, 1)] ?? null;
+
+  useEffect(() => {
+    if (visibleScenarios.some((s) => s.id === scenario)) return;
+    setScenario(visibleScenarios[0]?.id ?? 'free');
+  }, [visibleScenarios, scenario]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -53,14 +88,14 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
     setTaskIdx(0);
     setHintVisible(false);
     setTasksCompleted(false);
-  }, [scenario, level]);
+  }, [scenario, chatLevel]);
 
   useEffect(() => {
     const greeting = SCENARIOS.find((s) => s.id === scenario)?.greeting;
     if (!greeting) return;
     setMessages([{ role: 'assistant', ...greeting }]);
     setCorrection(null);
-  }, [scenario, level]);
+  }, [scenario, chatLevel]);
 
   const startListening = () => {
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -104,7 +139,9 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
       prompts: activePack.prompts,
       scenarioDesc,
       task: currentTask?.task,
-      level,
+      level: chatLevel,
+      vocab,
+      sparse,
     });
 
     const history = messages.slice(1).map((m) => ({
@@ -115,13 +152,15 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
     try {
       const raw = await callClaude(systemPrompt, text, history, {
         routingContext: { taskType: 'chat', userTier: 'guest' },
+        level: chatLevel,
+        vocab,
       });
       const cleaned = raw.replace(/```json|```/g, '').trim();
       const parsed = JSON.parse(cleaned);
       const reply = { role: 'assistant', de: parsed.de, ipa: parsed.ipa, en: parsed.en };
       setMessages((m) => [...m, reply]);
       setCorrection(parsed.correction || null);
-      recordEvent('chat', level, parsed.correction ? 'wrong' : 'correct');
+      recordEvent('chat', chatLevel, parsed.correction ? 'wrong' : 'correct');
       if (parsed.taskComplete) {
         const nextIdx = (taskIdx + 1) % Math.max(tasks.length, 1);
         if (nextIdx === 0) setTasksCompleted(true);
@@ -162,7 +201,13 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
         }}
       >
         <aside>
-          <ScenarioPicker scenario={scenario} setScenario={setScenario} mobile={mobile} />
+          <ScenarioPicker
+            scenario={scenario}
+            setScenario={setScenario}
+            mobile={mobile}
+            level={chatLevel}
+            scenarios={visibleScenarios}
+          />
 
           {currentTask && (
             <TaskPanel
@@ -171,6 +216,7 @@ export default function ChatTab({ level = 'a1', mobile = false, wide = true }) {
               tasksCompleted={tasksCompleted}
               hintVisible={hintVisible}
               setHintVisible={setHintVisible}
+              level={chatLevel}
               onResetTasks={() => {
                 setTasksCompleted(false);
                 setTaskIdx(0);

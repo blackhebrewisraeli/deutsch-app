@@ -48,6 +48,21 @@ describe('callClaude', () => {
     expect(body.model).toBe(MODELS.haiku.id);
   });
 
+  it('posts classified level and vocab extras on the chat endpoint only', async () => {
+    await callClaude('sys', 'msg', [], { level: 'a1', vocab: ['hello', 'please'] });
+    expect(postedBody().level).toBe('a1');
+    expect(postedBody().vocab).toEqual(['hello', 'please']);
+
+    await callClaude('sys', 'msg', [], {
+      endpoint: 'grade',
+      level: 'b1',
+      vocab: ['hello'],
+      routingContext: { taskType: 'translation_check', userTier: 'guest' },
+    });
+    expect(postedBody().level).toBeUndefined();
+    expect(postedBody().vocab).toBeUndefined();
+  });
+
   it('defaults a missing routingContext to the cheapest baseline (Haiku)', async () => {
     await callClaude('sys', 'msg');
     expect(postedBody().model).toBe(MODELS.haiku.id);

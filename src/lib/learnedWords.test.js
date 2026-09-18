@@ -3,6 +3,7 @@ import {
   isLearned,
   markLearnedIn,
   forgetDeck,
+  learnedIdsOf,
   learnedCountOf,
   learnedInDeck,
   backfillFromSrs,
@@ -99,6 +100,16 @@ describe('forgetDeck', () => {
   it('is a no-op for a deck that is not there', () => {
     const m = { numbers: { b: true } };
     expect(forgetDeck(m, 'custom')).toBe(m);
+  });
+});
+
+describe('learnedIdsOf', () => {
+  it('unions scoped and legacy keys without duplicates', () => {
+    const ids = learnedIdsOf(
+      { numbers: { [COLLIDING]: true }, greetings: { Hallo: true } },
+      { [COLLIDING]: true, Danke: true }
+    );
+    expect(ids).toEqual(new Set([COLLIDING, 'Hallo', 'Danke']));
   });
 });
 

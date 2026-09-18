@@ -60,6 +60,17 @@ export function clampMode(requested, classified = getUserLevel()) {
 }
 
 /**
+ * The classified CEFR code itself. Chat pedagogy uses this rather than
+ * clampMode: a B1 learner should get B1 tutor talk, not a leftover a1 prop.
+ * Junk / missing → a1. Never above what is stored.
+ * @param {string | null | undefined} [classified]
+ * @returns {'a1' | 'a2' | 'b1'}
+ */
+export function classifiedLevel(classified = getUserLevel()) {
+  return asLevel(classified) ?? 'a1';
+}
+
+/**
  * CEFR code a pack deck declares, or null when the deck is unleveled
  * (greetings, topics, frequency, custom).
  * @param {{ auto?: { level?: string } } | null | undefined} def

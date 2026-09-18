@@ -5,10 +5,17 @@ import { SectionLabel } from '../UI';
 
 // Section A — the scenario list (Free Chat / Coffee / Meet / Airport).
 // Horizontal scroller on mobile, vertical list on desktop.
-export default function ScenarioPicker({ scenario, setScenario, mobile }) {
+export default function ScenarioPicker({
+  scenario,
+  setScenario,
+  mobile,
+  level,
+  scenarios = SCENARIOS,
+}) {
+  const heading = level ? `Scenario · ${String(level).toUpperCase()}` : 'Scenario';
   return (
     <>
-      <SectionLabel num="A" text="Scenario" />
+      <SectionLabel num="A" text={heading} />
       <div
         role="radiogroup"
         aria-label="Choose chat scenario"
@@ -23,7 +30,7 @@ export default function ScenarioPicker({ scenario, setScenario, mobile }) {
           overflowX: mobile ? 'auto' : 'visible',
         }}
       >
-        {SCENARIOS.map((s) => {
+        {scenarios.map((s) => {
           const active = scenario === s.id;
           return (
             <button
