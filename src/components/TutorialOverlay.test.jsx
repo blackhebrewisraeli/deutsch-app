@@ -4,7 +4,8 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TutorialOverlay from './TutorialOverlay';
 import { TUTORIAL_STEPS } from './tutorial/steps';
-import { TUTORIAL_KEY } from '../lib/tutorialPref';
+import { TUTORIAL_KEY, TUTORIAL_REPLAY_EVENT, replayTutorial } from '../lib/tutorialPref';
+import { act } from '@testing-library/react';
 
 const setViewport = (width, height = 800) => {
   for (const [key, value] of [
@@ -89,6 +90,63 @@ describe('TutorialOverlay', () => {
     renderTour();
     expect(dialog()).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /skip tutorial/i })).not.toBeInTheDocument();
+  });
+
+  // ── First run only ────────────────────────────────────────────
+  it('records the tour as seen as soon as it paints, before any click', () => {
+    // The "tutorial on every app open" report. Recording only on dismissal
+    // meant a reload, a closed tab, or following a link out all left the flag
+    // unset — so the tour came back, and no amount of dismissing helped,
+    // because the learner had never dismissed it.
+    renderTour();
+    expect(dialog()).toBeInTheDocument();
+    expect(localStorage.getItem(TUTORIAL_KEY)).toBe('true');
+  });
+
+  it('does not record anything when it never paints', () => {
+    // Guard in the other direction: the flag must mean "was offered the tour",
+    // so a run where the tour is already done must not rewrite it, and a run
+    // where it never renders must not claim it was shown.
+    localStorage.clear();
+    renderTour({ showOverlay: false });
+    expect(localStorage.getItem(TUTORIAL_KEY)).toBeNull();
+  });
+
+  // ── Replay from Settings ──────────────────────────────────────
+  it('reopens on the replay event without a reload', async () => {
+    renderTour();
+    await act(async () => {
+      window.dispatchEvent(new CustomEvent(TUTORIAL_REPLAY_EVENT));
+    });
+    expect(dialog()).toBeInTheDocument();
+    expect(within(dialog()).getByText(TUTORIAL_STEPS[0].title)).toBeInTheDocument();
+  });
+
+  it('restarts the replayed tour at step one', async () => {
+    const user = userEvent.setup();
+    renderTour();
+    await user.click(screen.getByRole('button', { name: /next/i }));
+    expect(within(dialog()).getByText(TUTORIAL_STEPS[1].title)).toBeInTheDocument();
+
+    await act(async () => {
+      replayTutorial();
+    });
+
+    expect(within(dialog()).getByText(TUTORIAL_STEPS[0].title)).toBeInTheDocument();
+  });
+
+  it('reopens for a learner who had already seen it', async () => {
+    // The pairing that makes mark-on-show safe: the tour is unreachable after
+    // the first paint unless Settings can bring it back.
+    localStorage.setItem(TUTORIAL_KEY, 'true');
+    renderTour();
+    expect(dialog()).not.toBeInTheDocument();
+
+    await act(async () => {
+      replayTutorial();
+    });
+
+    expect(dialog()).toBeInTheDocument();
   });
 
   // ── Dismissal ─────────────────────────────────────────────────

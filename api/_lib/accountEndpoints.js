@@ -65,7 +65,19 @@ export function buildPatch(body) {
   const source = typeof body === 'string' ? safeParse(body) : body;
   const patch = {};
   for (const field of EDITABLE_FIELDS) {
-    const value = source?.[field];
+    // BRANCH ON THE KEY, NOT THE VALUE. An explicit `null` is a request —
+    // "remove my avatar" — and it is the only way AvatarPicker's "Remove
+    // picture" can express itself, because there is no empty-string spelling of
+    // an object path. The previous `typeof value !== 'string' → continue` swallowed
+    // it, so the patch came out `{}` and every learner who tried to remove their
+    // picture got "Nothing to update." Absent key = not mentioned; present-and-null
+    // = clear it. Those are different questions and the code has to ask both.
+    if (!Object.hasOwn(Object(source), field)) continue;
+    const value = source[field];
+    if (value === null) {
+      patch[field] = null;
+      continue;
+    }
     if (typeof value !== 'string') continue;
     const trimmed = value.trim();
     // An empty string clears the field rather than storing "", so a learner can

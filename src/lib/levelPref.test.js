@@ -1,14 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   LEVELS,
+  LEVEL_KEY,
   LEVEL_CHANGE_EVENT,
   readLevel,
   writeLevel,
+  adoptLevel,
   hasStoredLevel,
   getUserLevel,
   setUserLevel,
 } from './levelPref';
-
 vi.mock('./settingsStamp', () => ({ stampLevel: vi.fn() }));
 import { stampLevel } from './settingsStamp';
 
@@ -163,5 +164,50 @@ describe('getUserLevel / setUserLevel', () => {
     window.removeEventListener(LEVEL_CHANGE_EVENT, onChange);
     expect(onChange).toHaveBeenCalledTimes(1);
     spy.mockRestore();
+  });
+});
+
+describe('adoptLevel', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('stores the level and announces it', () => {
+    const heard = vi.fn();
+    window.addEventListener(LEVEL_CHANGE_EVENT, heard);
+
+    expect(adoptLevel('b1')).toBe(true);
+
+    window.removeEventListener(LEVEL_CHANGE_EVENT, heard);
+    expect(localStorage.getItem(LEVEL_KEY)).toBe('b1');
+    expect(hasStoredLevel()).toBe(true);
+    expect(heard).toHaveBeenCalledTimes(1);
+    expect(heard.mock.calls[0][0].detail).toEqual({ level: 'b1' });
+  });
+
+  it('does NOT restamp levelUpdatedAt — that clock records a human choice', () => {
+    // The whole reason this is not writeLevel. levelUpdatedAt decides level LWW
+    // in sync/merge.js; re-stamping an adopted value would make every reconcile
+    // claim this device authored a level it merely received, and the other
+    // device's genuinely newer choice would lose on the next round.
+    stampLevel.mockClear();
+    adoptLevel('a2');
+    expect(stampLevel).not.toHaveBeenCalled();
+
+    // Control: the human-choice writer still stamps, so the assertion above is
+    // about adoptLevel and not about a mock that never fires.
+    writeLevel('a2');
+    expect(stampLevel).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects junk rather than storing it', () => {
+    expect(adoptLevel('c2')).toBe(false);
+    expect(adoptLevel(undefined)).toBe(false);
+    expect(localStorage.getItem(LEVEL_KEY)).toBeNull();
+  });
+
+  it('is case-sensitive, exactly like setUserLevel', () => {
+    expect(adoptLevel('B1')).toBe(false);
+    expect(localStorage.getItem(LEVEL_KEY)).toBeNull();
   });
 });

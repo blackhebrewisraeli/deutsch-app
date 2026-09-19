@@ -1,4 +1,4 @@
-import { getAccessToken, getSupabase } from './auth.js';
+import { getAccessToken, getSupabase, refreshAccessToken } from './auth.js';
 
 // The learner's own profile row: league handle, uploaded avatar path, join
 // date.
@@ -38,15 +38,37 @@ export async function fetchMyProfile(userId) {
  *
  * @throws {Error} with the server's human message (e.g. "That handle is taken.")
  */
-export async function updateProfile(patch) {
-  const token = await getAccessToken();
-  if (!token) throw new Error('Please sign in again.');
+export const SESSION_EXPIRED_MESSAGE = 'Your session expired. Please sign in again and retry.';
 
-  const res = await fetch('/api/v1/account/profile', {
+const send = (token, patch) =>
+  fetch('/api/v1/account/profile', {
     method: 'PATCH',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
     body: JSON.stringify(patch),
   });
+
+export async function updateProfile(patch) {
+  const token = await getAccessToken();
+  if (!token) throw new Error('Please sign in again.');
+
+  let res = await send(token, patch);
+
+  // 401 means the token did not survive `auth.getUser()` on the server. The
+  // token in local storage can be perfectly well-formed and still fail that
+  // check, because GoTrue also requires the session behind it to exist — and a
+  // sign-out anywhere else revokes it globally. Storage and PostgREST only
+  // check the signature, which is why an avatar's BYTES upload fine and then
+  // the row pointing at them cannot be saved.
+  //
+  // One refresh, one retry. Not a loop: if a fresh token is also rejected the
+  // session is genuinely gone, and retrying just spends the learner's time
+  // before telling them the same thing.
+  if (res.status === 401) {
+    const fresh = await refreshAccessToken();
+    if (!fresh) throw new Error(SESSION_EXPIRED_MESSAGE);
+    res = await send(fresh, patch);
+    if (res.status === 401) throw new Error(SESSION_EXPIRED_MESSAGE);
+  }
 
   if (!res.ok) {
     // Surface the server's wording rather than a generic failure: "That handle

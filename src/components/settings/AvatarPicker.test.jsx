@@ -162,3 +162,65 @@ describe('AvatarPicker — removing', () => {
     expect(remove).not.toHaveBeenCalled();
   });
 });
+
+describe('AvatarPicker — when the save half fails', () => {
+  // Two authorities, one flow. Storage takes a signed JWT; the profile PATCH
+  // additionally needs a live GoTrue session. Production hit exactly this and
+  // left two objects in a public bucket that no row points at.
+  it('takes the just-uploaded object back out', async () => {
+    const user = userEvent.setup();
+    const save = vi.fn(async () => {
+      throw new Error('Your session expired. Please sign in again and retry.');
+    });
+    const { upload, remove } = setup({ save });
+
+    await user.upload(fileInput(), pngFile());
+
+    await waitFor(() => expect(remove).toHaveBeenCalled());
+    expect(upload).toHaveBeenCalledTimes(1);
+    // The orphan, not the previous avatar — there was none.
+    expect(remove).toHaveBeenCalledWith('u1/new.webp');
+  });
+
+  it('shows the server’s wording so the learner knows what to do', async () => {
+    const user = userEvent.setup();
+    const save = vi.fn(async () => {
+      throw new Error('Your session expired. Please sign in again and retry.');
+    });
+    setup({ save });
+
+    await user.upload(fileInput(), pngFile());
+
+    expect(await screen.findByText(/session expired/i)).toBeInTheDocument();
+  });
+
+  it('keeps the previous avatar when the replacement never saved', async () => {
+    const user = userEvent.setup();
+    const save = vi.fn(async () => {
+      throw new Error('nope');
+    });
+    const { remove } = setup({ save, profile: { avatar_path: 'u1/old.webp' } });
+
+    await user.upload(fileInput(), pngFile());
+
+    await waitFor(() => expect(remove).toHaveBeenCalled());
+    // Only the failed upload is cleaned up. Deleting the old one as well would
+    // turn a failed change into a lost avatar.
+    expect(remove).toHaveBeenCalledWith('u1/new.webp');
+    expect(remove).not.toHaveBeenCalledWith('u1/old.webp');
+  });
+
+  it('does not try to clean up when the upload itself never happened', async () => {
+    const user = userEvent.setup();
+    const prepare = vi.fn(async () => {
+      throw new ImagePrepError('Pick a JPEG, PNG or WebP image.');
+    });
+    const { upload, remove } = setup({ prepare });
+
+    await user.upload(fileInput(), pngFile());
+
+    await waitFor(() => expect(screen.getByText(/pick a jpeg/i)).toBeInTheDocument());
+    expect(upload).not.toHaveBeenCalled();
+    expect(remove).not.toHaveBeenCalled();
+  });
+});

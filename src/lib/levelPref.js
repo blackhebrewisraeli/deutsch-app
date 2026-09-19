@@ -104,6 +104,36 @@ export function writeLevel(level) {
 }
 
 /**
+ * Adopt a level that came from somewhere else — today, the sync reconcile
+ * pulling another device's (or this account's) CEFR code off the server.
+ *
+ * Identical to `writeLevel` EXCEPT that it does not call `stampLevel()`. That
+ * difference is the whole reason this exists: `levelUpdatedAt` records when a
+ * human chose the level, and the merge in sync/merge.js resolves level LWW on
+ * it. Re-stamping an adopted value with `Date.now()` would make every reconcile
+ * declare this device the freshest author of a level it merely received, so the
+ * next reconcile on the OTHER device would lose a genuinely newer choice.
+ *
+ * Before this existed, sync.js wrote `localStorage[LEVEL_KEY]` directly. The
+ * key moved and nothing was announced, so App's prop-drilled `level` kept
+ * rendering the old value — and the placement gate, which asks
+ * `hasStoredLevel()`, never learned that the learner now had one.
+ *
+ * @param {string} level
+ * @returns {boolean} whether the value was a level and was therefore applied
+ */
+export function adoptLevel(level) {
+  if (!LEVELS.includes(level)) return false;
+  try {
+    localStorage.setItem(LEVEL_KEY, level);
+  } catch {
+    // best-effort; listeners still hear about it below
+  }
+  notifyLevelChange(level);
+  return true;
+}
+
+/**
  * Announce the change. Fired even when the storage write was refused (private
  * mode), because the session's in-memory state did move and the UI should
  * follow it — the alternative is a picker that visibly does nothing.

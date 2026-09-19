@@ -12,7 +12,7 @@ import {
   CARD,
   Z,
 } from '../lib/theme';
-import { isTutorialDone, completeTutorial } from '../lib/tutorialPref';
+import { isTutorialDone, completeTutorial, TUTORIAL_REPLAY_EVENT } from '../lib/tutorialPref';
 import useFocusTrap from '../lib/useFocusTrap';
 import Button from './ui/Button';
 import { GUTTER, BUBBLE_MAX_WIDTH, bubbleBox, scrimRects } from './tutorial/geometry';
@@ -117,6 +117,27 @@ export default function TutorialOverlay({ anchors = {}, onDismiss }) {
   useEffect(() => {
     if (ready) panelRef.current?.focus();
   }, [ready]);
+
+  // Seen the moment it is actually on screen, not only when it is dismissed.
+  // Keyed on `ready` rather than `open` so a tour that never finished measuring
+  // is not counted as offered. See completeTutorial for why this is the honest
+  // moment: a reload or a closed tab is not a dismissal, and treating it as
+  // "not yet offered" is what brought the tour back on every single app open.
+  useEffect(() => {
+    if (ready) completeTutorial();
+  }, [ready]);
+
+  // Settings → "Show tutorial". This component stays mounted for the whole
+  // session and reads its flag once, so clearing storage alone would not
+  // reopen it until a reload.
+  useEffect(() => {
+    const replay = () => {
+      setStepIndex(0);
+      setOpen(true);
+    };
+    window.addEventListener(TUTORIAL_REPLAY_EVENT, replay);
+    return () => window.removeEventListener(TUTORIAL_REPLAY_EVENT, replay);
+  }, []);
 
   // Give focus back when the tour goes away. This overlay returns null rather
   // than unmounting, so the cleanup keys on `ready` — it runs when `ready` flips

@@ -25,7 +25,7 @@ import {
 } from './sync/merge.js';
 import { readDecks } from './customDecks.js';
 import { readLearnedByDeck, backfillFromSrs } from './learnedWords.js';
-import { LEVEL_KEY } from './levelPref.js';
+import { LEVEL_KEY, adoptLevel } from './levelPref.js';
 import { loadQueue, countersFromQueue } from './progressQueue.js';
 
 export const SYNC_ENABLED = import.meta.env.VITE_SYNC_ENABLED === 'true';
@@ -159,7 +159,13 @@ export async function pullAndMerge(userId) {
     preferredModel: adoptedSettings.preferredModel ?? cur.preferredModel,
     placementOffer: adoptedSettings.placementOffer ?? cur.placementOffer,
   });
-  if (adoptedSettings.level) localStorage.setItem(LEVEL_KEY, adoptedSettings.level);
+  // adoptLevel, not a bare setItem: this ANNOUNCES the level (LEVEL_CHANGE_EVENT)
+  // without re-stamping levelUpdatedAt. The announcement is load-bearing — the
+  // header, every tab, and the placement gate all hold the level in React state
+  // and cannot see a localStorage key move under them. A returning learner
+  // whose CEFR code lives only on the server used to be shown "Find your level"
+  // even after this line had already put b1 in storage.
+  if (adoptedSettings.level) adoptLevel(adoptedSettings.level);
   saveSyncMeta({ lastSyncedCounters: nextLastSynced, lastSyncedAt: Date.now() });
 
   if (Object.keys(srsMerged).length) {
@@ -196,7 +202,12 @@ export async function pushAll(userId) {
 
 const DEBOUNCE_MS = 3000;
 const listeners = new Set();
-let status = { pending: false, lastSyncedAt: null };
+// `settled` answers "has the first reconcile of this session FINISHED?", which
+// is not the same question as `lastSyncedAt != null`. A reconcile that threw
+// (offline, 500, revoked session) leaves lastSyncedAt null forever, and a
+// caller waiting on it would wait forever too — which is exactly what the
+// placement gate must not do. Success and failure both settle.
+let status = { pending: false, lastSyncedAt: null, settled: false };
 let activeUserId = null;
 let debounceTimer = null;
 let visibilityHandler = null;
@@ -244,9 +255,9 @@ async function reconcileNow(userId) {
       await pullAndMerge(userId);
     } while (rerunRequested);
     const meta = loadSyncMeta();
-    setStatus({ pending: false, lastSyncedAt: meta.lastSyncedAt });
+    setStatus({ pending: false, lastSyncedAt: meta.lastSyncedAt, settled: true });
   } catch {
-    setStatus({ pending: false, lastSyncedAt: status.lastSyncedAt });
+    setStatus({ pending: false, lastSyncedAt: status.lastSyncedAt, settled: true });
   } finally {
     reconciling = false;
   }
@@ -290,7 +301,7 @@ export function stop() {
     document.removeEventListener('visibilitychange', visibilityHandler);
     visibilityHandler = null;
   }
-  setStatus({ pending: false, lastSyncedAt: status.lastSyncedAt });
+  setStatus({ pending: false, lastSyncedAt: status.lastSyncedAt, settled: status.settled });
 }
 
 /** Test seam — optional `{ enabled: true, userId }` seeds an active session. */
@@ -307,6 +318,6 @@ export function __resetSyncState({ enabled, userId } = {}) {
   activeUserId = userId ?? null;
   reconciling = false;
   rerunRequested = false;
-  setStatus({ pending: false, lastSyncedAt: null });
+  setStatus({ pending: false, lastSyncedAt: null, settled: false });
   testClient = null;
 }
