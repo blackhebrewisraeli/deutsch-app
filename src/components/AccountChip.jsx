@@ -218,6 +218,7 @@ export default function AccountChip({
             Settings →
           </button>
           <button
+            type="button"
             onClick={onSignOut}
             style={{
               background: 'none',
