@@ -1,246 +1,128 @@
-# Deutsch App — Maintenance Checklist
-
-Run this checklist after every deployment, dependency update, or model change.
-Each check should take under 2 minutes. Full checklist: ~20 minutes.
-
----
-
-## How to run
-
-Open the **live production URL**: `https://deutsch-app-dusky.vercel.app`
-
-Open browser DevTools (F12) → **Console tab**. Keep it visible throughout.
-Any red errors = investigate before marking a check as passed.
-
-Clear localStorage before a full run to test first-visit behaviour:
-DevTools → Application → Local Storage → Right-click → Clear
-
----
-
-## 0. Onboarding — Splash Screen
-
-1. Clear localStorage and hard-reload (`Cmd+Shift+R`)
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| German flag (black / red / gold stripes) renders | Three colour bands visible | |
-| Three level buttons appear | 🌱 Beginner (A1) · 📚 Elementary (A2) · 🎓 Intermediate (B1) | |
-| Click **Beginner (A1)** | Enters app, Chat tab active, task panel shows an A1 task | |
-| Reload page | Splash does NOT show again (skipped) | |
-
----
-
-## 1. Chat Tab — Guided Conversation
-
-Navigate to **01 Chat**.
-
-**Task panel (left sidebar):**
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| "C YOUR TASK" panel visible | Red panel with task text | |
-| Task text matches level | A1: short one-sentence prompt; B1: multi-sentence scenario | |
-| SHOW HINT button (A1/A2 only) | Toggles hint text below the task | |
-| No hint button for B1 | Hidden for intermediate level | |
-
-**Anna's greeting:**
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| Opening message appears | German text + IPA + English translation | |
-| 🔊 icon plays audio | German TTS spoken aloud | |
-| Correction panel shows "Alles gut!" | Right panel with checkmark | |
-
-**Send a message with a grammar mistake:**
-Type: `Ich gehe in die Schule seit drei Jahr.` → press Enter
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| Anna responds | German reply with IPA + English | |
-| Correction panel turns red | "NEEDS A FIX" with strikethrough | |
-| Correct form shown | "drei Jahren" (dative plural) | |
-| Explanation shown | Brief English grammar note | |
-
-**Scenario switching:**
-Click **Order Coffee** in the left panel
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| Chat resets with café intro | New opening line in German | |
-| Task panel resets to task 1 | New task appropriate to scenario + level | |
-| Correction clears | Back to "Alles gut!" | |
-
----
-
-## 2. Alphabet Tab — Listen & Identify
-
-Click **02 Alphabet**.
-
-**Quiz mode (default):**
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| Quiz mode loads by default | 🔊 play button + 4 letter tiles + "WHICH LETTER DID YOU HEAR?" | |
-| 🔊 button plays audio | A letter is spoken aloud | |
-| Click a correct answer | Gold feedback panel, score increments | |
-| Click a wrong answer | Red feedback with correct letter shown | |
-| NEXT ROUND → advances | New round with new letter group | |
-| Score tracker updates | "ROUND N · SCORE X/Y" updates correctly | |
-
-**Browse mode:**
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| Click 📋 Browse toggle | Full A–Z + Ä/Ö/Ü/ß grid appears | |
-| All 30 characters render | 26 + 4 special characters | |
-| Example words are capitalised | **Apfel**, **Brot**, **Glück** (not lowercase) | |
-| Click any letter | Audio plays, detail panel appears | |
-| Toggle back to Quiz | Quiz resumes at current round | |
-
----
-
-## 3. Vocab Tab — Active Recall
-
-Click **03 Vocab**.
-
-**A1 / A2 — Multiple choice:**
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| German word + IPA shown on card | e.g. "Hallo [ˈhalo]" | |
-| 4 English options shown | 2×2 grid of buttons | |
-| Click correct option | Gold flash, "N remaining" decrements | |
-| Click wrong option | Red feedback, card goes back in queue | |
-| Deck complete → banner | "✓ Deck complete" shimmer banner | |
-
-**B1 — Type the meaning:**
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| Text input shown (not button grid) | Input field with "Type the English meaning…" | |
-| Type exact answer + Enter | Green "✓ CORRECT", card advances | |
-| Type near-correct (1–2 typo) | "≈ ALMOST — CHECK SPELLING", card advances | |
-| Type wrong answer | Red "✗ NOT QUITE", card re-queued | |
-
-**Custom deck generation:**
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| Type `animals` → click GENERATE | Button shows "GENERATING..." | |
-| Wait ~5 seconds | "✦ Your Deck" appears in sidebar with 10 cards | |
-| First card shows German + IPA | e.g. "der Hund [deːɐ̯ hʊnt]" | |
-
----
-
-## 4. Translate Tab — Exercise Mode
-
-Click **04 Translate**.
-
-**A1 — Word tiles:**
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| English sentence shown | e.g. "I drink water." | |
-| Empty answer area shown | Dashed border area, "YOUR ANSWER" label | |
-| Word bank shown below | Shuffled German tiles incl. distractors | |
-| Click tile → moves to answer area | Tile appears in answer row | |
-| Click placed tile → returns to bank | Tile back in word bank | |
-| CHECK disabled until tile placed | Button greyed out on load | |
-| CHECK → correct | Gold feedback panel + grammar note | |
-| CHECK → wrong | Red feedback + correct sentence shown | |
-| ⏭ Skip button | Advances without penalty | |
-
-**A2 — Fill the blanks:**
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| German sentence with ___ blanks shown | e.g. "Ich habe ___ Hund." | |
-| Tile bank shown | Only blank words + distractors | |
-| Click tile fills next blank | Blank fills in left-to-right order | |
-| Click filled blank → returns tile | Tile back in bank | |
-| CHECK → correct | Gold feedback + note | |
-
-**B1 — Free typing + AI:**
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| English sentence shown | Complex B1-level sentence | |
-| Textarea input shown | "Type your translation here…" | |
-| Cmd/Ctrl+Enter submits | Sends without clicking CHECK | |
-| CHECK calls AI grader | "GRADING..." shown during request | |
-| Correct answer → gold panel | AI praise + grammar tip | |
-| Wrong answer → red panel | Corrected sentence + error explanation | |
-
----
-
-## 5. Persistence & Stats
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| Answer a vocab card correctly | Card shows ✓ LEARNED on the flashcard | |
-| Open **05 Stats** tab | Level card shows LEARNED count ≥ 1 | |
-| Reload page | LEARNED count on Stats tab persists | |
-| STREAK shows ≥ 1 | Flame icon in header with number | |
-| Header level badge | Shows level number and rank after exercises | |
-
----
-
-## 6. Mobile Layout
-
-Resize browser to ~375px width (or use DevTools device mode).
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| Header: logo visible, tagline hidden | "Deutsch." visible, "Sprachschule × Est." hidden; level + streak + goal ring visible | |
-| Nav: icon-only tabs | Five icons (Chat–Stats), no text labels | |
-| Chat: scenario bar scrolls horizontally | Single row of scenario buttons | |
-| Vocab: deck list above flashcard | Single-column stacked layout | |
-| Alphabet quiz: 2×2 letter grid | Options visible without horizontal scroll | |
-| Alphabet browse: 4-column grid | Fits without overflow | |
-
----
-
-## 7. Console Health Check
-
-At the end of the full checklist run:
-
-| Check | Expected | Pass? |
-|-------|----------|-------|
-| DevTools → Console | Zero red errors | |
-| Network → filter "api" | `/api/chat` calls return HTTP 200 | |
-| No failed network requests | No red rows in Network tab | |
-
----
-
-## Known Limitations (by design)
-
-| Limitation | Notes |
-|------------|-------|
-| Speech recognition (mic input) requires Chrome/Edge | Safari/Firefox don't support Web Speech API |
-| Audio quiz may not speak on first load in some browsers | Click 🔊 manually to trigger on silent autoplay policy |
-| Mobile layout: Chat correction panel hidden when empty | Appears as soon as Anna corrects a mistake |
-
----
-
-## What to do when something fails
-
-| Symptom | First thing to check |
-|---------|---------------------|
-| API call failed (404) | Vercel dashboard → Functions → check `api/chat` is deployed |
-| API call failed (401/403) | Vercel → Settings → Environment Variables → `ANTHROPIC_API_KEY` set |
-| API call failed (model not found) | `src/lib/claude.js` → model ID may be retired; update to current Haiku |
-| App blank on load | Browser console for JS errors; Vercel deployment logs |
-| Splash screen never goes away | localStorage: `deutsch-onboarded` key should be set after level pick |
-| Tiles / blanks not appearing | Check `src/data/content.js` — `TRANSLATE_SENTENCES_A1/A2` export present |
-| Task panel not showing | Check `CHAT_TASKS` export in `content.js`; check `level` prop passed to ChatTab |
-
----
-
-## Current model reference
-
-| Use case | Model ID |
-|----------|----------|
-| All Claude calls | `claude-haiku-4-5-20251001` |
-
-When Anthropic retires a model, the API returns HTTP 404 with the model name in the error.
-Check [console.anthropic.com/models](https://console.anthropic.com) for the current list.
+# Deutsch App — Beta Maintenance Checklist
+
+Run this smoke test after a production deployment, dependency update, or AI
+model change. Use the [pre-beta owner checklist](PRE_BETA_OWNER_CHECKLIST.md)
+for dashboard settings, migration application, and signup policy; those are
+separate owner actions.
+
+## Prepare
+
+1. Record the deployment ID, date, browser, and result of each section. Open
+   <https://deutsch-app-dusky.vercel.app> with DevTools Console and Network open.
+2. Use a **disposable browser profile** for the fresh-visitor pass. Clear that
+   profile's site data and reload. Do not clear a learner's real progress.
+3. Use a separate existing beta test account for signed-in checks. Keep its
+   progress populated so the freeze indicator, long rank names, and sync path
+   render.
+4. Check desktop, **375px**, and **320px**. At each width, measure horizontal
+   overflow with
+   `document.documentElement.scrollWidth - document.documentElement.clientWidth`;
+   expected result is `0`.
+
+The guest path and core practice work with no AI backend. Chat replies, custom
+deck generation, and B1 translation grading require the deployed `/api/v1/ai/*`
+functions. Local `npm run dev` does not serve those functions; use production or
+`npm run dev:full` with the required credentials for the AI pass.
+
+## 1. Fresh visitor and Home
+
+| Action                                   | Expected                                                                                                           |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| Load the disposable profile              | Welcome screen offers **Try it first — free →**; account actions appear when auth is configured. No console error. |
+| Continue as guest                        | **Find your level** offers a nine-question placement test. Complete it and choose **Continue**.                    |
+| Finish or dismiss the first-run tutorial | Home opens with the identity card, missions, and quests. The tutorial does not restart on a normal reload.         |
+| Inspect navigation                       | Six destinations: **Home, Chat, Alphabet, Vocab, Translate, Profile**.                                             |
+| Reload                                   | The classified A1/A2/B1 level and local progress persist; placement does not reopen.                               |
+
+If the Welcome screen or placement test is absent, first confirm the disposable
+profile really has no site data. A returning account can receive its saved level
+from sync and correctly skip placement.
+
+## 2. Core practice without AI
+
+| Action                                                                      | Expected                                                                                                                                               |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Alphabet → Quiz → press the play control, then answer                       | Sound follows the press; a correct or incorrect verdict appears, the score changes, and **Next round** advances. Nothing speaks automatically on load. |
+| Alphabet → Browse → select a letter                                         | The A–Z plus Ä/Ö/Ü/ß grid renders; the selected letter has a detail panel and audio.                                                                   |
+| Vocab → Practice → select a preset deck such as Greetings and answer a card | The verdict is shown, the queue advances or requeues, and learned progress updates.                                                                    |
+| Vocab → Browse                                                              | A view-only deck table opens. It does not create or delete decks.                                                                                      |
+| Translate at A1                                                             | Word tiles move into the answer, **Check** gives feedback, and Skip advances.                                                                          |
+| Profile → Stats                                                             | XP, learned count, today's activity, and review data reflect the practice just completed. Reload and confirm the values persist.                       |
+
+For A2 and B1, use test profiles already classified at those levels or
+**Profile → Settings → Retake placement**. Do not use the advanced manual
+override for this check. A2 uses fill-in-the-blanks; B1 uses free typing and AI
+grading, so test B1 in section 3.
+
+## 3. AI and feedback
+
+Run these against production after an AI or model change. Avoid asserting exact
+AI wording; check the request, response, and user-visible state.
+
+| Action                                                             | Expected                                                                                                                                             |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Chat → send a German message                                       | `/api/v1/ai/chat` succeeds; Anna responds. EN and IPA can be revealed on request. A correction, when returned, appears beside the learner's message. |
+| Chat → change scenario                                             | The greeting and task reset for that scenario and the classified level.                                                                              |
+| Vocab → Custom → enter a topic and generate                        | `/api/v1/ai/deck` succeeds; a ten-card deck appears in the custom collection and can be practised.                                                   |
+| Translate at B1 → submit an answer                                 | `/api/v1/ai/grade` succeeds; the verdict and corrected sentence or feedback appear.                                                                  |
+| After feedback changes: submit a report from the beta test account | A success state appears. In the admin inbox, verify receipt and mark the test report handled. Its answer field is visible only to the admin.         |
+
+If a request fails, record its status and the deployment ID. Check the Vercel
+function log and [AI endpoint contract](api/ai.md), then verify the server-side
+`ANTHROPIC_API_KEY` and the selected model in
+`src/lib/ai-routing/catalog.js`. Do not put keys in a bug report. The legacy
+`/api/chat` shim is not the route used by the app.
+
+## 4. Signed-in account and sync
+
+Use the existing beta test account; do not create or delete a real user just
+for a smoke test.
+
+| Action                                                   | Expected                                                                                                               |
+| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Sign in with Google or Magic Link, whichever is enabled  | Return to the app with the account chip visible; no silent failure or loop.                                            |
+| Complete one practice answer, then reload                | XP and learned progress persist. Profile → Settings → Account shows a recent sync when sync is enabled.                |
+| Open Profile → Leagues, when the feature flag is enabled | Standings load for a signed-in member; selecting a row opens the learner profile.                                      |
+| Open Profile → Settings                                  | Profile, placement retake, interests, model preference, appearance, offline cache, and account controls are reachable. |
+| Open the account chip                                    | Its Profile and Settings actions reach the correct view.                                                               |
+
+If account or league controls are absent, check the deployed feature flags and
+the [auth runbooks](AUTH_GOOGLE_OAUTH_RUNBOOK.md). A visible control alone does
+not prove the Supabase round trip works. If a security migration has just been
+applied, follow its specific verification steps in the
+[owner checklist](PRE_BETA_OWNER_CHECKLIST.md#8-apply-pending-security-hardening-migrations).
+
+## 5. Mobile, accessibility, and offline
+
+Check **320px and 375px with a populated account**, then repeat the overflow
+measurement on all six tabs, inside a Vocab drill, and with a header sheet open.
+
+| Action                                                                                      | Expected                                                                                                    |
+| ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| Navigate the six icon-only tabs                                                             | Every destination is reachable and the document has `0` horizontal overflow.                                |
+| Use keyboard Tab, Enter, and Space on navigation, Vocab mode tabs, sheets, and a league row | Focus remains visible; controls can be operated and focus returns when a sheet closes.                      |
+| Load the app online once, then put the device genuinely offline and reload                  | The app shell and cached core vocab deck remain usable. AI calls are expected to fail offline.              |
+| Return online and reload twice after a lexicon deployment                                   | Previously cached lexicon content converges to the new version; a returning profile matters for this check. |
+
+Speech recognition depends on browser support for the Web Speech API. Audio
+playback may require a direct press because browsers restrict autoplay.
+
+## Finish and triage
+
+- Record console errors, failed Network requests, viewport overflow values,
+  and the first failed step. A passing build or rendered button is not proof
+  that its production backend works.
+- For a branch-side browser check, run `npm run smoke:learning-path`. It tests
+  guest practice in an isolated local build; it does not verify production auth
+  or AI.
+- Check the [uptime workflow](../.github/workflows/uptime.yml), Sentry issues,
+  and Vercel function logs after deployment. Check the build log for a
+  `SENTRY SOURCE-MAP UPLOAD FAILED` banner; source-map upload does not fail the
+  build.
+- If a new deployment reproducibly breaks a previously passing path, stop
+  rollout or restore the last healthy Vercel deployment. Escalate database
+  migration problems to the owner; do not run migration repair, push, pull, or
+  reset against production.
+- Record new code defects in the tracked backlog or a GitHub issue. Keep the
+  [pre-beta owner checklist](PRE_BETA_OWNER_CHECKLIST.md) current when a hosted
+  setting is verified or changed.
