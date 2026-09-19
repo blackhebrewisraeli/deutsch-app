@@ -71,11 +71,37 @@ function mergeLeagueClaimed(localIds, remoteIds) {
   return out;
 }
 
+// Union of earned badges: id → the timestamp it was earned. Append-only — no
+// path in the app un-earns a badge — so a side that is missing an id means
+// "never saw it", never "dropped it". Where both sides have the id the EARLIER
+// stamp wins: that is when the badge was actually earned, and a device that
+// lost the map and re-awarded it must not overwrite the real date with today's.
+function mergeAchievements(localMap, remoteMap) {
+  const out = {};
+  for (const [id, ts] of [...Object.entries(localMap ?? {}), ...Object.entries(remoteMap ?? {})]) {
+    const seen = out[id];
+    if (seen === undefined) out[id] = ts;
+    else if (typeof ts === 'number' && (typeof seen !== 'number' || ts < seen)) out[id] = ts;
+  }
+  return out;
+}
+
+// The day the daily goal was last met ('YYYY-MM-DD'), or null for "not yet".
+// null is the ABSENCE of information, so it must never overwrite a real day
+// key; two real keys resolve to the later one (day keys sort lexically).
+function mergeLastGoalMet(localDay, remoteDay) {
+  if (!localDay) return remoteDay ?? null;
+  if (!remoteDay) return localDay;
+  return localDay > remoteDay ? localDay : remoteDay;
+}
+
 // Settings is one jsonb blob per user → whole-object LWW by settingsUpdatedAt
 // (missing side loses; exact tie → remote) — EXCEPT fields that whole-row LWW
 // must never clobber: learnedWords (union, #41), the streak freeze state —
 // gamification.frozenDays (union) + gamification.bestStreak (max) — the league
-// reward claim set (gamification.leagueClaimed, union) — and level,
+// reward claim set (gamification.leagueClaimed, union), the earned-badge ledger
+// (gamification.achievements, union) and its goal twin
+// (gamification.lastGoalMet, never null-over-a-date) — and level,
 // which gets its OWN timestamp (levelUpdatedAt) rather than riding the shared
 // settingsUpdatedAt. Without that, a device whose *unrelated* local write is
 // merely newer than the server's last settings write can drag level backwards
@@ -119,15 +145,22 @@ export function mergeSettings(local, remote) {
   // set to the winner, so a device whose unrelated write was merely older had
   // its claims erased — and claimWinnerRewards, seeing no claim for a league it
   // had already paid out, awarded WINNER_BONUS_XP again on the next load.
+  //
+  // achievements and lastGoalMet are the same kind of field one step further:
+  // they are the DEDUP KEYS for the celebration toasts. Whole-row LWW handed
+  // the loser's badge ledger to the winner, so a device whose unrelated write
+  // was merely older had its ledger emptied — and applyProgress, finding ids it
+  // had already awarded missing from the map, fired "Achievement freigeschaltet"
+  // for every badge again on the next load and every focus after it.
   const lg = local.gamification;
   const rg = remote.gamification;
+  const hasKey = (key) => lg?.[key] !== undefined || rg?.[key] !== undefined;
   if (
-    lg?.frozenDays !== undefined ||
-    rg?.frozenDays !== undefined ||
-    lg?.bestStreak !== undefined ||
-    rg?.bestStreak !== undefined ||
-    lg?.leagueClaimed !== undefined ||
-    rg?.leagueClaimed !== undefined
+    hasKey('frozenDays') ||
+    hasKey('bestStreak') ||
+    hasKey('leagueClaimed') ||
+    hasKey('achievements') ||
+    hasKey('lastGoalMet')
   ) {
     const lf = lg?.frozenDays ?? {};
     const rf = rg?.frozenDays ?? {};
@@ -141,6 +174,15 @@ export function mergeSettings(local, remote) {
       bestStreak: Math.max(lg?.bestStreak ?? 0, rg?.bestStreak ?? 0),
       leagueClaimed: mergeLeagueClaimed(lg?.leagueClaimed, rg?.leagueClaimed),
     };
+    // Branch on the KEY, not on the value: setting these unconditionally would
+    // fabricate an empty ledger / a null day for a blob that never carried
+    // either, and the winner's own absence is information the merge must keep.
+    if (hasKey('achievements')) {
+      out.gamification.achievements = mergeAchievements(lg?.achievements, rg?.achievements);
+    }
+    if (hasKey('lastGoalMet')) {
+      out.gamification.lastGoalMet = mergeLastGoalMet(lg?.lastGoalMet, rg?.lastGoalMet);
+    }
   }
 
   return out;

@@ -198,11 +198,21 @@ export default function App() {
       const firstRun = prevLevelRef.current === null;
       const nextG = { ...g, achievements: { ...g.achievements } };
       const newToasts = [];
+      // Did this run WRITE a toast dedup key (a badge id, or today's goal day)?
+      // Those two fields are what stop the celebration firing twice, and this
+      // function is their only writer — see the stamp below.
+      let ledgerChanged = false;
 
       if (firstRun) {
         for (const id of earned)
-          if (!(id in nextG.achievements)) nextG.achievements[id] = Date.now();
-        if (goal.met) nextG.lastGoalMet = tKey;
+          if (!(id in nextG.achievements)) {
+            nextG.achievements[id] = Date.now();
+            ledgerChanged = true;
+          }
+        if (goal.met && nextG.lastGoalMet !== tKey) {
+          nextG.lastGoalMet = tKey;
+          ledgerChanged = true;
+        }
         prevLevelRef.current = lvlInfo.level;
       } else {
         if (lvlInfo.level > prevLevelRef.current) {
@@ -217,11 +227,13 @@ export default function App() {
         for (const id of earned) {
           if (!(id in nextG.achievements)) {
             nextG.achievements[id] = Date.now();
+            ledgerChanged = true;
             newToasts.push({ kind: 'ach', id });
           }
         }
         if (goal.met && nextG.lastGoalMet !== tKey) {
           nextG.lastGoalMet = tKey;
+          ledgerChanged = true;
           newToasts.push({
             kind: 'goal',
             title: 'Tagesziel erreicht!',
@@ -305,6 +317,21 @@ export default function App() {
       setStats((prev) => ({ ...prev, streak: tStreak }));
 
       saveState({ ...s, gamification: nextG });
+      // The write above is the whole reason the toasts stop repeating, and it
+      // used to go no further than localStorage: no stamp, so the blob kept
+      // whatever settingsUpdatedAt some earlier unrelated write had left and
+      // lost the settings LWW to the server; no markDirty, so nothing pushed it
+      // before the next reconcile handed the ledger back the way the server
+      // still had it. Both holes had to be open for the badge toasts to come
+      // back on every focus — closing either one alone leaves a race.
+      //
+      // Stamped only when a dedup key actually moved. Stamping on every focus
+      // would make this device win the whole-row LWW on fields it never
+      // touched, which is precisely the 2026-08-24 level regression.
+      if (ledgerChanged) {
+        stampSettings();
+        markDirty();
+      }
       setSoundEnabled(!!nextG.soundOn);
       setGame(deriveGame(userIdRef.current));
 
