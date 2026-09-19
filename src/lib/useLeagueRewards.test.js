@@ -109,3 +109,74 @@ describe('useLeagueRewards', () => {
     expect(saveState).not.toHaveBeenCalled();
   });
 });
+
+// Clear site data on a signed-in account wipes `gamification.leagueClaimed`
+// locally while the server copy is intact and one reconcile away. Claiming
+// from that empty local set re-pays every past win (observed on production:
+// four rank-1 leagues, +200 XP, Level 3 with an empty stats_daily). Same class
+// of bug as the placement gate: never decide from empty local state until the
+// first reconcile of the session has finished.
+describe('useLeagueRewards — waiting for the first reconcile', () => {
+  const winner = [{ league_id: 'L1', rank: 1, result: 'promoted' }];
+
+  it('does not claim while sync is enabled and the first reconcile is unsettled', async () => {
+    fetchMyResults.mockResolvedValue(winner);
+    const onClaimed = vi.fn();
+    renderHook(() => useLeagueRewards('me', onClaimed, { syncEnabled: true, syncSettled: false }));
+    // Give the effect's async body every chance to run before asserting.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(fetchMyResults).not.toHaveBeenCalled();
+    expect(saveState).not.toHaveBeenCalled();
+    expect(stampSettings).not.toHaveBeenCalled();
+    expect(markDirty).not.toHaveBeenCalled();
+    expect(onClaimed).not.toHaveBeenCalled();
+  });
+
+  it('claims once after the reconcile settles with the claim still missing', async () => {
+    fetchMyResults.mockResolvedValue(winner);
+    const onClaimed = vi.fn();
+    const { rerender } = renderHook(
+      ({ settled }) =>
+        useLeagueRewards('me', onClaimed, { syncEnabled: true, syncSettled: settled }),
+      { initialProps: { settled: false } }
+    );
+    // Flush the unsettled render's microtasks first — asserting synchronously
+    // would pass even unguarded, because the effect body only reaches
+    // fetchMyResults after `await getSupabase()`.
+    await Promise.resolve();
+    await Promise.resolve();
+    expect(fetchMyResults).not.toHaveBeenCalled();
+    rerender({ settled: true });
+    await waitFor(() => expect(saveState).toHaveBeenCalled());
+    expect(saveState.mock.calls[0][0].gamification.leagueClaimed).toContain('L1');
+    expect(onClaimed).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not re-award once the merge has restored the claim set', async () => {
+    fetchMyResults.mockResolvedValue(winner);
+    const onClaimed = vi.fn();
+    const { rerender } = renderHook(
+      ({ settled }) =>
+        useLeagueRewards('me', onClaimed, { syncEnabled: true, syncSettled: settled }),
+      { initialProps: { settled: false } }
+    );
+    await Promise.resolve();
+    await Promise.resolve();
+    // The reconcile lands and pulls the server's claim set into local state.
+    loadState.mockReturnValue({
+      stats: { leagueWins: 1 },
+      gamification: { leagueClaimed: ['L1'] },
+    });
+    rerender({ settled: true });
+    await waitFor(() => expect(fetchMyResults).toHaveBeenCalled());
+    expect(saveState).not.toHaveBeenCalled();
+    expect(onClaimed).not.toHaveBeenCalled();
+  });
+
+  it('claims without waiting when sync is off — there is no server to hear from', async () => {
+    fetchMyResults.mockResolvedValue(winner);
+    renderHook(() => useLeagueRewards('me', undefined, { syncEnabled: false, syncSettled: false }));
+    await waitFor(() => expect(saveState).toHaveBeenCalled());
+  });
+});

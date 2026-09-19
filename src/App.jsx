@@ -401,16 +401,22 @@ export default function App() {
   }, [user?.id]);
   const syncStatus = useSyncStatus();
   // Claim any league-winner rewards on load (not just when the Leagues tab
-  // opens), and celebrate a fresh win with a toast.
-  useLeagueRewards(user?.id, (count, xp) =>
-    pushToasts([
-      {
-        kind: 'league',
-        title: count > 1 ? `${count} Ligen gewonnen!` : 'Liga gewonnen!',
-        sub: `+${xp} XP · Liga-Meister`,
-        icon: '🥇',
-      },
-    ])
+  // opens), and celebrate a fresh win with a toast. Gated on the first
+  // reconcile the same way the placement gate is: the already-claimed set
+  // lives in server settings, so claiming before it lands re-pays every past
+  // win to anyone who cleared site data or signed in on a new device.
+  useLeagueRewards(
+    user?.id,
+    (count, xp) =>
+      pushToasts([
+        {
+          kind: 'league',
+          title: count > 1 ? `${count} Ligen gewonnen!` : 'Liga gewonnen!',
+          sub: `+${xp} XP · Liga-Meister`,
+          icon: '🥇',
+        },
+      ]),
+    { syncEnabled: SYNC_ENABLED, syncSettled: syncStatus.settled }
   );
   // The caller's live league standing, for the league-position mission. Two
   // reads and no writes — deliberately NOT the leaderboard's join+refresh path,
