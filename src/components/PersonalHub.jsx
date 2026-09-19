@@ -14,7 +14,6 @@ import { Row, Stack } from './ui/Layout';
 import Heading from './ui/Heading';
 import { Body } from './ui/Text';
 import { activePack } from '../packs';
-import { isAuthConfigured } from '../lib/auth.js';
 import Avatar from './ui/Avatar';
 import GoalRing from './gamification/GoalRing';
 import { useWindowWidth, bp } from '../lib/useWindowWidth';
@@ -65,9 +64,13 @@ const IDENTITY_HEADING_ID = 'home-identity-heading';
 // empty vertical air. Tokens step down one SPACE stop; the avatar column and
 // quieter XP are untouched.
 //
-// Read-only on purpose. Decision E5 keeps account MANAGEMENT — email, sign
-// out, export, danger zone — exclusive to Settings. The single interactive
-// element owned by the hub itself is the link into that Settings view.
+// Read-only on purpose, and now read-only completely. Decision E5 keeps account
+// MANAGEMENT — email, sign out, export, danger zone — exclusive to Settings; the
+// hub used to own one control, a "Settings →" link beside the avatar, and that is
+// gone. It made the landing screen carry two Settings doors while the header
+// account bubble — the affordance a learner actually reaches for — was the less
+// obvious of the two. The bubble is now the single door to Profile and Settings,
+// so this card renders nothing interactive at all.
 export default function PersonalHub({
   user,
   profile,
@@ -76,7 +79,6 @@ export default function PersonalHub({
   streak = 0,
   goalPct = 0,
   goalMet = false,
-  onOpenSettings,
   today = null,
   recommended = null,
 }) {
@@ -215,29 +217,9 @@ export default function PersonalHub({
         </Body>
       </Row>
 
-      {/* Only shown when there is an account to manage, and only when there is
-          a backend to manage it against — AccountChip and AccountSection make
-          the same check, so an unreachable Settings link never appears. */}
-      {showsAccountLine && isAuthConfigured() && (
-        <button
-          type="button"
-          onClick={onOpenSettings}
-          style={{
-            background: 'none',
-            border: 'none',
-            padding: 0,
-            cursor: 'pointer',
-            alignSelf: 'flex-start',
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            color: COLORS.mute,
-            textDecoration: 'underline',
-          }}
-        >
-          {copy.settingsLink} →
-        </button>
-      )}
-
+      {/* The Settings link stood here, between the level line and the today slot.
+          Nothing replaces it: both are direct children of this Stack, so the
+          gap collapses to a single SPACE step rather than leaving a hole. */}
       {wide ? today : null}
     </Stack>
   );

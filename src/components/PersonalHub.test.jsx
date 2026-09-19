@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import PersonalHub from './PersonalHub';
 import { FONT_SIZE, SPACE } from '../lib/theme';
 
@@ -243,31 +242,21 @@ describe('PersonalHub', () => {
 
   // Decision E5 keeps account MANAGEMENT off Home. The hub is identity +
   // standing, so it must never grow an email, a sign-out or a delete control.
-  it('carries no account management, only a link into Settings', () => {
+  //
+  // It no longer carries the one control it used to own either: the "Settings →"
+  // link is gone, and the header account bubble is the single door to Profile and
+  // Settings. The hub is fully read-only now, which is what the zero-button
+  // assertion below pins.
+  it('carries no account management, and no controls at all', () => {
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.queryByText(/semion@example\.com/)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /delete/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /export/i })).not.toBeInTheDocument();
 
-    const controls = screen.getAllByRole('button');
-    expect(controls).toHaveLength(1);
-    expect(controls[0]).toHaveTextContent(/settings/i);
-  });
-
-  it('opens Settings from that link', async () => {
-    const onOpenSettings = vi.fn();
-    render(
-      <PersonalHub
-        user={user}
-        profile={profile}
-        cefrLevel="a2"
-        score={score}
-        onOpenSettings={onOpenSettings}
-      />
-    );
-    await userEvent.click(screen.getByRole('button', { name: /settings/i }));
-    expect(onOpenSettings).toHaveBeenCalledTimes(1);
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryByRole('button', { name: /settings/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/settings/i)).not.toBeInTheDocument();
   });
 
   // A guest is not a Supabase user at all, so nothing here may imply an account.
@@ -286,16 +275,21 @@ describe('PersonalHub', () => {
   });
 });
 
-// Same production failure as AccountChip: when the demo's Supabase project
-// stopped resolving, surfaces that did not check kept advertising account
-// affordances pointing at a backend that no longer existed.
+// The hub used to gate its Settings link on isAuthConfigured(), because when the
+// demo's Supabase project stopped resolving it kept advertising an affordance
+// pointing at a backend that no longer existed. The link is gone, so the hub no
+// longer reads auth config at all and there is nothing left for it to gate — the
+// check now lives only where an account control still does (AccountChip,
+// AccountSection). This asserts the hub is INDIFFERENT to a dead backend rather
+// than that it reacts to one.
 describe('PersonalHub when auth is not configured', () => {
-  it('greets, but offers no Settings link to a dead backend', async () => {
+  it('greets identically, having no account affordance to withdraw', async () => {
     vi.resetModules();
     vi.doMock('../lib/auth.js', () => ({ isAuthConfigured: () => false }));
     const { default: Hub } = await import('./PersonalHub');
     render(<Hub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toBeInTheDocument();
+    expect(screen.getByText(/member since/i)).toBeInTheDocument();
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
     vi.doUnmock('../lib/auth.js');
   });

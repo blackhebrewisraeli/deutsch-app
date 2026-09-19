@@ -3,8 +3,15 @@ import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW } from '../lib/theme';
 import { isAuthConfigured } from '../lib/auth.js';
 
 // Header account affordance. Guest: a quiet "Sign in" link. Signed-in: an
-// initial-in-a-circle that opens a small sheet (email · sign out). Full
-// management lives in the Profile tab's Settings view; this is the glance + escape.
+// initial-in-a-circle that opens a small sheet (email · profile · settings ·
+// sign out). Full management lives in the Profile tab's Settings view; this is
+// the glance + escape.
+//
+// This sheet is the ONE door to that tab's two views. Home's identity strip used
+// to carry a "Settings →" link of its own, which made two Settings doors on the
+// landing screen and none of them the account bubble; the link is gone, so the
+// sheet reaches the Profile OVERVIEW as well as Settings. Losing the overview row
+// would leave the bubble able to open only the deeper of the two views.
 //
 // The sheet is a `dialog`, matching ThemeChip and StatusChip. It previously
 // advertised `aria-haspopup="true"` — which means MENU — over a panel carrying
@@ -18,10 +25,26 @@ import { isAuthConfigured } from '../lib/auth.js';
 // discovers header sheets by `aria-haspopup="dialog"`. Its interior — the
 // email line and the red "Sign out" — had never been contrast-audited,
 // because a sheet that never opens contributes no pairings.
+
+// The two navigation rows in the sheet are the same control twice over, so the
+// recipe lives once. Sign out keeps its own (red) styling.
+const SHEET_LINK = {
+  display: 'block',
+  background: 'none',
+  border: 'none',
+  color: COLORS.ink,
+  fontFamily: FONTS.mono,
+  fontSize: FONT_SIZE.tag,
+  cursor: 'pointer',
+  padding: 0,
+  marginBottom: 8,
+};
+
 export default function AccountChip({
   user,
   onSignIn,
   onSignOut,
+  onOpenProfile,
   onOpenSettings,
   pending = false,
 }) {
@@ -165,27 +188,32 @@ export default function AccountChip({
             {user.email}
           </div>
           {/* The sheet stays the glance-and-escape it always was; full account
-              management lives in the Settings route it now points at. */}
+              management lives in the Profile route these two rows point at.
+              Overview first, then the deeper view — Settings is a destination
+              inside Profile, not a sibling of it. */}
           <button
-            // Distinct from the identity strip's own "Settings →" link on Home:
-            // two controls with the same accessible name on one screen are
-            // ambiguous to a screen reader as well as to a test.
+            type="button"
+            // Both rows are explicitly labelled rather than read from their own
+            // text: "Profile →" and "Settings →" sit inches apart in one small
+            // sheet, and an unlabelled pair is ambiguous to a screen reader as
+            // well as to a test querying by name.
+            aria-label="Open profile"
+            onClick={() => {
+              setOpen(false);
+              onOpenProfile?.();
+            }}
+            style={SHEET_LINK}
+          >
+            Profile →
+          </button>
+          <button
+            type="button"
             aria-label="Open settings"
             onClick={() => {
               setOpen(false);
               onOpenSettings?.();
             }}
-            style={{
-              display: 'block',
-              background: 'none',
-              border: 'none',
-              color: COLORS.ink,
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              cursor: 'pointer',
-              padding: 0,
-              marginBottom: 8,
-            }}
+            style={SHEET_LINK}
           >
             Settings →
           </button>

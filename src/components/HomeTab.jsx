@@ -34,7 +34,6 @@ export default function HomeTab({
   missions = [],
   quests = [],
   onGoToTab,
-  onOpenSettings,
   showPlacementOffer = false,
   onRetakePlacement,
   onDismissPlacementOffer,
@@ -54,7 +53,6 @@ export default function HomeTab({
         streak={streak}
         goalPct={goalPct}
         goalMet={goalMet}
-        onOpenSettings={onOpenSettings}
         today={
           <Stack gap={3} data-testid="home-today-stack">
             <ErrorBoundary>

@@ -130,23 +130,54 @@ describe('AccountChip when auth is not configured', () => {
   });
 });
 
-// The chip defers full management to the Settings route rather than growing a
-// second copy of it — the same division Home's identity strip observes.
-describe('AccountChip → Settings', () => {
-  it('offers a Settings entry that opens the route and closes the sheet', async () => {
-    const onOpenSettings = vi.fn();
+// The chip is now the ONLY door to the Profile tab's own two views: Home's
+// identity strip no longer carries a Settings link of its own, so the sheet has
+// to reach the overview as well as Settings. It still defers full management to
+// that route rather than growing a second copy of it.
+describe('AccountChip → Profile and Settings', () => {
+  const renderChip = (over = {}) =>
     render(
       <AccountChip
         user={{ email: 'sam@example.com' }}
         onSignIn={() => {}}
         onSignOut={() => {}}
-        onOpenSettings={onOpenSettings}
+        {...over}
       />
     );
+
+  it('offers a Settings entry that opens the route and closes the sheet', async () => {
+    const onOpenSettings = vi.fn();
+    renderChip({ onOpenSettings });
     await userEvent.click(screen.getByRole('button', { name: /account/i }));
-    await userEvent.click(screen.getByRole('button', { name: /settings/i }));
+    await userEvent.click(screen.getByRole('button', { name: /open settings/i }));
 
     expect(onOpenSettings).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument();
+  });
+
+  it('offers a Profile entry that opens the overview, not Settings', async () => {
+    const onOpenProfile = vi.fn();
+    const onOpenSettings = vi.fn();
+    renderChip({ onOpenProfile, onOpenSettings });
+    await userEvent.click(screen.getByRole('button', { name: /account/i }));
+    await userEvent.click(screen.getByRole('button', { name: /open profile/i }));
+
+    expect(onOpenProfile).toHaveBeenCalledTimes(1);
+    // The two rows are separate doors. A Profile click that also fired
+    // onOpenSettings would land on Settings and defeat the point of the row.
+    expect(onOpenSettings).not.toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument();
+  });
+
+  // Both rows say "Profile"/"Settings" and both live in one small sheet, so the
+  // accessible names have to stay distinguishable: a `/profile/i` query that
+  // also matched the Settings row would make either test pass for the wrong
+  // reason.
+  it('names the two rows distinctly', async () => {
+    renderChip({ onOpenProfile: () => {}, onOpenSettings: () => {} });
+    await userEvent.click(screen.getByRole('button', { name: /account/i }));
+
+    expect(screen.getAllByRole('button', { name: /open profile/i })).toHaveLength(1);
+    expect(screen.getAllByRole('button', { name: /open settings/i })).toHaveLength(1);
   });
 });
