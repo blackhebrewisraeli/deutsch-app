@@ -53,6 +53,12 @@ export function settingsToRow(local, level, levelUpdatedAt) {
       frozenDays: local.gamification?.frozenDays,
       bestStreak: local.gamification?.bestStreak,
       lastReconcileDay: local.gamification?.lastReconcileDay,
+      // League-winner claim set. WITHOUT this the reward was re-awarded on
+      // every load: claimWinnerRewards dedups on gamification.leagueClaimed,
+      // but the reconcile replaces local gamification with the merged blob,
+      // so a claim set that never round-tripped was erased and every past
+      // rank-1 result looked unclaimed again (+50 XP each, every refresh).
+      leagueClaimed: local.gamification?.leagueClaimed,
       learnedWords: local.learnedWords,
       level,
       levelUpdatedAt,
@@ -81,6 +87,9 @@ export function settingsFromRow(row) {
       frozenDays: d.frozenDays ?? {},
       bestStreak: d.bestStreak ?? 0,
       lastReconcileDay: d.lastReconcileDay ?? null,
+      // [] not undefined: mergeSettings union-merges this, and a missing side
+      // must read as "claimed nothing", never as "drop the other side's ids".
+      leagueClaimed: Array.isArray(d.leagueClaimed) ? d.leagueClaimed : [],
     },
     learnedWords: d.learnedWords ?? {},
     level: d.level,

@@ -59,10 +59,23 @@ export function mergeDailyAdditive({ local, server, lastSynced }) {
   };
 }
 
+// Union of claimed league ids, de-duplicated and order-stable: local order
+// first, then any id only the remote side has. Re-running the same reconcile
+// therefore yields the same array, which is what makes the claim set usable as
+// an idempotency key at all.
+function mergeLeagueClaimed(localIds, remoteIds) {
+  const out = [];
+  for (const id of [...(localIds ?? []), ...(remoteIds ?? [])]) {
+    if (id != null && !out.includes(id)) out.push(id);
+  }
+  return out;
+}
+
 // Settings is one jsonb blob per user → whole-object LWW by settingsUpdatedAt
 // (missing side loses; exact tie → remote) — EXCEPT fields that whole-row LWW
 // must never clobber: learnedWords (union, #41), the streak freeze state —
-// gamification.frozenDays (union) + gamification.bestStreak (max) — and level,
+// gamification.frozenDays (union) + gamification.bestStreak (max) — the league
+// reward claim set (gamification.leagueClaimed, union) — and level,
 // which gets its OWN timestamp (levelUpdatedAt) rather than riding the shared
 // settingsUpdatedAt. Without that, a device whose *unrelated* local write is
 // merely newer than the server's last settings write can drag level backwards
@@ -101,13 +114,20 @@ export function mergeSettings(local, remote) {
 
   // gamification.frozenDays union + bestStreak max — a freeze or record earned
   // on one device can't be dropped by the other device's older LWW write.
+  // leagueClaimed unions for the same reason, and for a sharper one: it is an
+  // IDEMPOTENCY KEY, not a preference. Whole-row LWW handed the loser's claim
+  // set to the winner, so a device whose unrelated write was merely older had
+  // its claims erased — and claimWinnerRewards, seeing no claim for a league it
+  // had already paid out, awarded WINNER_BONUS_XP again on the next load.
   const lg = local.gamification;
   const rg = remote.gamification;
   if (
     lg?.frozenDays !== undefined ||
     rg?.frozenDays !== undefined ||
     lg?.bestStreak !== undefined ||
-    rg?.bestStreak !== undefined
+    rg?.bestStreak !== undefined ||
+    lg?.leagueClaimed !== undefined ||
+    rg?.leagueClaimed !== undefined
   ) {
     const lf = lg?.frozenDays ?? {};
     const rf = rg?.frozenDays ?? {};
@@ -119,6 +139,7 @@ export function mergeSettings(local, remote) {
       ...(winner.gamification ?? {}),
       frozenDays,
       bestStreak: Math.max(lg?.bestStreak ?? 0, rg?.bestStreak ?? 0),
+      leagueClaimed: mergeLeagueClaimed(lg?.leagueClaimed, rg?.leagueClaimed),
     };
   }
 

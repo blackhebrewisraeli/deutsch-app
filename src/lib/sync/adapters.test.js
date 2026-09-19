@@ -161,6 +161,30 @@ describe('settings adapter', () => {
     expect(back.gamification.bestStreak).toBe(9);
     expect(back.gamification.lastReconcileDay).toBe('2026-06-10');
   });
+
+  // The claim set is the league reward's idempotency key. When it did not
+  // round-trip, the reconcile handed the client a blob with no claims and
+  // every past rank-1 result was paid out again on the next load.
+  it('carries leagueClaimed round-trip so a claimed reward stays claimed', () => {
+    const local = {
+      gamification: { goal: 50, leagueClaimed: ['L1', 'L2'] },
+      learnedWords: {},
+      settingsUpdatedAt: 1,
+    };
+    const row = settingsToRow(local, 'a1');
+    expect(row.data.leagueClaimed).toEqual(['L1', 'L2']);
+    expect(settingsFromRow(row).gamification.leagueClaimed).toEqual(['L1', 'L2']);
+  });
+
+  it('reads a row with no leagueClaimed as [], never undefined', () => {
+    // undefined would make mergeSettings' union skip the key entirely, which is
+    // how "the other device claimed nothing" and "this row predates the field"
+    // would become indistinguishable.
+    expect(settingsFromRow({ data: {} }).gamification.leagueClaimed).toEqual([]);
+    expect(settingsFromRow({ data: { leagueClaimed: 'nope' } }).gamification.leagueClaimed).toEqual(
+      []
+    );
+  });
 });
 
 describe('deck adapters', () => {

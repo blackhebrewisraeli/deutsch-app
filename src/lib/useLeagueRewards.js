@@ -4,6 +4,8 @@ import { todayKey } from './stats.js';
 import { getSupabase } from './auth.js';
 import { LEAGUES_ENABLED, fetchMyResults } from './leagues.js';
 import { claimWinnerRewards, WINNER_BONUS_XP } from './leagueRewards.js';
+import { stampSettings } from './settingsStamp.js';
+import { markDirty } from './sync.js';
 
 // Claims any unclaimed league-winner rewards into local state when a signed-in
 // user loads the app — not only when they open the Leagues tab. Idempotent
@@ -11,6 +13,14 @@ import { claimWinnerRewards, WINNER_BONUS_XP } from './leagueRewards.js';
 // per sign-in is enough; failures are swallowed so a reward claim never blocks
 // the app. The credited bonus XP flows through the normal bonusXp → xpForDay →
 // sync path; the gamification recompute picks up the badge on its next run.
+//
+// A claim MUST be stamped and pushed, not just saved. The claim set is the
+// idempotency key, and saveState alone leaves it on this device only: the next
+// reconcile pulls a server blob that has never heard of it, and the reward is
+// awarded again on the following load (observed: +200 XP per refresh, forever).
+// stampSettings gives the write an LWW clock; markDirty schedules the push.
+// Nothing else does it for us — the claim credits bonusXp directly rather than
+// emitting a progress event, so App's markDirty listener never fires.
 //
 // onClaimed(count, xp) fires once when a new win is claimed, so the caller can
 // surface a celebration toast. It's held in a ref so passing a fresh inline
@@ -27,9 +37,16 @@ export function useLeagueRewards(userId, onClaimed) {
         const results = await fetchMyResults(await getSupabase(), userId);
         if (cancelled) return;
         const cur = loadState() ?? {};
-        const { state, claimedCount } = claimWinnerRewards(cur, results, todayKey());
+        const { state, claimedCount, changed } = claimWinnerRewards(cur, results, todayKey());
+        if (!changed) return;
+        saveState(state);
+        // Only a real claim is a synced write. A `changed` with claimedCount 0
+        // just corrected the derived, local-only stats.leagueWins — stamping
+        // that would bump the shared settings clock for a field the server
+        // never sees, and let this device win LWW over a peer's real edit.
         if (claimedCount > 0) {
-          saveState(state);
+          stampSettings();
+          markDirty();
           if (onClaimedRef.current)
             onClaimedRef.current(claimedCount, claimedCount * WINNER_BONUS_XP);
         }
