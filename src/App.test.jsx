@@ -91,6 +91,19 @@ const syncMock = vi.hoisted(() => ({
   start: vi.fn(),
   stop: vi.fn(),
   markDirty: vi.fn(),
+  // The reconcile lifecycle, drivable from a test. `settled` is what the
+  // placement gate waits on: "has the first reconcile FINISHED?", which is not
+  // the same question as "did it succeed?".
+  status: { pending: false, lastSyncedAt: null, settled: false },
+  listeners: new Set(),
+  setStatus(next) {
+    syncMock.status = next;
+    for (const fn of syncMock.listeners) fn(next);
+  },
+  reset() {
+    syncMock.status = { pending: false, lastSyncedAt: null, settled: false };
+    syncMock.listeners.clear();
+  },
 }));
 
 vi.mock('./lib/sync', async (importOriginal) => ({
@@ -101,6 +114,11 @@ vi.mock('./lib/sync', async (importOriginal) => ({
   start: syncMock.start,
   stop: syncMock.stop,
   markDirty: syncMock.markDirty,
+  getSyncStatus: () => syncMock.status,
+  subscribeSyncStatus: (fn) => {
+    syncMock.listeners.add(fn);
+    return () => syncMock.listeners.delete(fn);
+  },
 }));
 
 const progressFlushMock = vi.hoisted(() => ({
@@ -2543,5 +2561,102 @@ describe('deck papercuts', () => {
     expect(await screen.findByText('1 card')).toBeInTheDocument();
     expect(screen.queryByText('1 cards')).toBeNull();
     expect(screen.getByRole('button', { name: 'Your Deck: solo — 1 card' })).toBeInTheDocument();
+  });
+});
+
+// ── The placement gate vs. a level that lives on the server ────────────
+//
+// THE ACCEPTANCE BUG. Opening the README "Live demo" link put a returning,
+// signed-in learner straight into "Find your level" with no guest/sign-in
+// choice. Their CEFR code was never missing — production had `level: "b1"` in
+// `settings.data` the whole time — but it arrives on the first sync reconcile,
+// which lands after the first paint. The gate read localStorage at mount,
+// found nothing, and took the screen.
+//
+// These drive VITE_SYNC_ENABLED=true, which is false on both machines that run
+// this suite and true in production: the shipping combination.
+describe('placement gate while a signed-in level is still in flight', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    syncMock.reset();
+    syncMock.enabled = true;
+    authMock.status = 'authenticated';
+    authMock.mayHaveSession = true;
+    localStorage.removeItem('deutsch-level');
+  });
+
+  const placement = () => screen.queryByRole('heading', { name: /find your level/i });
+
+  it('does not classify a signed-in learner before the first reconcile finishes', () => {
+    render(<App />);
+    expect(placement()).toBeNull();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+  });
+
+  it('stays out of the way once the reconcile delivers the stored level', async () => {
+    render(<App />);
+    expect(placement()).toBeNull();
+
+    // What sync.js does at the end of pullAndMerge: adopt the server's level,
+    // which writes the key AND announces it.
+    const { adoptLevel } = await import('./lib/levelPref');
+    await act(async () => {
+      adoptLevel('b1');
+      syncMock.setStatus({ pending: false, lastSyncedAt: Date.now(), settled: true });
+    });
+
+    expect(placement()).toBeNull();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(localStorage.getItem('deutsch-level')).toBe('b1');
+  });
+
+  it('classifies once the reconcile comes back with no level at all', async () => {
+    // The genuinely new account. Waiting is not the same as never asking.
+    render(<App />);
+    expect(placement()).toBeNull();
+
+    await act(async () => {
+      syncMock.setStatus({ pending: false, lastSyncedAt: Date.now(), settled: true });
+    });
+
+    expect(placement()).toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).toBeNull();
+  });
+
+  it('still classifies when the reconcile FAILED rather than succeeded', async () => {
+    // A failed reconcile settles too. Keying on `lastSyncedAt` instead would
+    // wait forever and never place a first-time learner who was offline.
+    render(<App />);
+    await act(async () => {
+      syncMock.setStatus({ pending: false, lastSyncedAt: null, settled: true });
+    });
+    expect(placement()).toBeInTheDocument();
+  });
+
+  it('never opens for a returning learner, reconcile or not', async () => {
+    localStorage.setItem('deutsch-level', 'a2');
+    render(<App />);
+    expect(placement()).toBeNull();
+
+    await act(async () => {
+      syncMock.setStatus({ pending: false, lastSyncedAt: Date.now(), settled: true });
+    });
+    expect(placement()).toBeNull();
+  });
+
+  it('still lets a returning learner retake it from Settings', async () => {
+    // The gate getting quieter must not take the deliberate path with it.
+    const user = userEvent.setup();
+    localStorage.setItem('deutsch-level', 'a2');
+    render(<App />);
+    await act(async () => {
+      syncMock.setStatus({ pending: false, lastSyncedAt: Date.now(), settled: true });
+    });
+
+    await user.click(screen.getByRole('button', { name: /profile/i }));
+    await user.click(screen.getByRole('button', { name: /^settings$/i }));
+    await user.click(screen.getByRole('button', { name: /retake placement/i }));
+
+    expect(placement()).toBeInTheDocument();
   });
 });

@@ -1,12 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-const authMock = vi.hoisted(() => ({ token: 'tok', supabase: null }));
+const authMock = vi.hoisted(() => ({ token: 'tok', supabase: null, refreshed: null }));
 vi.mock('./auth.js', () => ({
   getAccessToken: () => Promise.resolve(authMock.token),
   getSupabase: () => Promise.resolve(authMock.supabase),
+  refreshAccessToken: () => Promise.resolve(authMock.refreshed),
 }));
 
-import { fetchMyProfile, updateProfile, PROFILE_COLUMNS } from './profile';
+import { fetchMyProfile, updateProfile, PROFILE_COLUMNS, SESSION_EXPIRED_MESSAGE } from './profile';
 
 const row = { handle: 'sam', avatar_path: null, created_at: 'x' };
 
@@ -107,5 +108,77 @@ describe('updateProfile', () => {
     authMock.token = null;
     await expect(updateProfile({ handle: 'x' })).rejects.toThrow(/sign in again/i);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+});
+
+// ── Revoked sessions ────────────────────────────────────────────────
+//
+// The production failure this covers: Storage accepted the avatar upload
+// (it only checks the JWT signature) while the account lane rejected the same
+// token, because GoTrue additionally requires the session behind it to exist
+// and answered `session_not_found`. The bytes landed; the row never did.
+describe('updateProfile when the session has been revoked', () => {
+  beforeEach(() => {
+    authMock.token = 'stale';
+    authMock.refreshed = null;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const jsonRes = (status, body = {}) => ({
+    ok: status >= 200 && status < 300,
+    status,
+    json: () => Promise.resolve(body),
+  });
+
+  it('refreshes once and retries, so a merely-stale token is not an error', async () => {
+    authMock.refreshed = 'fresh';
+    const stored = { handle: 'sam', avatar_path: 'u1/a.webp', created_at: 'x' };
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonRes(401, { error: { message: 'Invalid or expired token.' } }))
+      .mockResolvedValueOnce(jsonRes(200, stored));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(updateProfile({ avatar_path: 'u1/a.webp' })).resolves.toEqual(stored);
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][1].headers.authorization).toBe('Bearer stale');
+    expect(fetchMock.mock.calls[1][1].headers.authorization).toBe('Bearer fresh');
+  });
+
+  it('says the session expired rather than blaming the save', async () => {
+    authMock.refreshed = null; // refresh failed: the session is genuinely gone
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes(401, { error: { message: 'nope' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(updateProfile({ avatar_path: 'u1/a.webp' })).rejects.toThrow(
+      SESSION_EXPIRED_MESSAGE
+    );
+    // No retry without a fresh token — a second call with the same dead token
+    // can only fail the same way.
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives up after ONE retry when the fresh token is rejected too', async () => {
+    authMock.refreshed = 'fresh';
+    const fetchMock = vi.fn().mockResolvedValue(jsonRes(401, { error: { message: 'nope' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(updateProfile({ handle: 'sam' })).rejects.toThrow(SESSION_EXPIRED_MESSAGE);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('does not refresh on failures that are not about the session', async () => {
+    authMock.refreshed = 'fresh';
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(jsonRes(400, { error: { message: 'That handle is taken.' } }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(updateProfile({ handle: 'sam' })).rejects.toThrow('That handle is taken.');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 });

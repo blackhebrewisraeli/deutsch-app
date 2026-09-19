@@ -50,14 +50,26 @@ export default function AvatarPicker({
     setBusy(true);
     setError(null);
     const previous = profile?.avatar_path ?? null;
+    // Tracked so the catch below can tell "the upload never happened" from "the
+    // bytes are in the bucket but the row was never pointed at them".
+    let uploaded = null;
     try {
       const blob = await prepare(file);
       const path = await upload(userId, blob);
+      uploaded = path;
       const stored = await save({ avatar_path: path });
+      uploaded = null;
       onSaved?.(stored);
       onToast?.('Avatar updated');
       if (previous && previous !== path) await remove(previous);
     } catch (err) {
+      // The two halves of this flow answer to different authorities: Storage
+      // takes a signed JWT, the profile PATCH additionally needs a live GoTrue
+      // session. So the upload can succeed and the save fail — which is exactly
+      // what production did, twice, leaving two objects nothing references.
+      // Take the orphan back out; a learner retrying a failed avatar change
+      // should not be quietly filling a public bucket.
+      if (uploaded) await remove(uploaded);
       setError(
         err instanceof ImagePrepError
           ? err.message

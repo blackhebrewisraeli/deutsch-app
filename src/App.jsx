@@ -4,6 +4,7 @@ import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './li
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
 import { readLevel, LEVEL_CHANGE_EVENT, hasStoredLevel } from './lib/levelPref';
+import { shouldOpenPlacement } from './lib/placementGate';
 import { SessionGuardContext, useSessionGuardValue } from './lib/sessionGuard';
 import { getReviewItems, todayKey, TABS } from './lib/stats';
 import { trialStatus } from './lib/trial';
@@ -628,12 +629,50 @@ export default function App() {
   const [level, setLevel] = useState(readLevel);
   // First-time learners classify instead of freely picking. Returning learners
   // with a stored CEFR code skip this; they retake from Settings / StatusChip
-  // or from the 3-deck Home invite. Re-assert when auth settles so a newly
-  // signed-in account with no code cannot skip into the shell.
-  const [showPlacement, setShowPlacement] = useState(() => !hasStoredLevel());
+  // or from the 3-deck Home invite.
+  //
+  // TWO SOURCES, DELIBERATELY SEPARATE.
+  //   `retakePlacement` — the learner ASKED. It outranks everything and is the
+  //     only way a learner who already has a level ever sees the test again.
+  //   `autoPlacement`   — the engine decided they have no level. Governed by
+  //     shouldOpenPlacement, which refuses to answer until auth has resolved
+  //     and (for a signed-in account) the first sync reconcile has finished,
+  //     because the CEFR code may still be on its way down from the server.
+  //
+  // Keeping them apart is what stops a level arriving mid-retake from yanking
+  // the test out from under someone who is halfway through it.
+  const [retakePlacement, setRetakePlacement] = useState(false);
+  // Seeded rather than left false so the no-backend case (local dev, CI, the
+  // README demo with VITE_SUPABASE_* absent) does not flash the app shell for a
+  // frame before deciding. With auth unconfigured there is no session to wait
+  // for and no server to pull a level from, so the answer is already final.
+  const [autoPlacement, setAutoPlacement] = useState(
+    () => !isAuthConfigured() && !hasStoredLevel()
+  );
+  // Bumped by LEVEL_CHANGE_EVENT so the gate re-decides the moment a level
+  // lands. `level` alone is not enough: it starts at the a1 default, so a
+  // server value of a1 would move storage without moving this component.
+  const [levelTick, setLevelTick] = useState(0);
   useEffect(() => {
-    if (!hasStoredLevel()) setShowPlacement(true);
-  }, [authStatus, user?.id]);
+    const bump = () => setLevelTick((n) => n + 1);
+    window.addEventListener(LEVEL_CHANGE_EVENT, bump);
+    return () => window.removeEventListener(LEVEL_CHANGE_EVENT, bump);
+  }, []);
+  useEffect(() => {
+    setAutoPlacement(
+      shouldOpenPlacement({
+        hasLevel: hasStoredLevel(),
+        authStatus,
+        syncEnabled: SYNC_ENABLED,
+        syncSettled: syncStatus.settled,
+      })
+    );
+  }, [authStatus, user?.id, syncStatus.settled, levelTick]);
+  const showPlacement = retakePlacement || autoPlacement;
+  const closePlacement = useCallback(() => {
+    setRetakePlacement(false);
+    setAutoPlacement(false);
+  }, []);
   // One-shot Home invite after 3 completed preset decks. Session-visible
   // until dismiss; `shownAt` on the blob stops it coming back next load.
   const [placementOfferVisible, setPlacementOfferVisible] = useState(false);
@@ -790,7 +829,7 @@ export default function App() {
   // Review feed click handler — switches tab, then drops `reviewTarget` so
   // the destination can pre-load the item. Must NOT writeLevel: a leftover
   // B1 translate item used to reclassify an A1 learner into free typing.
-  const openPlacement = () => setShowPlacement(true);
+  const openPlacement = () => setRetakePlacement(true);
   const dismissPlacementOffer = useCallback(() => {
     recordPlacementOfferDismissed();
     setPlacementOfferVisible(false);
@@ -798,7 +837,7 @@ export default function App() {
   const acceptPlacementOffer = useCallback(() => {
     recordPlacementOfferDismissed();
     setPlacementOfferVisible(false);
-    setShowPlacement(true);
+    setRetakePlacement(true);
   }, []);
   const handleReview = (item) => {
     setReviewTarget(item);
@@ -998,8 +1037,8 @@ export default function App() {
     return (
       <>
         <PlacementTest
-          onComplete={() => setShowPlacement(false)}
-          onCancel={() => setShowPlacement(false)}
+          onComplete={closePlacement}
+          onCancel={closePlacement}
           allowCancel={hasStoredLevel()}
         />
         {authOverlay}

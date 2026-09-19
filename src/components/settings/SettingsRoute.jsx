@@ -23,6 +23,8 @@ import OfflineCacheSection from './OfflineCacheSection';
 import InterestPicker from './InterestPicker';
 import ModelPicker from '../ModelPicker';
 import AdminSection from '../admin/AdminSection';
+import FeedbackDialog from '../FeedbackDialog';
+import { replayTutorial } from '../../lib/tutorialPref';
 import { userTierOf } from '../../lib/ai-routing/preference.js';
 import { getThemeModeForUI, setThemePreference } from '../../lib/themeMode';
 import { writeLevel, LEVEL_NAMES, LEVEL_MODES } from '../../lib/levelPref';
@@ -33,6 +35,16 @@ import { useAdminSession } from '../../lib/useAdminSession.js';
 // not a modal. Six tabs already ship; the 320px header budget is a measured
 // 10px. The Profile tab's SETTINGS segment is the one surface, and the
 // `#/settings` hash still deep-links here after the entry gate.
+// Supporting copy under a control. Matches the muted body prose the rest of
+// this route uses for the same job (see the Lernen override note).
+const hintStyle = {
+  fontFamily: FONTS.body,
+  fontSize: FONT_SIZE.sm,
+  color: COLORS.inkSoft,
+  marginTop: SPACE[2],
+  overflowWrap: 'anywhere',
+};
+
 function Section({ label, children }) {
   return (
     <section>
@@ -85,6 +97,7 @@ export default function SettingsRoute({
   // a second source for one device setting.
   const [themeMode, setThemeMode] = useState(() => getThemeModeForUI());
   const [showLevelOverride, setShowLevelOverride] = useState(false);
+  const [reporting, setReporting] = useState(false);
   const adminSession = useAdminSession(user);
 
   return (
@@ -326,11 +339,63 @@ export default function SettingsRoute({
           </Stack>
         </Section>
 
+        {/* Hilfe is for EVERY learner, admin or not, and it sits above the
+            admin block on purpose.
+
+            Reporting a problem already worked for non-admins — the insert is a
+            plain RLS-guarded write, never gated on a role — but the only way to
+            reach it was a small grey flag tucked inside a Translate or Vocab
+            exercise. A learner who hit something wrong on Home, in Chat, or in
+            Settings itself had nowhere to say so, which reads as "feedback is
+            an admin feature". This is the standing entry point; the in-exercise
+            flag stays, because a report filed there carries the deck and item
+            the learner is actually looking at.
+
+            The tour re-entry lives here too: it is now marked seen the first
+            time it paints, so this is how anyone gets it back. */}
+        <Section label="Hilfe">
+          <Stack gap={5}>
+            <div>
+              <Button variant="secondary" onClick={() => setReporting(true)}>
+                Report an issue
+              </Button>
+              <div style={hintStyle}>
+                Something wrong with a word, a translation or the app itself? Tell us here. Inside
+                an exercise, the flag icon reports that exact card.
+              </div>
+            </div>
+            <div>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  replayTutorial();
+                  onToast?.('Tutorial reopened');
+                }}
+              >
+                Show tutorial
+              </Button>
+              <div style={hintStyle}>
+                Replay the short walkthrough of the header, Chat and Profile.
+              </div>
+            </div>
+          </Stack>
+        </Section>
+
         {adminSession.me?.isAdmin ? (
           <Section label="Admin">
             <AdminSection me={adminSession.me} />
           </Section>
         ) : null}
+
+        {/* `surface: 'settings'` rather than a drill name — there is no card
+            being asked about here, so deckId / itemId / itemLabel stay absent
+            and the row records where the report came from. */}
+        {reporting && (
+          <FeedbackDialog
+            context={{ surface: 'settings', level }}
+            onClose={() => setReporting(false)}
+          />
+        )}
       </Stack>
     </div>
   );

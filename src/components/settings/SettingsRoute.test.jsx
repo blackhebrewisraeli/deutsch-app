@@ -235,3 +235,43 @@ describe('SettingsRoute — Admin', () => {
     expect(screen.queryByText('Admin')).not.toBeInTheDocument();
   });
 });
+
+describe('SettingsRoute — Hilfe', () => {
+  beforeEach(() => {
+    adminState.me = { isAdmin: false, isSystemAccount: false, blocked: false };
+    localStorage.clear();
+  });
+
+  it('offers a non-admin learner a way to report an issue', async () => {
+    // The acceptance report was "feedback is not discoverable on the test
+    // account". Submitting was never admin-gated; the only entry point was a
+    // small flag inside an exercise, so a learner anywhere else had none.
+    const u = userEvent.setup();
+    renderRoute();
+
+    expect(screen.queryByText(/^Admin$/)).not.toBeInTheDocument();
+    const report = screen.getByRole('button', { name: /report an issue/i });
+    await u.click(report);
+
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+  });
+
+  it('keeps the report entry point for an admin too', async () => {
+    adminState.me = { isAdmin: true, isSystemAccount: true, blocked: false };
+    renderRoute();
+    expect(screen.getByRole('button', { name: /report an issue/i })).toBeInTheDocument();
+  });
+
+  it('reopens the tutorial on request', async () => {
+    const u = userEvent.setup();
+    const { TUTORIAL_KEY } = await import('../../lib/tutorialPref');
+    localStorage.setItem(TUTORIAL_KEY, 'true');
+    renderRoute();
+
+    await u.click(screen.getByRole('button', { name: /show tutorial/i }));
+
+    // The flag is what a freshly-mounted overlay reads; the event is what a
+    // mounted one hears. Settings has to do both.
+    expect(localStorage.getItem(TUTORIAL_KEY)).toBeNull();
+  });
+});

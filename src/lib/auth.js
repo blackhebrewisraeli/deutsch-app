@@ -343,3 +343,38 @@ export async function getAccessToken() {
   const { data } = await c.auth.getSession();
   return data?.session?.access_token ?? null;
 }
+
+/**
+ * Trade the refresh token for a brand-new access token, and return it.
+ *
+ * `getAccessToken` hands back whatever is in local storage. That token is
+ * SIGNED, which is all PostgREST and Storage check — but the account lane
+ * verifies it with `auth.getUser()`, and GoTrue additionally requires the
+ * SESSION behind the token to still exist. A session revoked elsewhere (a
+ * sign-out on another tab or device, which supabase-js scopes globally by
+ * default) leaves a token that storage still accepts and the API does not.
+ *
+ * That split is how a learner uploaded an avatar successfully and was then told
+ * their profile could not be saved: production logs show the upload landing in
+ * the bucket while GoTrue answered the server's getUser with
+ * `403 session_not_found` and the PATCH returned 401.
+ *
+ * So: one refresh, then let the caller retry. Null means the session is
+ * genuinely gone and the caller should ask the learner to sign in again rather
+ * than reporting the operation itself as broken.
+ *
+ * @returns {Promise<string | null>}
+ */
+export async function refreshAccessToken() {
+  const c = await getClient();
+  if (!c) return null;
+  try {
+    const { data, error } = await c.auth.refreshSession();
+    if (error) return null;
+    return data?.session?.access_token ?? null;
+  } catch {
+    // Offline, or no refresh token at all. Indistinguishable to the caller
+    // from a dead session, and handled the same way.
+    return null;
+  }
+}

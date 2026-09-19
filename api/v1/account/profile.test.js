@@ -57,6 +57,30 @@ describe('buildPatch', () => {
     expect(buildPatch({ handle: 42, avatar_path: {} })).toEqual({});
   });
 
+  it('honours an explicit null — that is how "Remove picture" is spelled', () => {
+    // An object path has no empty-string form, so null is the ONLY way the
+    // client can say "clear my avatar". Dropping it because it is not a string
+    // made the patch `{}`, and the endpoint answered "Nothing to update." —
+    // i.e. Remove picture was broken for every learner, admin included.
+    expect(buildPatch({ avatar_path: null })).toEqual({ avatar_path: null });
+    expect(buildPatch({ handle: null })).toEqual({ handle: null });
+  });
+
+  it('still distinguishes an absent key from a null one', () => {
+    // Absent = "I am not talking about this field"; null = "clear it". Folding
+    // them together is how a handle-only save would wipe the avatar.
+    expect(buildPatch({ handle: 'sam' })).toEqual({ handle: 'sam' });
+    expect('avatar_path' in buildPatch({ handle: 'sam' })).toBe(false);
+    expect('avatar_path' in buildPatch({ handle: 'sam', avatar_path: null })).toBe(true);
+  });
+
+  it('treats undefined as absent, not as a clear', () => {
+    // JSON.stringify drops undefined on the way out, so a body can never
+    // actually carry it — but a direct caller can, and "the key was there but
+    // empty" must not be read as a deliberate removal.
+    expect(buildPatch({ avatar_path: undefined })).toEqual({});
+  });
+
   it('accepts a body that arrived unparsed', () => {
     expect(buildPatch(JSON.stringify({ handle: 'sam' }))).toEqual({ handle: 'sam' });
     expect(buildPatch('not json')).toEqual({});
