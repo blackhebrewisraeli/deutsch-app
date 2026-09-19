@@ -741,6 +741,16 @@ export default function App() {
     setProfileView('settings');
     setSettingsHash();
   };
+  // The account bubble's other door. Home's identity strip used to carry the only
+  // in-page Settings link; with that gone the bubble has to reach the Profile
+  // OVERVIEW too, not just the deeper Settings view. Clearing the hash matters as
+  // much as setting the view: a learner arriving on `#/settings` and then picking
+  // Profile would otherwise be dragged straight back by the hashchange listener.
+  const openProfile = () => {
+    setTab('stats');
+    setProfileView('stats');
+    clearSettingsHash();
+  };
   const handleProfileView = (next) => {
     setProfileView(next);
     if (next === 'settings') setSettingsHash();
@@ -1215,6 +1225,7 @@ export default function App() {
               user={user}
               onSignIn={requestSignIn}
               onSignOut={handleSignOut}
+              onOpenProfile={openProfile}
               onOpenSettings={openSettings}
               pending={syncStatus.pending}
             />
@@ -1370,7 +1381,6 @@ export default function App() {
               missions={missions}
               quests={quests}
               onGoToTab={goToTab}
-              onOpenSettings={openSettings}
               showPlacementOffer={placementOfferVisible}
               onRetakePlacement={acceptPlacementOffer}
               onDismissPlacementOffer={dismissPlacementOffer}

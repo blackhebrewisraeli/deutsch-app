@@ -85,7 +85,10 @@ describe('HomeTab', () => {
     expect(screen.queryByText(/sound: off/i)).not.toBeInTheDocument();
   });
 
-  it('offers a signed-in learner exactly one Settings control', () => {
+  // Home offers NO Settings door of its own any more, signed in or not. The one
+  // entry is the header account bubble, which lives above HomeTab and is not part
+  // of this tree — so the assertion is absence, for both audiences.
+  it('offers a signed-in learner no Settings control of its own', () => {
     render(
       <HomeTab
         {...hubProps}
@@ -94,7 +97,8 @@ describe('HomeTab', () => {
         cefrLevel="a2"
       />
     );
-    expect(screen.getAllByRole('button', { name: /settings/i })).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: /settings/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/settings/i)).not.toBeInTheDocument();
   });
 
   it('hides Settings from a guest, who has no account to manage', () => {
@@ -164,8 +168,11 @@ describe('HomeTab', () => {
   });
 });
 
+// The Settings link Home used to gate on isAuthConfigured() is gone entirely, so
+// a dead backend changes nothing about this tab. Kept as the guard that it stays
+// that way: a future Settings door added back to Home would fail here first.
 describe('HomeTab when auth is not configured', () => {
-  it('still greets, but offers no Settings link to a dead backend', async () => {
+  it('still greets, and has no Settings link to withdraw', async () => {
     vi.resetModules();
     vi.doMock('../lib/auth.js', () => ({ isAuthConfigured: () => false }));
     const { default: Tab } = await import('./HomeTab');

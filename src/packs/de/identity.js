@@ -16,6 +16,4 @@ export const IDENTITY = {
 
   /** Names the level chip for a screen reader, which sees only "A2" otherwise. */
   levelLabel: (level) => `Level ${level}`,
-
-  settingsLink: 'Settings',
 };
