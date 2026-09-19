@@ -1413,6 +1413,89 @@ describe('sync engine wiring', () => {
   });
 });
 
+// applyProgress is the only writer of the earned-badge ledger, and it wrote it
+// straight to storage — no stamp, no push. The seed therefore carried whatever
+// settingsUpdatedAt some earlier, unrelated write had left behind, lost the
+// settings LWW to the server, and came back empty; the next focus then "earned"
+// every badge again, one "Achievement freigeschaltet" toast at a time.
+describe('the badge ledger reaches the server', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    localStorage.setItem('deutsch-level', 'a1');
+    syncMock.enabled = true;
+    syncMock.start.mockClear();
+    syncMock.markDirty.mockClear();
+    authMock.status = 'authenticated';
+  });
+
+  // These tests actually START the engine, and the shared spy outlives the
+  // block — the next describe asserts start was never called.
+  afterEach(() => {
+    syncMock.start.mockClear();
+    syncMock.markDirty.mockClear();
+  });
+
+  // seedPopulatedAccount earns NOTHING — 84 exercises is under the vol100 cut
+  // and it stores stats.streak: 0, which is the streak the badge tests read.
+  // A fixture that cannot express the failure proves nothing, so this one
+  // clears two badge thresholds outright.
+  function seedEarnedBadges() {
+    const daily = {};
+    const [y, m, d] = todayKey().split('-').map(Number);
+    for (let i = 20; i >= 1; i -= 1) {
+      const dt = new Date(Date.UTC(y, m - 1, d));
+      dt.setUTCDate(dt.getUTCDate() - i);
+      const mm = String(dt.getUTCMonth() + 1).padStart(2, '0');
+      const dd = String(dt.getUTCDate()).padStart(2, '0');
+      daily[`${dt.getUTCFullYear()}-${mm}-${dd}`] = {
+        total: 6,
+        byLevel: { a1: { correct: 6, almost: 0, wrong: 0 } },
+      };
+    }
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({
+        daily, // 120 exercises → vol100
+        gamification: { goal: 50 },
+        // Matches the streak the 20 qualifying days derive to. A stored
+        // streak that DISAGREES with the history makes the second run earn a
+        // badge for real, which would mask the stamp behaviour under test.
+        stats: { streak: 20, learnedCount: 40 }, // → streak3 + streak7 + streak14
+      })
+    );
+  }
+
+  it('stamps and pushes the badges the first run seeds', async () => {
+    seedEarnedBadges();
+    expect(loadState().settingsUpdatedAt).toBeUndefined();
+
+    renderPastEntry(<App />);
+
+    const stored = loadState();
+    expect(Object.keys(stored.gamification.achievements ?? {}).length).toBeGreaterThan(0);
+    // A ledger with no clock of its own loses every LWW it meets.
+    expect(typeof stored.settingsUpdatedAt).toBe('number');
+    await waitFor(() => expect(syncMock.markDirty).toHaveBeenCalled());
+  });
+
+  // The other direction, or the stamp would fire on every window focus and this
+  // device would win every settings LWW on fields it never touched — which is
+  // the 2026-08-24 level regression the merge carve-outs exist for.
+  it('does not re-stamp when a focus earns nothing new', () => {
+    seedEarnedBadges();
+    renderPastEntry(<App />);
+    const stamped = loadState().settingsUpdatedAt;
+    syncMock.markDirty.mockClear();
+
+    act(() => {
+      window.dispatchEvent(new Event('focus'));
+    });
+
+    expect(loadState().settingsUpdatedAt).toBe(stamped);
+    expect(syncMock.markDirty).not.toHaveBeenCalled();
+  });
+});
+
 describe('progress flush wiring', () => {
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();

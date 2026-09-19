@@ -288,6 +288,74 @@ describe('mergeSettings', () => {
     const remote = { settingsUpdatedAt: 100, gamification: { leagueClaimed: ['L2', 'L3'] } };
     expect(mergeSettings(local, remote).gamification.leagueClaimed).toEqual(['L1', 'L2', 'L3']);
   });
+
+  // achievements is an append-only earned-badge ledger, not a preference.
+  // Under whole-row LWW the loser's ledger was thrown away, and App.jsx's
+  // applyProgress re-awarded every id it could no longer find — one
+  // "Achievement freigeschaltet" toast per badge, on every load and focus.
+  it('unions achievements so the LWW loser never drops an earned badge', () => {
+    const local = { settingsUpdatedAt: 200, gamification: { achievements: { first_word: 100 } } };
+    const remote = { settingsUpdatedAt: 100, gamification: { achievements: { streak_7: 50 } } };
+    expect(mergeSettings(local, remote).gamification.achievements).toEqual({
+      first_word: 100,
+      streak_7: 50,
+    });
+    // Same ledger whichever side wins the LWW — the two devices converge.
+    expect(mergeSettings(remote, local).gamification.achievements).toEqual({
+      streak_7: 50,
+      first_word: 100,
+    });
+  });
+
+  it("keeps the older device's badges when the newer write knew nothing about them", () => {
+    // The exact shape that caused the toast loop: the newer write touched an
+    // unrelated setting and carried an EMPTY badge map.
+    const local = { settingsUpdatedAt: 500, gamification: { goal: 30, achievements: {} } };
+    const remote = {
+      settingsUpdatedAt: 100,
+      gamification: { goal: 50, achievements: { first_word: 100 } },
+    };
+    const out = mergeSettings(local, remote);
+    expect(out.gamification.achievements).toEqual({ first_word: 100 });
+    expect(out.gamification.goal).toBe(30); // scalar gamification still LWW
+  });
+
+  it('keeps the earliest timestamp for a badge both devices recorded', () => {
+    // The stamp is when the badge was EARNED, so the earlier one is the true
+    // one — a later re-award on a device that had lost the map must not win.
+    const local = { settingsUpdatedAt: 200, gamification: { achievements: { first_word: 900 } } };
+    const remote = { settingsUpdatedAt: 100, gamification: { achievements: { first_word: 100 } } };
+    expect(mergeSettings(local, remote).gamification.achievements.first_word).toBe(100);
+    expect(mergeSettings(remote, local).gamification.achievements.first_word).toBe(100);
+  });
+
+  it('leaves achievements alone when neither device has the key', () => {
+    const local = { settingsUpdatedAt: 200, gamification: { bestStreak: 3 } };
+    const remote = { settingsUpdatedAt: 100, gamification: { bestStreak: 1 } };
+    expect('achievements' in mergeSettings(local, remote).gamification).toBe(false);
+  });
+
+  // lastGoalMet is the dedup key for the "Tagesziel erreicht!" toast. null is
+  // "not met yet", which must never overwrite a day key someone already met.
+  it('never lets a null lastGoalMet overwrite a real day key', () => {
+    const local = { settingsUpdatedAt: 500, gamification: { lastGoalMet: null } };
+    const remote = { settingsUpdatedAt: 100, gamification: { lastGoalMet: '2026-09-19' } };
+    expect(mergeSettings(local, remote).gamification.lastGoalMet).toBe('2026-09-19');
+    expect(mergeSettings(remote, local).gamification.lastGoalMet).toBe('2026-09-19');
+  });
+
+  it('keeps the later lastGoalMet when both devices have one', () => {
+    const local = { settingsUpdatedAt: 100, gamification: { lastGoalMet: '2026-09-19' } };
+    const remote = { settingsUpdatedAt: 500, gamification: { lastGoalMet: '2026-09-12' } };
+    expect(mergeSettings(local, remote).gamification.lastGoalMet).toBe('2026-09-19');
+    expect(mergeSettings(remote, local).gamification.lastGoalMet).toBe('2026-09-19');
+  });
+
+  it('leaves lastGoalMet alone when neither device has the key', () => {
+    const local = { settingsUpdatedAt: 200, gamification: { bestStreak: 3 } };
+    const remote = { settingsUpdatedAt: 100, gamification: { bestStreak: 1 } };
+    expect('lastGoalMet' in mergeSettings(local, remote).gamification).toBe(false);
+  });
 });
 
 // The spec's success criterion for the guest trial is that "a trial user who

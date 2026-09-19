@@ -185,6 +185,29 @@ describe('settings adapter', () => {
       []
     );
   });
+
+  // achievements and lastGoalMet are the toasts' dedup keys, and the same
+  // failure mode as leagueClaimed applies: a field that does not survive the
+  // round-trip comes back empty and every badge looks unearned again. This
+  // pair DOES serialise today (the allowlist names both) — the guard is here
+  // so a future edit to the allowlist cannot silently drop them.
+  it('carries the earned-badge ledger and lastGoalMet round-trip', () => {
+    const local = {
+      gamification: {
+        goal: 50,
+        achievements: { first_word: 1_700_000_000_000, streak_7: 1_700_000_100_000 },
+        lastGoalMet: '2026-09-19',
+      },
+      learnedWords: {},
+      settingsUpdatedAt: 1,
+    };
+    const row = settingsToRow(local, 'a1');
+    expect(row.data.achievements).toEqual(local.gamification.achievements);
+    expect(row.data.lastGoalMet).toBe('2026-09-19');
+    const back = settingsFromRow(row);
+    expect(back.gamification.achievements).toEqual(local.gamification.achievements);
+    expect(back.gamification.lastGoalMet).toBe('2026-09-19');
+  });
 });
 
 describe('deck adapters', () => {
