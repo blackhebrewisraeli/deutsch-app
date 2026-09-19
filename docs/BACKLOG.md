@@ -249,7 +249,7 @@ checked so a stale entry is obvious.
 
 | #   | Action                                                                                                                                                                                 | Status                                                                                                                                 |
 | --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Paste `supabase/templates/magic_link.html` into the **hosted** project → Authentication → Email Templates → Magic Link. Local GoTrue reads it from `config.toml`; production does not. | **Unverified from the repo** — hosted dashboard state. Procedure: `docs/AUTH_EMAIL_TEMPLATE_RUNBOOK.md`                                |
+| 1   | Paste `supabase/templates/magic_link.html` into the **hosted** project → Authentication → Email Templates → Magic Link. Local GoTrue reads it from `config.toml`; production does not. | ✅ **Done** — owner applied the hosted template and 5-minute OTP expiry on 2026-09-18, as recorded in `docs/PRE_BETA_OWNER_CHECKLIST.md` §3. Re-paste after future template changes. |
 | 2   | Confirm hosted **URL Configuration** lists production plus `http://localhost:5173` and `http://127.0.0.1:5173`.                                                                        | **Unverified from the repo** — hosted dashboard state                                                                                  |
 | 3   | Google OAuth client → Supabase Google provider → `VITE_GOOGLE_AUTH_ENABLED=true` on Preview + Production, **then redeploy**.                                                           | ✅ **Done** — flag present in the production env, Google sign-in live since 2026-08-17. Procedure: `docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md` |
 | 4   | Apply `supabase/migrations/20260916183000_feedback.sql` to Sprachschule (`xcnnlczvxmuwcqwychox`) after that PR merges. Dashboard SQL editor. Never `migration repair`.                 | ✅ **Done** — table is live in production. `status` / `handled_*` arrived with action #5. |
@@ -321,28 +321,19 @@ button[aria-haspopup="dialog"]`) instead of selecting one by its literal
   Opening it for the first time immediately found a real defect: the email line
   rendered at 1:1 in light mode, invisible, because the panel carried its own
   background but inherited the masthead's on-charcoal ink.
-- **Local `.env` holds a Sentry user token where a DSN belongs.** The dev console
-  logs `Invalid Sentry Dsn: sntryu_…` on every load. `sntryu_` is an auth-token
-  prefix, not a DSN, so local error reporting is silently off. Production is
-  unaffected (`VITE_SENTRY_DSN` is set correctly in Vercel and was verified
-  inlined). Out of scope for the level-control work; it is a one-line local env
-  fix, not a code change, which is why it is recorded here rather than patched.
-- **Home has no "streak at risk" cue, by decision (2026-09-15).**
-  `streakPulsing` in `src/App.jsx` animates the header's streak pill with
-  `pulse-gold` when a streak is alive but today has not qualified yet. After
-  #261 the masthead streak duplicates the one `PersonalHub` already shows, so
-  the header pill is hidden on Home — and the pulse is the single signal
-  `PersonalHub` has no equivalent for. The owner took that trade knowingly:
-  Home carries its own at-risk prompt through the mission board, and the
-  alternative — teaching `PersonalHub` to pulse — is a second change to a
-  just-shipped file. **Do not add a pulse to `PersonalHub` as a drive-by.** If
-  it is wanted it is its own PR, with the hub's other signals weighed against
-  it. Recorded here because the mission brief that carries this decision lives
-  in `CURSOR_TASKS.md`, which is git-excluded and therefore absent from CI and
-  fresh checkouts. Note the pulse has **never had a test** — it appears only in
-  `App.jsx` and in two `App.test.jsx` comments that claim to protect it — so
-  the suite stays green whichever way this goes and cannot enforce the
-  decision.
+- ~~**Local `.env` holds a Sentry user token where a DSN belongs.**~~ No
+  `VITE_SENTRY_DSN` assignment remains in `.env` or `.env.local` as checked
+  2026-09-20, so the recorded `sntryu_`-as-DSN console warning is no longer a
+  current local issue. Local Sentry remains off unless a real DSN is supplied.
+  This check says nothing about today's Vercel setting; the owner action for
+  production source-map upload is above.
+- **No dedicated animated "streak at risk" cue, by decision.** #263 removed
+  the duplicate header streak on Home, where `PersonalHub` shows the streak and
+  the mission board carries the at-risk prompt. #267 removed the remaining
+  header streak pills: `GoalStrip` shows streak and daily goal on the other
+  tabs. The old `streakPulsing` path is gone. Do not add a pulse to
+  `PersonalHub` as a drive-by; that would be a separate product decision and
+  PR, weighed against the hub's other signals.
 - ~~**The header streak is freeze-blind until the first progress event.**~~
   Closed: the mount hydrate now passes `frozenDays` into `currentStreak` the
   same way `deriveGame` does, so `stats.streak` counts freeze-rescued days on
