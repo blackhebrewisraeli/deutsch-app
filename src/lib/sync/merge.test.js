@@ -259,6 +259,35 @@ describe('mergeSettings', () => {
     expect(out.gamification.bestStreak).toBe(9); // max wins even though remote is older
     expect(out.gamification.goal).toBe(50); // scalar gamification still LWW (local newer)
   });
+
+  // leagueClaimed is an idempotency key, so the LWW loser's ids must survive.
+  // Under whole-row LWW the loser's claim set was dropped, and the next
+  // claimWinnerRewards paid WINNER_BONUS_XP out a second time for a league it
+  // had already settled.
+  it('unions leagueClaimed so neither device drops ids the other claimed', () => {
+    const local = { settingsUpdatedAt: 200, gamification: { leagueClaimed: ['L1'] } };
+    const remote = { settingsUpdatedAt: 100, gamification: { leagueClaimed: ['L2'] } };
+    expect(mergeSettings(local, remote).gamification.leagueClaimed).toEqual(['L1', 'L2']);
+    // Same set whichever side wins the LWW — the union is order-stable, not
+    // winner-takes-all, so the two devices converge.
+    expect(mergeSettings(remote, local).gamification.leagueClaimed).toEqual(['L2', 'L1']);
+  });
+
+  it('keeps the loser-side claim set when only the OLDER device has claims', () => {
+    // The shape that caused the bug: the newer write touched an unrelated
+    // setting and knew nothing about the claim.
+    const local = { settingsUpdatedAt: 500, gamification: { goal: 30 } };
+    const remote = { settingsUpdatedAt: 100, gamification: { goal: 50, leagueClaimed: ['L1'] } };
+    const out = mergeSettings(local, remote);
+    expect(out.gamification.leagueClaimed).toEqual(['L1']);
+    expect(out.gamification.goal).toBe(30); // scalar still LWW
+  });
+
+  it('does not duplicate an id both devices claimed', () => {
+    const local = { settingsUpdatedAt: 200, gamification: { leagueClaimed: ['L1', 'L2'] } };
+    const remote = { settingsUpdatedAt: 100, gamification: { leagueClaimed: ['L2', 'L3'] } };
+    expect(mergeSettings(local, remote).gamification.leagueClaimed).toEqual(['L1', 'L2', 'L3']);
+  });
 });
 
 // The spec's success criterion for the guest trial is that "a trial user who
