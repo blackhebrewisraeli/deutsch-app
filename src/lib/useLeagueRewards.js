@@ -22,15 +22,37 @@ import { markDirty } from './sync.js';
 // Nothing else does it for us — the claim credits bonusXp directly rather than
 // emitting a progress event, so App's markDirty listener never fires.
 //
+// AND the claim set must have ARRIVED before we read it. Clear site data (or a
+// second device, or a fresh browser) leaves `gamification.leagueClaimed` empty
+// locally while the server's copy is intact and one reconcile away. Claiming
+// from that empty set re-pays every past win: production showed four rank-1
+// leagues re-awarded as +200 XP — Level 3 against a stats_daily with no rows.
+// So, exactly like the placement gate, never decide from empty local state
+// until the first reconcile of the session has FINISHED. `syncSettled` is the
+// right signal rather than `lastSyncedAt`: a reconcile that failed settles too,
+// and waiting on a success that will never come would disable claims offline.
+//
 // onClaimed(count, xp) fires once when a new win is claimed, so the caller can
 // surface a celebration toast. It's held in a ref so passing a fresh inline
 // callback each render does not re-trigger the effect.
-export function useLeagueRewards(userId, onClaimed) {
+//
+// @param {boolean} [opts.syncEnabled] VITE_SYNC_ENABLED — is there a server the
+//   claim set could still be coming from?
+// @param {boolean} [opts.syncSettled] has the first reconcile of this session
+//   finished (success or failure)?
+export function useLeagueRewards(
+  userId,
+  onClaimed,
+  { syncEnabled = false, syncSettled = false } = {}
+) {
   const onClaimedRef = useRef(onClaimed);
   onClaimedRef.current = onClaimed;
 
   useEffect(() => {
     if (!LEAGUES_ENABLED || !userId) return undefined;
+    // Sync is on and the merge has not landed: local `leagueClaimed` may be a
+    // lie of omission. The effect re-runs when syncSettled flips true.
+    if (syncEnabled && !syncSettled) return undefined;
     let cancelled = false;
     (async () => {
       try {
@@ -57,5 +79,5 @@ export function useLeagueRewards(userId, onClaimed) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, syncEnabled, syncSettled]);
 }
