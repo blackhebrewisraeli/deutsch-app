@@ -7,6 +7,14 @@
  * falls below WCAG AA (4.5:1 body / 3:1 large), plus any header popover that
  * renders outside the viewport (a class jsdom and scrollWidth both miss).
  *
+ * On top of the tab walk it drives the surfaces a walk cannot reach:
+ *   - every header sheet, opened through its own trigger;
+ *   - three full-screen modals (sign-in, trial wall, auth callback);
+ *   - Chat's model popover, opened through its accessible trigger, with the
+ *     four choices asserted present when open and ABSENT when closed;
+ *   - Profile → Settings at 320 / 375 / desktop, guest and signed-in, for
+ *     contrast and for horizontal fit.
+ *
  * Usage:
  *   npm run audit:contrast                         # builds and serves itself
  *   AUDIT_BASE=http://localhost:5290 npm run audit:contrast   # audit a server you already run
@@ -122,16 +130,25 @@ function restoreTrial() {
   window.dispatchEvent(new CustomEvent('deutsch:progress'));
 }
 
-/** Measure whichever modal is open: geometry, same rules as a header sheet. */
-function measureOpenModal(selector) {
+/**
+ * Measure one box against the viewport's left and right edges: the element
+ * itself, then every text-bearing node inside it.
+ *
+ * Took a bare selector and said "modal" in every reason it produced. It takes
+ * a `kind` now because the same two questions — does the box fit, and does its
+ * text fit — are exactly the ones to ask of Chat's model popover and of the
+ * Settings route, and a finding that calls the Settings route a modal is a
+ * finding nobody can act on.
+ */
+function measureAgainstViewport({ selector, kind }) {
   const el = document.querySelector(selector);
-  if (!el) return [{ reason: 'modal vanished before measurement' }];
+  if (!el) return [{ reason: `${kind} vanished before measurement` }];
   const vw = document.documentElement.clientWidth;
   const out = [];
   const r = el.getBoundingClientRect();
   if (r.left < 0 || r.right > vw) {
     out.push({
-      reason: 'modal outside viewport',
+      reason: `${kind} outside viewport`,
       left: +r.left.toFixed(1),
       right: +r.right.toFixed(1),
       vw,
@@ -142,13 +159,29 @@ function measureOpenModal(selector) {
     const b = node.getBoundingClientRect();
     if (b.left < 0 || b.right > vw) {
       out.push({
-        reason: 'modal content clipped',
+        reason: `${kind} content clipped`,
         text: node.textContent.trim().slice(0, 24),
         left: +b.left.toFixed(1),
+        right: +b.right.toFixed(1),
+        vw,
       });
     }
   }
   return out;
+}
+
+/**
+ * The other half of horizontal fit.
+ *
+ * An edge check catches a box that hangs PAST the viewport — clipped, and
+ * invisible to scrollWidth. This catches the opposite failure: content that
+ * widened the document instead, which the user meets as a horizontal
+ * scrollbar and which no per-element edge check can see, because every
+ * element then fits inside a document that is itself too wide.
+ */
+function docOverflow() {
+  const doc = document.documentElement;
+  return doc.scrollWidth - doc.clientWidth;
 }
 
 const MODALS = [
@@ -244,7 +277,10 @@ async function auditModals(page) {
     }
     await page.waitForTimeout(200);
     measured += 1;
-    for (const f of await page.evaluate(measureOpenModal, modal.selector)) {
+    for (const f of await page.evaluate(measureAgainstViewport, {
+      selector: modal.selector,
+      kind: 'modal',
+    })) {
       layout.push({ ...f, modal: modal.name });
     }
     for (const f of await page.evaluate(collectFindings, `modal:${modal.name}`)) {
@@ -636,6 +672,300 @@ async function auditHeaderSheets(page, minSheets, passLabel = 'guest') {
   return { layout, contrast, measured: triggers.length };
 }
 
+// ─── Chat's model popover ─────────────────────────────────────────────────
+//
+// The app's fourth non-modal popover, and the first one outside the header:
+// Chat's model control collapsed from an always-visible 2×2 grid to a trigger
+// that opens the shared ModelPicker in a `role="dialog"`. `auditHeaderSheets`
+// discovers triggers inside `<header>` and so cannot reach it, which left the
+// popover's interior measured in no mode at no width, and its placement — left
+// aligned, flipped above the trigger when the sheet would run off the bottom
+// at 320px — asserted only by a pure function against numbers, never against a
+// rendered box. jsdom reports every rect as 0×0, so the component test cannot
+// close that gap either; only a browser can.
+//
+// The closed state is audited too. Collapsing the grid was the point of the
+// change: four preference buttons are supposed to be OUT of Chat's tab order
+// until asked for. "The choices are absent" is therefore a behaviour under
+// audit, not an assumption this file gets to make.
+
+const MODEL_DIALOG = '[role="dialog"][aria-label="Modell"]';
+// WCAG 2.5.3 Label in Name: the accessible name carries the visible text, so
+// it reads "Modell: Balanced". Matching the prefix keeps this working whichever
+// band is current, and keeps it pinned to the ACCESSIBLE name — the audit opens
+// the popover the way a voice-control or screen-reader user does.
+const MODEL_TRIGGER = 'button[aria-haspopup="dialog"][aria-label^="Modell:"]';
+const MODEL_CHOICES = ['Auto', 'Fast', 'Balanced', 'Capable'];
+// Above the guest tier ceiling (guest maxCost 1, capable costs 3), so picking
+// it renders the plan-fallback caption — a line of `inkSoft` on an elevated
+// surface that no other pass can reach, because every pass starts on 'auto'.
+const MODEL_OVER_TIER = 'Capable';
+
+/**
+ * The picker's choice labels within `scope` (null = the whole document).
+ *
+ * Reads the first line of each `aria-pressed` tile rather than its
+ * textContent: a tile renders label + detail ("Auto" / "Router"), and the
+ * uppercase is a text-transform, so the DOM still carries the cased label.
+ */
+function readModelChoices(scope) {
+  const root = scope ? document.querySelector(scope) : document;
+  if (!root) return [];
+  const group = root.querySelector('[role="group"][aria-label="Chat model"]');
+  if (!group) return [];
+  return [...group.querySelectorAll('button[aria-pressed]')].map((b) =>
+    (b.querySelector('div')?.textContent || b.textContent || '').trim()
+  );
+}
+
+/** The trigger's accessible name and expanded state, or null when it is gone. */
+function readModelTrigger(selector) {
+  const btn = document.querySelector(selector);
+  if (!btn) return null;
+  return {
+    label: btn.getAttribute('aria-label') || '',
+    expanded: btn.getAttribute('aria-expanded'),
+  };
+}
+
+function clickSelector(selector) {
+  const el = document.querySelector(selector);
+  if (!el) return false;
+  el.click();
+  return true;
+}
+
+/** Pick one band inside the open popover, by its visible label. */
+function pickModelChoice({ dialog, label }) {
+  const root = document.querySelector(dialog);
+  if (!root) return false;
+  const btn = [...root.querySelectorAll('button[aria-pressed]')].find(
+    (b) => (b.querySelector('div')?.textContent || '').trim() === label
+  );
+  if (!btn) return false;
+  btn.click();
+  return true;
+}
+
+/**
+ * Open the popover and wait for it. Returns '' on success, or the reason it
+ * could not be opened.
+ */
+async function openModelPopover(page) {
+  if (!(await page.evaluate(clickSelector, MODEL_TRIGGER))) return 'model trigger vanished';
+  try {
+    await page.waitForSelector(MODEL_DIALOG, { state: 'visible', timeout: 3000 });
+  } catch {
+    return 'Chat model popover did not open';
+  }
+  // The popover places itself in an effect after mount. Measuring before that
+  // runs reports the pre-placement position, which is off-anchor by design.
+  await page.waitForTimeout(200);
+  return '';
+}
+
+/** Geometry + contrast of the open popover, under one label. */
+async function measureModelPopover(page, label) {
+  const layout = [];
+  const contrast = [];
+  for (const f of await page.evaluate(measureAgainstViewport, {
+    selector: MODEL_DIALOG,
+    kind: 'Chat model popover',
+  })) {
+    layout.push({ ...f, popover: label });
+  }
+  const overflow = await page.evaluate(docOverflow);
+  if (overflow > 0) {
+    layout.push({ reason: 'page scrolls horizontally', overflow, popover: label });
+  }
+  for (const f of await page.evaluate(collectFindings, `popover:${label}`)) contrast.push(f);
+  return { layout, contrast };
+}
+
+/**
+ * Drive Chat's model popover through the control a learner uses.
+ *
+ * Runs with Chat ALREADY open — the tab walk has just measured it — so this
+ * costs no extra navigation.
+ *
+ * Every step that cannot proceed records a finding instead of returning early
+ * and quietly: a vanished trigger and a clean popover both used to print
+ * nothing at all, and `measured` is reported against its denominator in main()
+ * so a pass that silently stops reaching the popover cannot read as coverage.
+ */
+async function auditChatModelPopover(page) {
+  const layout = [];
+  const contrast = [];
+
+  const mountedClosed = await page.evaluate(readModelChoices, null);
+  if (mountedClosed.length > 0) {
+    layout.push({
+      reason: 'Chat mounts the model choices while the popover is closed',
+      found: mountedClosed.join(', '),
+      popover: 'chat model',
+    });
+  }
+
+  const trigger = await page.evaluate(readModelTrigger, MODEL_TRIGGER);
+  if (!trigger) {
+    layout.push({
+      reason: 'no Chat model popover trigger — the accessible name or the control moved',
+      popover: 'chat model',
+    });
+    return { layout, contrast, measured: 0 };
+  }
+  if (trigger.expanded !== 'false') {
+    layout.push({
+      reason: `closed Chat model trigger reports aria-expanded="${trigger.expanded}"`,
+      popover: 'chat model',
+    });
+  }
+
+  const failed = await openModelPopover(page);
+  if (failed) {
+    layout.push({ reason: failed, popover: 'chat model' });
+    return { layout, contrast, measured: 0 };
+  }
+
+  const open = await page.evaluate(readModelTrigger, MODEL_TRIGGER);
+  if (open?.expanded !== 'true') {
+    layout.push({
+      reason: `open Chat model trigger reports aria-expanded="${open?.expanded}"`,
+      popover: 'chat model',
+    });
+  }
+
+  const choices = await page.evaluate(readModelChoices, MODEL_DIALOG);
+  if (choices.join('|') !== MODEL_CHOICES.join('|')) {
+    layout.push({
+      reason: `expected the ${MODEL_CHOICES.length} model choices in the popover, found ${choices.length}`,
+      found: choices.join(', ') || '(none)',
+      popover: 'chat model',
+    });
+  }
+
+  const opened = await measureModelPopover(page, 'chat model');
+  layout.push(...opened.layout);
+  contrast.push(...opened.contrast);
+
+  // The plan-fallback caption. Picking a band above the tier is the only way
+  // it renders, and picking also proves the popover dismisses on a choice.
+  if (await page.evaluate(pickModelChoice, { dialog: MODEL_DIALOG, label: MODEL_OVER_TIER })) {
+    await page.waitForTimeout(200);
+    if (await page.evaluate((sel) => Boolean(document.querySelector(sel)), MODEL_DIALOG)) {
+      layout.push({ reason: 'Chat model popover stayed open after a pick', popover: 'chat model' });
+    }
+    const reopened = await openModelPopover(page);
+    if (reopened) {
+      layout.push({ reason: `${reopened} (fallback caption)`, popover: 'chat model/fallback' });
+    } else {
+      const fallback = await measureModelPopover(page, 'chat model/fallback');
+      layout.push(...fallback.layout);
+      contrast.push(...fallback.contrast);
+      // Back to Auto, so the next tab walk starts where this one did. The
+      // preference is a key inside `deutsch-app-state-v1`, which the next
+      // combination re-seeds wholesale anyway — this keeps THIS combination's
+      // remaining surfaces (the modals) on the state they were seeded with.
+      await page.evaluate(pickModelChoice, { dialog: MODEL_DIALOG, label: 'Auto' });
+      await page.waitForTimeout(200);
+    }
+  } else {
+    layout.push({
+      reason: `no "${MODEL_OVER_TIER}" choice to pick — the plan-fallback caption went unmeasured`,
+      popover: 'chat model',
+    });
+  }
+
+  // Escape dismisses, and the choices leave the tree with it.
+  if (await page.evaluate((sel) => Boolean(document.querySelector(sel)), MODEL_DIALOG)) {
+    await page.keyboard.press('Escape');
+    await page.waitForTimeout(200);
+  }
+  if (await page.evaluate((sel) => Boolean(document.querySelector(sel)), MODEL_DIALOG)) {
+    layout.push({ reason: 'Chat model popover survived Escape', popover: 'chat model' });
+  }
+  const mountedAfter = await page.evaluate(readModelChoices, null);
+  if (mountedAfter.length > 0) {
+    layout.push({
+      reason: 'model choices stayed mounted after the popover closed',
+      found: mountedAfter.join(', '),
+      popover: 'chat model',
+    });
+  }
+
+  return { layout, contrast, measured: 1 };
+}
+
+// ─── Profile → Settings ───────────────────────────────────────────────────
+//
+// Settings rode along in the tab walk only as Profile's DEFAULT view, which is
+// the stats dashboard — so the route itself was measured in exactly one place,
+// the signed-in pass at 390px. It is the densest surface in the app (six
+// panels of label + hint + control, three type tiers) and it is where the last
+// two narrow-width defects landed, so it gets its own sweep at the three
+// widths that matter.
+const SETTINGS_WIDTHS = [320, 375, 1280];
+
+/** One of Profile's view segments, by its accessible name. */
+function clickProfileSegment(name) {
+  const b = [...document.querySelectorAll('button')].find(
+    (x) => (x.getAttribute('aria-label') || '') === name
+  );
+  if (!b) return false;
+  b.click();
+  return true;
+}
+
+/** Whether the Settings route itself painted, rather than just its segment. */
+function onSettingsRoute() {
+  return [...document.querySelectorAll('h1')].some((h) =>
+    /Einstellungen/.test(h.textContent || '')
+  );
+}
+
+/**
+ * Open Profile → Settings at the page's current width and measure it.
+ *
+ * Contrast, then BOTH halves of horizontal fit — an element hanging past the
+ * edge, and a document grown wider than its viewport. Neither would have
+ * caught the Interessen tiles that shipped reading "SPOR / T" at 320px: those
+ * broke INSIDE the word and overflowed nothing, which is the honest limit of
+ * what this measures.
+ *
+ * Takes the page as it finds it, so the caller owns the viewport, the theme
+ * and the session — that is what lets the guest sweep and the signed-in pass
+ * share one implementation.
+ */
+async function auditSettings(page, label) {
+  const layout = [];
+  const contrast = [];
+
+  await openTab(page, 'Profile');
+  if (!(await page.evaluate(clickProfileSegment, 'settings'))) {
+    layout.push({ reason: 'no SETTINGS segment on Profile', view: label });
+    return { layout, contrast, measured: 0 };
+  }
+  await page.waitForTimeout(400);
+  if (!(await page.evaluate(onSettingsRoute))) {
+    layout.push({ reason: 'the SETTINGS segment did not render the route', view: label });
+    return { layout, contrast, measured: 0 };
+  }
+
+  for (const f of await page.evaluate(measureAgainstViewport, {
+    selector: 'main',
+    kind: 'Settings',
+  })) {
+    layout.push({ ...f, view: label });
+  }
+  const overflow = await page.evaluate(docOverflow);
+  if (overflow > 0) {
+    layout.push({ reason: 'Settings scrolls horizontally', overflow, view: label });
+  }
+  for (const f of await page.evaluate(collectFindings, label)) contrast.push(f);
+
+  return { layout, contrast, measured: 1 };
+}
+
 /**
  * Walk the entry screens if they are up, then assert we reached the app shell.
  *
@@ -818,33 +1148,38 @@ async function auditSignedIn(page, mode, tone) {
   await page.waitForTimeout(700);
   out.push(...(await page.evaluate(collectFindings, 'Profile/signed-in')));
 
-  const onSettings = await page.evaluate(() => {
-    const b = [...document.querySelectorAll('button')].find(
-      (x) => (x.getAttribute('aria-label') || '') === 'settings'
-    );
-    if (!b) return false;
-    b.click();
-    return true;
-  });
-  if (!onSettings) {
+  // Settings at every width, with a session and a populated account — the one
+  // combination the guest sweep cannot produce, because Konto (the email line,
+  // sync, export, the danger zone) renders only for a signed-in user, and
+  // those rows carry the longest unbreakable strings on the route: an address.
+  // 390px alone used to stand for "narrow" here.
+  const settingsLayout = [];
+  let settingsMeasured = 0;
+  for (const width of SETTINGS_WIDTHS) {
+    await page.setViewportSize({ width, height: SIGNED_IN_VIEWPORT.height });
+    // No reload: `useWindowWidth` listens for resize, so the breakpoints
+    // re-evaluate in place and the session survives.
+    await page.waitForTimeout(300);
+    const res = await auditSettings(page, `Settings/signed-in@${width}`);
+    settingsMeasured += res.measured;
+    for (const l of res.layout) settingsLayout.push({ ...l, viewport: width });
+    // The width travels with the finding. Without it main() stamps the pass
+    // viewport on every row, and a clip found at 320 prints as a clip at 390.
+    for (const f of res.contrast) out.push({ ...f, viewport: width });
+  }
+  await page.setViewportSize(SIGNED_IN_VIEWPORT);
+  await page.waitForTimeout(300);
+  if (settingsMeasured < SETTINGS_WIDTHS.length) {
     throw new Error(
-      `audit-contrast: no SETTINGS toggle on Profile (${mode}.${tone}) — the segment moved.`
+      `audit-contrast: reached Settings at only ${settingsMeasured}/${SETTINGS_WIDTHS.length} ` +
+        `widths in the signed-in pass (${mode}.${tone}) — the segment moved.`
     );
   }
-  await page.waitForTimeout(400);
-  out.push(...(await page.evaluate(collectFindings, 'Settings/signed-in')));
 
   // The league table sits behind a view toggle, not behind the tab. Opening
   // Profile alone leaves it unrendered — which is exactly how it stayed
   // unaudited while the job reported clean.
-  const onLeagues = await page.evaluate(() => {
-    const b = [...document.querySelectorAll('button')].find(
-      (x) => (x.getAttribute('aria-label') || '') === 'leagues'
-    );
-    if (!b) return false;
-    b.click();
-    return true;
-  });
+  const onLeagues = await page.evaluate(clickProfileSegment, 'leagues');
   if (!onLeagues) {
     throw new Error(
       `audit-contrast: no LEAGUES toggle on Profile (${mode}.${tone}) — either the ` +
@@ -891,8 +1226,9 @@ async function auditSignedIn(page, mode, tone) {
   return {
     findings: out,
     profileCardOpened: opened,
-    sheetLayout,
+    sheetLayout: [...sheetLayout, ...settingsLayout],
     sheetsMeasured: signedInSheets.measured,
+    settingsMeasured,
   };
 }
 
@@ -940,6 +1276,10 @@ async function main() {
   let modalsMeasured = 0;
   let combinations = 0;
   let signedInCombinations = 0;
+  let chatPopoversMeasured = 0;
+  let chatPopoverAttempts = 0;
+  let guestSettingsMeasured = 0;
+  let signedInSettingsMeasured = 0;
 
   for (const mode of MODES) {
     for (const tone of TONES) {
@@ -973,6 +1313,22 @@ async function main() {
               viewport: vp.width,
             });
           }
+
+          // Chat's model popover, driven while Chat is already open — in its
+          // own pass it would pay for the navigation twice. Every mode and
+          // every width: the placement flips above the trigger at 320px and
+          // not at 1280, so one width would audit one of the two branches.
+          if (tab === 'Chat') {
+            chatPopoverAttempts += 1;
+            const popover = await auditChatModelPopover(page);
+            chatPopoversMeasured += popover.measured;
+            for (const l of popover.layout) {
+              layout.push({ ...l, mode, tone, viewport: vp.width });
+            }
+            for (const f of popover.contrast) {
+              findings.push({ ...f, mode, tone, viewport: vp.width });
+            }
+          }
         }
 
         // Last in the iteration: opening the trial wall mutates stored
@@ -986,6 +1342,34 @@ async function main() {
         for (const f of modals.contrast) {
           findings.push({ ...f, mode, tone, viewport: vp.width });
         }
+      }
+    }
+  }
+
+  // ── Profile → Settings, guest, across widths ──────────────────────────────
+  // Its own sweep rather than a fourth entry in VIEWPORTS: adding 375px to the
+  // matrix above would re-walk six tabs, three modals and two header sheets at
+  // a width whose only open question is how this one route reflows.
+  //
+  // Mode only, no tone: `deutsch-theme-tone` has no reader left anywhere in
+  // src/ (the tone picker was removed and MODE_COLORS collapsed to mode), so a
+  // tone loop here would double the work for identical pixels. The matrix
+  // above still sweeps both, and that is where the claim is worth re-testing.
+  for (const mode of MODES) {
+    for (const width of SETTINGS_WIDTHS) {
+      await page.setViewportSize({ width, height: 800 });
+      await page.evaluate(seedPopulatedAccount);
+      // applyTheme reloads and walks the entry gate, so the seed goes in
+      // first and this costs one reload per combination rather than two.
+      await applyTheme(page, mode, 'day');
+
+      const res = await auditSettings(page, `Settings/guest@${width}`);
+      guestSettingsMeasured += res.measured;
+      for (const l of res.layout) {
+        layout.push({ ...l, mode, tone: 'day', viewport: width, pass: 'guest settings' });
+      }
+      for (const f of res.contrast) {
+        findings.push({ ...f, mode, tone: 'day', viewport: width });
       }
     }
   }
@@ -1007,11 +1391,16 @@ async function main() {
       const res = await auditSignedIn(signedInPage, mode, tone);
       if (res.profileCardOpened) profileCardsAudited += 1;
       signedInSheetsMeasured = Math.max(signedInSheetsMeasured, res.sheetsMeasured);
+      signedInSettingsMeasured += res.settingsMeasured;
       for (const l of res.sheetLayout) {
-        layout.push({ ...l, mode, tone, viewport: SIGNED_IN_VIEWPORT.width, pass: 'signed-in' });
+        // The Settings findings carry the width they were measured at; the
+        // sheet findings do not, and belong to the pass viewport.
+        const viewport = typeof l.viewport === 'number' ? l.viewport : SIGNED_IN_VIEWPORT.width;
+        layout.push({ ...l, mode, tone, viewport, pass: 'signed-in' });
       }
       for (const f of res.findings) {
-        findings.push({ ...f, mode, tone, viewport: SIGNED_IN_VIEWPORT.width });
+        const viewport = typeof f.viewport === 'number' ? f.viewport : SIGNED_IN_VIEWPORT.width;
+        findings.push({ ...f, mode, tone, viewport });
       }
     }
   }
@@ -1029,11 +1418,52 @@ async function main() {
     unique.push(f);
   }
 
-  console.log(`Audited ${combinations} guest combinations (2×2×5×3).`);
+  const guestSettingsExpected = MODES.length * SETTINGS_WIDTHS.length;
+  const signedInSettingsExpected = signedInCombinations * SETTINGS_WIDTHS.length;
+
+  console.log(
+    `Audited ${combinations} guest combinations ` +
+      `(${MODES.length}×${TONES.length}×${TABS.length}×${VIEWPORTS.length}).`
+  );
   console.log(
     `Audited ${signedInCombinations} signed-in combinations (2×2) — ` +
       `AccountChip, account section, league table; ${profileCardsAudited} with the profile card.`
   );
+  console.log(
+    `Chat model popover: opened and measured in ${chatPopoversMeasured}/${chatPopoverAttempts} ` +
+      `guest combinations (trigger, ${MODEL_CHOICES.length} choices, plan-fallback caption, ` +
+      'geometry, page overflow, and the closed view carrying no choices).'
+  );
+  console.log(
+    `Profile → Settings: ${guestSettingsMeasured}/${guestSettingsExpected} guest and ` +
+      `${signedInSettingsMeasured}/${signedInSettingsExpected} signed-in measurements at ` +
+      `${SETTINGS_WIDTHS.join(' / ')}px (contrast, element edges, page overflow).`
+  );
+
+  // Denominators, asserted rather than printed. A pass that stops reaching a
+  // surface prints the same zero findings as a clean one, which is how the
+  // Status sheet went unaudited while the totals looked healthy.
+  // `all`, not undefined: these are findings about the run as a whole, and the
+  // printer below reads mode/tone/viewport off every row.
+  const everywhere = { mode: 'all', tone: 'all', viewport: 'all' };
+  if (chatPopoversMeasured < chatPopoverAttempts) {
+    layout.push({
+      ...everywhere,
+      reason: `Chat model popover measured in only ${chatPopoversMeasured}/${chatPopoverAttempts} combinations`,
+    });
+  }
+  if (guestSettingsMeasured < guestSettingsExpected) {
+    layout.push({
+      ...everywhere,
+      reason: `guest Settings measured at only ${guestSettingsMeasured}/${guestSettingsExpected} width×mode combinations`,
+    });
+  }
+  if (signedInSettingsMeasured < signedInSettingsExpected) {
+    layout.push({
+      ...everywhere,
+      reason: `signed-in Settings measured at only ${signedInSettingsMeasured}/${signedInSettingsExpected} width×mode combinations`,
+    });
+  }
   console.log(`Raw findings: ${findings.length}; unique: ${unique.length}`);
   console.log(
     `Header sheets measured per combination: ${sheetsMeasured} guest / ` +

@@ -19,6 +19,32 @@ separate owner actions.
    `document.documentElement.scrollWidth - document.documentElement.clientWidth`;
    expected result is `0`.
 
+### What the automated audit already covers
+
+`npm run audit:contrast` runs in CI and on a developer box (it builds and
+serves its own stub-config target). Treat the surfaces below as machine-checked
+for what the table says and only that: **text contrast against WCAG AA**
+everywhere, and **horizontal fit** — element edges, and where noted
+`scrollWidth - clientWidth` — on the surfaces that carry it. Spend the manual
+passes on what it cannot see: audio, keyboard order, sync round trips, offline,
+and anything only a human reads as wrong.
+
+| Surface                                          | Widths           | Contrast                             | Horizontal fit                | States                                                                                                  |
+| ------------------------------------------------ | ---------------- | ------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| All six tabs                                     | 1280 / 390 / 320 | yes                                  | no — contrast only            | guest, populated, 2 modes × 2 tones                                                                     |
+| Header sheets, all, opened by their triggers     | 1280 / 390 / 320 | yes                                  | element edges                 | 2 guest, 3 signed-in                                                                                    |
+| Sign-in, trial wall, expired-link overlay        | 1280 / 390 / 320 | yes                                  | element edges                 | guest                                                                                                   |
+| Chat → model popover                             | 1280 / 390 / 320 | yes, incl. the plan-fallback caption | element edges + page overflow | guest; opened by its accessible trigger, four choices asserted present when open and absent when closed |
+| Profile → Settings                               | 320 / 375 / 1280 | yes                                  | element edges + page overflow | guest, and signed-in with a populated account                                                           |
+| Profile → Leagues, profile card, account section | 390              | yes                                  | no — contrast only            | signed-in, stubbed standings                                                                            |
+
+The run fails when a surface stops being reachable, not only when a colour is
+wrong, and it prints how many of each it measured. A zero next to a surface in
+that output means it was never reached — read it before trusting a clean run.
+
+Not machine-checked: a label that breaks inside a word, an overlay not listed
+in the script, anything behind a live network call, and `VitalsOverlay`.
+
 The guest path and core practice work with no AI backend. Chat replies, custom
 deck generation, and B1 translation grading require the deployed `/api/v1/ai/*`
 functions. Local `npm run dev` does not serve those functions; use production or
@@ -96,6 +122,11 @@ applied, follow its specific verification steps in the
 
 Check **320px and 375px with a populated account**, then repeat the overflow
 measurement on all six tabs, inside a Vocab drill, and with a header sheet open.
+`npm run audit:contrast` already measures the six tabs for contrast at
+1280 / 390 / 320, and Chat's model popover and Profile → Settings for contrast
+AND horizontal fit (see the table under _Prepare_). It does **not** take a
+per-tab overflow reading, so the tab-by-tab measurement below is still a human
+step — as are the Vocab drill, the keyboard pass, and offline.
 
 | Action                                                                                      | Expected                                                                                                    |
 | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
@@ -115,6 +146,13 @@ playback may require a direct press because browsers restrict autoplay.
 - For a branch-side browser check, run `npm run smoke:learning-path`. It tests
   guest practice in an isolated local build; it does not verify production auth
   or AI.
+- Run `npm run audit:contrast` after any change to colour tokens, type tiers,
+  a popover, or the Settings route. It builds and serves its own target, so it
+  needs no running dev server, and takes roughly four minutes. Read the
+  coverage counts it prints, not only its exit code: `Chat model popover:
+opened and measured in N/12` and `Profile → Settings: N/6 guest and N/12
+signed-in` are the denominators that separate "nothing is wrong" from
+  "nothing was checked".
 - Check the [uptime workflow](../.github/workflows/uptime.yml), Sentry issues,
   and Vercel function logs after deployment. Check the build log for a
   `SENTRY SOURCE-MAP UPLOAD FAILED` banner; source-map upload does not fail the
