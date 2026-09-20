@@ -18,10 +18,10 @@ Starting these without a written design means the implementing agent invents the
 architecture, which is the expensive thing to undo. That is the whole reason
 they are listed as blocked rather than "available".
 
-| Item                                   | Notes                                                                        |
-| -------------------------------------- | ---------------------------------------------------------------------------- |
-| **UI sub-project 3** — graphics assets | Logo, icon set, empty/error states, OG image. The font slice shipped as #103 |
-| **Auth Phase E** — phone/SMS OTP       | Deliberately deferred: the only auth component with a per-use cost           |
+| Item                                          | Notes                                                                                                                                                                                                     |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **UI sub-project 3** — the illustration slice | What is left after the icon/OG slice shipped (see below): an in-app illustration set for the states `StatusNote` renders, and a wordmark lockup beyond the single-letter mark. Neither is needed for beta |
+| **Auth Phase E** — phone/SMS OTP              | Deliberately deferred: the only auth component with a per-use cost                                                                                                                                        |
 
 ## Ready to execute
 
@@ -32,6 +32,66 @@ Nothing queued.
 Nothing in review.
 
 ## Recently shipped
+
+### UI sub-project 3 — brand + sharing assets
+
+**Shipped as the `feat/ui3-brand-assets` PR.** Design at
+`docs/superpowers/specs/2026-09-20-brand-and-sharing-assets-design.md`, plan at
+`docs/superpowers/plans/2026-09-20-brand-and-sharing-assets.md`.
+
+The icon set and the OG image, which were the two slices of this item that beta
+actually needs. The empty/error-state slice had already shipped as `StatusNote`;
+the font slice shipped as #103.
+
+**What was actually wrong** — all four found in the files, not assumed:
+
+- **The icons were rendered from a font we do not ship.** `icon-base.svg` and
+  `favicon.svg` drew the `D` with an SVG `<text>` asking for
+  `Georgia, 'Times New Roman', serif`. Neither is vendored, so the letterform
+  was whatever serif the rasterising machine had — the `pwa-512.png` on `main`
+  is a Times D, a face that appears nowhere in the app's type system. The same
+  input produced different artwork on different machines and nothing could see
+  it. The mark is now constructed geometry (`scripts/gen-assets/mark.js`), and
+  a test fails on any `<text>` or `font-family` in an icon source.
+- **The icon palette was three dead literals.** `#16110b` (light `fg` used as a
+  plane), `#FDF3C0` (the retired parchment ground) and `#D62828` (the
+  pre-theme-arc red). None is reachable as a current token. The mark now reads
+  `accent-black` / `accent-black-on` / `flag-red` from `themeTokens.js` — all
+  three mode-independent, because an app icon has no theme.
+- **There was no maskable icon.** The manifest declared `pwa-512.png` twice,
+  once bare and once `maskable`. Declaring it is not drawing it: Android may
+  crop to the central circle at 80%, and that artwork puts the `D`'s stem and
+  the red dot outside it. `pwa-maskable-512.png` is a distinct bitmap, and both
+  the generator and the test refuse a mark that does not clear the circle.
+- **`index.html` had no sharing metadata at all**, and `docs/social-preview.png`
+  sat in `docs/`, which the app does not serve — so no `og:image` could ever
+  have pointed at it. The card itself still `@import`-ed Google Fonts (the CDN
+  #103 removed), grounded on retired parchment, set its prose in Fraunces
+  italic (prose moved to Plus Jakarta Sans on 2026-09-01) and drew its feature
+  pills and tick in emoji and U+2713, none of which any vendored family covers
+  — five more glyphs that came from the rasterising OS.
+
+**Two decisions worth not re-deriving:**
+
+- **Three mask contracts, so three geometries.** `any` is shown as authored and
+  supplies its own rounded plane; `maskable` is full-bleed with the mark inside
+  r = 40%; `apple-touch-icon` is full-bleed **square** because iOS always
+  applies its own squircle and a baked radius would be rounded twice. One
+  bitmap cannot serve all three, which is exactly the bug above.
+- **The `D` is constructed, not set in Fraunces.** Outlining a variable font
+  needs a font-parsing dependency and embedding a subset would bloat a 32px
+  favicon. Fraunces still carries the wordmark everywhere it is live text — the
+  pre-JS shell, the masthead, the social card.
+
+`npm run gen:assets` regenerates everything (Playwright, already a devDep).
+`scripts/gen-icons.js` is deleted: it imported `sharp`, which its own header
+admitted was not installed, so it could not be run.
+
+**Not in this slice, and not needed for beta:** an in-app illustration set, a
+wordmark lockup beyond the single-letter mark, a `.ico` bundle (every target
+browser takes PNG or SVG), and any application UI change — not one file under
+`src/components/` was touched. See owner action #9 for the one step nobody with
+repo access can do.
 
 ### User roles + admin v1
 
@@ -247,16 +307,17 @@ Each needs the Supabase or Google Cloud dashboard. Neither Claude Code nor Curso
 can complete or, in most cases, verify them; status below says how each was
 checked so a stale entry is obvious.
 
-| #   | Action                                                                                                                                                                                 | Status                                                                                                                                 |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Paste `supabase/templates/magic_link.html` into the **hosted** project → Authentication → Email Templates → Magic Link. Local GoTrue reads it from `config.toml`; production does not. | ✅ **Done** — owner applied the hosted template and 5-minute OTP expiry on 2026-09-18, as recorded in `docs/PRE_BETA_OWNER_CHECKLIST.md` §3. Re-paste after future template changes. |
-| 2   | Confirm hosted **URL Configuration** lists production plus `http://localhost:5173` and `http://127.0.0.1:5173`.                                                                        | **Unverified from the repo** — hosted dashboard state                                                                                  |
-| 3   | Google OAuth client → Supabase Google provider → `VITE_GOOGLE_AUTH_ENABLED=true` on Preview + Production, **then redeploy**.                                                           | ✅ **Done** — flag present in the production env, Google sign-in live since 2026-08-17. Procedure: `docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md` |
-| 4   | Apply `supabase/migrations/20260916183000_feedback.sql` to Sprachschule (`xcnnlczvxmuwcqwychox`) after that PR merges. Dashboard SQL editor. Never `migration repair`.                 | ✅ **Done** — table is live in production. `status` / `handled_*` arrived with action #5. |
-| 5   | Apply `supabase/migrations/20260918153000_user_roles.sql` to Sprachschule after the roles/admin PR merges. Dashboard SQL editor. Never `migration repair`. Adds `feedback.status` / `handled_*` and `profiles.blocked_at`, and narrows profile UPDATE grants. **Do not exclude system accounts from stats/leagues.** | ✅ **Done** — applied 2026-09-18. Production has schema_migrations name `user_roles`; Migration Drift is green. Never `migration repair`. **Do not exclude system accounts from stats/leagues.** |
-| 6   | Apply `supabase/migrations/20260918200000_revoke_is_league_member_execute.sql` to Sprachschule (**#290**, first). Code is on `main`; production apply is still pending. Dashboard SQL editor. Never `migration repair`. Moves `is_league_member` to schema `private` and retargets both league RLS policies (advisor 0029). Then confirm Stats → Ligen still loads for a signed-in user. | **Unapplied** — owner-only after return. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §8a |
-| 7   | Apply `supabase/migrations/20260918213000_server_only_rls_deny_policies.sql` to Sprachschule (**#293**, after #6 / the #290 migration). Code is on `main`; production apply is still pending. Dashboard SQL editor. Never `migration repair`. Adds deny-all RLS policies on `rate_limits` and `progress_events_seen` (advisor INFO 0008). Learners never hit these tables. | **Unapplied** — owner-only after return. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §8b |
-| 8   | Enable the closed-beta email allowlist via Vercel when you want signup locked (**after #294**). Set `SIGNUP_EMAIL_ALLOWLIST` and `VITE_SIGNUP_EMAIL_ALLOWLIST` on Production + Preview to the same list, then redeploy. Unset = open signup (current production default). Do not disable the Google provider. | **Not enabled** — owner-only. Code shipped as #294; production stays open until the vars are set. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §5 |
+| #   | Action                                                                                                                                                                                                                                                                                                                                                                                                           | Status                                                                                                                                                                                           |
+| --- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 1   | Paste `supabase/templates/magic_link.html` into the **hosted** project → Authentication → Email Templates → Magic Link. Local GoTrue reads it from `config.toml`; production does not.                                                                                                                                                                                                                           | ✅ **Done** — owner applied the hosted template and 5-minute OTP expiry on 2026-09-18, as recorded in `docs/PRE_BETA_OWNER_CHECKLIST.md` §3. Re-paste after future template changes.             |
+| 2   | Confirm hosted **URL Configuration** lists production plus `http://localhost:5173` and `http://127.0.0.1:5173`.                                                                                                                                                                                                                                                                                                  | **Unverified from the repo** — hosted dashboard state                                                                                                                                            |
+| 3   | Google OAuth client → Supabase Google provider → `VITE_GOOGLE_AUTH_ENABLED=true` on Preview + Production, **then redeploy**.                                                                                                                                                                                                                                                                                     | ✅ **Done** — flag present in the production env, Google sign-in live since 2026-08-17. Procedure: `docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md`                                                           |
+| 4   | Apply `supabase/migrations/20260916183000_feedback.sql` to Sprachschule (`xcnnlczvxmuwcqwychox`) after that PR merges. Dashboard SQL editor. Never `migration repair`.                                                                                                                                                                                                                                           | ✅ **Done** — table is live in production. `status` / `handled_*` arrived with action #5.                                                                                                        |
+| 5   | Apply `supabase/migrations/20260918153000_user_roles.sql` to Sprachschule after the roles/admin PR merges. Dashboard SQL editor. Never `migration repair`. Adds `feedback.status` / `handled_*` and `profiles.blocked_at`, and narrows profile UPDATE grants. **Do not exclude system accounts from stats/leagues.**                                                                                             | ✅ **Done** — applied 2026-09-18. Production has schema_migrations name `user_roles`; Migration Drift is green. Never `migration repair`. **Do not exclude system accounts from stats/leagues.** |
+| 6   | Apply `supabase/migrations/20260918200000_revoke_is_league_member_execute.sql` to Sprachschule (**#290**, first). Code is on `main`; production apply is still pending. Dashboard SQL editor. Never `migration repair`. Moves `is_league_member` to schema `private` and retargets both league RLS policies (advisor 0029). Then confirm Stats → Ligen still loads for a signed-in user.                         | **Unapplied** — owner-only after return. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §8a                                                                                                       |
+| 7   | Apply `supabase/migrations/20260918213000_server_only_rls_deny_policies.sql` to Sprachschule (**#293**, after #6 / the #290 migration). Code is on `main`; production apply is still pending. Dashboard SQL editor. Never `migration repair`. Adds deny-all RLS policies on `rate_limits` and `progress_events_seen` (advisor INFO 0008). Learners never hit these tables.                                       | **Unapplied** — owner-only after return. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §8b                                                                                                       |
+| 8   | Enable the closed-beta email allowlist via Vercel when you want signup locked (**after #294**). Set `SIGNUP_EMAIL_ALLOWLIST` and `VITE_SIGNUP_EMAIL_ALLOWLIST` on Production + Preview to the same list, then redeploy. Unset = open signup (current production default). Do not disable the Google provider.                                                                                                    | **Not enabled** — owner-only. Code shipped as #294; production stays open until the vars are set. Procedure: `docs/PRE_BETA_OWNER_CHECKLIST.md` §5                                               |
+| 9   | Upload `public/social-preview.png` to GitHub → repo **Settings → Social preview**. This is a repo setting, not a file in the tree: the `og:image` meta already serves the app's own link previews, but GitHub's card is set only through the dashboard and there is no API for it. The image is 1200x630, which is GitHub's 1.91:1 crop exactly. Re-upload after any `npm run gen:assets` that changes the card. | **Not done** — owner-only. The old `docs/social-preview.png` this replaces was never wired to anything                                                                                           |
 
 Two traps worth keeping, both from #96:
 
@@ -361,6 +422,7 @@ button[aria-haspopup="dialog"]`) instead of selecting one by its literal
   hint. What it still cannot see: a label that breaks INSIDE a word (the
   `SPOR / T` tiles of #305 overflowed nothing), and any colour pairing a
   fixture does not render.
+
 - ~~**The contrast audit sweeps a theme `tone` no code reads.**~~ Closed: the
   `TONES` loop is gone, and the script no longer writes `deutsch-theme-tone` at
   all. The Appearance picker lost its Day / Night tone in `d0a9bf3`
@@ -382,6 +444,7 @@ button[aria-haspopup="dialog"]`) instead of selecting one by its literal
   Guest combinations 72 → 36, signed-in 4 → 2, popover measurements 12 → 6,
   signed-in Settings 12 → 6. Runtime 3:30 → 1:54, measured on the same box. If a tone ever comes back,
   the loop comes back with it; the comment at `MODES` says so.
+
 - ~~**Local `.env` holds a Sentry user token where a DSN belongs.**~~ No
   `VITE_SENTRY_DSN` assignment remains in `.env` or `.env.local` as checked
   2026-09-20, so the recorded `sntryu_`-as-DSN console warning is no longer a

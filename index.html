@@ -3,8 +3,15 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <!-- PNG fallback for browsers that ignore an SVG favicon. The file has
+         existed in public/ since the first icon pass and was never linked, so
+         those browsers fell through to a /favicon.ico that does not exist. -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <!-- One apple-touch-icon, and it is the 180. iOS applies its own squircle,
+         so the artwork is a full-bleed square; the 192 line that used to sit
+         here pointed at the PWA bitmap, which bakes its own rounded plane and
+         would have been rounded a second time. -->
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="apple-touch-icon" sizes="192x192" href="/pwa-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- theme-color is light-mode `fg` (#16110b): the sticky masthead is
          accent-black and does not invert. background_color in the generated
@@ -16,6 +23,49 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="description" content="Deutsch — a bold German learning app powered by Claude" />
     <title>Deutsch · Sprachschule</title>
+
+    <!--
+      Sharing metadata. The app's only distribution during beta is somebody
+      pasting the link, and without this a paste renders as a bare URL.
+
+      The origin is written out in full because crawlers do not resolve a
+      relative og:image — a root-relative path is silently dropped, which looks
+      identical to having no card at all. It is duplicated from AGENTS.md
+      ("Linked environments"), and src/brandAssets.test.js asserts every
+      absolute URL here against that one constant so the copies cannot drift.
+
+      og:image is public/social-preview.png, rendered by `npm run gen:assets`.
+      The declared width/height are checked against the PNG's own IHDR header
+      by the same test: a stale pair makes crawlers reserve the wrong box.
+    -->
+    <link rel="canonical" href="https://deutsch-app-dusky.vercel.app/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Deutsch · Sprachschule" />
+    <meta property="og:title" content="Deutsch · Sprachschule" />
+    <meta
+      property="og:description"
+      content="An AI tutor for German — guided chat, spaced-repetition vocabulary and translation drills."
+    />
+    <meta property="og:url" content="https://deutsch-app-dusky.vercel.app/" />
+    <meta property="og:image" content="https://deutsch-app-dusky.vercel.app/social-preview.png" />
+    <meta property="og:image:type" content="image/png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="The Deutsch. wordmark beside a vocabulary card reading Hallo, with four answer tiles and Hello marked correct."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Deutsch · Sprachschule" />
+    <meta
+      name="twitter:description"
+      content="An AI tutor for German — guided chat, spaced-repetition vocabulary and translation drills."
+    />
+    <meta name="twitter:image" content="https://deutsch-app-dusky.vercel.app/social-preview.png" />
+    <meta
+      name="twitter:image:alt"
+      content="The Deutsch. wordmark beside a vocabulary card reading Hallo, with four answer tiles and Hello marked correct."
+    />
 
     <!--
       Pre-JS shell. The app is client-rendered into an empty #root, so until the
