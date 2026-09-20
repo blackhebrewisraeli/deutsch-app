@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { COLORS, FONTS, FONT_SIZE, SPACE } from '../../lib/theme';
+import { FONTS, SPACE } from '../../lib/theme';
 import Button from '../ui/Button';
+import { Body } from '../ui/Text';
 import { clearAppCaches } from '../../lib/clearAppCaches';
 import { __resetCache } from '../../packs/lexiconStore';
 
@@ -49,19 +50,10 @@ export default function OfflineCacheSection({
 
   return (
     <div style={{ fontFamily: FONTS.body }}>
-      <p
-        style={{
-          fontFamily: FONTS.body,
-          fontSize: FONT_SIZE.base,
-          color: COLORS.inkSoft,
-          margin: 0,
-          marginBottom: SPACE[3],
-          overflowWrap: 'break-word',
-        }}
-      >
-        Clears this device's offline copies of the app shell and lexicon. Progress, theme, and
+      <Body size="sm" tone="soft" style={{ marginBottom: SPACE[3], overflowWrap: 'break-word' }}>
+        Clears this device&apos;s offline copies of the app shell and lexicon. Progress, theme, and
         account data stay. Use this if Vocab still looks stale after a deploy.
-      </p>
+      </Body>
       <Button
         variant="secondary"
         onClick={handleClear}
@@ -70,19 +62,12 @@ export default function OfflineCacheSection({
       >
         Clear offline cache
       </Button>
+      {/* The outcome of an action the learner just took, phrased as a
+          sentence — so it is set as prose, not as a 10px mono label. */}
       {status && (
-        <p
-          role="status"
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            color: COLORS.mute,
-            margin: 0,
-            marginTop: SPACE[2],
-          }}
-        >
+        <Body role="status" size="sm" tone="soft" style={{ marginTop: SPACE[2] }}>
           {status}
-        </p>
+        </Body>
       )}
     </div>
   );

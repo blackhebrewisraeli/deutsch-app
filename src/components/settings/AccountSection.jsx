@@ -1,14 +1,7 @@
 import { useState } from 'react';
-import {
-  COLORS,
-  FONTS,
-  FONT_SIZE,
-  FONT_WEIGHT,
-  LETTER_SPACING,
-  SPACE,
-  RADIUS,
-} from '../../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, SPACE, RADIUS } from '../../lib/theme';
 import Button from '../ui/Button';
+import { Body, Meta } from '../ui/Text';
 import { isAuthConfigured } from '../../lib/auth.js';
 
 // Mirrors CONFIRM_PHRASE in api/v1/account/delete.js. The server is the
@@ -53,9 +46,11 @@ export default function AccountSection({
   if (!user) {
     return (
       <div style={{ fontFamily: FONTS.body }}>
-        <p style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, color: COLORS.mute }}>
+        {/* A sentence, so it is set as one. This shipped as 10px mono at the
+            muted ink — the label recipe, worn by prose. */}
+        <Body size="sm" tone="soft" style={{ marginBottom: SPACE[3] }}>
           Sign in to sync your progress across devices.
-        </p>
+        </Body>
         <Button onClick={onSignIn}>Sign in to sync →</Button>
       </div>
     );
@@ -77,17 +72,13 @@ export default function AccountSection({
 
   return (
     <div style={{ fontFamily: FONTS.body }}>
+      {/* This one IS a meta readout, so it keeps the label face — but from the
+          token, with the tracking and the uppercase that make 10px mono
+          readable, rather than a partial hand copy of it. */}
       {lastSyncedAt != null && (
-        <div
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            color: COLORS.mute,
-            marginBottom: SPACE[2],
-          }}
-        >
+        <Meta as="div" style={{ marginBottom: SPACE[2] }}>
           Last synced · {formatRelativeSync(lastSyncedAt)}
-        </div>
+        </Meta>
       )}
       <Button variant="secondary" onClick={onSignOut} style={{ marginBottom: SPACE[4] }}>
         Sign out
@@ -113,27 +104,14 @@ export default function AccountSection({
           marginTop: SPACE[4],
         }}
       >
-        <div
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            fontWeight: FONT_WEIGHT.bold,
-            letterSpacing: LETTER_SPACING.caps,
-            color: COLORS.red,
-            marginBottom: SPACE[2],
-          }}
-        >
-          DANGER ZONE
-        </div>
-        <p
-          style={{
-            fontFamily: FONTS.body,
-            fontSize: FONT_SIZE.base,
-            marginBottom: SPACE[3],
-          }}
-        >
+        {/* Authored in sentence case and uppercased by the label recipe, so
+            a screen reader reads "Danger zone" instead of spelling it. */}
+        <Meta as="div" tone="error" style={{ marginBottom: SPACE[2] }}>
+          Danger zone
+        </Meta>
+        <Body size="sm" style={{ marginBottom: SPACE[3] }}>
           Permanently delete your account and all data. This cannot be undone.
-        </p>
+        </Body>
         {!confirmDelete ? (
           <Button
             variant="danger"
@@ -144,17 +122,13 @@ export default function AccountSection({
           </Button>
         ) : (
           <div>
-            <p
-              style={{
-                fontFamily: FONTS.mono,
-                fontSize: FONT_SIZE.sm,
-                marginBottom: SPACE[2],
-                color: COLORS.red,
-              }}
-            >
-              This erases all your progress and cannot be undone. Type {DELETE_CONFIRM_PHRASE} to
-              confirm.
-            </p>
+            <Body size="sm" tone="error" style={{ marginBottom: SPACE[2] }}>
+              This erases all your progress and cannot be undone. Type{' '}
+              <strong>{DELETE_CONFIRM_PHRASE}</strong> to confirm.
+            </Body>
+            {/* No visible label: the sentence above IS the instruction, and a
+                second "Confirm" caption would have to be repeated inside the
+                aria-label to satisfy Label in Name. */}
             <input
               aria-label={`Type ${DELETE_CONFIRM_PHRASE} to confirm`}
               value={typed}

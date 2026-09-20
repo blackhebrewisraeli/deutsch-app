@@ -397,6 +397,35 @@ export const TEXT = {
     lineHeight: 1.5,
     opacity: 0.75,
   },
+  // The label ON a form control — Handle, Email, the delete confirm box.
+  //
+  // Same mono-caps family as TEXT.label, one notch stronger, because it does a
+  // different job: a section marker is scanned, a field label is READ to answer
+  // "what goes in this box". Two files had each inlined their own version of
+  // it at 10px, weight 400, with no tracking and no uppercase — the mono face
+  // without any of the things that make mono legible as a label.
+  fieldLabel: {
+    display: 'block',
+    fontFamily: FONTS.mono,
+    fontSize: FONT_SIZE.ipa,
+    fontWeight: FONT_WEIGHT.semibold,
+    letterSpacing: LETTER_SPACING.wider,
+    textTransform: 'uppercase',
+    color: COLORS.mute,
+  },
+  // The tier between a section title and its body. Settings had no such tier:
+  // a sub-heading inside a panel wore the SAME mono-caps recipe as the panel's
+  // own title, so "Interessen" and "KI-Modell" read as siblings of "Lernen"
+  // rather than as parts of it, and four of these in a column read as a wall.
+  // Body face, one step up from prose, ink rather than mute — the weight and
+  // the colour carry the hierarchy so the size does not have to.
+  subhead: {
+    fontFamily: FONTS.body,
+    fontSize: FONT_SIZE.md,
+    fontWeight: FONT_WEIGHT.semibold,
+    color: COLORS.ink,
+    lineHeight: 1.3,
+  },
   translation: {
     fontFamily: FONTS.body,
     fontStyle: 'italic',

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AlertTriangle, Check, Mail } from 'lucide-react';
-import { COLORS, FONTS, FONT_SIZE, RADIUS, SPACE } from '../../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, RADIUS, SPACE, TEXT } from '../../lib/theme';
 import { Stack } from '../ui/Layout';
 import Button from '../ui/Button';
 import StatusNote from '../ui/StatusNote';
@@ -53,13 +53,9 @@ const fieldStyle = {
   width: '100%',
 };
 
-const labelStyle = {
-  display: 'block',
-  fontFamily: FONTS.mono,
-  fontSize: FONT_SIZE.tag,
-  color: COLORS.mute,
-  marginBottom: SPACE[1],
-};
+// Shared with ProfileSection through the token, not by copying the recipe:
+// these two files had byte-identical private copies of it.
+const labelStyle = { ...TEXT.fieldLabel, marginBottom: SPACE[1] };
 
 export default function EmailSection({
   user,

@@ -12,7 +12,7 @@ import {
 import Surface from './ui/Surface';
 import { Row, Stack } from './ui/Layout';
 import Heading from './ui/Heading';
-import { Body } from './ui/Text';
+import { Body, Meta } from './ui/Text';
 import { activePack } from '../packs';
 import Avatar from './ui/Avatar';
 import GoalRing from './gamification/GoalRing';
@@ -117,19 +117,32 @@ export default function PersonalHub({
               // than the wordmark. This card's greeting is the identity
               // display line; 4xl matches the masthead without touching
               // Heading's global scale.
-              fontSize: FONT_SIZE['4xl'],
+              //
+              // Narrow steps down to 2xl, and that is not taste. At 320px the
+              // avatar owns half the identity band, which leaves the greeting
+              // a measured 77px of track — so "Guten Tag" broke as "Gut / en /
+              // Tag", three lines of a two-word greeting, with the word split
+              // mid-syllable. Same curve as Heading size="display": the
+              // display face scales with the space it has instead of holding
+              // one size until it shatters.
+              fontSize: wide ? FONT_SIZE['4xl'] : FONT_SIZE['2xl'],
             }}
           >
             {copy.greeting?.(name)}
           </Heading>
+          {/* The band chip beside a 36px greeting. It sat at 10px with the
+              widest tracking, which is the recipe for a label you SCAN past —
+              this is a fact about the learner and reads as one at 11px. The
+              trailing caps tracking is dropped so the glyphs are not pushed
+              off-centre inside their own border. */}
           <span
             aria-label={copy.levelLabel?.(String(cefrLevel ?? '').toUpperCase())}
             style={{
               flexShrink: 0,
               fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
+              fontSize: FONT_SIZE.ipa,
               fontWeight: FONT_WEIGHT.bold,
-              letterSpacing: LETTER_SPACING.caps,
+              letterSpacing: LETTER_SPACING.wider,
               color: COLORS.ink,
               border: `1px solid ${COLORS.mute}`,
               borderRadius: RADIUS.sm,
@@ -139,8 +152,12 @@ export default function PersonalHub({
             {String(cefrLevel ?? '').toUpperCase()}
           </span>
         </Row>
+        {/* `soft`, not `muted`. Supporting prose across the app is inkSoft and
+            labels are mute; these two lines had it backwards, so the handle
+            and the level — the two facts this card exists to state — were set
+            in the quietest ink on the page. */}
         {showsAccountLine && (
-          <Body size="sm" tone="muted" as="div" style={TRUNCATE}>
+          <Body size="sm" tone="soft" as="div" style={TRUNCATE}>
             {[
               profile?.handle ? `@${profile.handle}` : null,
               createdAt ? copy.memberSince?.(createdAt) : null,
@@ -181,21 +198,13 @@ export default function PersonalHub({
         </span>
         <Body
           size="sm"
-          tone="muted"
+          tone="soft"
           as="div"
           style={{ minWidth: 0, overflowWrap: 'anywhere', flex: '1 1 8ch' }}
         >
-          <span
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              fontWeight: FONT_WEIGHT.bold,
-              letterSpacing: LETTER_SPACING.caps,
-              textTransform: 'uppercase',
-            }}
-          >
-            Level
-          </span>{' '}
+          {/* The one label in this line, from the label token rather than a
+              fourth hand copy of it. */}
+          <Meta>Level</Meta>{' '}
           <span
             data-testid="home-identity-level"
             style={{
