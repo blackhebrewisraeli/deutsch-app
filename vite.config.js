@@ -41,7 +41,15 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'pwa-192.png', 'pwa-512.png', 'apple-touch-icon.png'],
+      includeAssets: [
+        'favicon.svg',
+        'favicon-32.png',
+        'pwa-192.png',
+        'pwa-512.png',
+        'pwa-maskable-512.png',
+        'apple-touch-icon.png',
+        'social-preview.png',
+      ],
       // Service worker caches the app shell and static assets for offline use.
       // navigateFallback is the basic offline strategy: unknown navigations
       // (and a cold open with no network) serve the precached index.html.
@@ -90,19 +98,29 @@ export default defineConfig({
         orientation: 'portrait-primary',
         scope: '/',
         start_url: '/',
+        // `maskable` is a DIFFERENT bitmap, not the same one declared twice.
+        // Listing pwa-512 under both purposes — which is what shipped until
+        // now — promises a safe zone the artwork never kept: Android may crop
+        // to the central circle at 80%, and the rounded-plane artwork puts the
+        // D's stem and the red dot outside it. scripts/gen-assets renders the
+        // maskable from its own geometry and refuses to emit one whose mark
+        // does not clear that circle; src/brandAssets.test.js asserts the two
+        // purposes never collapse back onto one file.
         icons: [
           {
             src: 'pwa-192.png',
             sizes: '192x192',
             type: 'image/png',
+            purpose: 'any',
           },
           {
             src: 'pwa-512.png',
             sizes: '512x512',
             type: 'image/png',
+            purpose: 'any',
           },
           {
-            src: 'pwa-512.png',
+            src: 'pwa-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
