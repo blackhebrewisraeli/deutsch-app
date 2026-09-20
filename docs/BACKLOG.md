@@ -275,7 +275,8 @@ Two traps worth keeping, both from #96:
   session and stubbed league responses. The freeze chip named in the original
   entry was never actually a gap — the existing seed yields two freezes, so the
   guest walk already rendered it.
-- **The contrast gate covers header sheets and listed modals, not every overlay.**
+- **The contrast gate covers header sheets, listed modals and Chat's model
+  popover, not every overlay.**
   Header sheets are DISCOVERED (`header button[aria-haspopup="dialog"]`); full
   modals are LISTED, because reaching one is an app state rather than a button
   in a fixed place — but each entry opens the modal itself and the run fails if
@@ -284,8 +285,12 @@ Two traps worth keeping, both from #96:
   and `AuthCallbackLanding` (seeded via the real expired-magic-link query
   `?error=access_denied&error_code=otp_expired` — no live OAuth required; the
   error phase is the durable overlay, pending/success self-dismiss).
-  `ProfileCard` is already reached by the signed-in pass. Not covered:
-  `VitalsOverlay` (dev-only). Add new overlays to `MODALS`.
+  `ProfileCard` is already reached by the signed-in pass. `ModelPopover` is
+  neither a header sheet nor a modal — it is a non-modal popover in the PAGE
+  BODY, so discovery scoped to `<header>` cannot see it and it is driven by
+  name in `auditChatModelPopover`; the next body popover needs the same
+  treatment, or it ships unmeasured. Not covered: `VitalsOverlay` (dev-only).
+  Add new overlays to `MODALS`.
 - ~~**League table rows are not keyboard reachable.**~~ Closed: each row is a
   real `<button>` inside the `<li>` (`data-ui="button"` + `data-focus-inset`),
   so Tab / Enter / Space open the profile card. The signed-in contrast pass
@@ -321,6 +326,48 @@ button[aria-haspopup="dialog"]`) instead of selecting one by its literal
   Opening it for the first time immediately found a real defect: the email line
   rendered at 1:1 in light mode, invisible, because the panel carried its own
   background but inherited the masthead's on-charcoal ink.
+- ~~**Chat's model popover and Profile → Settings were outside the rendered
+  audit.**~~ Closed: `npm run audit:contrast` now drives both.
+
+  The popover is opened through its ACCESSIBLE trigger
+  (`button[aria-haspopup="dialog"][aria-label^="Modell:"]`) in all 12 guest
+  combinations — 2 modes × 2 tones × 3 viewports — piggybacking on the tab
+  walk's visit to Chat, so it costs no extra navigation. Per combination it
+  fails the run when the trigger or the dialog is missing rather than skipping
+  quietly; asserts the four choices (Auto / Fast / Balanced / Capable) are
+  present while open and ABSENT while closed, which is the whole point of
+  collapsing the always-visible 2×2 grid out of Chat's tab order; checks
+  `aria-expanded` in both states and that Escape dismisses; measures the dialog
+  and every text node inside it against both viewport edges plus
+  `scrollWidth - clientWidth`; and colour-audits the interior — including the
+  plan-fallback caption, which is reached by picking a band above the guest
+  tier and which no other pass can render, because every pass starts on `auto`.
+  `sheetAnchor.placeSheet` is a pure function precisely because jsdom reports
+  every rect as 0×0; this is the only place the clamp and the flip-above are
+  asserted against a rendered box.
+
+  Settings gets its own sweep at **320 / 375 / 1280** in both modes as a guest,
+  and the signed-in pass now sweeps the same three widths with a populated
+  seeded account rather than standing at 390. Both measure contrast, every
+  element's edges against the viewport, and page overflow. Its own sweep rather
+  than a fourth entry in `VIEWPORTS`: adding 375px to the matrix would re-walk
+  six tabs, three modals and two header sheets at a width whose only open
+  question is how one route reflows.
+
+  Proved with eight controls, each failing the run with the surface and width
+  named: a renamed trigger, a trigger whose click does nothing, the grid left
+  mounted while the popover is closed, an unclamped placement, a dropped
+  choice, a renamed SETTINGS segment, a 900px row on the route, and a 1.87:1
+  hint. What it still cannot see: a label that breaks INSIDE a word (the
+  `SPOR / T` tiles of #305 overflowed nothing), and any colour pairing a
+  fixture does not render.
+- **The contrast audit sweeps a theme `tone` no code reads.** `MODES × TONES`
+  doubles the guest matrix and the signed-in pass, but `deutsch-theme-tone` has
+  no reader left anywhere in `src/` — the tone picker was removed and
+  `MODE_COLORS` collapsed to mode-only. Both halves therefore measure identical
+  pixels. Left in place here because collapsing the matrix is not an
+  audit-coverage change and deserves its own PR; the Settings sweep added above
+  iterates modes only and says so at the loop.
 - ~~**Local `.env` holds a Sentry user token where a DSN belongs.**~~ No
   `VITE_SENTRY_DSN` assignment remains in `.env` or `.env.local` as checked
   2026-09-20, so the recorded `sntryu_`-as-DSN console warning is no longer a
