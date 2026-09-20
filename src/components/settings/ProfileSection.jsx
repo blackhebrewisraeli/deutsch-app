@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { COLORS, FONTS, FONT_SIZE, RADIUS, SPACE } from '../../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, RADIUS, SPACE, TEXT } from '../../lib/theme';
 import { Stack } from '../ui/Layout';
 import Button from '../ui/Button';
 import StatusNote from '../ui/StatusNote';
@@ -30,13 +30,7 @@ const asForm = (profile) => ({
   handle: profile?.handle ?? '',
 });
 
-const labelStyle = {
-  display: 'block',
-  fontFamily: FONTS.mono,
-  fontSize: FONT_SIZE.tag,
-  color: COLORS.mute,
-  marginBottom: SPACE[1],
-};
+const labelStyle = { ...TEXT.fieldLabel, marginBottom: SPACE[1] };
 
 const inputStyle = {
   fontFamily: FONTS.mono,

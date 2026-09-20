@@ -1,17 +1,10 @@
 import { useState } from 'react';
-import {
-  COLORS,
-  FONTS,
-  FONT_SIZE,
-  FONT_WEIGHT,
-  LETTER_SPACING,
-  SPACE,
-  RADIUS,
-  SHADOW,
-} from '../../lib/theme';
+import { SPACE, TEXT } from '../../lib/theme';
 import { Stack } from '../ui/Layout';
 import Heading from '../ui/Heading';
+import SectionLabel from '../ui/SectionLabel';
 import Surface from '../ui/Surface';
+import { Body } from '../ui/Text';
 import LevelSwitcher from '../ui/LevelSwitcher';
 import Button from '../ui/Button';
 import GoalPicker from '../gamification/GoalPicker';
@@ -35,32 +28,43 @@ import { useAdminSession } from '../../lib/useAdminSession.js';
 // not a modal. Six tabs already ship; the 320px header budget is a measured
 // 10px. The Profile tab's SETTINGS segment is the one surface, and the
 // `#/settings` hash still deep-links here after the entry gate.
-// Supporting copy under a control. Matches the muted body prose the rest of
-// this route uses for the same job (see the Lernen override note).
-const hintStyle = {
-  fontFamily: FONTS.body,
-  fontSize: FONT_SIZE.sm,
-  color: COLORS.inkSoft,
-  marginTop: SPACE[2],
-  overflowWrap: 'anywhere',
-};
+//
+// Type on this route reads in exactly three tiers, and every block below picks
+// one of them rather than inventing a recipe:
+//
+//   Section   mono caps, mute ...... the panel's own title (SectionLabel)
+//   Field     body semibold, ink ... a control inside a panel (TEXT.subhead)
+//   Hint      body 13/1.5, soft .... the sentence under a control (Body)
+//
+// Before this pass there were two: a panel title and a sub-heading wore the
+// SAME mono-caps recipe, inlined five times, and the hint under a control was
+// 12px in three places and 13px in three others, none of them with a
+// line-height. That is what made the route read as flat — not the colours.
+
+// Supporting copy under a control.
+function Hint({ children }) {
+  return (
+    <Body size="sm" tone="soft" style={{ overflowWrap: 'anywhere' }}>
+      {children}
+    </Body>
+  );
+}
+
+// A named control inside a panel: sub-heading, optional hint, then the control.
+function Field({ label, hint, children }) {
+  return (
+    <Stack gap={2}>
+      <div style={TEXT.subhead}>{label}</div>
+      {hint ? <Hint>{hint}</Hint> : null}
+      {children}
+    </Stack>
+  );
+}
 
 function Section({ label, children }) {
   return (
     <section>
-      <div
-        style={{
-          fontFamily: FONTS.mono,
-          fontSize: FONT_SIZE.tag,
-          fontWeight: FONT_WEIGHT.bold,
-          letterSpacing: LETTER_SPACING.caps,
-          textTransform: 'uppercase',
-          color: COLORS.mute,
-          marginBottom: SPACE[3],
-        }}
-      >
-        {label}
-      </div>
+      <SectionLabel>{label}</SectionLabel>
       <Surface elevation={1} padding={4}>
         {children}
       </Surface>
@@ -109,16 +113,9 @@ export default function SettingsRoute({
       <Stack gap={8}>
         {adminSession.me?.blocked ? (
           <Section label="Account status">
-            <div
-              style={{
-                fontFamily: FONTS.body,
-                fontSize: FONT_SIZE.base,
-                color: COLORS.ink,
-                overflowWrap: 'anywhere',
-              }}
-            >
+            <Body size="sm" style={{ overflowWrap: 'anywhere' }}>
               This account is blocked. You can still export or delete your data below.
-            </div>
+            </Body>
           </Section>
         ) : null}
 
@@ -139,77 +136,45 @@ export default function SettingsRoute({
             <Button variant="secondary" onClick={onRetakePlacement}>
               Retake placement
             </Button>
-            <div
-              style={{
-                fontFamily: FONTS.body,
-                fontSize: FONT_SIZE.sm,
-                color: COLORS.inkSoft,
-                overflowWrap: 'anywhere',
-              }}
-            >
+            <Hint>
               The learner path for changing practice level. Also offered on Home after you finish
               three vocab decks.
-            </div>
-            <div
-              style={{
-                fontFamily: FONTS.mono,
-                fontSize: FONT_SIZE.tag,
-                letterSpacing: LETTER_SPACING.caps,
-                color: COLORS.mute,
-              }}
-            >
-              {LEVEL_NAMES[level] ?? ''}
+            </Hint>
+            {/* The current band, as a readout rather than a label. It used to
+                be 10px mono at caps tracking with no uppercase transform, so
+                "Beginner" rendered letter-spaced in a face meant for labels —
+                the tracking said "label", the sentence case said "value", and
+                it read as neither. */}
+            <Body size="sm" tone="soft" style={{ overflowWrap: 'anywhere' }}>
+              <strong>{LEVEL_NAMES[level] ?? ''}</strong>
               {levelBoost && (LEVEL_MULTIPLIERS[level] ?? 1) > 1
                 ? ` · ×${LEVEL_MULTIPLIERS[level]} XP per answer`
                 : ''}
-            </div>
+            </Body>
             {/* What the level actually changes, in the learner's terms.
                 Printed verbatim, never case-transformed: lowercasing the
                 detail turned B1's "AI-graded" into "ai-graded". */}
             {LEVEL_MODES[level] && (
-              <div
-                style={{
-                  fontFamily: FONTS.body,
-                  fontSize: FONT_SIZE.base,
-                  color: COLORS.inkSoft,
-                  overflowWrap: 'anywhere',
-                }}
-              >
+              <Hint>
                 Translate exercises: <strong>{LEVEL_MODES[level].label}</strong> —{' '}
                 {LEVEL_MODES[level].detail}.
-              </div>
+              </Hint>
             )}
             <details
               open={showLevelOverride}
               onToggle={(e) => setShowLevelOverride(e.currentTarget.open)}
             >
               <summary
-                style={{
-                  fontFamily: FONTS.mono,
-                  fontSize: FONT_SIZE.tag,
-                  letterSpacing: LETTER_SPACING.caps,
-                  textTransform: 'uppercase',
-                  color: COLORS.mute,
-                  cursor: 'pointer',
-                  minWidth: 0,
-                  overflowWrap: 'anywhere',
-                }}
+                style={{ ...TEXT.label, cursor: 'pointer', minWidth: 0, overflowWrap: 'anywhere' }}
               >
                 Advanced — override classification
               </summary>
               {showLevelOverride && (
                 <Stack gap={3} style={{ marginTop: SPACE[3] }}>
-                  <div
-                    style={{
-                      fontFamily: FONTS.body,
-                      fontSize: FONT_SIZE.sm,
-                      color: COLORS.inkSoft,
-                      overflowWrap: 'anywhere',
-                    }}
-                  >
+                  <Hint>
                     Writes CEFR without a placement test. Learners should retake placement. This
                     override exists for sync debugging and tests.
-                  </div>
+                  </Hint>
                   <LevelSwitcher
                     value={level}
                     onChange={(next) => {
@@ -222,87 +187,45 @@ export default function SettingsRoute({
             </details>
             <GoalPicker goal={goal} onPick={onGoalChange} />
             {interestTopics.length > 0 && (
-              <Stack gap={3}>
-                <div
-                  style={{
-                    fontFamily: FONTS.mono,
-                    fontSize: FONT_SIZE.tag,
-                    fontWeight: FONT_WEIGHT.bold,
-                    letterSpacing: LETTER_SPACING.caps,
-                    textTransform: 'uppercase',
-                    color: COLORS.mute,
-                  }}
-                >
-                  Interessen
-                </div>
-                <div
-                  style={{
-                    fontFamily: FONTS.body,
-                    fontSize: FONT_SIZE.sm,
-                    color: COLORS.inkSoft,
-                    overflowWrap: 'anywhere',
-                  }}
-                >
-                  Optional topical vocabulary. Enabled decks appear under Interests in Vocab
-                  Practice.
-                </div>
+              <Field
+                label="Interessen"
+                hint="Optional topical vocabulary. Enabled decks appear under Interests in Vocab Practice."
+              >
                 <InterestPicker
                   topics={interestTopics}
                   enabled={enabledInterests}
                   onChange={onInterestsChange}
                 />
-              </Stack>
+              </Field>
             )}
-            <Stack gap={3}>
-              <div
-                style={{
-                  fontFamily: FONTS.mono,
-                  fontSize: FONT_SIZE.tag,
-                  fontWeight: FONT_WEIGHT.bold,
-                  letterSpacing: LETTER_SPACING.caps,
-                  textTransform: 'uppercase',
-                  color: COLORS.mute,
-                }}
-              >
-                KI-Modell
-              </div>
-              <div
-                style={{
-                  fontFamily: FONTS.body,
-                  fontSize: FONT_SIZE.sm,
-                  color: COLORS.inkSoft,
-                  overflowWrap: 'anywhere',
-                }}
-              >
-                Used for Chat with Anna. Auto keeps the current router. Fast / Balanced / Capable
-                pick a band when your plan allows it.
-              </div>
+            {/* Settings keeps the always-visible 2×2 grid. Chat collapsed its
+                copy into a pull-down (ModelPopover) because Chat is the
+                conversation; here the grid IS the surface, and hiding a
+                setting behind a disclosure on the settings screen would be
+                the wrong trade. */}
+            <Field
+              label="KI-Modell"
+              hint="Used for Chat with Anna. Auto keeps the current router. Fast / Balanced / Capable pick a band when your plan allows it."
+            >
               <ModelPicker
                 value={preferredModel}
                 onChange={onPreferredModelChange}
                 userTier={userTierOf(user)}
               />
-            </Stack>
-            <button
-              type="button"
+            </Field>
+            {/* Was a hand-rolled button carrying its own copy of the
+                secondary recipe — and therefore no focus ring, no press
+                state, and a letter-spacing one stop off every other button on
+                the route. The ALL-CAPS is the button token's, not the
+                string's, so the accessible name stays sentence case. */}
+            <Button
+              variant="secondary"
               aria-pressed={soundOn}
               onClick={onSoundChange}
-              style={{
-                border: 'none',
-                borderRadius: RADIUS.md,
-                boxShadow: SHADOW.press(COLORS.lip),
-                background: COLORS.card,
-                color: COLORS.ink,
-                padding: `${SPACE[2]}px ${SPACE[4]}px`,
-                fontFamily: FONTS.mono,
-                fontSize: FONT_SIZE.sm,
-                letterSpacing: LETTER_SPACING.widest,
-                cursor: 'pointer',
-                alignSelf: 'flex-start',
-              }}
+              style={{ alignSelf: 'flex-start' }}
             >
-              {soundOn ? '🔊 SOUND: ON' : '🔇 SOUND: OFF'}
-            </button>
+              {soundOn ? '🔊 Sound: on' : '🔇 Sound: off'}
+            </Button>
           </Stack>
         </Section>
 
@@ -359,9 +282,11 @@ export default function SettingsRoute({
               <Button variant="secondary" onClick={() => setReporting(true)}>
                 Report an issue
               </Button>
-              <div style={hintStyle}>
-                Something wrong with a word, a translation or the app itself? Tell us here. Inside
-                an exercise, the flag icon reports that exact card.
+              <div style={{ marginTop: SPACE[2] }}>
+                <Hint>
+                  Something wrong with a word, a translation or the app itself? Tell us here. Inside
+                  an exercise, the flag icon reports that exact card.
+                </Hint>
               </div>
             </div>
             <div>
@@ -374,8 +299,8 @@ export default function SettingsRoute({
               >
                 Show tutorial
               </Button>
-              <div style={hintStyle}>
-                Replay the short walkthrough of the header, Chat and Profile.
+              <div style={{ marginTop: SPACE[2] }}>
+                <Hint>Replay the short walkthrough of the header, Chat and Profile.</Hint>
               </div>
             </div>
           </Stack>

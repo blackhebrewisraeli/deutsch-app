@@ -130,6 +130,22 @@ describe('PersonalHub', () => {
     });
   });
 
+  // At 320px the avatar owns half the identity band, so the greeting has a
+  // measured 77px of track — 36px display type broke "Guten Tag" into three
+  // lines and split the word mid-syllable. The display face steps down with
+  // the space it has, the same way Heading size="display" does.
+  it.each([
+    [1280, FONT_SIZE['4xl']],
+    [375, FONT_SIZE['2xl']],
+    [320, FONT_SIZE['2xl']],
+  ])('sizes the greeting for the track it gets at %spx', (width, expected) => {
+    setViewportWidth(width);
+    render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
+    expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toHaveStyle({
+      fontSize: `${expected}px`,
+    });
+  });
+
   it('sizes the greeting and standing numbers as the card display scale', () => {
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} streak={4} />);
     expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toHaveStyle({

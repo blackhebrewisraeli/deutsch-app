@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ChatTab from './ChatTab';
 import { callClaude } from '../lib/claude';
@@ -66,11 +66,26 @@ describe('ChatTab routing', () => {
     });
   });
 
-  it('lets the learner change the model from Chat', async () => {
+  it('lets the learner change the model from Chat, through the popover', async () => {
     const onPreferredModelChange = vi.fn();
     render(<ChatTab onPreferredModelChange={onPreferredModelChange} />);
-    await userEvent.click(screen.getByRole('button', { name: /balanced/i }));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Modell: Auto' }));
+    const sheet = screen.getByRole('dialog', { name: 'Modell' });
+    await userEvent.click(within(sheet).getByRole('button', { name: /balanced/i }));
+
     expect(onPreferredModelChange).toHaveBeenCalledWith('balanced');
+    // Picking dismisses and hands focus back, the way the header sheets do.
+    expect(screen.queryByRole('dialog', { name: 'Modell' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Modell: Auto' })).toHaveFocus();
+  });
+
+  it('names the saved preference on the closed trigger', () => {
+    render(<ChatTab preferredModel="capable" />);
+    expect(screen.getByRole('button', { name: 'Modell: Capable' })).toHaveAttribute(
+      'aria-expanded',
+      'false'
+    );
   });
 });
 
@@ -264,10 +279,33 @@ describe('ChatTab conversation-first layout', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('collapses the model picker below the thread when not wide', () => {
-    render(<ChatTab wide={false} />);
-    expect(screen.getByText('Modell')).toBeInTheDocument();
-    expect(screen.getByText('Modell').closest('summary')).toBeTruthy();
+  it('keeps the model control below the thread when not wide', () => {
+    const { container } = render(<ChatTab wide={false} />);
+    const trigger = screen.getByRole('button', { name: 'Modell: Auto' });
+    expect(trigger.closest('summary')).toBeNull();
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+
+    // Ordered after the conversation panel, not stacked above it.
+    const grid = chatLayoutGrid(container);
+    const slots = [...grid.children];
+    const composer = screen.getByRole('textbox', { name: 'Chat message in German' });
+    const thread = slots.find((el) => el.contains(composer));
+    const control = slots.find((el) => el.contains(trigger));
+    expect(slots.indexOf(control)).toBeGreaterThan(slots.indexOf(thread));
+  });
+
+  // The whole point of the popover: Chat is the conversation, so four
+  // preference buttons must not sit permanently in its tab order. They used to
+  // — always visible in the wide aside, and one `<summary>` away when stacked.
+  it.each([true, false])('mounts no preference buttons until opened (wide=%s)', (wide) => {
+    render(<ChatTab wide={wide} />);
+    for (const band of [/^Auto/i, /^Fast/i, /^Balanced/i, /^Capable/i]) {
+      expect(screen.queryByRole('button', { name: band })).not.toBeInTheDocument();
+    }
+    expect(screen.queryByRole('group', { name: 'Chat model' })).not.toBeInTheDocument();
+    // The control itself IS mounted — a zero-button assertion passes just as
+    // well when the whole feature is gone.
+    expect(screen.getByRole('button', { name: 'Modell: Auto' })).toBeInTheDocument();
   });
 
   it('uses a 220px rail plus a shrinking conversation track when wide', () => {

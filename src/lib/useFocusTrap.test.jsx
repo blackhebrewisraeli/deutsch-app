@@ -114,19 +114,29 @@ describe('useFocusTrap', () => {
   });
 });
 
-// Guard, in the style of noHardcodedHex / noPromptsInComponents. The three
-// header sheets are NON-MODAL popovers: `aria-haspopup="dialog"` with no
-// `aria-modal` and no scrim. Trapping Tab in one would be a regression dressed
-// as an a11y fix — a non-modal popover is supposed to let Tab leave. The audit
-// behind #144–#146 checked them and deliberately left them alone, so this
+// Guard, in the style of noHardcodedHex / noPromptsInComponents. These are
+// NON-MODAL popovers: `aria-haspopup="dialog"` with no `aria-modal` and no
+// scrim. Trapping Tab in one would be a regression dressed as an a11y fix — a
+// non-modal popover is supposed to let Tab leave. The audit behind #144–#146
+// checked the three header sheets and deliberately left them alone, so this
 // stops the next pass at "completing the loop" from adopting the hook there.
-it('is not adopted by the non-modal header sheets', async () => {
+//
+// ModelPopover joined the list when Chat's model grid collapsed into a
+// pull-down: it is the same kind of surface, built on the same pattern, and it
+// is the one most likely to be "fixed" by someone who has just read the three
+// modal dialogs above.
+it('is not adopted by the non-modal popovers', async () => {
   const { readFileSync } = await import('node:fs');
   const nonModal = [
     'src/components/AccountChip.jsx',
     'src/components/StatusChip.jsx',
     'src/components/ThemeChip.jsx',
+    'src/components/ModelPopover.jsx',
   ];
-  const adopted = nonModal.filter((f) => /useFocusTrap/.test(readFileSync(f, 'utf8')));
-  expect({ inspected: nonModal.length, adopted }).toEqual({ inspected: 3, adopted: [] });
+  // Matches the IMPORT, not any mention of the name. A bare /useFocusTrap/
+  // fired on ModelPopover's own comment explaining why it does not trap — the
+  // guard would have banned documenting the rule it enforces.
+  const imports = /^\s*import\b.*\buseFocusTrap\b/m;
+  const adopted = nonModal.filter((f) => imports.test(readFileSync(f, 'utf8')));
+  expect({ inspected: nonModal.length, adopted }).toEqual({ inspected: 4, adopted: [] });
 });

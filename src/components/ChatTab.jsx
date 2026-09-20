@@ -1,13 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
-import {
-  COLORS,
-  FONT_MONO,
-  FONT_BODY,
-  FONT_SIZE,
-  LETTER_SPACING,
-  SPACE,
-  RADIUS,
-} from '../lib/theme';
+import { COLORS, FONT_BODY, FONT_SIZE, SPACE, RADIUS } from '../lib/theme';
 import { callClaude } from '../lib/claude';
 import { chatSystemPrompt } from '../lib/prompts';
 import { classifiedLevel } from '../lib/levelGate';
@@ -15,7 +7,7 @@ import { getUserLevel } from '../lib/levelPref';
 import { buildChatAllowlist, scenariosForLevel } from '../lib/chatVocab';
 import { interestPromptHints } from '../lib/interests';
 import { sanitizePreferredModel, userTierOf } from '../lib/ai-routing/preference.js';
-import ModelPicker from './ModelPicker';
+import ModelPopover from './ModelPopover';
 import { activePack } from '../packs';
 const {
   scenarios: SCENARIOS,
@@ -223,12 +215,16 @@ export default function ChatTab({
     }
   };
 
-  const modelPicker = (
-    <ModelPicker
+  // One compact control, rendered in exactly one of the two slots below. It
+  // used to be the full 2×2 grid: labelled in the wide aside, wrapped in a
+  // `<details>` when stacked. Chat is the conversation; the model is a setting
+  // you glance at, so it collapses to its current value and opens on demand.
+  // Settings still renders the grid always-visible.
+  const modelControl = (
+    <ModelPopover
       value={preferredModel}
       onChange={onPreferredModelChange}
       userTier={userTierOf(user)}
-      compact
     />
   );
 
@@ -273,23 +269,7 @@ export default function ChatTab({
             />
           )}
 
-          {!stacked && (
-            <div style={{ marginTop: SPACE[5] }}>
-              <div
-                style={{
-                  fontFamily: FONT_MONO,
-                  fontSize: FONT_SIZE.tag,
-                  letterSpacing: LETTER_SPACING.caps,
-                  textTransform: 'uppercase',
-                  color: COLORS.mute,
-                  marginBottom: SPACE[3],
-                }}
-              >
-                Modell
-              </div>
-              {modelPicker}
-            </div>
-          )}
+          {!stacked && <div style={{ marginTop: SPACE[5] }}>{modelControl}</div>}
         </aside>
 
         <div
@@ -334,23 +314,11 @@ export default function ChatTab({
           </div>
         </div>
 
-        {stacked && (
-          <details style={{ minWidth: 0 }}>
-            <summary
-              style={{
-                fontFamily: FONT_MONO,
-                fontSize: FONT_SIZE.tag,
-                letterSpacing: LETTER_SPACING.caps,
-                textTransform: 'uppercase',
-                color: COLORS.mute,
-                cursor: 'pointer',
-              }}
-            >
-              Modell
-            </summary>
-            <div style={{ marginTop: SPACE[3] }}>{modelPicker}</div>
-          </details>
-        )}
+        {/* Stacked keeps the control BELOW the thread, where the `<details>`
+            used to sit: on a phone the conversation owns the top of the
+            screen, and a model chip above it would push the first message
+            down for a setting nobody opens mid-sentence. */}
+        {stacked && <div style={{ minWidth: 0 }}>{modelControl}</div>}
       </div>
     </>
   );
