@@ -330,9 +330,9 @@ button[aria-haspopup="dialog"]`) instead of selecting one by its literal
   audit.**~~ Closed: `npm run audit:contrast` now drives both.
 
   The popover is opened through its ACCESSIBLE trigger
-  (`button[aria-haspopup="dialog"][aria-label^="Modell:"]`) in all 12 guest
-  combinations — 2 modes × 2 tones × 3 viewports — piggybacking on the tab
-  walk's visit to Chat, so it costs no extra navigation. Per combination it
+  (`button[aria-haspopup="dialog"][aria-label^="Modell:"]`) in every guest
+  combination — 2 modes × 3 viewports — piggybacking on the tab walk's visit to
+  Chat, so it costs no extra navigation. Per combination it
   fails the run when the trigger or the dialog is missing rather than skipping
   quietly; asserts the four choices (Auto / Fast / Balanced / Capable) are
   present while open and ABSENT while closed, which is the whole point of
@@ -361,13 +361,27 @@ button[aria-haspopup="dialog"]`) instead of selecting one by its literal
   hint. What it still cannot see: a label that breaks INSIDE a word (the
   `SPOR / T` tiles of #305 overflowed nothing), and any colour pairing a
   fixture does not render.
-- **The contrast audit sweeps a theme `tone` no code reads.** `MODES × TONES`
-  doubles the guest matrix and the signed-in pass, but `deutsch-theme-tone` has
-  no reader left anywhere in `src/` — the tone picker was removed and
-  `MODE_COLORS` collapsed to mode-only. Both halves therefore measure identical
-  pixels. Left in place here because collapsing the matrix is not an
-  audit-coverage change and deserves its own PR; the Settings sweep added above
-  iterates modes only and says so at the loop.
+- ~~**The contrast audit sweeps a theme `tone` no code reads.**~~ Closed: the
+  `TONES` loop is gone, and the script no longer writes `deutsch-theme-tone` at
+  all. The Appearance picker lost its Day / Night tone in `d0a9bf3`
+  (2026-08-24) — `THEME_TONE_KEY` and every tone accessor went with it, and
+  `MODE_COLORS` collapsed from mode × tone to mode-only — but the audit kept
+  sweeping both values for almost a month, so every guest combination and every
+  signed-in combination ran twice over identical pixels.
+
+  Measured before removing, not argued from a grep. Against the production
+  build, with the mode held fixed, `day`, `night` and NO KEY AT ALL produce
+  byte-identical readings of all 69 custom properties on `:root` and of the
+  resolved colour / background / border of 55 text nodes on the Settings route.
+  The control — light vs dark — moves both hashes, so the probe could see a
+  palette change if there were one. An earlier version of that probe reported
+  8 of 12 pairs differing; every one of those was the one-shot tutorial overlay
+  or a randomised drill sentence, not colour, which is why the reading is taken
+  on a deterministic surface with the tutorial dismissed.
+
+  Guest combinations 72 → 36, signed-in 4 → 2, popover measurements 12 → 6,
+  signed-in Settings 12 → 6. Runtime 3:30 → 1:54, measured on the same box. If a tone ever comes back,
+  the loop comes back with it; the comment at `MODES` says so.
 - ~~**Local `.env` holds a Sentry user token where a DSN belongs.**~~ No
   `VITE_SENTRY_DSN` assignment remains in `.env` or `.env.local` as checked
   2026-09-20, so the recorded `sntryu_`-as-DSN console warning is no longer a
