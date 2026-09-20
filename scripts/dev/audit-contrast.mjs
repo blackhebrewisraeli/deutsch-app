@@ -2,7 +2,7 @@
 /**
  * Rendered-DOM contrast audit.
  *
- * Walks 2 modes × 2 tones × 6 tabs × 3 viewports with a populated account and
+ * Walks 2 modes × 6 tabs × 3 viewports with a populated account and
  * reports every text node whose contrast against its nearest opaque background
  * falls below WCAG AA (4.5:1 body / 3:1 large), plus any header popover that
  * renders outside the viewport (a class jsdom and scrollWidth both miss).
@@ -408,10 +408,23 @@ async function provisionTarget() {
 }
 
 const MODES = ['light', 'dark'];
-const TONES = ['day', 'night'];
 const TABS = ['Home', 'Chat', 'Alphabet', 'Vocab', 'Translate', 'Profile'];
-// The signed-in pass sweeps mode x tone at one viewport. Contrast is a function
-// of the palette, not the width; width only moves things around, and the guest
+
+// There is no TONES loop. The Appearance picker lost its Day / Night tone in
+// d0a9bf3 (2026-08-24) — `deutsch-theme-tone` has had no reader anywhere in
+// `src/` since, and `MODE_COLORS` collapsed from mode × tone to mode-only — but
+// this script kept writing the key and sweeping both values, so every guest
+// combination and every signed-in combination ran twice over identical pixels.
+//
+// Measured before removing, against the production build, rather than argued
+// from a grep: with the mode held fixed, `day`, `night` and NO KEY AT ALL
+// produce byte-identical readings of all 69 custom properties on `:root` and of
+// the resolved colour / background / border of 55 text nodes on Settings.
+// Light vs dark moves both hashes, so the probe could see a palette change if
+// there were one. If a tone ever comes back it needs this loop back with it.
+//
+// The signed-in pass sweeps modes at one viewport. Contrast is a function of
+// the palette, not the width; width only moves things around, and the guest
 // walk already covers all three widths for the shared chrome.
 const SIGNED_IN_VIEWPORT = { width: 390, height: 800 };
 
@@ -616,9 +629,9 @@ function measureOpenSheet() {
  *
  * The click and the measurement have to be separate round trips. Doing both
  * inside one page.evaluate reads the DOM before React has rendered the sheet,
- * which reported "sheet did not open" for all 12 mode×tone×viewport
- * combinations and made this script exit 1 unconditionally — the reason it was
- * never wired into CI.
+ * which reported "sheet did not open" for every mode×viewport combination and
+ * made this script exit 1 unconditionally — the reason it was never wired into
+ * CI.
  *
  * Drives EVERY header sheet, and also colour-audits each one's interior while
  * it is open. Both were previously limited to the Appearance sheet by name.
@@ -1104,15 +1117,14 @@ async function stubAccountNetwork(page) {
  * profile card. The guest walk cannot reach any of it — before this pass those
  * surfaces had never been measured in any mode.
  */
-async function auditSignedIn(page, mode, tone) {
+async function auditSignedIn(page, mode) {
   await page.evaluate(
-    ({ m, t, key }) => {
+    ({ m, key }) => {
       localStorage.setItem('deutsch-theme-mode', m);
-      localStorage.setItem('deutsch-theme-tone', t);
       localStorage.setItem('deutsch-level', 'a1');
       return key;
     },
-    { m: mode, t: tone, key: SESSION_KEY }
+    { m: mode, key: SESSION_KEY }
   );
   await page.evaluate(seedPopulatedAccount);
   await page.evaluate(seedSignedInSession, SESSION_KEY);
@@ -1124,7 +1136,7 @@ async function auditSignedIn(page, mode, tone) {
   const signedIn = await page.evaluate(() => Boolean(document.querySelector('header')));
   if (!signedIn) {
     throw new Error(
-      `audit-contrast: signed-in pass never reached the app shell (${mode}.${tone}). ` +
+      `audit-contrast: signed-in pass never reached the app shell (${mode}). ` +
         'The session seed no longer satisfies useAuth — check SESSION_KEY and expires_at.'
     );
   }
@@ -1172,7 +1184,7 @@ async function auditSignedIn(page, mode, tone) {
   if (settingsMeasured < SETTINGS_WIDTHS.length) {
     throw new Error(
       `audit-contrast: reached Settings at only ${settingsMeasured}/${SETTINGS_WIDTHS.length} ` +
-        `widths in the signed-in pass (${mode}.${tone}) — the segment moved.`
+        `widths in the signed-in pass (${mode}) — the segment moved.`
     );
   }
 
@@ -1182,7 +1194,7 @@ async function auditSignedIn(page, mode, tone) {
   const onLeagues = await page.evaluate(clickProfileSegment, 'leagues');
   if (!onLeagues) {
     throw new Error(
-      `audit-contrast: no LEAGUES toggle on Profile (${mode}.${tone}) — either the ` +
+      `audit-contrast: no LEAGUES toggle on Profile (${mode}) — either the ` +
         'build lacks VITE_LEAGUES_ENABLED=true or the toggle moved.'
     );
   }
@@ -1232,14 +1244,10 @@ async function auditSignedIn(page, mode, tone) {
   };
 }
 
-async function applyTheme(page, mode, tone) {
-  await page.evaluate(
-    ({ mode: m, tone: t }) => {
-      localStorage.setItem('deutsch-theme-mode', m);
-      localStorage.setItem('deutsch-theme-tone', t);
-    },
-    { mode, tone }
-  );
+async function applyTheme(page, mode) {
+  await page.evaluate((m) => {
+    localStorage.setItem('deutsch-theme-mode', m);
+  }, mode);
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(400);
   await dismissEntryScreens(page);
@@ -1282,66 +1290,59 @@ async function main() {
   let signedInSettingsMeasured = 0;
 
   for (const mode of MODES) {
-    for (const tone of TONES) {
-      for (const vp of VIEWPORTS) {
-        await page.setViewportSize(vp);
-        await applyTheme(page, mode, tone);
-        // Re-seed after reload (reload keeps localStorage, but be explicit).
-        await page.evaluate(seedPopulatedAccount);
-        await page.reload({ waitUntil: 'domcontentloaded' });
-        await page.waitForTimeout(400);
-        await dismissEntryScreens(page);
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize(vp);
+      await applyTheme(page, mode);
+      // Re-seed after reload (reload keeps localStorage, but be explicit).
+      await page.evaluate(seedPopulatedAccount);
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(400);
+      await dismissEntryScreens(page);
 
-        const sheets = await auditHeaderSheets(page, MIN_HEADER_SHEETS_GUEST, 'guest');
-        sheetsMeasured = Math.max(sheetsMeasured, sheets.measured);
-        for (const l of sheets.layout) {
-          layout.push({ ...l, mode, tone, viewport: vp.width });
-        }
-        for (const f of sheets.contrast) {
-          findings.push({ ...f, mode, tone, viewport: vp.width });
+      const sheets = await auditHeaderSheets(page, MIN_HEADER_SHEETS_GUEST, 'guest');
+      sheetsMeasured = Math.max(sheetsMeasured, sheets.measured);
+      for (const l of sheets.layout) {
+        layout.push({ ...l, mode, viewport: vp.width });
+      }
+      for (const f of sheets.contrast) {
+        findings.push({ ...f, mode, viewport: vp.width });
+      }
+
+      for (const tab of TABS) {
+        combinations += 1;
+        await openTab(page, tab);
+        const bad = await page.evaluate(collectFindings, tab);
+        for (const f of bad) {
+          findings.push({ ...f, mode, viewport: vp.width });
         }
 
-        for (const tab of TABS) {
-          combinations += 1;
-          await openTab(page, tab);
-          const bad = await page.evaluate(collectFindings, tab);
-          for (const f of bad) {
-            findings.push({
-              ...f,
-              mode,
-              tone,
-              viewport: vp.width,
-            });
+        // Chat's model popover, driven while Chat is already open — in its
+        // own pass it would pay for the navigation twice. Every mode and
+        // every width: the placement flips above the trigger at 320px and
+        // not at 1280, so one width would audit one of the two branches.
+        if (tab === 'Chat') {
+          chatPopoverAttempts += 1;
+          const popover = await auditChatModelPopover(page);
+          chatPopoversMeasured += popover.measured;
+          for (const l of popover.layout) {
+            layout.push({ ...l, mode, viewport: vp.width });
           }
-
-          // Chat's model popover, driven while Chat is already open — in its
-          // own pass it would pay for the navigation twice. Every mode and
-          // every width: the placement flips above the trigger at 320px and
-          // not at 1280, so one width would audit one of the two branches.
-          if (tab === 'Chat') {
-            chatPopoverAttempts += 1;
-            const popover = await auditChatModelPopover(page);
-            chatPopoversMeasured += popover.measured;
-            for (const l of popover.layout) {
-              layout.push({ ...l, mode, tone, viewport: vp.width });
-            }
-            for (const f of popover.contrast) {
-              findings.push({ ...f, mode, tone, viewport: vp.width });
-            }
+          for (const f of popover.contrast) {
+            findings.push({ ...f, mode, viewport: vp.width });
           }
         }
+      }
 
-        // Last in the iteration: opening the trial wall mutates stored
-        // progress, so it must not run before the tab walk it would change.
-        // The next iteration re-seeds and reloads, so nothing carries over.
-        const modals = await auditModals(page);
-        modalsMeasured = Math.max(modalsMeasured, modals.measured);
-        for (const l of modals.layout) {
-          layout.push({ ...l, mode, tone, viewport: vp.width });
-        }
-        for (const f of modals.contrast) {
-          findings.push({ ...f, mode, tone, viewport: vp.width });
-        }
+      // Last in the iteration: opening the trial wall mutates stored
+      // progress, so it must not run before the tab walk it would change.
+      // The next iteration re-seeds and reloads, so nothing carries over.
+      const modals = await auditModals(page);
+      modalsMeasured = Math.max(modalsMeasured, modals.measured);
+      for (const l of modals.layout) {
+        layout.push({ ...l, mode, viewport: vp.width });
+      }
+      for (const f of modals.contrast) {
+        findings.push({ ...f, mode, viewport: vp.width });
       }
     }
   }
@@ -1350,11 +1351,6 @@ async function main() {
   // Its own sweep rather than a fourth entry in VIEWPORTS: adding 375px to the
   // matrix above would re-walk six tabs, three modals and two header sheets at
   // a width whose only open question is how this one route reflows.
-  //
-  // Mode only, no tone: `deutsch-theme-tone` has no reader left anywhere in
-  // src/ (the tone picker was removed and MODE_COLORS collapsed to mode), so a
-  // tone loop here would double the work for identical pixels. The matrix
-  // above still sweeps both, and that is where the claim is worth re-testing.
   for (const mode of MODES) {
     for (const width of SETTINGS_WIDTHS) {
       await page.setViewportSize({ width, height: 800 });
@@ -1366,10 +1362,10 @@ async function main() {
       const res = await auditSettings(page, `Settings/guest@${width}`);
       guestSettingsMeasured += res.measured;
       for (const l of res.layout) {
-        layout.push({ ...l, mode, tone: 'day', viewport: width, pass: 'guest settings' });
+        layout.push({ ...l, mode, viewport: width, pass: 'guest settings' });
       }
       for (const f of res.contrast) {
-        findings.push({ ...f, mode, tone: 'day', viewport: width });
+        findings.push({ ...f, mode, viewport: width });
       }
     }
   }
@@ -1386,22 +1382,20 @@ async function main() {
 
   let profileCardsAudited = 0;
   for (const mode of MODES) {
-    for (const tone of TONES) {
-      signedInCombinations += 1;
-      const res = await auditSignedIn(signedInPage, mode, tone);
-      if (res.profileCardOpened) profileCardsAudited += 1;
-      signedInSheetsMeasured = Math.max(signedInSheetsMeasured, res.sheetsMeasured);
-      signedInSettingsMeasured += res.settingsMeasured;
-      for (const l of res.sheetLayout) {
-        // The Settings findings carry the width they were measured at; the
-        // sheet findings do not, and belong to the pass viewport.
-        const viewport = typeof l.viewport === 'number' ? l.viewport : SIGNED_IN_VIEWPORT.width;
-        layout.push({ ...l, mode, tone, viewport, pass: 'signed-in' });
-      }
-      for (const f of res.findings) {
-        const viewport = typeof f.viewport === 'number' ? f.viewport : SIGNED_IN_VIEWPORT.width;
-        findings.push({ ...f, mode, tone, viewport });
-      }
+    signedInCombinations += 1;
+    const res = await auditSignedIn(signedInPage, mode);
+    if (res.profileCardOpened) profileCardsAudited += 1;
+    signedInSheetsMeasured = Math.max(signedInSheetsMeasured, res.sheetsMeasured);
+    signedInSettingsMeasured += res.settingsMeasured;
+    for (const l of res.sheetLayout) {
+      // The Settings findings carry the width they were measured at; the
+      // sheet findings do not, and belong to the pass viewport.
+      const viewport = typeof l.viewport === 'number' ? l.viewport : SIGNED_IN_VIEWPORT.width;
+      layout.push({ ...l, mode, viewport, pass: 'signed-in' });
+    }
+    for (const f of res.findings) {
+      const viewport = typeof f.viewport === 'number' ? f.viewport : SIGNED_IN_VIEWPORT.width;
+      findings.push({ ...f, mode, viewport });
     }
   }
   await signedInContext.close();
@@ -1412,7 +1406,7 @@ async function main() {
   const seen = new Set();
   const unique = [];
   for (const f of findings) {
-    const key = [f.mode, f.tone, f.tab, f.text, f.ratio, f.fg, f.bg].join('|');
+    const key = [f.mode, f.tab, f.text, f.ratio, f.fg, f.bg].join('|');
     if (seen.has(key)) continue;
     seen.add(key);
     unique.push(f);
@@ -1423,10 +1417,10 @@ async function main() {
 
   console.log(
     `Audited ${combinations} guest combinations ` +
-      `(${MODES.length}×${TONES.length}×${TABS.length}×${VIEWPORTS.length}).`
+      `(${MODES.length}×${TABS.length}×${VIEWPORTS.length}).`
   );
   console.log(
-    `Audited ${signedInCombinations} signed-in combinations (2×2) — ` +
+    `Audited ${signedInCombinations} signed-in combinations (${MODES.length} modes) — ` +
       `AccountChip, account section, league table; ${profileCardsAudited} with the profile card.`
   );
   console.log(
@@ -1444,8 +1438,8 @@ async function main() {
   // surface prints the same zero findings as a clean one, which is how the
   // Status sheet went unaudited while the totals looked healthy.
   // `all`, not undefined: these are findings about the run as a whole, and the
-  // printer below reads mode/tone/viewport off every row.
-  const everywhere = { mode: 'all', tone: 'all', viewport: 'all' };
+  // printer below reads mode/viewport off every row.
+  const everywhere = { mode: 'all', viewport: 'all' };
   if (chatPopoversMeasured < chatPopoverAttempts) {
     layout.push({
       ...everywhere,
@@ -1485,7 +1479,7 @@ async function main() {
   }
 
   for (const l of layout) {
-    console.log(`[${l.mode}.${l.tone} @${l.viewport}] ${l.reason} ${JSON.stringify(l)}`);
+    console.log(`[${l.mode} @${l.viewport}] ${l.reason} ${JSON.stringify(l)}`);
   }
 
   if (unique.length === 0 && layout.length === 0) {
@@ -1495,7 +1489,7 @@ async function main() {
 
   for (const f of unique.slice(0, 80)) {
     console.log(
-      `[${f.mode}.${f.tone} @${f.viewport} ${f.tab}] ${f.ratio}:1 (need ${f.floor}) ` +
+      `[${f.mode} @${f.viewport} ${f.tab}] ${f.ratio}:1 (need ${f.floor}) ` +
         `"${f.text}" fg=${f.fg} bg=${f.bg} size=${f.size}`
     );
   }

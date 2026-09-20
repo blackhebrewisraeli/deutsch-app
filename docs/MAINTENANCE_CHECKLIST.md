@@ -31,7 +31,7 @@ and anything only a human reads as wrong.
 
 | Surface                                          | Widths           | Contrast                             | Horizontal fit                | States                                                                                                  |
 | ------------------------------------------------ | ---------------- | ------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| All six tabs                                     | 1280 / 390 / 320 | yes                                  | no — contrast only            | guest, populated, 2 modes × 2 tones                                                                     |
+| All six tabs                                     | 1280 / 390 / 320 | yes                                  | no — contrast only            | guest, populated, 2 modes (light and dark)                                                              |
 | Header sheets, all, opened by their triggers     | 1280 / 390 / 320 | yes                                  | element edges                 | 2 guest, 3 signed-in                                                                                    |
 | Sign-in, trial wall, expired-link overlay        | 1280 / 390 / 320 | yes                                  | element edges                 | guest                                                                                                   |
 | Chat → model popover                             | 1280 / 390 / 320 | yes, incl. the plan-fallback caption | element edges + page overflow | guest; opened by its accessible trigger, four choices asserted present when open and absent when closed |
@@ -148,11 +148,11 @@ playback may require a direct press because browsers restrict autoplay.
   or AI.
 - Run `npm run audit:contrast` after any change to colour tokens, type tiers,
   a popover, or the Settings route. It builds and serves its own target, so it
-  needs no running dev server, and takes roughly four minutes. Read the
-  coverage counts it prints, not only its exit code: `Chat model popover:
-opened and measured in N/12` and `Profile → Settings: N/6 guest and N/12
-signed-in` are the denominators that separate "nothing is wrong" from
-  "nothing was checked".
+  needs no running dev server, and takes about two minutes. Read the coverage
+  counts it prints, not only its exit code — `Chat model popover: opened and
+measured in 6/6` and `Profile → Settings: 6/6 guest and 6/6 signed-in` are
+  the denominators that separate "nothing is wrong" from "nothing was
+  checked".
 - Check the [uptime workflow](../.github/workflows/uptime.yml), Sentry issues,
   and Vercel function logs after deployment. Check the build log for a
   `SENTRY SOURCE-MAP UPLOAD FAILED` banner; source-map upload does not fail the
