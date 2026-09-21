@@ -912,24 +912,56 @@ async function auditChatModelPopover(page) {
 // ─── Profile → Settings ───────────────────────────────────────────────────
 //
 // Settings rode along in the tab walk only as Profile's DEFAULT view, which is
-// the stats dashboard — so the route itself was measured in exactly one place,
+// the consolidated profile page — so the route itself was measured in one place,
 // the signed-in pass at 390px. It is the densest surface in the app (six
 // panels of label + hint + control, three type tiers) and it is where the last
 // two narrow-width defects landed, so it gets its own sweep at the three
 // widths that matter.
 const SETTINGS_WIDTHS = [320, 375, 1280];
 
-/** One of Profile's view segments, by its accessible name. */
-function clickProfileSegment(name) {
-  const b = [...document.querySelectorAll('button')].find(
-    (x) => (x.getAttribute('aria-label') || '') === name
+/**
+ * Click Profile's door to the Settings route, by accessible name.
+ *
+ * It used to be a segment in a STATS / LEAGUES / SETTINGS control, labelled
+ * `settings`. That control is gone — the Profile tab is one page now — so the
+ * door is a button on the page itself: "Edit profile" for a signed-in learner
+ * (the spec's secondary self action) and plain "Settings" for a guest, who has
+ * no account sheet to reach it from.
+ *
+ * Both names are tried because this one function serves the guest sweep and
+ * the signed-in pass, and the caller owns which of the two it is.
+ */
+function clickSettingsDoor() {
+  const names = ['Edit profile', 'Settings'];
+  for (const name of names) {
+    const b = [...document.querySelectorAll('button')].find(
+      (x) => (x.getAttribute('aria-label') || x.textContent || '').trim() === name
+    );
+    if (b) {
+      b.click();
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Leave the settings route, back to the profile page.
+ *
+ * The route persists, so after the Settings sweep this pass is still on it and
+ * the standings below are not rendered. "← Back to profile" is the way out —
+ * SettingsRoute has no back control of its own.
+ */
+function clickBackToProfile() {
+  const b = [...document.querySelectorAll('button')].find((x) =>
+    /back to profile/i.test(x.textContent || '')
   );
   if (!b) return false;
   b.click();
   return true;
 }
 
-/** Whether the Settings route itself painted, rather than just its segment. */
+/** Whether the Settings route itself painted, rather than just its door. */
 function onSettingsRoute() {
   return [...document.querySelectorAll('h1')].some((h) =>
     /Einstellungen/.test(h.textContent || '')
@@ -954,13 +986,21 @@ async function auditSettings(page, label) {
   const contrast = [];
 
   await openTab(page, 'Profile');
-  if (!(await page.evaluate(clickProfileSegment, 'settings'))) {
-    layout.push({ reason: 'no SETTINGS segment on Profile', view: label });
-    return { layout, contrast, measured: 0 };
+  // The settings route PERSISTS across a resize and a tab round-trip — it is
+  // App state plus a `#/settings` hash, not a segment that resets. So after
+  // the first width this sweep is already standing on it, and there is no
+  // door left to click: the page is showing the settings panel and a "← Back
+  // to profile" link. Clicking blindly measured 1 of 3 widths and reported
+  // the door as missing.
+  if (!(await page.evaluate(onSettingsRoute))) {
+    if (!(await page.evaluate(clickSettingsDoor))) {
+      layout.push({ reason: 'no Settings door on Profile', view: label });
+      return { layout, contrast, measured: 0 };
+    }
   }
   await page.waitForTimeout(400);
   if (!(await page.evaluate(onSettingsRoute))) {
-    layout.push({ reason: 'the SETTINGS segment did not render the route', view: label });
+    layout.push({ reason: 'the Settings door did not render the route', view: label });
     return { layout, contrast, measured: 0 };
   }
 
@@ -1184,18 +1224,33 @@ async function auditSignedIn(page, mode) {
   if (settingsMeasured < SETTINGS_WIDTHS.length) {
     throw new Error(
       `audit-contrast: reached Settings at only ${settingsMeasured}/${SETTINGS_WIDTHS.length} ` +
-        `widths in the signed-in pass (${mode}) — the segment moved.`
+        `widths in the signed-in pass (${mode}) — the Settings door moved.`
     );
   }
 
-  // The league table sits behind a view toggle, not behind the tab. Opening
-  // Profile alone leaves it unrendered — which is exactly how it stayed
-  // unaudited while the job reported clean.
-  const onLeagues = await page.evaluate(clickProfileSegment, 'leagues');
+  // The league table used to sit behind a view toggle, which is how it stayed
+  // unaudited while this job reported clean. It renders inline on the profile
+  // page now — so there is nothing to toggle, but this pass is standing on the
+  // settings route from the sweep above and has to come back first.
+  if (await page.evaluate(onSettingsRoute)) {
+    if (!(await page.evaluate(clickBackToProfile))) {
+      throw new Error(
+        `audit-contrast: stuck on the settings route (${mode}) — the ` +
+          '"Back to profile" link moved, and the standings cannot be reached.'
+      );
+    }
+    await page.waitForTimeout(400);
+  }
+  // Assert the league card painted, so a profile page that stopped rendering
+  // its league section is REPORTED rather than silently contributing no
+  // pairings — the failure mode this whole block exists to prevent.
+  const onLeagues = await page.evaluate(
+    () => !!document.querySelector('[data-testid="profile-league"]')
+  );
   if (!onLeagues) {
     throw new Error(
-      `audit-contrast: no LEAGUES toggle on Profile (${mode}) — either the ` +
-        'build lacks VITE_LEAGUES_ENABLED=true or the toggle moved.'
+      `audit-contrast: no league section on Profile (${mode}) — either the ` +
+        'build lacks VITE_LEAGUES_ENABLED=true or the section moved.'
     );
   }
   // join -> refresh -> standings are three sequential round trips, and a fixed
