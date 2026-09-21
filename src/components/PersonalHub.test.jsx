@@ -92,6 +92,22 @@ describe('PersonalHub', () => {
     expect(screen.getByTestId('home-identity-level-group')).toHaveTextContent('Level 1 · Neuling');
   });
 
+  // 0 is a real total. null and undefined are not: the score can arrive without
+  // a number, and both the visible value and the accessible name go through
+  // `?? 0` so the unit still reads "0 XP" rather than a blank.
+  it.each([null, undefined])(
+    'labels a %s XP total as 0 XP on the value and the accessible name',
+    (totalXp) => {
+      render(
+        <PersonalHub user={user} profile={profile} cefrLevel="a2" score={{ ...score, totalXp }} />
+      );
+      const xp = screen.getByTestId('home-identity-xp');
+      expect(xp).toHaveAttribute('aria-label', '0 XP');
+      expect(screen.getByTestId('home-identity-xp-value')).toHaveTextContent('0');
+      expect(xp).toHaveTextContent('0 XP');
+    }
+  );
+
   // A zero streak is not a standing worth printing: a bare flame beside "0"
   // reads as a broken counter rather than as "you have not started yet", and
   // it competes with the XP and level that DO say something. The row simply
