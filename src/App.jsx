@@ -35,6 +35,7 @@ import { sanitizeEnabledInterests } from './lib/interests';
 import { AUTO_MODEL, sanitizePreferredModel } from './lib/ai-routing/preference.js';
 import HomeTab from './components/HomeTab';
 import SettingsRoute from './components/settings/SettingsRoute';
+import AppFooter from './components/AppFooter';
 import AdminTab from './components/admin/AdminTab';
 import { deriveMissions } from './lib/missions';
 import { deriveQuests, questHistory } from './lib/quests';
@@ -98,7 +99,6 @@ import TutorialOverlay from './components/TutorialOverlay';
 import { Analytics } from '@vercel/analytics/react';
 import PrivacyPolicy from './components/legal/PrivacyPolicy';
 import TermsOfService from './components/legal/TermsOfService';
-import LegalFooter from './components/legal/LegalFooter';
 import { currentLegalRoute } from './lib/legalRoute';
 import { useWindowWidth, isMobile, isTiny, isTablet, bp } from './lib/useWindowWidth';
 
@@ -1539,36 +1539,10 @@ export default function App() {
         </PageFrame>
 
         {/* ── Footer ────────────────────────────────────────────────
-            The decorative strap line stays desktop-only as before. The legal
-            links do NOT: hiding them on mobile would leave a phone user with
-            no route to the privacy policy at all, which is the one thing they
-            exist to prevent. One <footer> so there is a single contentinfo
-            landmark either way. */}
-        <footer
-          style={{
-            borderTop: `2px solid ${COLORS.ink}`,
-            marginTop: 64,
-            fontFamily: FONT_MONO,
-            fontSize: 10,
-            letterSpacing: '0.15em',
-            color: COLORS.mute,
-            textTransform: 'uppercase',
-          }}
-        >
-          {!mobile && (
-            <div
-              style={{
-                padding: '16px 32px',
-                display: 'flex',
-                justifyContent: 'space-between',
-              }}
-            >
-              <span>Lernen × Sprechen × Verstehen</span>
-              <span>// Powered by Claude</span>
-            </div>
-          )}
-          <LegalFooter onNavigate={openLegal} />
-        </footer>
+            Strap, legal links and credit are one row, and AppFooter owns both
+            the row and the <footer> element itself — see the note there for
+            why the row needs a single owner. */}
+        <AppFooter mobile={mobile} onNavigate={openLegal} />
 
         {/* Only reachable past the entry gate, which early-returns above — so a
           brand-new account meets the gate first and the tour on the frame after
