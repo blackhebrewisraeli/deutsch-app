@@ -35,6 +35,11 @@ const asReturningLearner = () => {
 beforeEach(() => {
   asReturningLearner();
   window.location.hash = '';
+  authMock.configured = true;
+  authMock.status = 'anonymous';
+  authMock.token = null;
+  adminSessionMock.status = 'ready';
+  adminSessionMock.me = { isAdmin: false, isSystemAccount: false, blocked: false };
 });
 
 const authMock = vi.hoisted(() => ({
@@ -44,6 +49,18 @@ const authMock = vi.hoisted(() => ({
   // Null matches the real module's behaviour with no Supabase configured, so
   // every existing test is unaffected; the account-lane tests set a token.
   token: null,
+}));
+
+const adminSessionMock = vi.hoisted(() => ({
+  status: 'ready',
+  me: { isAdmin: false, isSystemAccount: false, blocked: false },
+}));
+
+vi.mock('./lib/useAdminSession.js', () => ({
+  useAdminSession: (user) =>
+    user
+      ? { status: adminSessionMock.status, me: adminSessionMock.me }
+      : { status: 'idle', me: null },
 }));
 
 // Spread the real module: App imports six names from it and StatsTab,
@@ -201,6 +218,30 @@ describe('App navigation a11y', () => {
     for (const name of TAB_NAMES) {
       expect(nav.getByRole('button', { name })).toBeInTheDocument();
     }
+  });
+
+  it('does not expose the Admin destination to a regular signed-in user', () => {
+    authMock.status = 'authenticated';
+    setViewportWidth(1280);
+    renderPastEntry(<App />);
+    expect(
+      within(screen.getByRole('navigation')).queryByRole('button', { name: 'Admin' })
+    ).not.toBeInTheDocument();
+  });
+
+  it('lets a server-confirmed admin open the isolated Admin tab', async () => {
+    authMock.status = 'authenticated';
+    adminSessionMock.me = { isAdmin: true, isSystemAccount: true, blocked: false };
+    setViewportWidth(1280);
+    renderPastEntry(<App />);
+
+    const admin = within(screen.getByRole('navigation')).getByRole('button', { name: 'Admin' });
+    expect(admin).toHaveTextContent('07');
+    await userEvent.click(admin);
+
+    expect(admin).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('heading', { name: 'Admin' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /feedback/i })).toBeInTheDocument();
   });
 
   it('mobile icon-only nav buttons keep their accessible names', () => {
@@ -1069,11 +1110,13 @@ describe('entry gate', () => {
 
     await userEvent.click(nav.getByRole('button', { name: 'Profile' }));
     await userEvent.click(screen.getByRole('button', { name: 'settings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Learning' }));
     await userEvent.click(screen.getByText(/override classification/i));
     await userEvent.click(screen.getByRole('radio', { name: /A1/ }));
     await userEvent.click(nav.getByRole('button', { name: 'Vocab' }));
     await userEvent.click(nav.getByRole('button', { name: 'Profile' }));
     await userEvent.click(screen.getByRole('button', { name: 'settings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Learning' }));
     await userEvent.click(screen.getByText(/override classification/i));
 
     // If App had dropped onLevelChange, Settings would re-mount from the stale
@@ -1143,6 +1186,7 @@ describe('placement access after completed decks', () => {
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
     await userEvent.click(screen.getByRole('button', { name: 'settings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Learning' }));
     await userEvent.click(screen.getByRole('button', { name: /retake placement/i }));
     expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
   });
@@ -1218,6 +1262,7 @@ describe('level coordination', () => {
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
     await user.click(screen.getByRole('button', { name: 'settings' }));
+    await user.click(screen.getByRole('button', { name: 'Learning' }));
     await user.click(screen.getByText(/override classification/i));
     await user.click(screen.getByRole('radio', { name: /B1/ }));
     await user.click(
@@ -1247,6 +1292,7 @@ describe('level coordination', () => {
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
     await user.click(screen.getByRole('button', { name: 'settings' }));
+    await user.click(screen.getByRole('button', { name: 'Learning' }));
     expect(screen.queryByRole('radiogroup', { name: /level/i })).not.toBeInTheDocument();
     expect(screen.getByText(/override classification/i)).toBeInTheDocument();
   });
@@ -1337,6 +1383,7 @@ describe('level coordination', () => {
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
     await user.click(screen.getByRole('button', { name: 'settings' }));
+    await user.click(screen.getByRole('button', { name: 'Learning' }));
     await user.click(screen.getByText(/override classification/i));
     await user.click(screen.getByRole('radio', { name: /A2/ }));
     expect(chip()).toHaveTextContent('A2');
@@ -2738,6 +2785,7 @@ describe('placement gate while a signed-in level is still in flight', () => {
 
     await user.click(screen.getByRole('button', { name: /profile/i }));
     await user.click(screen.getByRole('button', { name: /^settings$/i }));
+    await user.click(screen.getByRole('button', { name: 'Learning' }));
     await user.click(screen.getByRole('button', { name: /retake placement/i }));
 
     expect(placement()).toBeInTheDocument();

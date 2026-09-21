@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { SPACE, TEXT } from '../../lib/theme';
+import { FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE, TEXT } from '../../lib/theme';
 import { Stack } from '../ui/Layout';
 import Heading from '../ui/Heading';
-import SectionLabel from '../ui/SectionLabel';
 import Surface from '../ui/Surface';
+import SegmentedPicker from '../ui/SegmentedPicker';
 import { Body } from '../ui/Text';
 import LevelSwitcher from '../ui/LevelSwitcher';
 import Button from '../ui/Button';
@@ -15,33 +15,33 @@ import ProfileSection from './ProfileSection';
 import OfflineCacheSection from './OfflineCacheSection';
 import InterestPicker from './InterestPicker';
 import ModelPicker from '../ModelPicker';
-import AdminSection from '../admin/AdminSection';
 import FeedbackDialog from '../FeedbackDialog';
 import { replayTutorial } from '../../lib/tutorialPref';
 import { userTierOf } from '../../lib/ai-routing/preference.js';
 import { getThemeModeForUI, setThemePreference } from '../../lib/themeMode';
 import { writeLevel, LEVEL_NAMES, LEVEL_MODES } from '../../lib/levelPref';
 import { LEVEL_MULTIPLIERS } from '../../lib/gameConfig';
-import { useAdminSession } from '../../lib/useAdminSession.js';
 
-// Settings as a panel inside the Profile tab — not a seventh nav tab, and
-// not a modal. Six tabs already ship; the 320px header budget is a measured
-// 10px. The Profile tab's SETTINGS segment is the one surface, and the
-// `#/settings` hash still deep-links here after the entry gate.
-//
-// Type on this route reads in exactly three tiers, and every block below picks
-// one of them rather than inventing a recipe:
-//
-//   Section   mono caps, mute ...... the panel's own title (SectionLabel)
-//   Field     body semibold, ink ... a control inside a panel (TEXT.subhead)
-//   Hint      body 13/1.5, soft .... the sentence under a control (Body)
-//
-// Before this pass there were two: a panel title and a sub-heading wore the
-// SAME mono-caps recipe, inlined five times, and the hint under a control was
-// 12px in three places and 13px in three others, none of them with a
-// line-height. That is what made the route read as flat — not the colours.
+const SETTINGS_SECTIONS = [
+  { key: 'account', label: 'Account' },
+  { key: 'learning', label: 'Learning' },
+  { key: 'system', label: 'System' },
+];
 
-// Supporting copy under a control.
+const titleStyle = {
+  fontFamily: FONTS.body,
+  fontSize: FONT_SIZE['3xl'],
+  fontWeight: FONT_WEIGHT.bold,
+  letterSpacing: LETTER_SPACING.tight,
+  lineHeight: 1.2,
+};
+
+const subsectionTitleStyle = {
+  fontFamily: FONTS.body,
+  fontWeight: FONT_WEIGHT.semibold,
+  letterSpacing: LETTER_SPACING.normal,
+};
+
 function Hint({ children }) {
   return (
     <Body size="sm" tone="soft" style={{ overflowWrap: 'anywhere' }}>
@@ -50,7 +50,6 @@ function Hint({ children }) {
   );
 }
 
-// A named control inside a panel: sub-heading, optional hint, then the control.
 function Field({ label, hint, children }) {
   return (
     <Stack gap={2}>
@@ -61,10 +60,29 @@ function Field({ label, hint, children }) {
   );
 }
 
-function Section({ label, children }) {
+function Subsection({ title, children }) {
   return (
     <section>
-      <SectionLabel>{label}</SectionLabel>
+      <Heading level={3} size="sm" style={{ ...subsectionTitleStyle, marginBottom: SPACE[3] }}>
+        {title}
+      </Heading>
+      {children}
+    </section>
+  );
+}
+
+function SettingsPanel({ title, children }) {
+  const titleId = `settings-${title.toLowerCase()}-title`;
+  return (
+    <section aria-labelledby={titleId}>
+      <Heading
+        id={titleId}
+        level={2}
+        size="lg"
+        style={{ ...subsectionTitleStyle, marginBottom: SPACE[3] }}
+      >
+        {title}
+      </Heading>
       <Surface elevation={1} padding={4}>
         {children}
       </Surface>
@@ -75,6 +93,7 @@ function Section({ label, children }) {
 export default function SettingsRoute({
   user,
   profile,
+  adminMe,
   onProfileSaved,
   onToast,
   level,
@@ -96,232 +115,221 @@ export default function SettingsRoute({
   onDelete,
   lastSyncedAt,
 }) {
-  // Appearance owns its own mode, exactly as ThemeChip does — the preference
-  // lives in localStorage, not in App state, so threading it through would add
-  // a second source for one device setting.
+  const [activeSection, setActiveSection] = useState('account');
   const [themeMode, setThemeMode] = useState(() => getThemeModeForUI());
   const [showLevelOverride, setShowLevelOverride] = useState(false);
   const [reporting, setReporting] = useState(false);
-  const adminSession = useAdminSession(user);
 
   return (
     <div>
-      <Heading level={1} style={{ margin: 0, marginBottom: SPACE[6] }}>
+      <Heading level={1} size="xl" style={{ ...titleStyle, marginBottom: SPACE[4] }}>
         Einstellungen
       </Heading>
 
-      <Stack gap={8}>
-        {adminSession.me?.blocked ? (
-          <Section label="Account status">
-            <Body size="sm" style={{ overflowWrap: 'anywhere' }}>
-              This account is blocked. You can still export or delete your data below.
-            </Body>
-          </Section>
-        ) : null}
+      <SegmentedPicker
+        options={SETTINGS_SECTIONS}
+        activeKey={activeSection}
+        onPick={({ key }) => setActiveSection(key)}
+        ariaLabel="Settings section"
+      />
 
-        <Section label="Profil">
-          <ProfileSection
-            profile={profile}
-            userId={user?.id}
-            onSaved={onProfileSaved}
-            onToast={onToast}
-          />
-        </Section>
+      <div style={{ marginTop: SPACE[6] }}>
+        {activeSection === 'account' && (
+          <SettingsPanel title="Account">
+            <Stack gap={6}>
+              {adminMe?.blocked ? (
+                <Body size="sm" style={{ overflowWrap: 'anywhere' }}>
+                  This account is blocked. You can still export or delete your data below.
+                </Body>
+              ) : null}
 
-        {/* Placement is the learner path. The switcher is an advanced
-            override (sync debug / tests / stuck learner) — Phase 2 gating
-            treats classified CEFR as the source of truth. */}
-        <Section label="Lernen">
-          <Stack gap={5}>
-            <Button variant="secondary" onClick={onRetakePlacement}>
-              Retake placement
-            </Button>
-            <Hint>
-              The learner path for changing practice level. Also offered on Home after you finish
-              three vocab decks.
-            </Hint>
-            {/* The current band, as a readout rather than a label. It used to
-                be 10px mono at caps tracking with no uppercase transform, so
-                "Beginner" rendered letter-spaced in a face meant for labels —
-                the tracking said "label", the sentence case said "value", and
-                it read as neither. */}
-            <Body size="sm" tone="soft" style={{ overflowWrap: 'anywhere' }}>
-              <strong>{LEVEL_NAMES[level] ?? ''}</strong>
-              {levelBoost && (LEVEL_MULTIPLIERS[level] ?? 1) > 1
-                ? ` · ×${LEVEL_MULTIPLIERS[level]} XP per answer`
-                : ''}
-            </Body>
-            {/* What the level actually changes, in the learner's terms.
-                Printed verbatim, never case-transformed: lowercasing the
-                detail turned B1's "AI-graded" into "ai-graded". */}
-            {LEVEL_MODES[level] && (
-              <Hint>
-                Translate exercises: <strong>{LEVEL_MODES[level].label}</strong> —{' '}
-                {LEVEL_MODES[level].detail}.
-              </Hint>
-            )}
-            <details
-              open={showLevelOverride}
-              onToggle={(e) => setShowLevelOverride(e.currentTarget.open)}
-            >
-              <summary
-                style={{ ...TEXT.label, cursor: 'pointer', minWidth: 0, overflowWrap: 'anywhere' }}
-              >
-                Advanced — override classification
-              </summary>
-              {showLevelOverride && (
-                <Stack gap={3} style={{ marginTop: SPACE[3] }}>
-                  <Hint>
-                    Writes CEFR without a placement test. Learners should retake placement. This
-                    override exists for sync debugging and tests.
-                  </Hint>
-                  <LevelSwitcher
-                    value={level}
-                    onChange={(next) => {
-                      writeLevel(next);
-                      onLevelChange?.(next);
-                    }}
-                  />
-                </Stack>
-              )}
-            </details>
-            <GoalPicker goal={goal} onPick={onGoalChange} />
-            {interestTopics.length > 0 && (
-              <Field
-                label="Interessen"
-                hint="Optional topical vocabulary. Enabled decks appear under Interests in Vocab Practice."
-              >
-                <InterestPicker
-                  topics={interestTopics}
-                  enabled={enabledInterests}
-                  onChange={onInterestsChange}
+              <Subsection title="Profile">
+                <ProfileSection
+                  profile={profile}
+                  userId={user?.id}
+                  onSaved={onProfileSaved}
+                  onToast={onToast}
                 />
-              </Field>
-            )}
-            {/* Settings keeps the always-visible 2×2 grid. Chat collapsed its
-                copy into a pull-down (ModelPopover) because Chat is the
-                conversation; here the grid IS the surface, and hiding a
-                setting behind a disclosure on the settings screen would be
-                the wrong trade. */}
-            <Field
-              label="KI-Modell"
-              hint="Used for Chat with Anna. Auto keeps the current router. Fast / Balanced / Capable pick a band when your plan allows it."
-            >
-              <ModelPicker
-                value={preferredModel}
-                onChange={onPreferredModelChange}
-                userTier={userTierOf(user)}
-              />
-            </Field>
-            {/* Was a hand-rolled button carrying its own copy of the
-                secondary recipe — and therefore no focus ring, no press
-                state, and a letter-spacing one stop off every other button on
-                the route. The ALL-CAPS is the button token's, not the
-                string's, so the accessible name stays sentence case. */}
-            <Button
-              variant="secondary"
-              aria-pressed={soundOn}
-              onClick={onSoundChange}
-              style={{ alignSelf: 'flex-start' }}
-            >
-              {soundOn ? '🔊 Sound: on' : '🔇 Sound: off'}
-            </Button>
-          </Stack>
-        </Section>
+              </Subsection>
 
-        <Section label="Darstellung">
-          <AppearancePicker
-            mode={themeMode}
-            onPick={(pref) => {
-              setThemePreference(pref);
-              setThemeMode(pref);
-            }}
-          />
-        </Section>
+              <Subsection title="Email">
+                <EmailSection user={user} onToast={onToast} onReauth={onSignIn} />
+              </Subsection>
 
-        {/* Gerät is device Cache Storage, not account data — guests need it
-            too, and AccountSection is hidden when auth is unconfigured. */}
-        <Section label="Gerät">
-          <OfflineCacheSection onToast={onToast} />
-        </Section>
-
-        {/* Konto holds the ACCOUNT: which address it is reachable at, sync,
-            export and the danger zone. Identity — handle and avatar — stays
-            in Profil, so each field has exactly one editor. */}
-        <Section label="Konto">
-          <Stack gap={5}>
-            <EmailSection user={user} onToast={onToast} onReauth={onSignIn} />
-            <AccountSection
-              user={user}
-              onSignIn={onSignIn}
-              onSignOut={onSignOut}
-              onExport={onExport}
-              onDelete={onDelete}
-              lastSyncedAt={lastSyncedAt}
-            />
-          </Stack>
-        </Section>
-
-        {/* Hilfe is for EVERY learner, admin or not, and it sits above the
-            admin block on purpose.
-
-            Reporting a problem already worked for non-admins — the insert is a
-            plain RLS-guarded write, never gated on a role — but the only way to
-            reach it was a small grey flag tucked inside a Translate or Vocab
-            exercise. A learner who hit something wrong on Home, in Chat, or in
-            Settings itself had nowhere to say so, which reads as "feedback is
-            an admin feature". This is the standing entry point; the in-exercise
-            flag stays, because a report filed there carries the deck and item
-            the learner is actually looking at.
-
-            The tour re-entry lives here too: it is now marked seen the first
-            time it paints, so this is how anyone gets it back. */}
-        <Section label="Hilfe">
-          <Stack gap={5}>
-            <div>
-              <Button variant="secondary" onClick={() => setReporting(true)}>
-                Report an issue
-              </Button>
-              <div style={{ marginTop: SPACE[2] }}>
-                <Hint>
-                  Something wrong with a word, a translation or the app itself? Tell us here. Inside
-                  an exercise, the flag icon reports that exact card.
-                </Hint>
-              </div>
-            </div>
-            <div>
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  replayTutorial();
-                  onToast?.('Tutorial reopened');
-                }}
-              >
-                Show tutorial
-              </Button>
-              <div style={{ marginTop: SPACE[2] }}>
-                <Hint>Replay the short walkthrough of the header, Chat and Profile.</Hint>
-              </div>
-            </div>
-          </Stack>
-        </Section>
-
-        {adminSession.me?.isAdmin ? (
-          <Section label="Admin">
-            <AdminSection me={adminSession.me} />
-          </Section>
-        ) : null}
-
-        {/* `surface: 'settings'` rather than a drill name — there is no card
-            being asked about here, so deckId / itemId / itemLabel stay absent
-            and the row records where the report came from. */}
-        {reporting && (
-          <FeedbackDialog
-            context={{ surface: 'settings', level }}
-            onClose={() => setReporting(false)}
-          />
+              <Subsection title="Account controls">
+                <AccountSection
+                  user={user}
+                  onSignIn={onSignIn}
+                  onSignOut={onSignOut}
+                  onExport={onExport}
+                  onDelete={onDelete}
+                  lastSyncedAt={lastSyncedAt}
+                />
+              </Subsection>
+            </Stack>
+          </SettingsPanel>
         )}
-      </Stack>
+
+        {activeSection === 'learning' && (
+          <SettingsPanel title="Learning">
+            <Stack gap={6}>
+              <Subsection title="Practice level">
+                <Stack gap={5}>
+                  <Button variant="secondary" onClick={onRetakePlacement}>
+                    Retake placement
+                  </Button>
+                  <Hint>
+                    The learner path for changing practice level. Also offered on Home after you
+                    finish three vocab decks.
+                  </Hint>
+                  <Body size="sm" tone="soft" style={{ overflowWrap: 'anywhere' }}>
+                    <strong>{LEVEL_NAMES[level] ?? ''}</strong>
+                    {levelBoost && (LEVEL_MULTIPLIERS[level] ?? 1) > 1
+                      ? ` · ×${LEVEL_MULTIPLIERS[level]} XP per answer`
+                      : ''}
+                  </Body>
+                  {LEVEL_MODES[level] && (
+                    <Hint>
+                      Translate exercises: <strong>{LEVEL_MODES[level].label}</strong> —{' '}
+                      {LEVEL_MODES[level].detail}.
+                    </Hint>
+                  )}
+                  <details
+                    open={showLevelOverride}
+                    onToggle={(event) => setShowLevelOverride(event.currentTarget.open)}
+                  >
+                    <summary
+                      style={{
+                        ...TEXT.label,
+                        cursor: 'pointer',
+                        minWidth: 0,
+                        overflowWrap: 'anywhere',
+                      }}
+                    >
+                      Advanced — override classification
+                    </summary>
+                    {showLevelOverride && (
+                      <Stack gap={3} style={{ marginTop: SPACE[3] }}>
+                        <Hint>
+                          Writes CEFR without a placement test. Learners should retake placement.
+                          This override exists for sync debugging and tests.
+                        </Hint>
+                        <LevelSwitcher
+                          value={level}
+                          onChange={(next) => {
+                            writeLevel(next);
+                            onLevelChange?.(next);
+                          }}
+                        />
+                      </Stack>
+                    )}
+                  </details>
+                </Stack>
+              </Subsection>
+
+              <Subsection title="Daily goal">
+                <GoalPicker goal={goal} onPick={onGoalChange} />
+              </Subsection>
+
+              {interestTopics.length > 0 && (
+                <Subsection title="Interessen">
+                  <Field
+                    label="Topics"
+                    hint="Optional topical vocabulary. Enabled decks appear under Interests in Vocab Practice."
+                  >
+                    <InterestPicker
+                      topics={interestTopics}
+                      enabled={enabledInterests}
+                      onChange={onInterestsChange}
+                    />
+                  </Field>
+                </Subsection>
+              )}
+            </Stack>
+          </SettingsPanel>
+        )}
+
+        {activeSection === 'system' && (
+          <SettingsPanel title="System">
+            <Stack gap={6}>
+              <Subsection title="KI-Modell">
+                <Field
+                  label="Chat model"
+                  hint="Used for Chat with Anna. Auto keeps the current router. Fast / Balanced / Capable pick a band when your plan allows it."
+                >
+                  <ModelPicker
+                    value={preferredModel}
+                    onChange={onPreferredModelChange}
+                    userTier={userTierOf(user)}
+                  />
+                </Field>
+              </Subsection>
+
+              <Subsection title="Sound">
+                <Button
+                  variant="secondary"
+                  aria-pressed={soundOn}
+                  onClick={onSoundChange}
+                  style={{ alignSelf: 'flex-start' }}
+                >
+                  {soundOn ? '🔊 Sound: on' : '🔇 Sound: off'}
+                </Button>
+              </Subsection>
+
+              <Subsection title="Appearance">
+                <AppearancePicker
+                  mode={themeMode}
+                  onPick={(preference) => {
+                    setThemePreference(preference);
+                    setThemeMode(preference);
+                  }}
+                />
+              </Subsection>
+
+              <Subsection title="Offline cache">
+                <OfflineCacheSection onToast={onToast} />
+              </Subsection>
+
+              <Subsection title="Help">
+                <Stack gap={5}>
+                  <div>
+                    <Button variant="secondary" onClick={() => setReporting(true)}>
+                      Report an issue
+                    </Button>
+                    <div style={{ marginTop: SPACE[2] }}>
+                      <Hint>
+                        Something wrong with a word, a translation or the app itself? Tell us here.
+                        Inside an exercise, the flag icon reports that exact card.
+                      </Hint>
+                    </div>
+                  </div>
+                  <div>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        replayTutorial();
+                        onToast?.('Tutorial reopened');
+                      }}
+                    >
+                      Show tutorial
+                    </Button>
+                    <div style={{ marginTop: SPACE[2] }}>
+                      <Hint>Replay the short walkthrough of the header, Chat and Profile.</Hint>
+                    </div>
+                  </div>
+                </Stack>
+              </Subsection>
+            </Stack>
+          </SettingsPanel>
+        )}
+      </div>
+
+      {reporting && (
+        <FeedbackDialog
+          context={{ surface: 'settings', level }}
+          onClose={() => setReporting(false)}
+        />
+      )}
     </div>
   );
 }
