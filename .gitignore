@@ -11,6 +11,7 @@ node_modules
 dist
 dist-audit
 dist-smoke
+dist-smoke-auth
 dist-ssr
 *.local
 
@@ -60,3 +61,4 @@ supabase/.branches/
 # Lexicon raw-download cache
 .cache/
 .bench-baseline.json
+smoke-auth-failure-*.png
