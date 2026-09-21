@@ -1,5 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, within, cleanup } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AccountChip from './AccountChip';
 
@@ -160,14 +160,29 @@ describe('AccountChip → Settings', () => {
   // a bare `queryByRole('open settings')`, and "no profile row" is only half
   // the claim — the other half is that Settings did not get duplicated in its
   // place. Sign out is excluded because it is not a navigation row.
-  it('offers exactly one navigation row, and it is not Profile', async () => {
-    renderChip({ onOpenSettings: () => {} });
+  // This guard used to read "offers exactly one navigation row, and it is not
+  // Profile". #314 removed the Profile row because both rows landed on the
+  // SAME tab — Profile on its overview view, Settings on the deeper one — and
+  // two names for one place, inches apart, read as two destinations.
+  //
+  // That premise is gone. The Profile tab is now one consolidated page and
+  // Settings is a route off it with its own back link, so these are two
+  // genuinely different destinations and the sheet may name both.
+  it('offers Profile and Settings as two distinct destinations', async () => {
+    const onOpenProfile = vi.fn();
+    const onOpenSettings = vi.fn();
+    renderChip({ onOpenProfile, onOpenSettings });
     await userEvent.click(screen.getByRole('button', { name: /account/i }));
 
-    expect(screen.queryByRole('button', { name: /profile/i })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /your profile/i }));
+    expect(onOpenProfile).toHaveBeenCalled();
+    expect(onOpenSettings).not.toHaveBeenCalled();
+  });
+
+  it('still offers exactly one Settings entry', async () => {
+    renderChip({ onOpenSettings: () => {} });
+    await userEvent.click(screen.getByRole('button', { name: /account/i }));
     expect(screen.getAllByRole('button', { name: /open settings/i })).toHaveLength(1);
-    const rows = screen.getAllByRole('button').filter((b) => /\u2192/.test(b.textContent));
-    expect(rows.map((b) => b.textContent)).toEqual(['Settings \u2192']);
   });
 
   // The email line is the sheet's other content and shares its ink; it stayed
@@ -177,5 +192,136 @@ describe('AccountChip → Settings', () => {
     await userEvent.click(screen.getByRole('button', { name: /account/i }));
 
     expect(screen.getByText('sam@example.com')).toBeInTheDocument();
+  });
+});
+
+// ── The account sheet as an identity surface ────────────────────────
+//
+// It was a bare popover: an email line and two text links, no avatar, no
+// name, no grouping. Everything it needed to identify the person was already
+// fetched for the Profile page.
+describe('AccountChip — identity header and grouped rows', () => {
+  const PROFILE = { display_name: 'Sam Vimes', handle: 'sam', avatar_path: null };
+  const open = async (over = {}) => {
+    render(
+      <AccountChip
+        user={{ id: 'u1', email: 'sam@example.com' }}
+        profile={PROFILE}
+        onSignIn={() => {}}
+        onSignOut={() => {}}
+        onOpenSettings={() => {}}
+        onOpenProfile={() => {}}
+        {...over}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /account/i }));
+  };
+
+  it('leads with the avatar, the display name and the handle', async () => {
+    await open();
+    const sheet = screen.getByRole('dialog', { name: /account/i });
+    expect(within(sheet).getByText('Sam Vimes')).toBeInTheDocument();
+    expect(within(sheet).getByText('@sam')).toBeInTheDocument();
+    expect(sheet.querySelector('img[data-avatar]')).toBeTruthy();
+  });
+
+  it('falls back to the handle, then the anonymous label, never a blank header', async () => {
+    await open({ profile: { display_name: null, handle: 'sam' } });
+    expect(within(screen.getByRole('dialog')).getByText('sam')).toBeInTheDocument();
+  });
+
+  it('keeps the email, on the mono face', async () => {
+    await open();
+    const email = screen.getByText('sam@example.com');
+    expect(email).toBeInTheDocument();
+    expect(email.getAttribute('style')).toMatch(/--f-mono/);
+  });
+
+  it('separates the groups with real dividers rather than bare whitespace', async () => {
+    await open();
+    const sheet = screen.getByRole('dialog');
+    const divided = [...sheet.querySelectorAll('[style*="border-top"]')];
+    expect(divided.length).toBeGreaterThanOrEqual(2);
+    // The token the owner specified for dividers.
+    expect(divided.some((el) => /--c-fg-muted/.test(el.getAttribute('style')))).toBe(true);
+  });
+
+  it('gives every row an icon, so the list reads as a menu and not as prose', async () => {
+    await open();
+    const sheet = screen.getByRole('dialog');
+    for (const name of [/your profile/i, /open settings/i, /sign out/i]) {
+      const row = within(sheet).getByRole('button', { name });
+      expect(row.querySelector('svg'), `${name} icon`).toBeTruthy();
+    }
+  });
+
+  it('keeps Sign out visually separated and in the danger colour', async () => {
+    await open();
+    const out = screen.getByRole('button', { name: /sign out/i });
+    expect(out.getAttribute('style')).toMatch(/--c-(red|error)/);
+  });
+});
+
+// ── Status ──────────────────────────────────────────────────────────
+describe('AccountChip — set status', () => {
+  // A status SURVIVES a remount — that is the point of storing it — so each
+  // case has to start from a known empty store or the previous one's status
+  // is still there and the control is labelled "Edit status".
+  beforeEach(() => localStorage.clear());
+
+  const open = async (over = {}) => {
+    render(
+      <AccountChip
+        user={{ id: 'u1', email: 'sam@example.com' }}
+        profile={{ display_name: 'Sam Vimes', handle: 'sam' }}
+        onSignIn={() => {}}
+        onSignOut={() => {}}
+        onOpenSettings={() => {}}
+        onOpenProfile={() => {}}
+        {...over}
+      />
+    );
+    await userEvent.click(screen.getByRole('button', { name: /account/i }));
+  };
+
+  it('offers a Set status control in the header', async () => {
+    await open();
+    expect(screen.getByRole('button', { name: /set status/i })).toBeInTheDocument();
+  });
+
+  it('saves a status and shows it in place of the prompt', async () => {
+    await open();
+    await userEvent.click(screen.getByRole('button', { name: /set status/i }));
+    await userEvent.type(screen.getByRole('textbox', { name: /status/i }), 'Lerne Perfekt');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(screen.getByText('Lerne Perfekt')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^set status$/i })).toBeNull();
+  });
+
+  it('can clear a status it previously set', async () => {
+    await open();
+    await userEvent.click(screen.getByRole('button', { name: /set status/i }));
+    await userEvent.type(screen.getByRole('textbox', { name: /status/i }), 'Lerne Perfekt');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+    await userEvent.click(screen.getByRole('button', { name: /edit status/i }));
+    await userEvent.click(screen.getByRole('button', { name: /clear/i }));
+
+    expect(screen.queryByText('Lerne Perfekt')).toBeNull();
+    expect(screen.getByRole('button', { name: /set status/i })).toBeInTheDocument();
+  });
+
+  it('remembers the status across a remount', async () => {
+    // Local-only persistence, but persistence: the sheet must not forget a
+    // status the moment it closes.
+    await open();
+    await userEvent.click(screen.getByRole('button', { name: /set status/i }));
+    await userEvent.type(screen.getByRole('textbox', { name: /status/i }), 'Lerne Perfekt');
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    cleanup();
+    await open();
+    expect(screen.getByText('Lerne Perfekt')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /edit status/i })).toBeInTheDocument();
   });
 });

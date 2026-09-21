@@ -116,8 +116,8 @@ export default function UserProfile({
   // not signed in, which is most of the people who open this tab.
   if (!user) {
     return (
-      <div style={{ display: 'grid', gap: SPACE[6] }}>
-        <div style={{ display: 'grid', gap: SPACE[4], justifyItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: SPACE[6] }}>
+        <div style={{ display: 'grid', gap: SPACE[4], justifyItems: 'start', minWidth: 0 }}>
           <Heading level={2}>Dein Profil</Heading>
           <StatusNote>
             Sign in to keep your progress, earn badges and join a weekly league.
@@ -147,7 +147,13 @@ export default function UserProfile({
   const avatarSize = mobile ? 112 : 144;
 
   return (
-    <div style={{ display: 'grid', gap: SPACE[6] }}>
+    // A single implicit grid column is sized `auto`, i.e. max-content, so the
+    // widest child decides the column — and a grid ITEM defaults to
+    // min-width:auto, which refuses to shrink below its own content. Together
+    // that made the metrics row lay all five cards out at full width and push
+    // the column to 581px inside a 343px container: 222px of horizontal
+    // overflow at 375px. The track has to be explicitly shrinkable.
+    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: SPACE[6] }}>
       {/* ── Identity ─────────────────────────────────────────── */}
       <div
         style={{
@@ -157,6 +163,7 @@ export default function UserProfile({
           textAlign: 'center',
           gap: SPACE[2],
           minWidth: 0,
+          maxWidth: '100%',
         }}
       >
         <Avatar profile={profile ?? {}} userId={userId} size={avatarSize} />
@@ -193,10 +200,13 @@ export default function UserProfile({
       <div
         data-testid="profile-metrics"
         style={{
+          // Without this the grid item keeps min-width:auto and auto-fit
+          // never wraps — see the note on the root grid above.
+          minWidth: 0,
           display: 'grid',
           // auto-fit + minmax(0, …) so the row reflows to two columns at
           // 320px instead of overflowing. A bare 1fr would refuse to shrink.
-          gridTemplateColumns: 'repeat(auto-fit, minmax(0, 1fr))',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))',
           gap: SPACE[3],
         }}
       >

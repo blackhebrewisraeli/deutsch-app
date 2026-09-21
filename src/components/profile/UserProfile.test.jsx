@@ -111,6 +111,34 @@ describe('UserProfile — the consolidated profile page', () => {
     expect(screen.getByTestId('profile-metrics')).toHaveTextContent('1240');
   });
 
+  it('no grid relies on the implicit auto column', async () => {
+    // The bug the previous guard could not see, because it only inspected
+    // elements that HAD a grid-template-columns to inspect. A `display: grid`
+    // with no template gets ONE implicit column sized `auto` — max-content —
+    // so the widest child decides its width. That is how the metrics row
+    // pushed this page to 597px inside a 375px viewport: 222px of horizontal
+    // overflow, invisible to jsdom because jsdom does no layout.
+    //
+    // Declaring a template is the structural property jsdom CAN check.
+    const { container } = render(<UserProfile user={USER} local={local} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+    const grids = [...container.querySelectorAll('[style*="display: grid"]')];
+    expect(grids.length).toBeGreaterThan(0);
+    for (const el of grids) {
+      const style = el.getAttribute('style');
+      const declaresTemplate = /grid-template-columns/.test(style);
+      const shrinkable = /min-width:\s*0/.test(style);
+      // A grid with an explicit width cannot be sized by its content, so the
+      // implicit auto column is harmless there — that is the league shield,
+      // a fixed 48px disc holding one icon.
+      const fixedWidth = /(^|;)\s*width:\s*\d/.test(style);
+      expect(
+        declaresTemplate || shrinkable || fixedWidth,
+        `content-sized grid — "${(el.textContent || '').slice(0, 40)}" — ${style}`
+      ).toBe(true);
+    }
+  });
+
   it('every shrinkable grid track is minmax(0, 1fr), never a bare 1fr', async () => {
     // AGENTS.md: a bare `1fr` keeps min-width:auto and refuses to shrink,
     // pushing the page wider than a 320px viewport. This has caused mobile
@@ -125,8 +153,13 @@ describe('UserProfile — the consolidated profile page', () => {
       // test — a regex for "a bare 1fr" matches INSIDE minmax(0, 1fr) too,
       // which is how the first version of this guard failed a correct grid.
       const total = (tracks.match(/1fr/g) ?? []).length;
-      const wrapped = (tracks.match(/minmax\(\s*0\s*,\s*1fr\s*\)/g) ?? []).length;
-      expect(total, `bare 1fr in "${tracks.trim()}"`).toBe(wrapped);
+      // Any explicit minimum is fine — minmax(0, 1fr) or minmax(96px, 1fr).
+      // What must never appear is a 1fr that is not inside a minmax at all,
+      // or one whose minimum is `auto`: both keep min-width:auto and refuse
+      // to shrink. A fixed px minimum still shrinks the TRACK COUNT, because
+      // auto-fit drops to fewer columns rather than overflowing.
+      const wrapped = (tracks.match(/minmax\(\s*(?!auto)[^,]+,\s*1fr\s*\)/g) ?? []).length;
+      expect(total, `unshrinkable 1fr in "${tracks.trim()}"`).toBe(wrapped);
     }
   });
 });

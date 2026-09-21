@@ -794,6 +794,16 @@ export default function App() {
     setProfileView('settings');
     setSettingsHash();
   };
+  // The sheet's other destination. It is the same TAB as Settings but no
+  // longer the same place: `stats` is the consolidated profile page, and
+  // `settings` is the route off it. Clearing the hash matters — without it a
+  // learner who opened Settings, went to the profile and reloaded would land
+  // back in Settings.
+  const openProfile = () => {
+    setTab('stats');
+    setProfileView('stats');
+    clearSettingsHash();
+  };
   const handleProfileView = (next) => {
     setProfileView(next);
     if (next === 'settings') setSettingsHash();
@@ -1271,9 +1281,11 @@ export default function App() {
             <ThemeChip />
             <AccountChip
               user={user}
+              profile={profile}
               onSignIn={requestSignIn}
               onSignOut={handleSignOut}
               onOpenSettings={openSettings}
+              onOpenProfile={openProfile}
               pending={syncStatus.pending}
             />
           </div>

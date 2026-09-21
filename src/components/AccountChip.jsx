@@ -1,6 +1,34 @@
 import { useState, useEffect, useRef } from 'react';
-import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW } from '../lib/theme';
+import { User, Settings as SettingsIcon, LogOut, Mail, Smile } from 'lucide-react';
+import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOW, SPACE } from '../lib/theme';
 import { isAuthConfigured } from '../lib/auth.js';
+import { profileName } from '../lib/profile.js';
+import Avatar from './ui/Avatar';
+
+// Where a status lives. LOCAL ONLY, deliberately: `profiles` has no status
+// column, and inventing one here would mean a migration, a patch-allowlist
+// entry and a sync path for a decoration. It is per-device until that exists,
+// which is the honest behaviour for something stored in localStorage — not a
+// button that pretends to save.
+const STATUS_KEY = 'deutsch-account-status';
+
+function readStatus() {
+  try {
+    return localStorage.getItem(STATUS_KEY) || '';
+  } catch {
+    // Private mode, blocked site data: a missing status is not an error.
+    return '';
+  }
+}
+
+function writeStatus(value) {
+  try {
+    if (value) localStorage.setItem(STATUS_KEY, value);
+    else localStorage.removeItem(STATUS_KEY);
+  } catch {
+    /* nothing to do: the sheet still shows it for this session */
+  }
+}
 
 // Header account affordance. Guest: a quiet "Sign in" link. Signed-in: an
 // initial-in-a-circle that opens a small sheet (email · settings · sign out).
@@ -11,11 +39,16 @@ import { isAuthConfigured } from '../lib/auth.js';
 // "Settings →" link of its own, which made two Settings doors on the landing
 // screen and none of them the account bubble; that link is gone.
 //
-// It used to carry a "Profile →" row beside Settings. Both rows landed on the
-// same tab — Profile on its overview view, Settings on the deeper one — and in
-// one small sheet, inches apart, that read as two destinations when it was one.
-// Settings became a tabbed route in #311, which is the overview now, so the
-// extra row was a second name for a place the sheet already went.
+// Profile and Settings are both here again. #314 removed the Profile row
+// because both landed on the SAME tab — Profile on its overview view, Settings
+// on the deeper one — so two names sat inches apart pointing at one place.
+// That stopped being true when the Profile tab became one consolidated page
+// and Settings became a route off it with its own back link: they are two
+// destinations now, and the sheet names both.
+//
+// The sheet is also an identity surface rather than a bare popover. It was an
+// email line and two text links — no avatar, no name, no grouping — while the
+// profile row it needed was already being fetched for the Profile page.
 //
 // The sheet is a `dialog`, matching ThemeChip and StatusChip. It previously
 // advertised `aria-haspopup="true"` — which means MENU — over a panel carrying
@@ -30,29 +63,75 @@ import { isAuthConfigured } from '../lib/auth.js';
 // email line and the red "Sign out" — had never been contrast-audited,
 // because a sheet that never opens contributes no pairings.
 
-// The sheet's navigation row. Kept as a named recipe rather than inlined: it
-// carried two rows until the Profile one went, and Sign out deliberately does
-// NOT share it (it is red).
-const SHEET_LINK = {
-  display: 'block',
+// One row of the grouped list. Every row is icon + label on the same recipe,
+// which is what makes the sheet read as a menu rather than as three unrelated
+// links; Sign out passes its own colour and nothing else.
+const ROW = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: SPACE[2],
+  width: '100%',
   background: 'none',
   border: 'none',
   color: COLORS.ink,
+  fontFamily: FONTS.sans,
+  fontSize: FONT_SIZE.tag,
+  cursor: 'pointer',
+  padding: `${SPACE[2]}px ${SPACE[1]}px`,
+  textAlign: 'left',
+  borderRadius: RADIUS.sm,
+};
+
+// Group separator. COLORS.mute is a foreground token being used as a rule on
+// purpose: `border` is too faint to group anything at this size, and the point
+// of the redesign was that the sheet had no visible structure at all.
+const GROUP = {
+  borderTop: `1px solid ${COLORS.mute}`,
+  marginTop: SPACE[2],
+  paddingTop: SPACE[2],
+};
+
+const STATUS_ACTION = {
+  background: 'none',
+  border: 'none',
+  color: COLORS.mute,
   fontFamily: FONTS.mono,
   fontSize: FONT_SIZE.tag,
   cursor: 'pointer',
-  padding: 0,
-  marginBottom: 8,
+  padding: SPACE[1],
 };
+
+// `ariaLabel` is separate from the visible text on purpose. The Settings row
+// reads "Settings" but answers to "Open settings", which is the name every
+// existing test and the contrast gate already use — and "Open settings" printed
+// in the menu would be an accessible name leaking into the UI.
+function Row({ icon: Icon, label, ariaLabel, onClick, color = COLORS.ink }) {
+  return (
+    <button
+      type="button"
+      aria-label={ariaLabel ?? label}
+      onClick={onClick}
+      style={{ ...ROW, color }}
+    >
+      <Icon size={14} aria-hidden="true" />
+      <span>{label}</span>
+    </button>
+  );
+}
 
 export default function AccountChip({
   user,
+  profile = null,
   onSignIn,
   onSignOut,
   onOpenSettings,
+  onOpenProfile,
   pending = false,
 }) {
   const [open, setOpen] = useState(false);
+  const [status, setStatus] = useState(() => readStatus());
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [draft, setDraft] = useState('');
   const rootRef = useRef(null);
   const buttonRef = useRef(null);
 
@@ -115,6 +194,14 @@ export default function AccountChip({
   }
 
   const initial = (user.email?.[0] ?? '?').toUpperCase();
+  const name = profileName(profile);
+  const showHandle = Boolean(profile?.handle) && name !== profile.handle;
+  const saveStatus = () => {
+    const next = draft.trim();
+    setStatus(next);
+    writeStatus(next);
+    setEditingStatus(false);
+  };
   return (
     <div ref={rootRef} style={{ position: 'relative' }}>
       {pending && (
@@ -188,39 +275,142 @@ export default function AccountChip({
             zIndex: 60,
           }}
         >
-          <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.tag, marginBottom: 8 }}>
-            {user.email}
+          {/* ── Identity ─────────────────────────────────────── */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[2], minWidth: 0 }}>
+            <Avatar profile={profile ?? {}} userId={user.id} size={36} />
+            <div style={{ minWidth: 0 }}>
+              <div
+                style={{
+                  fontFamily: FONTS.sans,
+                  fontWeight: FONT_WEIGHT.bold,
+                  fontSize: FONT_SIZE.tag,
+                  color: COLORS.ink,
+                  overflowWrap: 'anywhere',
+                }}
+              >
+                {name}
+              </div>
+              {showHandle && (
+                <div
+                  style={{
+                    fontFamily: FONTS.mono,
+                    fontSize: FONT_SIZE.tag,
+                    color: COLORS.mute,
+                    overflowWrap: 'anywhere',
+                  }}
+                >
+                  @{profile.handle}
+                </div>
+              )}
+            </div>
           </div>
-          {/* The sheet stays the glance-and-escape it always was; full account
-              management lives in the tabbed Settings route this row points at. */}
-          <button
-            type="button"
-            // Labelled explicitly rather than read from its own text, so the
-            // trailing arrow never becomes part of the accessible name.
-            aria-label="Open settings"
-            onClick={() => {
-              setOpen(false);
-              onOpenSettings?.();
-            }}
-            style={SHEET_LINK}
-          >
-            Settings →
-          </button>
-          <button
-            type="button"
-            onClick={onSignOut}
-            style={{
-              background: 'none',
-              border: 'none',
-              color: COLORS.red,
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              cursor: 'pointer',
-              padding: 0,
-            }}
-          >
-            Sign out
-          </button>
+
+          {/* ── Status ───────────────────────────────────────────
+              Local to this device until `profiles` has a column for it. */}
+          <div style={{ marginTop: SPACE[2] }}>
+            {editingStatus ? (
+              <div style={{ display: 'flex', gap: SPACE[1], alignItems: 'center' }}>
+                <input
+                  aria-label="Status"
+                  value={draft}
+                  autoFocus
+                  maxLength={80}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    saveStatus();
+                  }}
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    fontFamily: FONTS.sans,
+                    fontSize: FONT_SIZE.tag,
+                    color: COLORS.ink,
+                    background: COLORS.surface,
+                    border: `1px solid ${COLORS.borderStrong}`,
+                    borderRadius: RADIUS.sm,
+                    padding: `${SPACE[1]}px ${SPACE[2]}px`,
+                  }}
+                />
+                <button type="button" aria-label="Save" onClick={saveStatus} style={STATUS_ACTION}>
+                  Save
+                </button>
+                <button
+                  type="button"
+                  aria-label="Clear"
+                  onClick={() => {
+                    setStatus('');
+                    writeStatus('');
+                    setDraft('');
+                    setEditingStatus(false);
+                  }}
+                  style={STATUS_ACTION}
+                >
+                  Clear
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                aria-label={status ? 'Edit status' : 'Set status'}
+                onClick={() => {
+                  setDraft(status);
+                  setEditingStatus(true);
+                }}
+                style={{
+                  ...ROW,
+                  border: `1px solid ${COLORS.borderStrong}`,
+                  borderRadius: RADIUS.md,
+                  color: status ? COLORS.ink : COLORS.mute,
+                }}
+              >
+                <Smile size={14} aria-hidden="true" />
+                <span style={{ overflowWrap: 'anywhere' }}>{status || 'Set status'}</span>
+              </button>
+            )}
+          </div>
+
+          {/* ── Destinations ─────────────────────────────────── */}
+          <div style={GROUP}>
+            <Row
+              icon={User}
+              label="Your profile"
+              onClick={() => {
+                setOpen(false);
+                onOpenProfile?.();
+              }}
+            />
+            <Row
+              icon={SettingsIcon}
+              label="Settings"
+              ariaLabel="Open settings"
+              onClick={() => {
+                setOpen(false);
+                onOpenSettings?.();
+              }}
+            />
+          </div>
+
+          {/* ── The account itself ───────────────────────────── */}
+          <div style={GROUP}>
+            <div
+              style={{
+                ...ROW,
+                cursor: 'default',
+                fontFamily: FONTS.mono,
+                color: COLORS.mute,
+                overflowWrap: 'anywhere',
+              }}
+            >
+              <Mail size={14} aria-hidden="true" />
+              <span style={{ fontFamily: FONTS.mono }}>{user.email}</span>
+            </div>
+          </div>
+
+          <div style={GROUP}>
+            <Row icon={LogOut} label="Sign out" onClick={onSignOut} color={COLORS.red} />
+          </div>
         </div>
       )}
     </div>
