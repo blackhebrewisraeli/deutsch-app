@@ -130,11 +130,10 @@ describe('AccountChip when auth is not configured', () => {
   });
 });
 
-// The chip is now the ONLY door to the Profile tab's own two views: Home's
-// identity strip no longer carries a Settings link of its own, so the sheet has
-// to reach the overview as well as Settings. It still defers full management to
-// that route rather than growing a second copy of it.
-describe('AccountChip → Profile and Settings', () => {
+// The chip is the ONLY door to Settings: Home's identity strip no longer
+// carries a Settings link of its own. It still defers full management to that
+// route rather than growing a second copy of it.
+describe('AccountChip → Settings', () => {
   const renderChip = (over = {}) =>
     render(
       <AccountChip
@@ -155,29 +154,28 @@ describe('AccountChip → Profile and Settings', () => {
     expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument();
   });
 
-  it('offers a Profile entry that opens the overview, not Settings', async () => {
-    const onOpenProfile = vi.fn();
-    const onOpenSettings = vi.fn();
-    renderChip({ onOpenProfile, onOpenSettings });
+  // The sheet carried a "Profile →" row beside Settings until the tabbed
+  // Settings route made it a second name for the same destination. Asserted as
+  // a COUNT as well as an absence: a sheet that regrew the row would still pass
+  // a bare `queryByRole('open settings')`, and "no profile row" is only half
+  // the claim — the other half is that Settings did not get duplicated in its
+  // place. Sign out is excluded because it is not a navigation row.
+  it('offers exactly one navigation row, and it is not Profile', async () => {
+    renderChip({ onOpenSettings: () => {} });
     await userEvent.click(screen.getByRole('button', { name: /account/i }));
-    await userEvent.click(screen.getByRole('button', { name: /open profile/i }));
 
-    expect(onOpenProfile).toHaveBeenCalledTimes(1);
-    // The two rows are separate doors. A Profile click that also fired
-    // onOpenSettings would land on Settings and defeat the point of the row.
-    expect(onOpenSettings).not.toHaveBeenCalled();
-    expect(screen.queryByRole('button', { name: /sign out/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /profile/i })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /open settings/i })).toHaveLength(1);
+    const rows = screen.getAllByRole('button').filter((b) => /\u2192/.test(b.textContent));
+    expect(rows.map((b) => b.textContent)).toEqual(['Settings \u2192']);
   });
 
-  // Both rows say "Profile"/"Settings" and both live in one small sheet, so the
-  // accessible names have to stay distinguishable: a `/profile/i` query that
-  // also matched the Settings row would make either test pass for the wrong
-  // reason.
-  it('names the two rows distinctly', async () => {
-    renderChip({ onOpenProfile: () => {}, onOpenSettings: () => {} });
+  // The email line is the sheet's other content and shares its ink; it stayed
+  // when the Profile row went.
+  it('still shows the account email', async () => {
+    renderChip({ onOpenSettings: () => {} });
     await userEvent.click(screen.getByRole('button', { name: /account/i }));
 
-    expect(screen.getAllByRole('button', { name: /open profile/i })).toHaveLength(1);
-    expect(screen.getAllByRole('button', { name: /open settings/i })).toHaveLength(1);
+    expect(screen.getByText('sam@example.com')).toBeInTheDocument();
   });
 });
