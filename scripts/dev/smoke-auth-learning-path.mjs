@@ -51,6 +51,10 @@ import { existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DECK_ID, STATE_KEY, learningPathSeed, srsKey } from './learning-path-seed.js';
+// The SAME pure module LeaderboardSection and the settle endpoint both use, so
+// the zone dividers this smoke expects can never drift from the ones the app
+// draws. Importing it beats hardcoding 7/5 here.
+import { zoneCounts } from '../../src/lib/leagueZones.js';
 
 // Absolute path to the pinned vite binary rather than bare `npx vite`: npx is
 // resolved through PATH and will fetch-and-execute an uninstalled name from
@@ -65,6 +69,11 @@ const STUB_ENV = {
   VITE_SUPABASE_URL: 'https://stub.supabase.co',
   VITE_SUPABASE_ANON_KEY: 'stub-anon-key-not-a-secret',
   VITE_LEAGUES_ENABLED: 'true',
+  // Step 3 measures the RECONCILE lane, which `sync.js` makes a no-op unless
+  // this is 'true' — without it step 3 would assert on a lane that never ran.
+  // Step 2 does not need it: the progress flush is gated on a JWT, not on
+  // this flag, so answers are never stranded by sync being off.
+  VITE_SYNC_ENABLED: 'true',
 };
 
 // Its own scratch dir and port, so this never clobbers `dist/`, `dist-smoke/`
@@ -369,6 +378,173 @@ async function dumpPage(page, label) {
   } catch (err) {
     console.error(`smoke-auth-learning-path dump (${label}) failed: ${err.message}`);
   }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// SERVER FIXTURE
+//
+// `pullAndMerge` reads srs_state, decks, settings and stats_daily over
+// PostgREST. Answering them all with `[]` (as the guest smoke does) makes the
+// reconcile a no-op, and a no-op reconcile cannot show that anything was
+// restored — so steps 3 and 4 get a POPULATED server instead.
+//
+// Everything here is synthetic and never leaves the intercepted page.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** A day well before the run, so it can only have come from the server. */
+const SERVER_ONLY_DAY = '2026-01-15';
+/** Values local storage never held. Their presence after a reload IS the proof. */
+const SERVER_ONLY_BEST_STREAK = 77;
+const SERVER_ONLY_DAY_TOTAL = 9;
+const LEAGUE_ID = 'smoke-league';
+/** A league already settled AND already claimed — step 4 asserts it is not re-paid. */
+const CLAIMED_LEAGUE_ID = 'smoke-league-past';
+
+function mondayOfThisWeek() {
+  const now = new Date();
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - ((now.getDay() + 6) % 7));
+  monday.setHours(0, 0, 0, 0);
+  return monday;
+}
+
+function serverSettingsRow() {
+  return {
+    data: {
+      goal: 50,
+      soundOn: false,
+      achievements: {},
+      lastGoalMet: null,
+      frozenDays: {},
+      // Server-only sentinel #1.
+      bestStreak: SERVER_ONLY_BEST_STREAK,
+      lastReconcileDay: null,
+      // The past league is ALREADY claimed. useLeagueRewards must therefore
+      // pay nothing, even though the settled result below says we won it.
+      leagueClaimed: [CLAIMED_LEAGUE_ID],
+      learnedWords: {},
+      level: 'a1',
+      levelUpdatedAt: 1,
+      settingsUpdatedAt: 1,
+    },
+    learned_by_deck: {},
+  };
+}
+
+function serverDailyRows() {
+  return [
+    {
+      // Server-only sentinel #2: a day the local blob has never seen.
+      day: SERVER_ONLY_DAY,
+      counters: {
+        total: SERVER_ONLY_DAY_TOTAL,
+        bonusXp: 0,
+        byTab: { chat: 0, alphabet: 0, vocab: SERVER_ONLY_DAY_TOTAL, translate: 0 },
+        byLevel: {
+          a1: { correct: SERVER_ONLY_DAY_TOTAL, almost: 0, wrong: 0 },
+          a2: { correct: 0, almost: 0, wrong: 0 },
+          b1: { correct: 0, almost: 0, wrong: 0 },
+        },
+      },
+    },
+  ];
+}
+
+/**
+ * Cohort size for the fixture.
+ *
+ * NOT 12. At n=12 `zoneCounts` gives promote=7 / demote=5, so
+ * relegationStart (12-5=7) is not > promote (7): the two zones meet exactly
+ * and the widget draws ONE divider, correctly. A 12-row fixture therefore
+ * cannot show the relegation label, and a smoke that demanded it would be
+ * asserting a bug that is not one. 15 rows separates them (7 and 10).
+ */
+const LEAGUE_ROWS = 15;
+
+/** Rows enough to fill the promotion zone, the relegation zone and the middle. */
+function serverStandingsRows(selfId) {
+  return Array.from({ length: LEAGUE_ROWS }, (_, i) => ({
+    user_id: i === 3 ? selfId : `peer-${i}`,
+    handle: i === 3 ? 'Smoke' : `Lernende ${i + 1}`,
+    // Step must keep every row positive across LEAGUE_ROWS: weekly XP is a
+    // count and a negative one would be fixture noise, not a real standing.
+    weekly_xp: 900 - i * 55,
+    rank: i + 1,
+  }));
+}
+
+/**
+ * Answer Supabase + the league API with the fixture.
+ *
+ * PostgREST puts both `league_members` reads on the same path and they are
+ * told apart by `select=`: the standings ask for handle/weekly_xp, the
+ * settled-results read asks for `result`. Dispatching on that is what lets
+ * one route serve both without either shadowing the other.
+ */
+async function routeServerFixture(page, selfId) {
+  const json = (body, status = 200) => ({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify(body),
+  });
+
+  await page.route('**/rest/v1/**', (route) => {
+    const url = route.request().url();
+    if (route.request().method() !== 'GET') return route.fulfill(json([]));
+    if (url.includes('/league_members')) {
+      if (/select=[^&]*result/.test(url)) {
+        // Settled and WON — but its id is in `leagueClaimed` already.
+        return route.fulfill(json([{ league_id: CLAIMED_LEAGUE_ID, rank: 1, result: 'won' }]));
+      }
+      return route.fulfill(json(serverStandingsRows(selfId)));
+    }
+    if (url.includes('/settings')) return route.fulfill(json([serverSettingsRow()]));
+    if (url.includes('/stats_daily')) return route.fulfill(json(serverDailyRows()));
+    return route.fulfill(json([]));
+  });
+
+  const monday = mondayOfThisWeek();
+  await page.route('**/api/v1/league/join', (r) =>
+    r.fulfill(json({ league_id: LEAGUE_ID, tier: 2, period_start: monday.toISOString() }))
+  );
+  await page.route('**/api/v1/league/refresh', (r) => r.fulfill(json({ ok: true })));
+  await page.route('**/api/v1/league/profile*', (r) =>
+    r.fulfill(json({ handle: 'Smoke', tier: 2, total_xp: 4200, longest_streak: 31 }))
+  );
+}
+
+/**
+ * Watch the reconcile's reads so step 3 can wait for it to FINISH.
+ *
+ * `syncStatus.settled` is the right signal and it is not reachable from here:
+ * it lives in a module closure in the bundle and is never put on `window` or
+ * in the DOM. The nearest honest external equivalent is "the reconcile's
+ * table reads have come back", which — like `settled`, and unlike
+ * `lastSyncedAt` — is satisfied whether they succeeded or failed.
+ *
+ * The waiter therefore never throws on timeout. If the reconcile really did
+ * not happen, the restore assertions say so with a real message instead.
+ */
+function watchReconcile(page) {
+  const seen = new Set();
+  page.on('response', (res) => {
+    const url = res.url();
+    if (!url.includes('/rest/v1/')) return;
+    for (const table of ['settings', 'stats_daily', 'srs_state']) {
+      if (url.includes(`/${table}`)) seen.add(table);
+    }
+  });
+  return seen;
+}
+
+async function waitForReconcile(page, seen, timeoutMs = 20000) {
+  const deadline = Date.now() + timeoutMs;
+  const wanted = ['settings', 'stats_daily', 'srs_state'];
+  while (Date.now() < deadline) {
+    if (wanted.every((t) => seen.has(t))) return true;
+    await page.waitForTimeout(250);
+  }
+  return false;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -701,49 +877,263 @@ async function stepCompleteExerciseAndSync(page, seed, posts) {
 }
 
 /**
- * STEP 3 — Refresh and verify progress persistence.
+ * STEP 3 — Refresh and verify progress persistence.  ✅ IMPLEMENTED
  *
- * TODO: Reload, re-dismiss the entry screens, and assert progress survived.
- * TODO: Assert it survived from the SERVER, not just localStorage. Reuse
- *       `assertPersistedProgress`-style checks for the local half, but this
- *       step is only meaningful if the reconcile is what restores it — clear
- *       the local blob and let the (stubbed) server response repopulate it.
- * TODO: Add `VITE_SYNC_ENABLED: 'true'` to STUB_ENV. Step 2 does not need
- *       it (the progress flush is gated on a JWT), but the reconcile lane
- *       this step measures is a no-op without it — so today this step would
- *       be asserting on a lane that never ran.
- * TODO: Wait on `syncStatus.settled`, never `lastSyncedAt`. A FAILED
- *       reconcile also settles, and any load-time decision that reads
- *       "absence" out of local state before settle is the bug class that
- *       produced #298, #299/#300 and #303.
- * TODO: Assert no duplicate award: XP/streak/achievements must be identical
- *       before and after the refresh.
+ * The weak version of this step reloads and checks localStorage still holds
+ * the progress. That passes with the reconcile lane completely dead, because
+ * localStorage is the offline source of truth and survives a reload on its
+ * own. It proves nothing about sync.
+ *
+ * So this WIPES the local blob first and reloads with only the session left,
+ * then requires the state to come back from the server fixture. Two values
+ * are seeded that local never held — `bestStreak: 77` and a whole day at
+ * 2026-01-15 — and their arrival is the proof: they can only have come down
+ * the reconcile.
+ *
+ * Double-count check: with local emptied, `mergeDailyAdditive` contributes
+ * local−lastSynced = 0, so the merged day must equal the server's exactly.
+ * A day that comes back at 2x the fixture is the additive-merge runaway.
  */
 async function stepRefreshAndVerifyPersistence(page, seed) {
-  void page;
   void seed;
-  todo('step 3', 'post-refresh persistence + settle-gating not written');
+
+  // Keep the session and the level key; drop everything the reconcile should
+  // be able to rebuild. The level key stays because losing it opens the
+  // placement gate, which is a different surface and not what this measures.
+  await page.evaluate(
+    ({ stateKey, queueKey }) => {
+      localStorage.removeItem(stateKey);
+      localStorage.removeItem(queueKey);
+      // Let the baseline init script re-seed nothing: we WANT an empty blob.
+      sessionStorage.setItem('__smoke_auth_learning_path_seeded', '1');
+    },
+    { stateKey: STATE_KEY, queueKey: QUEUE_KEY }
+  );
+
+  const wiped = await page.evaluate((k) => localStorage.getItem(k), STATE_KEY);
+  if (wiped) {
+    throw new Error('smoke-auth-learning-path: could not clear local state before the reload.');
+  }
+
+  const reconciled = watchReconcile(page);
+  await page.reload({ waitUntil: 'domcontentloaded' });
+  await page.waitForTimeout(400);
+  await dismissEntryScreens(page);
+  await waitForReconcile(page, reconciled);
+
+  // Poll: the merge lands a tick after the reads resolve.
+  let restored = null;
+  const deadline = Date.now() + 15000;
+  while (Date.now() < deadline) {
+    restored = await page.evaluate((k) => {
+      try {
+        return JSON.parse(localStorage.getItem(k) || 'null');
+      } catch {
+        return null;
+      }
+    }, STATE_KEY);
+    if (restored?.daily?.[SERVER_ONLY_DAY]) break;
+    await page.waitForTimeout(250);
+  }
+
+  if (!restored) {
+    throw new Error(
+      'smoke-auth-learning-path: local state was still empty after the reload — ' +
+        `the reconcile did not restore anything (tables seen: ${[...reconciled].join(', ') || 'none'}).`
+    );
+  }
+
+  const day = restored.daily?.[SERVER_ONLY_DAY];
+  if (!day) {
+    throw new Error(
+      `smoke-auth-learning-path: ${SERVER_ONLY_DAY} is absent after the reload. That day exists ` +
+        'only on the server, so progress did NOT come back down the reconcile ' +
+        `(tables seen: ${[...reconciled].join(', ') || 'none'}).`
+    );
+  }
+  if (day.total !== SERVER_ONLY_DAY_TOTAL) {
+    throw new Error(
+      `smoke-auth-learning-path: ${SERVER_ONLY_DAY} came back at total=${day.total}, expected ` +
+        `${SERVER_ONLY_DAY_TOTAL}. A doubled total is the additive daily merge re-adding a ` +
+        'delta on top of an already-incremented row.'
+    );
+  }
+
+  const best = restored.gamification?.bestStreak;
+  if (best !== SERVER_ONLY_BEST_STREAK) {
+    throw new Error(
+      `smoke-auth-learning-path: bestStreak is ${best}, expected the server's ` +
+        `${SERVER_ONLY_BEST_STREAK} — settings did not survive the reconcile.`
+    );
+  }
+
+  console.log(
+    `  step 3: restored from server after a local wipe ` +
+      `(${SERVER_ONLY_DAY} total=${day.total}, bestStreak=${best})`
+  );
 }
 
 /**
- * STEP 4 — Open leagues and check the table.
+ * STEP 4 — Open leagues and check the table.  ✅ IMPLEMENTED
  *
- * TODO: Navigate Stats → Ligen (leagues need VITE_LEAGUES_ENABLED, already
- *       set in STUB_ENV).
- * TODO: Stub join / standings / profile with a POPULATED fixture. Without
- *       one the surface renders "Couldn't load your league." — a single
- *       error line, which is exactly the state that hides every row the
- *       table is supposed to show. A fixture that cannot express the
- *       failure cannot catch it.
- * TODO: Assert real rows: rank order, the current user highlighted, the
- *       promote/demote zones. Not just "the heading is present".
- * TODO: Assert the rows are keyboard-reachable. 14 league rows once shipped
- *       as `<li onClick>` — dead to Tab — with 1600 tests green.
- * TODO: Assert the winner bonus is NOT re-claimed on this load (see #303).
+ * The surface fails SOFT: any throw in LeaderboardSection's effect renders
+ * "Couldn't load your league." — one short line where a twelve-row table
+ * should be. A run that only asserted "the Ligen heading is present" would
+ * pass on that error line, which is exactly the state that hides every row.
+ * So the error line and the loading line are both asserted ABSENT first, and
+ * the rows are then read positively.
+ *
+ * The 12-row fixture is sized to populate all three row styles the widget
+ * distinguishes: the promotion zone, the untouched middle, and the
+ * relegation zone.
+ *
+ * Rows are real `<button>`s inside the `<li>`, not clickable list items —
+ * 14 of them once shipped dead to Tab with 1600 tests green, so their
+ * presence in the tab order is asserted, not assumed.
+ *
+ * Re-claim: the fixture reports a settled league we WON whose id is already
+ * in `leagueClaimed`. Nothing may be paid out for it again — that is the
+ * #298/#303 bug class, where a load-time decision reads "absence" out of
+ * local state before the reconcile has landed.
  */
 async function stepOpenLeagues(page) {
-  void page;
-  todo('step 4', 'leagues navigation + standings-table assertions not written');
+  // The leagues surface lives in StatsTab, which the nav labels "Profile"
+  // (section 06) — there is no "Stats" tab to click.
+  const nav = page.getByRole('navigation');
+  const profile = nav.getByRole('button', { name: /Profile/i });
+  await profile.waitFor({ state: 'visible', timeout: 10000 });
+  await profile.click();
+
+  // The segment button's accessible name is its aria-label ("leagues"),
+  // not the uppercase "LEAGUES" it renders.
+  const leaguesBtn = page.getByRole('button', { name: 'leagues', exact: true });
+  await leaguesBtn.waitFor({ state: 'visible', timeout: 10000 });
+  await leaguesBtn.click();
+
+  await page.getByRole('heading', { name: 'Ligen' }).waitFor({ timeout: 10000 });
+
+  // The soft-failure surfaces. Wait for the table rather than asserting on a
+  // still-loading widget.
+  const errorLine = page.getByText(/Couldn.t load your league/i);
+  const rowButtons = page.locator('li > button');
+  const deadline = Date.now() + 15000;
+  let count = 0;
+  while (Date.now() < deadline) {
+    if (await errorLine.isVisible().catch(() => false)) {
+      throw new Error(
+        'smoke-auth-learning-path: leagues rendered "Couldn\'t load your league." — the ' +
+          'fixture did not satisfy join → refresh → standings, so no row is measurable.'
+      );
+    }
+    count = await rowButtons.count();
+    if (count >= LEAGUE_ROWS) break;
+    await page.waitForTimeout(250);
+  }
+  if (await page.getByText('Loading league…').isVisible().catch(() => false)) {
+    throw new Error('smoke-auth-learning-path: leagues never left the loading state.');
+  }
+  if (count !== LEAGUE_ROWS) {
+    throw new Error(
+      `smoke-auth-learning-path: leagues showed ${count} row(s), expected the fixture's ` +
+        `${LEAGUE_ROWS}.`
+    );
+  }
+
+  // Rank order: the widget numbers rows itself, so read the rendered text
+  // rather than trusting the fixture's own `rank` column.
+  const rendered = await rowButtons.evaluateAll((els) =>
+    els.map((el) => ({
+      text: (el.innerText || '').replace(/\s+/g, ' ').trim(),
+      bold: Number(getComputedStyle(el).fontWeight) >= 700,
+      tag: el.tagName,
+    }))
+  );
+
+  // Capture an optional sign: `\d+` alone reads "-80 XP" as 80, which would
+  // turn a negative standing into an ascending-order failure pointing at the
+  // wrong thing (it did, once).
+  const xps = rendered.map((r) => Number(/(-?\d+)\s*XP/.exec(r.text)?.[1] ?? NaN));
+  if (xps.some(Number.isNaN)) {
+    throw new Error('smoke-auth-learning-path: a league row rendered no XP figure.');
+  }
+  for (let i = 1; i < xps.length; i += 1) {
+    if (xps[i] > xps[i - 1]) {
+      throw new Error(
+        `smoke-auth-learning-path: league rows are not in descending XP order ` +
+          `(row ${i} has ${xps[i]} XP after ${xps[i - 1]}).`
+      );
+    }
+  }
+  for (let i = 0; i < rendered.length; i += 1) {
+    if (!rendered[i].text.startsWith(`${i + 1}.`)) {
+      throw new Error(
+        `smoke-auth-learning-path: row ${i + 1} is numbered "${rendered[i].text.slice(0, 12)}".`
+      );
+    }
+  }
+
+  // The caller's own row is the 4th in the fixture and must be the marked one.
+  const mine = rendered.filter((r) => r.bold);
+  if (mine.length !== 1 || !mine[0].text.includes('Smoke')) {
+    throw new Error(
+      `smoke-auth-learning-path: expected exactly one highlighted row (the caller's), ` +
+        `got ${mine.length}.`
+    );
+  }
+  if (!rendered[3].bold) {
+    throw new Error("smoke-auth-learning-path: the highlighted row is not the caller's rank 4.");
+  }
+
+  // Zone dividers, predicted by the same pure module the widget uses — and
+  // by the widget's own render conditions, so this tracks the app rather than
+  // a number copied out of it.
+  const { promote, demote } = zoneCounts(LEAGUE_ROWS);
+  const relegationStart = LEAGUE_ROWS - demote;
+  const expectPromote = promote > 0 && promote < LEAGUE_ROWS;
+  const expectRelegate = demote > 0 && relegationStart > promote;
+  if (!expectPromote || !expectRelegate) {
+    throw new Error(
+      `smoke-auth-learning-path: the ${LEAGUE_ROWS}-row fixture no longer separates the zones ` +
+        `(promote=${promote}, demote=${demote}) — resize it so both dividers render.`
+    );
+  }
+  for (const [label, re] of [
+    ['↑ Promotion', /↑\s*Promotion/i],
+    ['↓ Relegation', /↓\s*Relegation/i],
+  ]) {
+    if (!(await page.getByText(re).first().isVisible().catch(() => false))) {
+      throw new Error(`smoke-auth-learning-path: zone label "${label}" is missing from the table.`);
+    }
+  }
+
+  // Keyboard reachability: a native button, and focusable.
+  if (rendered.some((r) => r.tag !== 'BUTTON')) {
+    throw new Error(
+      'smoke-auth-learning-path: a league row is not a native <button> — rows like that are ' +
+        'dead to Tab however many tests pass.'
+    );
+  }
+  const focusable = await rowButtons.first().evaluate((el) => {
+    el.focus();
+    return document.activeElement === el;
+  });
+  if (!focusable) {
+    throw new Error('smoke-auth-learning-path: a league row would not take keyboard focus.');
+  }
+
+  // Already-claimed league must not pay out again.
+  const claimToast = page.getByText(/Liga gewonnen|Ligen gewonnen/);
+  if (await claimToast.isVisible().catch(() => false)) {
+    throw new Error(
+      'smoke-auth-learning-path: a league-winner reward fired for a league already in ' +
+        'leagueClaimed — the bonus is being re-awarded on load.'
+    );
+  }
+
+  console.log(
+    `  step 4: ${count} league rows, ranked, caller highlighted, ` +
+      `dividers at ${promote}/${relegationStart}, focus OK`
+  );
 }
 
 /**
@@ -821,7 +1211,8 @@ async function walkViewport(context, page, vp, seed) {
   });
   await page.route('**/api/**', (r) => r.fulfill(json({ error: 'smoke-offline' }, 503)));
   await page.route('**/auth/v1/**', (r) => r.fulfill(json({})));
-  await page.route('**/rest/v1/**', (r) => r.fulfill(json([])));
+  // Populated server + league API. Registered after the catch-alls so it wins.
+  await routeServerFixture(page, stubSession().user.id);
   const posts = await captureProgressSync(page);
 
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
@@ -838,7 +1229,7 @@ async function walkViewport(context, page, vp, seed) {
   await stepOpenLeagues(page);
   await stepAccountControlsAndLogout(page);
 
-  console.log(`✓ ${label} (steps 1-2 asserted; 3-6 scaffolded)`);
+  console.log(`✓ ${label} (steps 1-4 asserted; 5-6 scaffolded)`);
 }
 
 async function launchBrowser() {
