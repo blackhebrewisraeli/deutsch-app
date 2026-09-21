@@ -112,12 +112,21 @@ const passportDb = (over = {}) => {
     settings:
       'settings' in over ? over.settings : { data: { achievements: { deck1: 100, vol100: 200 } } },
   };
+  // followers = rows pointing AT the target; following = rows FROM them. The
+  // two differ only by which column is filtered, so the mock has to remember
+  // the column or it cannot tell the two counts apart — and a test that cannot
+  // tell them apart would pass with the endpoint's two queries swapped.
+  const follows = over.follows ?? { followed_id: 3, follower_id: 5 };
   return {
     rpc: vi.fn().mockResolvedValue({ data: true, error: null }),
     from: vi.fn((table) => {
+      let eqField = null;
       const q = {
         select: vi.fn(() => q),
-        eq: vi.fn(() => q),
+        eq: vi.fn((field) => {
+          eqField = field;
+          return q;
+        }),
         order: vi.fn(() => q),
         limit: vi.fn(() => q),
         maybeSingle: vi.fn(() =>
@@ -130,11 +139,15 @@ const passportDb = (over = {}) => {
                   : { leagues: { tier: 1 } },
           })
         ),
-        then: (resolve) =>
-          resolve({
+        then: (resolve) => {
+          if (table === 'profile_follows') {
+            return resolve({ count: follows[eqField] ?? 0, error: null });
+          }
+          return resolve({
             data: table === 'stats_daily' ? rows.stats_daily : rows.wins,
             error: null,
-          }),
+          });
+        },
       };
       return q;
     }),
@@ -160,6 +173,46 @@ describe('GET /api/v1/league/profile — the passport', () => {
       achievements: ['deck1', 'vol100'],
     });
     expect(res.body).not.toHaveProperty('avatar_emoji');
+  });
+
+  it('carries the display name and the follower counts', async () => {
+    requireAuth.mockResolvedValue(USER);
+    serviceClient.mockReturnValue(
+      passportDb({
+        profile: { display_name: 'Sam Vimes' },
+        follows: { followed_id: 3, follower_id: 5 },
+      })
+    );
+    const res = createRes();
+    await handler(req('other'), res);
+    expect(res.body.display_name).toBe('Sam Vimes');
+    // followers = people pointing at them; following = people they point at.
+    // Asserting different numbers is the point: equal fixtures would pass with
+    // the two queries transposed.
+    expect(res.body.followers_count).toBe(3);
+    expect(res.body.following_count).toBe(5);
+  });
+
+  it('reports zero rather than null for a profile nobody follows', async () => {
+    requireAuth.mockResolvedValue(USER);
+    serviceClient.mockReturnValue(passportDb({ follows: {} }));
+    const res = createRes();
+    await handler(req('other'), res);
+    expect(res.body.followers_count).toBe(0);
+    expect(res.body.following_count).toBe(0);
+  });
+
+  it('never leaks WHO follows whom, only how many', async () => {
+    // The counts are public; the edges are not. A profile card that shipped
+    // the follower list would publish the social graph of everyone in the
+    // league, which no screen asks for.
+    requireAuth.mockResolvedValue(USER);
+    serviceClient.mockReturnValue(passportDb());
+    const res = createRes();
+    await handler(req('other'), res);
+    expect(res.body).not.toHaveProperty('followers');
+    expect(res.body).not.toHaveProperty('following');
+    expect(JSON.stringify(res.body)).not.toContain('follower_id');
   });
 
   // The client's stats.leagueWins has NEVER synced — `stats` is absent from

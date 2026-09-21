@@ -86,20 +86,45 @@ describe('buildPatch', () => {
     expect(buildPatch('not json')).toEqual({});
   });
 
-  it('covers exactly the columns Settings edits, and display_name is not one', () => {
-    expect(EDITABLE_FIELDS).toEqual(['handle', 'avatar_path']);
-    // The column still exists; it is simply no longer writable from the client.
-    expect(EDITABLE_FIELDS).not.toContain('display_name');
+  // display_name is writable again, DELIBERATELY. This assertion used to read
+  // "and display_name is not one", recording a decision to leave the column
+  // unused. The Social Profile v1 spec (§7,
+  // docs/superpowers/specs/2026-09-21-social-profile-v1-design.md) supersedes
+  // it in as many words: the profile header and the account sheet both render
+  // a display name, so the client has to be able to set one. The column
+  // already existed; nothing was migrated.
+  //
+  // The other four names stay out, and for a different reason — they are not
+  // "not needed yet", they are privilege. avatar_emoji is a dead column, and
+  // blocked_at / role / isAdmin are the admin lane. A learner PATCHing their
+  // own profile must never reach them, so the negative half of this test is
+  // the half that still guards something.
+  it('covers exactly the columns Settings edits, now including display_name', () => {
+    expect(EDITABLE_FIELDS).toEqual(['handle', 'avatar_path', 'display_name']);
+    expect(EDITABLE_FIELDS).toContain('display_name');
     expect(EDITABLE_FIELDS).not.toContain('avatar_emoji');
     expect(EDITABLE_FIELDS).not.toContain('blocked_at');
     expect(EDITABLE_FIELDS).not.toContain('role');
     expect(EDITABLE_FIELDS).not.toContain('isAdmin');
-    // An old client that still sends either is IGNORED by the allowlist, never an error.
-    expect(buildPatch({ display_name: 'Sam', handle: 'sam' })).toEqual({ handle: 'sam' });
+    expect(buildPatch({ display_name: 'Sam', handle: 'sam' })).toEqual({
+      handle: 'sam',
+      display_name: 'Sam',
+    });
+    // An old client that still sends one of the forbidden names is IGNORED by
+    // the allowlist, never an error.
     expect(buildPatch({ avatar_emoji: '🦊', handle: 'sam' })).toEqual({ handle: 'sam' });
     expect(buildPatch({ blocked_at: null, role: 'admin', isAdmin: true, handle: 'sam' })).toEqual({
       handle: 'sam',
     });
+  });
+
+  it('gives display_name the same trim / clear / absent semantics as handle', () => {
+    expect(buildPatch({ display_name: '  Sam Vimes  ' }).display_name).toBe('Sam Vimes');
+    // Emptied or explicitly nulled = "I no longer want a display name", which
+    // falls the UI back to @handle rather than storing "".
+    expect(buildPatch({ display_name: '   ' }).display_name).toBeNull();
+    expect(buildPatch({ display_name: null })).toEqual({ display_name: null });
+    expect('display_name' in buildPatch({ handle: 'sam' })).toBe(false);
   });
 });
 
@@ -136,6 +161,33 @@ describe('PATCH /api/v1/account/profile', () => {
     const res = createRes();
     await handler(req({ handle: 'submitted' }), res);
     expect(res.body.handle).toBe('stored');
+  });
+
+  it('persists a display_name and reads it back in the stored row', async () => {
+    profileRow = { handle: 'sam', avatar_path: null, created_at: 'x', display_name: 'Sam Vimes' };
+    const res = createRes();
+    await handler(req({ display_name: 'Sam Vimes' }), res);
+    expect(res.statusCode).toBe(200);
+    expect(updates).toContainEqual({ table: 'profiles', patch: { display_name: 'Sam Vimes' } });
+    expect(res.body.display_name).toBe('Sam Vimes');
+    // display_name is NOT denormalised onto league_members — the standings
+    // render @handle, which is the stable social identifier. Only a handle
+    // rename touches that table.
+    expect(updates.some((u) => u.table === 'league_members')).toBe(false);
+  });
+
+  it('rejects a display_name longer than the column allows', async () => {
+    const res = createRes();
+    await handler(req({ display_name: 'x'.repeat(41) }), res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body?.error?.message).toMatch(/display name is too long/i);
+    expect(updates).toHaveLength(0);
+  });
+
+  it('accepts a display_name exactly at the limit', async () => {
+    const res = createRes();
+    await handler(req({ display_name: 'x'.repeat(40) }), res);
+    expect(res.statusCode).toBe(200);
   });
 
   it('rejects an empty patch instead of writing nothing', async () => {

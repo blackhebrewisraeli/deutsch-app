@@ -7,7 +7,14 @@ vi.mock('./auth.js', () => ({
   refreshAccessToken: () => Promise.resolve(authMock.refreshed),
 }));
 
-import { fetchMyProfile, updateProfile, PROFILE_COLUMNS, SESSION_EXPIRED_MESSAGE } from './profile';
+import {
+  fetchMyProfile,
+  updateProfile,
+  profileName,
+  ANONYMOUS_NAME,
+  PROFILE_COLUMNS,
+  SESSION_EXPIRED_MESSAGE,
+} from './profile';
 
 const row = { handle: 'sam', avatar_path: null, created_at: 'x' };
 
@@ -38,10 +45,16 @@ describe('fetchMyProfile', () => {
   it('never asks for columns it has no business reading', () => {
     expect(PROFILE_COLUMNS).not.toMatch(/user_id/);
     expect(PROFILE_COLUMNS).not.toMatch(/\*/);
-    // display_name was dropped: selecting a column nothing reads is dead weight
-    // on every profile fetch.
-    expect(PROFILE_COLUMNS).not.toMatch(/display_name/);
+    // avatar_emoji is a dead column — still nothing reads it, so it stays out.
     expect(PROFILE_COLUMNS).not.toMatch(/avatar_emoji/);
+  });
+
+  it('asks for display_name, which the profile header and account sheet render', () => {
+    // This used to assert the opposite, on the grounds that selecting a column
+    // nothing reads is dead weight. Social Profile v1 (§7) gave it readers:
+    // the identity header and the account sheet both show a display name,
+    // falling back to @handle. The column is no longer dead weight.
+    expect(PROFILE_COLUMNS).toMatch(/display_name/);
   });
 
   // Home is the landing tab and renders a greeting either way; an absent
@@ -180,5 +193,37 @@ describe('updateProfile when the session has been revoked', () => {
 
     await expect(updateProfile({ handle: 'sam' })).rejects.toThrow('That handle is taken.');
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+});
+
+// ── Name resolution ─────────────────────────────────────────────────
+//
+// ONE answer to "what do we call this person", because there were about to be
+// three: the passport body, the new profile header, and the account sheet.
+// PassportBody used to inline `profile.handle ?? 'Anonym'`, which was the only
+// implementation and therefore consistent by accident. Adding display_name to
+// the mix is exactly when that stops being true.
+describe('profileName', () => {
+  it('prefers the display name', () => {
+    expect(profileName({ display_name: 'Sam Vimes', handle: 'sam' })).toBe('Sam Vimes');
+  });
+
+  it('falls back to the handle, then to the anonymous label', () => {
+    expect(profileName({ display_name: null, handle: 'sam' })).toBe('sam');
+    expect(profileName({ handle: 'sam' })).toBe('sam');
+    expect(profileName({ display_name: null, handle: null })).toBe(ANONYMOUS_NAME);
+    expect(profileName({})).toBe(ANONYMOUS_NAME);
+    expect(profileName(null)).toBe(ANONYMOUS_NAME);
+  });
+
+  it('treats a whitespace-only display name as absent', () => {
+    // The write path trims and stores null, but a row written before that
+    // guard existed — or by a direct DB edit — can still carry "   ", and a
+    // header rendering pure whitespace looks like a rendering bug.
+    expect(profileName({ display_name: '   ', handle: 'sam' })).toBe('sam');
+  });
+
+  it('trims a display name rather than rendering its padding', () => {
+    expect(profileName({ display_name: '  Sam  ', handle: 'sam' })).toBe('Sam');
   });
 });

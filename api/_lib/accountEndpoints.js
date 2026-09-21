@@ -39,9 +39,18 @@ import { REAUTH_MAX_AGE_SEC } from './authTime.js';
 // table: an old client that still sends it is ignored, never an error.
 
 /** Only these columns are writable. Anything else in the body is ignored. */
-export const EDITABLE_FIELDS = ['handle', 'avatar_path'];
+// display_name rejoined this list for Social Profile v1 (spec §7). It had been
+// removed when the column went unused; the profile header and the account
+// sheet both render a display name now, so the client must be able to set one.
+// The column already existed — no migration.
+//
+// handle stays first: it is the unique social identifier and the only field
+// here that is denormalised elsewhere (league_members).
+export const EDITABLE_FIELDS = ['handle', 'avatar_path', 'display_name'];
 
-const MAX_LEN = { handle: 24, avatar_path: 200 };
+// 40 matches the spec's "1-40 visible characters or null". It is a guard on
+// the write path, not a column constraint: profiles.display_name is plain text.
+const MAX_LEN = { handle: 24, avatar_path: 200, display_name: 40 };
 
 /**
  * `avatar_path` is the one editable field that names something OUTSIDE this
@@ -134,7 +143,7 @@ export const profileHandler = createAccountHandler({
     // optimistic value survived, because a handle can be rejected as taken.
     const { data } = await db
       .from('profiles')
-      .select('handle, avatar_path, created_at')
+      .select('handle, avatar_path, created_at, display_name')
       .eq('user_id', auth.userId)
       .maybeSingle();
 

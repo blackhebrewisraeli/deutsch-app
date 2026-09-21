@@ -1109,13 +1109,15 @@ describe('entry gate', () => {
     const nav = within(screen.getByRole('navigation'));
 
     await userEvent.click(nav.getByRole('button', { name: 'Profile' }));
-    await userEvent.click(screen.getByRole('button', { name: 'settings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Edit profile' }));
     await userEvent.click(screen.getByRole('button', { name: 'Learning' }));
     await userEvent.click(screen.getByText(/override classification/i));
     await userEvent.click(screen.getByRole('radio', { name: /A1/ }));
     await userEvent.click(nav.getByRole('button', { name: 'Vocab' }));
     await userEvent.click(nav.getByRole('button', { name: 'Profile' }));
-    await userEvent.click(screen.getByRole('button', { name: 'settings' }));
+    // No second click into Settings: the route persists across a tab
+    // round-trip, so returning to Profile lands back inside it. That
+    // persistence is what this test is about.
     await userEvent.click(screen.getByRole('button', { name: 'Learning' }));
     await userEvent.click(screen.getByText(/override classification/i));
 
@@ -1185,7 +1187,7 @@ describe('placement access after completed decks', () => {
     await userEvent.click(
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
-    await userEvent.click(screen.getByRole('button', { name: 'settings' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Settings' }));
     await userEvent.click(screen.getByRole('button', { name: 'Learning' }));
     await userEvent.click(screen.getByRole('button', { name: /retake placement/i }));
     expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
@@ -1261,7 +1263,7 @@ describe('level coordination', () => {
     await user.click(
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
-    await user.click(screen.getByRole('button', { name: 'settings' }));
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
     await user.click(screen.getByRole('button', { name: 'Learning' }));
     await user.click(screen.getByText(/override classification/i));
     await user.click(screen.getByRole('radio', { name: /B1/ }));
@@ -1291,7 +1293,7 @@ describe('level coordination', () => {
     await user.click(
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
-    await user.click(screen.getByRole('button', { name: 'settings' }));
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
     await user.click(screen.getByRole('button', { name: 'Learning' }));
     expect(screen.queryByRole('radiogroup', { name: /level/i })).not.toBeInTheDocument();
     expect(screen.getByText(/override classification/i)).toBeInTheDocument();
@@ -1382,7 +1384,7 @@ describe('level coordination', () => {
     await user.click(
       within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
     );
-    await user.click(screen.getByRole('button', { name: 'settings' }));
+    await user.click(screen.getByRole('button', { name: 'Settings' }));
     await user.click(screen.getByRole('button', { name: 'Learning' }));
     await user.click(screen.getByText(/override classification/i));
     await user.click(screen.getByRole('radio', { name: /A2/ }));
@@ -2784,7 +2786,7 @@ describe('placement gate while a signed-in level is still in flight', () => {
     });
 
     await user.click(screen.getByRole('button', { name: /profile/i }));
-    await user.click(screen.getByRole('button', { name: /^settings$/i }));
+    await user.click(screen.getByRole('button', { name: /^edit profile$/i }));
     await user.click(screen.getByRole('button', { name: 'Learning' }));
     await user.click(screen.getByRole('button', { name: /retake placement/i }));
 

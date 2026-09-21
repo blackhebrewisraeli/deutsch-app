@@ -59,52 +59,87 @@ vi.mock('./stats/ProfileCard.jsx', () => ({
 vi.mock('../lib/leagues.js', () => ({
   LEAGUES_ENABLED: true,
   TIER_NAMES: ['Bronze'],
+  // UserProfile fetches its own social row now, so the leagues mock has to
+  // answer it or the tab throws on mount.
+  fetchProfile: vi.fn().mockResolvedValue({ handle: 'sam', tier: 0 }),
 }));
 
-describe('StatsTab — Leagues flag OFF', () => {
-  it('hides Leagues nav button when LEAGUES_ENABLED is false', async () => {
-    vi.resetModules();
-    vi.doMock('../lib/leagues.js', () => ({ LEAGUES_ENABLED: false, TIER_NAMES: ['Bronze'] }));
-    const { default: StatsTabOff } = await import('./StatsTab.jsx');
-    const { render: renderOff, screen: screenOff } = await import('@testing-library/react');
-    renderOff(<StatsTabOff />);
-    expect(screenOff.queryByRole('button', { name: /leagues/i })).toBeNull();
-    expect(screenOff.getByRole('button', { name: /settings/i })).toBeTruthy();
-    vi.resetModules();
-  });
-});
+describe('StatsTab — one consolidated page, no sub-tabs', () => {
+  const USER = { id: 'u1', email: 'sam@example.com' };
 
-describe('StatsTab — Leagues view', () => {
-  it('shows Leagues nav tab when LEAGUES_ENABLED', () => {
-    render(<StatsTab />);
-    expect(screen.getByRole('button', { name: /leagues/i })).toBeTruthy();
+  it('offers no STATS / LEAGUES / SETTINGS segmented control', () => {
+    // The redesign's whole premise: these were three destinations wearing one
+    // tab. If any of them comes back as a button, the page has re-split.
+    render(<StatsTab user={USER} />);
+    for (const label of ['stats', 'leagues', 'settings']) {
+      expect(screen.queryByRole('button', { name: new RegExp(`^${label}$`, 'i') })).toBeNull();
+    }
   });
 
-  it('switches to Leagues view and renders LeaderboardSection', () => {
-    render(<StatsTab />);
-    fireEvent.click(screen.getByRole('button', { name: /leagues/i }));
+  it('renders the standings inline, with no click needed to reach them', () => {
+    render(<StatsTab user={USER} />);
     expect(screen.getByText('stub-leaderboard')).toBeTruthy();
   });
 
-  it('clicking leaderboard row opens ProfileCard with correct userId', () => {
-    render(<StatsTab />);
-    fireEvent.click(screen.getByRole('button', { name: /leagues/i }));
+  it('clicking a leaderboard row still opens ProfileCard', () => {
+    render(<StatsTab user={USER} />);
     fireEvent.click(screen.getByText('stub-leaderboard'));
     expect(screen.getByText('stub-card-x')).toBeTruthy();
   });
-});
 
-describe('StatsTab — Profile segments', () => {
-  it('always offers STATS and SETTINGS', () => {
-    render(<StatsTab />);
-    expect(screen.getByRole('button', { name: /stats/i })).toBeTruthy();
-    expect(screen.getByRole('button', { name: /settings/i })).toBeTruthy();
+  it('puts the detailed charts AFTER the standings', () => {
+    // They used to open the tab, which is what made it read as an analytics
+    // dashboard rather than a profile.
+    render(<StatsTab user={USER} />);
+    const standings = screen.getByText('stub-leaderboard');
+    const charts = screen.getByText(/Last 12 months/i);
+    expect(
+      standings.compareDocumentPosition(charts) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
-  it('renders the settings panel in the SETTINGS view', () => {
-    render(<StatsTab settingsPanel={<div>stub-settings</div>} />);
-    fireEvent.click(screen.getByRole('button', { name: /settings/i }));
+  it('still renders the settings panel on the settings route', () => {
+    // Settings did not move INTO the page; it is a route reached from the
+    // account sheet (#314). Removing the segmented control must not orphan it.
+    render(
+      <StatsTab
+        user={USER}
+        view="settings"
+        onViewChange={() => {}}
+        settingsPanel={<div>stub-settings</div>}
+      />
+    );
     expect(screen.getByText('stub-settings')).toBeTruthy();
+  });
+
+  it('offers a way BACK from the settings route to the profile', () => {
+    // The segmented control used to double as the return journey: SETTINGS was
+    // still on screen while you were in it, and STATS was next to it. Removing
+    // it without a back affordance made Settings a dead end you could only
+    // leave by switching tabs — SettingsRoute has no back control of its own.
+    const onViewChange = vi.fn();
+    render(
+      <StatsTab
+        user={USER}
+        view="settings"
+        onViewChange={onViewChange}
+        settingsPanel={<div>stub-settings</div>}
+      />
+    );
+    fireEvent.click(screen.getByRole('button', { name: /back to profile/i }));
+    expect(onViewChange).toHaveBeenCalledWith('stats');
+  });
+
+  it('does not show the standings on the settings route', () => {
+    render(
+      <StatsTab
+        user={USER}
+        view="settings"
+        onViewChange={() => {}}
+        settingsPanel={<div>stub-settings</div>}
+      />
+    );
+    expect(screen.queryByText('stub-leaderboard')).toBeNull();
   });
 
   it('does not keep GoalPicker or LevelSwitcher on the stats view', () => {
