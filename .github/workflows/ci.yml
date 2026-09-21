@@ -170,6 +170,59 @@ jobs:
           done
           npm run smoke:learning-path
 
+  # The signed-in half of the same journey: sync wire, reconcile-after-wipe,
+  # leagues, account controls, sign-out. Its own job for the same reasons as
+  # the guest smoke above, and a SEPARATE job rather than another step in it
+  # because the two need incompatible builds — guest runs against a build with
+  # no Supabase env, this one needs stub Supabase config or the seeded session
+  # is rejected.
+  #
+  # It went red one day after it shipped (#311 gave the Settings segmented
+  # control a second `aria-label="Account"`) and nothing noticed, because it
+  # existed only as an npm script. That is what this job is for.
+  #
+  # Deliberately NO `AUDIT_BASE` and no build step: unset means the script
+  # provisions its own target, and it is the script — not this file — that
+  # knows the build needs `VITE_SUPABASE_URL`/`ANON_KEY` stubs plus leagues
+  # and sync on. Building here instead would put that env in two places and
+  # let them drift; the header of the script explains the failure mode.
+  auth-learning-path-smoke:
+    name: Learning path · Signed in
+    runs-on: ubuntu-latest
+    env:
+      HUSKY: 0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --ignore-scripts
+
+      - name: Install Chromium
+        run: npx --no -- playwright install --with-deps chromium
+
+      - name: Smoke restore → sync → reload → leagues → sign out
+        run: npm run smoke:auth-learning-path
+
+      # The run writes smoke-auth-failure-<name>-<width>.png for the viewport
+      # that failed. On a red run that screenshot is the fastest read there is,
+      # and without this it dies with the runner.
+      - name: Upload failure screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: auth-smoke-failure-screenshots
+          path: smoke-auth-failure-*.png
+          if-no-files-found: ignore
+          retention-days: 7
+
   rls-policy-tests:
     name: RLS Policy Tests
     runs-on: ubuntu-latest
