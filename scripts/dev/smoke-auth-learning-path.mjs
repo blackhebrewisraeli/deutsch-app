@@ -96,6 +96,10 @@ const SUPABASE_REF = (process.env.VITE_SUPABASE_URL ?? STUB_ENV.VITE_SUPABASE_UR
   .split('.')[0];
 const SESSION_KEY = `sb-${SUPABASE_REF}-auth-token`;
 
+// src/lib/progressQueue.js owns this key; the queue is the only place the
+// id a given answer enqueued is observable from outside the bundle.
+const QUEUE_KEY = 'deutsch-app-progress-queue-v1';
+
 let previewServer = null;
 
 function stopPreview() {
@@ -196,28 +200,32 @@ async function provisionTarget() {
  *
  * `expires_at` sits comfortably ahead of the run so supabase-js never tries
  * to refresh mid-walk.
+ *
+ * A plain factory rather than a page function: it is serialised into the init
+ * script, and `EXPECTED_BEARER` below reads the same object, so the token the
+ * app presents and the token step 2 asserts on can never drift apart.
  */
-function seedSignedInSession(key) {
-  localStorage.setItem(
-    key,
-    JSON.stringify({
-      access_token: 'smoke.stub.token',
-      token_type: 'bearer',
-      expires_in: 3600,
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      refresh_token: 'smoke-stub-refresh',
-      user: {
-        id: '00000000-0000-4000-8000-000000000002',
-        aud: 'authenticated',
-        role: 'authenticated',
-        email: 'smoke@example.test',
-        app_metadata: {},
-        user_metadata: {},
-        created_at: '2026-01-01T00:00:00.000Z',
-      },
-    })
-  );
+function stubSession() {
+  return {
+    access_token: 'smoke.stub.token',
+    token_type: 'bearer',
+    expires_in: 3600,
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    refresh_token: 'smoke-stub-refresh',
+    user: {
+      id: '00000000-0000-4000-8000-000000000002',
+      aud: 'authenticated',
+      role: 'authenticated',
+      email: 'smoke@example.test',
+      app_metadata: {},
+      user_metadata: {},
+      created_at: '2026-01-01T00:00:00.000Z',
+    },
+  };
 }
+
+/** The bearer the flush must present. Derived, so the two cannot drift. */
+const EXPECTED_BEARER = `Bearer ${stubSession().access_token}`;
 
 /**
  * Baseline LOCAL state, installed before first paint.
@@ -247,6 +255,61 @@ async function installBaselineSeed(context, seed) {
       // private mode — dismissEntryScreens fails loudly if the shell never appears
     }
   }, seed.localStorage);
+}
+
+/**
+ * The SESSION, installed before first paint — step 1's half of the seed.
+ *
+ * Separate from `installBaselineSeed` on purpose: that one is the guest-side
+ * blob the guest smoke also writes, this one is what makes the run signed in.
+ * Keeping them apart means a failure says which half did not take.
+ *
+ * Same `addInitScript` reasoning: `useAuth` reads
+ * `client.auth.getSession()` during mount, so a session written after the
+ * first paint leaves the app rendered as a guest and every signed-in
+ * assertion below measures the wrong shell.
+ */
+async function installSignedInSeed(context, key) {
+  await context.addInitScript(
+    ({ storageKey, session }) => {
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(session));
+      } catch {
+        // private mode — stepRestoreSession fails loudly on the guest shell
+      }
+    },
+    { storageKey: key, session: stubSession() }
+  );
+}
+
+/**
+ * Refuse to run against anything real.
+ *
+ * The seeded token is a fake string, not a signed JWT, and the build is made
+ * with a stub host. This asserts both, so that "fixing" a flake by pointing
+ * the smoke at a real project fails here instead of quietly sending a walk of
+ * synthetic progress at production.
+ *
+ * Skipped only when the caller set AUDIT_BASE, which means they are supplying
+ * the server and own that decision.
+ */
+function assertNoRealCredentials() {
+  if (EXPLICIT_BASE) {
+    console.log('AUDIT_BASE set — skipping the stub-host guard; you own that server.');
+    return;
+  }
+  const { access_token: token } = stubSession();
+  // A real Supabase access token is a JWT: three base64url segments, first
+  // decoding to a JSON header. Ours must not look like one.
+  if (token.split('.').length === 3 && /^eyJ/.test(token)) {
+    throw new Error('smoke-auth-learning-path: the seeded token looks like a real JWT.');
+  }
+  if (SUPABASE_REF !== 'stub') {
+    throw new Error(
+      `smoke-auth-learning-path: built against project ref "${SUPABASE_REF}", not the stub. ` +
+        'This smoke must never run against a real project.'
+    );
+  }
 }
 
 /**
@@ -320,53 +383,321 @@ function todo(step, what) {
 }
 
 /**
- * STEP 1 — Mock session restoration, without secrets.
+ * STEP 1 — Mock session restoration, without secrets.  ✅ IMPLEMENTED
  *
- * TODO: Seed the session with `seedSignedInSession` BEFORE first paint, the
- *       way `installBaselineSeed` already seeds the local blob — via
- *       `context.addInitScript`, not goto→evaluate→reload. The guest smoke
- *       lost that race on CI, where App's persist effect reads empty state
- *       and then clobbers the seed. Init scripts run before page JS.
- *       Until this lands the walk runs as a GUEST, so every signed-in
- *       assertion below would be measuring the wrong shell.
- * TODO: Reload, then assert the app is actually in the signed-in state —
- *       AccountChip present, not merely "a header exists". A header renders
- *       for a guest too, so a header check passes on a failed restore.
- * TODO: Assert no real credential is anywhere in the run: no value from a
- *       developer `.env`, no token matching a real project ref. This guards
- *       against someone "fixing" a flake by pointing the smoke at prod.
- * TODO: Fail loudly with the audit-contrast wording if useAuth rejects the
- *       seed — "the session seed no longer satisfies useAuth" — and name
- *       SESSION_KEY + expires_at, the two things that actually break it.
+ * The seed itself is installed in `main` via `installSignedInSeed`, before
+ * the context's first page exists — see that function for why it cannot be
+ * done here with `evaluate`.
+ *
+ * What this asserts is that the app ACCEPTED it. "A header exists" is not
+ * that test: the header renders for a guest too, and an earlier draft of
+ * this file passed on the guest shell for exactly that reason. AccountChip
+ * is the discriminator — signed out it renders a "Sign in" button, signed in
+ * it renders a `aria-label="Account"` avatar button with the email initial.
+ * Both directions are asserted, so a chip that renders BOTH (a half-restored
+ * session) fails too.
  */
 async function stepRestoreSession(context, page, seed) {
   void context;
-  void page;
   void seed;
-  todo('step 1', 'session restoration is not seeded or asserted yet');
+
+  const account = page.getByRole('button', { name: 'Account', exact: true });
+  const signIn = page.getByRole('button', { name: 'Sign in', exact: true });
+
+  try {
+    await account.waitFor({ state: 'visible', timeout: 10000 });
+  } catch (err) {
+    throw new Error(
+      'smoke-auth-learning-path: signed-in pass never reached the account chrome. ' +
+        'The session seed no longer satisfies useAuth — check SESSION_KEY ' +
+        `(${SESSION_KEY}) and expires_at. (${err.message})`
+    );
+  }
+
+  if (await signIn.isVisible().catch(() => false)) {
+    throw new Error(
+      'smoke-auth-learning-path: "Sign in" is showing alongside the account chip — ' +
+        'the session restored only partially.'
+    );
+  }
+
+  // The seed is a fake string, not a credential, and it must stay that way.
+  const seeded = await page.evaluate((key) => {
+    try {
+      return JSON.parse(localStorage.getItem(key) || 'null');
+    } catch {
+      return null;
+    }
+  }, SESSION_KEY);
+  if (!seeded || seeded.access_token !== stubSession().access_token) {
+    throw new Error(
+      'smoke-auth-learning-path: the stored session is not the stub one this run seeded.'
+    );
+  }
 }
 
 /**
- * STEP 2 — Complete an exercise and check the sync request.
+ * Capture the progress-sync lane.
  *
- * TODO: Walk the deck the way `practiceUntilComplete` does in the guest
- *       smoke (choose → GOOD → wait out CLICK_LOCK_MS), to DeckCompleteBanner.
- * TODO: Record outbound calls with `page.on('request')` BEFORE the first
- *       answer, so the assertion sees the whole exercise, not the tail.
- * TODO: Assert the progress write actually went out — the apply-progress
- *       call, with the expected deck/card payload. "No error appeared" is
- *       not evidence a request was made; a dead sync lane is silent.
- * TODO: Assert the idempotency key is present AND round-trips. It has been
- *       dropped three separate ways in this codebase (not serialised by the
- *       adapter, clobbered by the merge, never pushed by the hook), and each
- *       one alone re-awards on every load.
- * TODO: Stub the response rather than letting it 503 like the guest smoke
- *       does — step 3 needs a server state to come back to.
+ * Registered BEFORE the catch-all so it wins: Playwright matches the most
+ * recently registered handler first.
+ *
+ * It ANSWERS 200 rather than 503 like the guest smoke does. A 503 leaves the
+ * event at the head of the queue and `flushQueue` returns, so the queue never
+ * drains and the round-trip half of the assertion could not be made.
  */
-async function stepCompleteExerciseAndSync(page, seed) {
-  void page;
-  void seed;
-  todo('step 2', 'exercise walk + sync-request assertion not written');
+async function captureProgressSync(page) {
+  const posts = [];
+  await page.route('**/api/v1/progress/events', async (route) => {
+    const req = route.request();
+    let body = null;
+    try {
+      body = JSON.parse(req.postData() ?? 'null');
+    } catch {
+      body = { __unparseable: req.postData() };
+    }
+    posts.push({ method: req.method(), auth: req.headers().authorization ?? null, body });
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ ok: true }),
+    });
+  });
+  return posts;
+}
+
+/** The card currently on screen, matched by headword. */
+async function visibleCard(page, cards) {
+  return page.evaluate((payload) => {
+    const text = document.body.innerText || '';
+    return payload.find((card) => text.includes(card.de)) ?? null;
+  }, cards);
+}
+
+/**
+ * The id `recordEvent` just enqueued.
+ *
+ * `enqueue` APPENDS, so immediately after a verdict the tail of the queue is
+ * that answer's event. Read straight after the click: the flush is debounced
+ * 500ms behind `deutsch:progress`, so the row is still there.
+ *
+ * This is what makes step 2 specific. Counting POSTs cannot work — see the
+ * backlog note on `stepCompleteExerciseAndSync`.
+ */
+async function queueTailId(page) {
+  return page.evaluate((key) => {
+    try {
+      const q = JSON.parse(localStorage.getItem(key) || '[]');
+      return Array.isArray(q) && q.length ? (q[q.length - 1]?.id ?? null) : null;
+    } catch {
+      return null;
+    }
+  }, QUEUE_KEY);
+}
+
+/**
+ * Answer through the queue until DeckCompleteBanner. Ported from the guest
+ * smoke, plus the per-answer id capture.
+ *
+ * @returns {Promise<string[]>} the id enqueued by each answer, in order.
+ */
+async function practiceUntilComplete(page, seed) {
+  const empty = page.getByText('Select a deck to start.');
+  const complete = page.getByText(/Deck complete/);
+  await page.waitForFunction(
+    (des) => des.some((de) => (document.body.innerText || '').includes(de)),
+    seed.cards.map((card) => card.de),
+    { timeout: 10000 }
+  );
+  const budget = seed.cards.length + 2;
+  const enqueued = [];
+
+  for (let i = 0; i < budget; i += 1) {
+    if (await complete.isVisible().catch(() => false)) return enqueued;
+    if (await empty.isVisible().catch(() => false)) {
+      throw new Error(
+        'smoke-auth-learning-path: empty "Select a deck to start." state after a card'
+      );
+    }
+
+    const card = await visibleCard(page, seed.cards);
+    if (!card) {
+      throw new Error(
+        `smoke-auth-learning-path: no food-deck headword visible on card ${i + 1}`
+      );
+    }
+
+    const choice = page.getByRole('button', { name: card.en, exact: true });
+    await choice.waitFor({ state: 'visible', timeout: 10000 });
+    await choice.click();
+
+    const good = page.getByRole('button', { name: 'GOOD', exact: true });
+    await good.waitFor({ state: 'visible', timeout: 10000 });
+    await good.click();
+
+    const id = await queueTailId(page);
+    if (!id) {
+      throw new Error(
+        `smoke-auth-learning-path: answering card ${i + 1} enqueued nothing — ` +
+          'recordEvent is not reaching the progress queue.'
+      );
+    }
+    if (enqueued.includes(id)) {
+      throw new Error(
+        `smoke-auth-learning-path: card ${i + 1} reused idempotency id ${id} — ` +
+          'newEventId is not producing a fresh key per answer.'
+      );
+    }
+    enqueued.push(id);
+
+    // VocabTab's click-lock swallows the next choice for 200ms after a verdict.
+    await page.waitForTimeout(CLICK_LOCK_MS);
+  }
+
+  if (!(await complete.isVisible().catch(() => false))) {
+    throw new Error('smoke-auth-learning-path: queue emptied without DeckCompleteBanner');
+  }
+  return enqueued;
+}
+
+/** Wait until every id in `wanted` has been seen on the wire. */
+async function waitForSyncedIds(page, posts, wanted, timeoutMs = 20000) {
+  const deadline = Date.now() + timeoutMs;
+  const seen = () => new Set(posts.map((p) => p.body?.id));
+  while (Date.now() < deadline) {
+    const have = seen();
+    if (wanted.every((id) => have.has(id))) return true;
+    await page.waitForTimeout(250);
+  }
+  return false;
+}
+
+/** Poll the progress queue to empty. Polled, not read once: a flush cycle is async. */
+async function waitForQueueDrained(page, timeoutMs = 20000) {
+  const deadline = Date.now() + timeoutMs;
+  let last = null;
+  while (Date.now() < deadline) {
+    last = await page.evaluate((key) => {
+      try {
+        return JSON.parse(localStorage.getItem(key) || '[]')?.length ?? null;
+      } catch {
+        return null;
+      }
+    }, QUEUE_KEY);
+    if (last === 0) return 0;
+    await page.waitForTimeout(250);
+  }
+  return last;
+}
+
+/**
+ * STEP 2 — Complete an exercise and check the sync request.  ✅ IMPLEMENTED
+ *
+ * The lane: answering dispatches `deutsch:progress` → App schedules a flush
+ * (500ms) → `flushQueue` POSTs each queued event to
+ * `/api/v1/progress/events` with a bearer token. Note this flush is gated on
+ * a JWT, NOT on VITE_SYNC_ENABLED — sync off must not strand answers. That is
+ * why step 2 works without the flag and step 3 will need it.
+ *
+ * ── Why this keys on ids and never on counts ─────────────────────────────
+ * A first draft asserted "at least as many POSTs as cards answered" and went
+ * green reporting 65 events for 3 cards. Those 62 extras are real:
+ * `expandGuestBacklog` diffs local daily counters against what the server
+ * has, and our `/rest/v1` stub always answers empty, so the whole local day
+ * is re-expanded into catch-up events on EVERY flush. They are synthesised
+ * to be indistinguishable from real ones — same tab, same level, same
+ * dateKey — so no payload filter can separate them either.
+ *
+ * That assertion would therefore have passed with per-answer sync entirely
+ * dead. The fix is to capture the id each answer actually enqueues (the
+ * queue tail, see `queueTailId`) and require THOSE exact ids on the wire.
+ * If `recordEvent` stops enqueuing, the capture fails; if the flush stops
+ * POSTing, the ids never arrive. Backlog noise cannot satisfy either.
+ *
+ * Asserted here, rather than "no error appeared" — a dead sync lane is
+ * silent, so absence of an error is not evidence a request was made:
+ *   - one freshly-enqueued event per answered card, ids distinct;
+ *   - every one of those ids reaching /api/v1/progress/events;
+ *   - each carrying the stub bearer and a well-formed UUID id;
+ *   - the payload matching what the learner did (vocab / a1 / de, today,
+ *     a real verdict);
+ *   - the queue draining, which is the round-trip half: `flushQueue` only
+ *     shifts an event off after a 200.
+ */
+async function stepCompleteExerciseAndSync(page, seed, posts) {
+  const enqueued = await practiceUntilComplete(page, seed);
+  if (enqueued.length < 1) {
+    throw new Error('smoke-auth-learning-path: the deck was already complete — nothing practised.');
+  }
+
+  if (!(await waitForSyncedIds(page, posts, enqueued))) {
+    const seen = new Set(posts.map((p) => p.body?.id));
+    const missing = enqueued.filter((id) => !seen.has(id));
+    throw new Error(
+      `smoke-auth-learning-path: ${missing.length} of ${enqueued.length} answered event(s) ` +
+        `never reached /api/v1/progress/events (${missing.join(', ')}) — the sync lane is ` +
+        `not firing. ${posts.length} POST(s) were seen in total.`
+    );
+  }
+
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const today = new Date();
+  const dateKey = [
+    today.getFullYear(),
+    String(today.getMonth() + 1).padStart(2, '0'),
+    String(today.getDate()).padStart(2, '0'),
+  ].join('-');
+
+  const byId = new Map();
+  for (const post of posts) {
+    if (post.body?.id && !byId.has(post.body.id)) byId.set(post.body.id, post);
+  }
+
+  for (const id of enqueued) {
+    const { method, auth, body } = byId.get(id);
+    if (method !== 'POST') {
+      throw new Error(`smoke-auth-learning-path: progress event sent as ${method}, not POST.`);
+    }
+    if (auth !== EXPECTED_BEARER) {
+      // Never print the header: say which check failed, not what it held.
+      throw new Error(
+        'smoke-auth-learning-path: progress POST did not carry the seeded bearer token.'
+      );
+    }
+    if (!UUID.test(body.id)) {
+      throw new Error(`smoke-auth-learning-path: idempotency id is not a UUID (${body.id}).`);
+    }
+    if (body.tab !== 'vocab') {
+      throw new Error(`smoke-auth-learning-path: expected tab "vocab", got "${body.tab}".`);
+    }
+    if (body.level !== 'a1') {
+      throw new Error(`smoke-auth-learning-path: expected level "a1", got "${body.level}".`);
+    }
+    if ((body.packId ?? 'de') !== 'de') {
+      throw new Error(`smoke-auth-learning-path: expected packId "de", got "${body.packId}".`);
+    }
+    if (body.dateKey !== dateKey) {
+      throw new Error(
+        `smoke-auth-learning-path: dateKey ${body.dateKey} is not today (${dateKey}).`
+      );
+    }
+    if (!['correct', 'almost', 'wrong'].includes(body.verdict)) {
+      throw new Error(`smoke-auth-learning-path: unknown verdict "${body.verdict}".`);
+    }
+  }
+
+  const left = await waitForQueueDrained(page);
+  if (left !== 0) {
+    throw new Error(
+      `smoke-auth-learning-path: progress queue did not drain after the server acked ` +
+        `(${left ?? 'unreadable'} left).`
+    );
+  }
+
+  console.log(
+    `  step 2: ${enqueued.length} answered event(s) synced and acked ` +
+      `(${posts.length} POSTs total, incl. guest-backlog catch-up)`
+  );
 }
 
 /**
@@ -377,6 +708,10 @@ async function stepCompleteExerciseAndSync(page, seed) {
  *       `assertPersistedProgress`-style checks for the local half, but this
  *       step is only meaningful if the reconcile is what restores it — clear
  *       the local blob and let the (stubbed) server response repopulate it.
+ * TODO: Add `VITE_SYNC_ENABLED: 'true'` to STUB_ENV. Step 2 does not need
+ *       it (the progress flush is gated on a JWT), but the reconcile lane
+ *       this step measures is a no-op without it — so today this step would
+ *       be asserting on a lane that never ran.
  * TODO: Wait on `syncStatus.settled`, never `lastSyncedAt`. A FAILED
  *       reconcile also settles, and any load-time decision that reads
  *       "absence" out of local state before settle is the bug class that
@@ -448,15 +783,46 @@ async function stepViewportChecks(page, label) {
   todo('step 6', 'per-child edge checks + nav collapse assertions not written');
 }
 
+/** Navigate to Vocab and select the seeded deck. */
+async function openSeededDeck(page) {
+  const nav = page.getByRole('navigation');
+  const vocab = nav.getByRole('button', { name: 'Vocab', exact: true });
+  await vocab.waitFor({ state: 'visible', timeout: 10000 });
+  await vocab.click();
+  if ((await vocab.getAttribute('aria-current')) !== 'page') {
+    throw new Error('smoke-auth-learning-path: Vocab did not become the active tab.');
+  }
+
+  const food = page.getByRole('button', { name: /Food & Drink/i });
+  await food.waitFor({ state: 'visible', timeout: 10000 });
+  if ((await food.getAttribute('aria-pressed')) !== 'true') {
+    await food.click();
+    await page.waitForTimeout(300);
+  }
+  if ((await food.getAttribute('aria-pressed')) !== 'true') {
+    throw new Error('smoke-auth-learning-path: Food & Drink never became the selected deck.');
+  }
+}
+
 /** One full signed-in walk at one viewport. */
 async function walkViewport(context, page, vp, seed) {
   const label = `${vp.name}@${vp.width}`;
   console.log(`→ ${label}`);
   await page.setViewportSize({ width: vp.width, height: vp.height });
 
-  // TODO: route interception for /api, /auth/v1, /rest/v1 goes here — but
-  // unlike the guest smoke it must ANSWER rather than 503, because steps 2-4
-  // assert on what comes back. Keep it closed to the real network.
+  // Closed to the real network first, then the progress lane on top — the
+  // later registration wins in Playwright, so the specific route is the one
+  // that answers. Unlike the guest smoke these ANSWER rather than 503,
+  // because steps 2-4 assert on what comes back.
+  const json = (body, status = 200) => ({
+    status,
+    contentType: 'application/json',
+    body: JSON.stringify(body),
+  });
+  await page.route('**/api/**', (r) => r.fulfill(json({ error: 'smoke-offline' }, 503)));
+  await page.route('**/auth/v1/**', (r) => r.fulfill(json({})));
+  await page.route('**/rest/v1/**', (r) => r.fulfill(json([])));
+  const posts = await captureProgressSync(page);
 
   await page.goto(BASE, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(400);
@@ -465,12 +831,14 @@ async function walkViewport(context, page, vp, seed) {
   await dismissEntryScreens(page);
   await stepViewportChecks(page, `${label} home`);
 
-  await stepCompleteExerciseAndSync(page, seed);
+  await openSeededDeck(page);
+  await stepCompleteExerciseAndSync(page, seed, posts);
+
   await stepRefreshAndVerifyPersistence(page, seed);
   await stepOpenLeagues(page);
   await stepAccountControlsAndLogout(page);
 
-  console.log(`✓ ${label} (harness only — steps are scaffolded)`);
+  console.log(`✓ ${label} (steps 1-2 asserted; 3-6 scaffolded)`);
 }
 
 async function launchBrowser() {
@@ -492,7 +860,10 @@ async function main() {
   if (EXPLICIT_BASE) console.log(`Smoking the server at ${BASE} (AUDIT_BASE set).`);
   else await provisionTarget();
 
-  const seed = learningPathSeed();
+  assertNoRealCredentials();
+  // Three remaining, not the guest smoke's one: a single event cannot show
+  // that ids are DISTINCT, which is the assertion that catches a replay.
+  const seed = learningPathSeed({ remaining: 3 });
   console.log(
     `Seed: ${seed.learnedCards.length}/${seed.cards.length} of ${DECK_ID} learned, ` +
       `${seed.remainingCount} left; session key ${SESSION_KEY}`
@@ -503,6 +874,7 @@ async function main() {
     for (const vp of VIEWPORTS) {
       const context = await browser.newContext();
       await installBaselineSeed(context, seed);
+      await installSignedInSeed(context, SESSION_KEY);
       const page = await context.newPage();
       try {
         await walkViewport(context, page, vp, seed);
