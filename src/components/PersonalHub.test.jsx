@@ -66,14 +66,62 @@ describe('PersonalHub', () => {
     expect(screen.getByLabelText(/level a2/i)).toHaveTextContent('A2');
   });
 
-  it('keeps a quiet level and rank, without XP totals or a learned counter', () => {
+  it('labels the XP total and separates it from the level and rank', () => {
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
-    expect(screen.getByText('3')).toBeInTheDocument();
+    expect(screen.getByTestId('home-identity-xp')).toHaveTextContent('300 XP');
+    expect(screen.getByTestId('home-identity-level-group')).toHaveTextContent('Level 3 · Anfänger');
+    expect(screen.getByTestId('home-identity-level-group').style.borderLeft).toBe(
+      '1px solid var(--c-border)'
+    );
     expect(screen.getByText('Anfänger')).toBeInTheDocument();
-    expect(screen.queryByText(/300 XP total/)).not.toBeInTheDocument();
     expect(screen.queryByText(/XP to next/)).not.toBeInTheDocument();
     expect(screen.queryByText('Learned')).not.toBeInTheDocument();
     expect(screen.queryByText('12')).not.toBeInTheDocument();
+  });
+
+  it('makes a new learner read as 0 XP, Level 1 instead of an unlabeled zero', () => {
+    render(
+      <PersonalHub
+        user={null}
+        profile={null}
+        cefrLevel="a1"
+        score={{ ...score, level: 1, rankName: 'Neuling', totalXp: 0 }}
+      />
+    );
+    expect(screen.getByTestId('home-identity-xp')).toHaveTextContent('0 XP');
+    expect(screen.getByTestId('home-identity-level-group')).toHaveTextContent('Level 1 · Neuling');
+  });
+
+  // 0 is a real total. null and undefined are not: the score can arrive without
+  // a number, and both the visible value and the accessible name go through
+  // `?? 0` so the unit still reads "0 XP" rather than a blank.
+  it.each([null, undefined])(
+    'labels a %s XP total as 0 XP on the value and the accessible name',
+    (totalXp) => {
+      render(
+        <PersonalHub user={user} profile={profile} cefrLevel="a2" score={{ ...score, totalXp }} />
+      );
+      const xp = screen.getByTestId('home-identity-xp');
+      expect(xp).toHaveAttribute('aria-label', '0 XP');
+      expect(screen.getByTestId('home-identity-xp-value')).toHaveTextContent('0');
+      expect(xp).toHaveTextContent('0 XP');
+    }
+  );
+
+  // A zero streak is not a standing worth printing: a bare flame beside "0"
+  // reads as a broken counter rather than as "you have not started yet", and
+  // it competes with the XP and level that DO say something. The row simply
+  // drops it until there is a streak to show.
+  it('hides the streak entirely at zero rather than printing a flame beside 0', () => {
+    render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} streak={0} />);
+    expect(screen.queryByTestId('home-identity-streak')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/^Streak/)).not.toBeInTheDocument();
+  });
+
+  it('shows the streak as soon as there is one', () => {
+    render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} streak={1} />);
+    expect(screen.getByTestId('home-identity-streak')).toHaveTextContent('1');
+    expect(screen.getByLabelText('Streak 1')).toBeInTheDocument();
   });
 
   it('keeps daily goal and streak in the same panel as identity', () => {
@@ -146,12 +194,15 @@ describe('PersonalHub', () => {
     });
   });
 
-  it('sizes the greeting and standing numbers as the card display scale', () => {
+  it('sizes the greeting, XP, and level as the card display scale', () => {
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} streak={4} />);
     expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toHaveStyle({
       fontSize: `${FONT_SIZE['4xl']}px`,
     });
     expect(screen.getByTestId('home-identity-streak')).toHaveStyle({
+      fontSize: `${FONT_SIZE.sm}px`,
+    });
+    expect(screen.getByTestId('home-identity-xp-value')).toHaveStyle({
       fontSize: `${FONT_SIZE['3xl']}px`,
     });
     expect(screen.getByTestId('home-identity-level')).toHaveStyle({

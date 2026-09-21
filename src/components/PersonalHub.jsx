@@ -55,14 +55,15 @@ const IDENTITY_HEADING_ID = 'home-identity-heading';
 // composes those boards into these slots so they are not three competing page
 // sections.
 //
-// Standing is quiet on purpose. The daily-goal ring and streak stay visible;
-// dense Learned / XP-total counters do not — they compete with the actions.
-// Arithmetic is unchanged; this file only decides what to print.
+// Standing is quiet on purpose. The daily-goal ring, total XP, level, and a
+// live streak stay visible; dense Learned / XP-to-next counters do not compete
+// with the actions. Arithmetic is unchanged; this file only decides what to
+// print.
 //
 // Spacing is denser than the first identity-card pass: #270 grew the avatar
 // and type, which left Missionen / Tagesaufgaben / Recommended sitting in
-// empty vertical air. Tokens step down one SPACE stop; the avatar column and
-// quieter XP are untouched.
+// empty vertical air. Tokens step down one SPACE stop; the avatar column is
+// untouched.
 //
 // Read-only on purpose, and now read-only completely. Decision E5 keeps account
 // MANAGEMENT — email, sign out, export, danger zone — exclusive to Settings; the
@@ -168,23 +169,21 @@ export default function PersonalHub({
         )}
       </Stack>
 
-      <Row wrap gap={2} align="center" style={{ minWidth: 0 }}>
+      <Row wrap gap={2} align="center" data-testid="home-identity-standing" style={{ minWidth: 0 }}>
         <GoalRing pct={goalPct} met={goalMet} size={SPACE[12]} />
         <span
-          aria-label={`Streak ${streak}`}
+          data-testid="home-identity-xp"
+          aria-label={`${lvl.totalXp ?? 0} XP`}
           style={{
             display: 'flex',
-            alignItems: 'center',
+            alignItems: 'baseline',
             gap: SPACE[1],
             minWidth: 0,
             flexShrink: 0,
           }}
         >
-          <span style={{ color: COLORS.gold, display: 'flex' }} aria-hidden="true">
-            <Flame size={FONT_SIZE.lg} />
-          </span>
           <span
-            data-testid="home-identity-streak"
+            data-testid="home-identity-xp-value"
             style={{
               fontFamily: FONTS.display,
               fontWeight: FONT_WEIGHT.bold,
@@ -193,17 +192,27 @@ export default function PersonalHub({
               color: COLORS.ink,
             }}
           >
-            {streak}
-          </span>
+            {lvl.totalXp ?? 0}
+          </span>{' '}
+          <Meta tone="soft" style={{ letterSpacing: LETTER_SPACING.wider }}>
+            XP
+          </Meta>
         </span>
-        <Body
-          size="sm"
-          tone="soft"
-          as="div"
-          style={{ minWidth: 0, overflowWrap: 'anywhere', flex: '1 1 8ch' }}
+        <span
+          data-testid="home-identity-level-group"
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            columnGap: SPACE[1],
+            rowGap: SPACE[1],
+            flexWrap: 'wrap',
+            minWidth: 0,
+            overflowWrap: 'anywhere',
+            flex: '1 1 8ch',
+            borderLeft: BORDER.panel,
+            paddingLeft: SPACE[2],
+          }}
         >
-          {/* The one label in this line, from the label token rather than a
-              fourth hand copy of it. */}
           <Meta>Level</Meta>{' '}
           <span
             data-testid="home-identity-level"
@@ -220,10 +229,44 @@ export default function PersonalHub({
           {lvl.rankName ? (
             <>
               {' · '}
-              <span style={{ overflowWrap: 'anywhere', minWidth: 0 }}>{lvl.rankName}</span>
+              <Body
+                size="sm"
+                tone="soft"
+                as="span"
+                style={{ minWidth: 0, overflowWrap: 'anywhere' }}
+              >
+                {lvl.rankName}
+              </Body>
             </>
           ) : null}
-        </Body>
+        </span>
+        {streak > 0 ? (
+          <span
+            aria-label={`Streak ${streak}`}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: SPACE[1],
+              minWidth: 0,
+              flexShrink: 0,
+              color: COLORS.gold,
+            }}
+          >
+            <Flame size={FONT_SIZE.lg} aria-hidden="true" />
+            <span
+              data-testid="home-identity-streak"
+              style={{
+                fontFamily: FONTS.mono,
+                fontWeight: FONT_WEIGHT.bold,
+                fontSize: FONT_SIZE.sm,
+                lineHeight: 1,
+                color: COLORS.inkSoft,
+              }}
+            >
+              {streak}
+            </span>
+          </span>
+        ) : null}
       </Row>
 
       {/* The Settings link stood here, between the level line and the today slot.
