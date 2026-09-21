@@ -11,6 +11,7 @@ node_modules
 dist
 dist-audit
 dist-smoke
+dist-smoke-auth
 dist-ssr
 *.local
 

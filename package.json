@@ -22,6 +22,7 @@
     "audit:contrast": "node scripts/dev/audit-contrast.mjs",
     "audit:layout": "node scripts/dev/audit-layout.mjs",
     "smoke:learning-path": "node scripts/dev/smoke-learning-path.mjs",
+    "smoke:auth-learning-path": "node scripts/dev/smoke-auth-learning-path.mjs",
     "bench:perf": "node scripts/dev/bench-perf.mjs",
     "clean": "node scripts/clean.js",
     "prepare": "husky",

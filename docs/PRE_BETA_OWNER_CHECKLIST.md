@@ -146,20 +146,25 @@ password security) → enable **Leaked password protection**.
 This is a hosted Auth setting. Editing `supabase/config.toml` only affects
 local `supabase start`.
 
-## 8. Apply pending security-hardening migrations
+## 8. Apply pending security-hardening migrations — ✅ RESOLVED 2026-09-21
 
 Two files, in this order: **#290 then #293** (BACKLOG owner actions #6
-then #7). Both PRs are on `main`; neither migration is applied in
-production. Open the production SQL editor for Sprachschule. Paste each
-file **verbatim**. Run it. Do **not** `supabase migration repair`, `db
-push`, `db pull`, or `db reset`. Do not apply via MCP. Do not mark either
-row Done until the SQL has actually run.
+then #7). **Both are now applied in production.** Nothing is left to do
+in this section; it is kept as the record of what ran and how it was
+verified.
+
+Verified 2026-09-21 by production read-only check plus Migration Drift
+CI — see *Verification* below. No `supabase migration repair`, `db push`,
+`db pull`, `db reset`, or MCP apply was used; the SQL ran verbatim in the
+Sprachschule dashboard SQL editor.
 
 ### 8a. `#290` — `is_league_member` off the PostgREST surface
 
 Repo file: `supabase/migrations/20260918200000_revoke_is_league_member_execute.sql`.
 
-**Unapplied.** Code landed as #290. Moves `is_league_member` to schema
+**✅ Applied 2026-09-21** (`schema_migrations` name
+`revoke_is_league_member_execute`). Code landed as #290. Moves
+`is_league_member` to schema
 `private` (not in PostgREST's exposed schemas) and points both league RLS
 policies at it. `authenticated` keeps `EXECUTE` there — PostgreSQL checks
 that privilege when evaluating RLS, so revoking it in `public` 42501'd
@@ -174,8 +179,9 @@ recreate `public.is_league_member`.
 
 Repo file: `supabase/migrations/20260918213000_server_only_rls_deny_policies.sql`.
 
-**Unapplied.** Code landed as #293. Apply **after** 8a / the #290
-migration. Adds deny-all RLS policies (`USING false` / `WITH CHECK false`)
+**✅ Applied 2026-09-21** (`schema_migrations` name
+`server_only_rls_deny_policies`), after 8a / the #290 migration as
+required. Code landed as #293. Adds deny-all RLS policies (`USING false` / `WITH CHECK false`)
 for `anon` and `authenticated` on `rate_limits` and `progress_events_seen`.
 RLS stays enabled. No client grants. `service_role` keeps `GRANT ALL` (it
 bypasses RLS). Learners never hit these tables; there is no UI smoke test.
@@ -184,6 +190,32 @@ Migration Drift sees the new name.
 
 Ignore a red **Supabase Preview** check — that asks the inverse question
 and is stale on `main` on purpose (`AGENTS.md`).
+
+### Verification (2026-09-21)
+
+Both migrations were confirmed applied by their **effects**, not just by a
+`schema_migrations` stamp — a stamp row alone never proves a migration
+took.
+
+- **Migration Drift CI on `main`:** red on 2026-09-18 (before the apply),
+  green on 2026-09-19 and 2026-09-20. Drift name-matches, so the
+  production version stamps differing from the repo filenames
+  (`20260918222912` vs `20260918213000`) is expected and not drift.
+- **Production read-only check** (catalog reads only; no DDL, no writes):
+  - `is_league_member` exists **only** in schema `private`; the
+    `public` function is gone, so `/rpc/is_league_member` is closed.
+    `authenticated` holds `EXECUTE` on the private one, as 8a intends.
+  - `read my league rows` (`league_members`) and `read my leagues`
+    (`leagues`) both evaluate `private.is_league_member(...)` with the
+    InitPlan-wrapped `auth.uid()` intact.
+  - `rate_limits` and `progress_events_seen` each carry a
+    `no client access` policy, `FOR ALL`, `USING false` /
+    `WITH CHECK false`.
+- **Supabase advisors** (live, not cached): WARN 0029
+  `authenticated_security_definer_function_executable` and INFO 0008
+  `rls_enabled_no_policy` are both **clear**. The only remaining security
+  advisor is `auth_leaked_password_protection`, which is §7 above and
+  unrelated to these two migrations.
 
 ## 9. Merge the outstanding docs PR if it is still open
 
