@@ -18,7 +18,7 @@ export default defineConfig({
     // under test had never touched. A real hang still fails, just later.
     testTimeout: 30000,
     hookTimeout: 30000,
-    // Bound the worker pool. Vitest defaults maxForks to the CPU count — 8
+    // Bound the worker pool. Vitest defaults maxWorkers to the CPU count — 8
     // here — and each fork carries its own jsdom environment, so peak memory
     // scales with core count rather than with available RAM. On a 16 GB box
     // that is also running Docker (which reserves ~7.7 GB before a single
@@ -38,12 +38,11 @@ export default defineConfig({
     // testTimeout 5s -> 30s (above) treated this same cause at the deadline;
     // this treats it at the source. Both stay: a real hang still fails, and
     // now it fails for a legible reason.
-    // minForks must be set alongside maxForks: it defaults to the CPU count,
-    // so `maxForks: 4` alone throws "minThreads and maxThreads must not
-    // conflict" and vitest then runs ZERO tests. It does exit 1, so CI and the
-    // pre-commit hook catch it — but the summary reads "Test Files no tests",
-    // which looks far more benign than it is.
-    poolOptions: { forks: { minForks: 1, maxForks: 4 } },
+    // Vitest 4 removed poolOptions and promotes worker limits to top-level test
+    // options. Keep the fork pool explicit so this retains the old execution
+    // model while using the supported worker cap.
+    pool: 'forks',
+    maxWorkers: 4,
     include: ['src/**/*.test.{js,jsx}', 'api/**/*.test.js', 'scripts/**/*.test.{js,jsx}'],
     coverage: {
       provider: 'v8',
