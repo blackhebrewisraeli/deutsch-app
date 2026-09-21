@@ -13,6 +13,16 @@ const ALLOWED = 'src/lib/prompts.js';
 // guard, not a runtime check.
 const PROMPT_MARKER = /\bYou are\b|\bYou generate\b/;
 
+// Verbatim legal copy, which addresses the reader in the second person because
+// that is how a terms document is written ("You are responsible for
+// maintaining the security of your account"). The marker is a heuristic for
+// LLM system prompts and this is the one legitimate non-prompt hit for it.
+//
+// Scoped to these exact files rather than a directory prefix, and asserted to
+// exist below — an exclusion that outlives the file it excuses is an exclusion
+// nobody notices has stopped meaning anything.
+const NOT_PROMPTS = ['src/components/legal/TermsOfService.jsx'];
+
 function walkSource(dir, out = []) {
   for (const name of readdirSync(dir)) {
     const full = join(dir, name);
@@ -34,6 +44,7 @@ describe('AI prompt text lives in one place', () => {
     const offenders = [];
     for (const file of walkSource(SRC_DIR)) {
       if (file === ALLOWED) continue;
+      if (NOT_PROMPTS.includes(file)) continue;
       const lines = readFileSync(file, 'utf8').split('\n');
       lines.forEach((line, i) => {
         if (PROMPT_MARKER.test(line)) offenders.push(`${file}:${i + 1}: ${line.trim()}`);
@@ -45,5 +56,17 @@ describe('AI prompt text lives in one place', () => {
   it('still sees the prompts module itself, so the guard cannot pass vacuously', () => {
     const text = readFileSync(ALLOWED, 'utf8');
     expect(PROMPT_MARKER.test(text)).toBe(true);
+  });
+
+  it('keeps every excused file real and still matching, so no exclusion goes stale', () => {
+    for (const file of NOT_PROMPTS) {
+      // Exists: a path that no longer resolves would silently excuse nothing
+      // while reading as though it still guards something.
+      const text = readFileSync(file, 'utf8');
+      // Still matches: once the copy no longer trips the marker the exclusion
+      // has outlived its reason and should be deleted rather than left to
+      // cover a future, real offender in the same file.
+      expect(PROMPT_MARKER.test(text), `${file} no longer needs its exclusion`).toBe(true);
+    }
   });
 });

@@ -94,6 +94,10 @@ import StatusChip from './components/StatusChip';
 import GoalStrip from './components/gamification/GoalStrip';
 import TutorialOverlay from './components/TutorialOverlay';
 import { Analytics } from '@vercel/analytics/react';
+import PrivacyPolicy from './components/legal/PrivacyPolicy';
+import TermsOfService from './components/legal/TermsOfService';
+import LegalFooter from './components/legal/LegalFooter';
+import { currentLegalRoute } from './lib/legalRoute';
 import { useWindowWidth, isMobile, isTiny, isTablet, bp } from './lib/useWindowWidth';
 
 export default function App() {
@@ -725,6 +729,40 @@ export default function App() {
     recordPlacementOfferShown();
   }, [tab, placementOfferVisible, showPlacement]);
 
+  // ── Legal routes ────────────────────────────────────────────────────────
+  //
+  // Checked BEFORE the entry gate and the placement test, because a compliance
+  // page has to be readable by someone who has not signed up — they are
+  // deciding whether to, and the terms are part of that decision. Gating them
+  // behind the gate would hide them from exactly the right reader.
+  const [legalRoute, setLegalRoute] = useState(currentLegalRoute);
+  useEffect(() => {
+    const onNav = () => setLegalRoute(currentLegalRoute());
+    // popstate covers Back/Forward; hashchange covers the #/privacy fallback
+    // form, which does not fire popstate in every browser.
+    window.addEventListener('popstate', onNav);
+    window.addEventListener('hashchange', onNav);
+    return () => {
+      window.removeEventListener('popstate', onNav);
+      window.removeEventListener('hashchange', onNav);
+    };
+  }, []);
+  const openLegal = useCallback((to) => {
+    // pushState, so an ordinary click never round-trips to the server and the
+    // page works even where no SPA rewrite is configured.
+    window.history.pushState(null, '', to);
+    setLegalRoute(currentLegalRoute());
+    window.scrollTo(0, 0);
+  }, []);
+  const closeLegal = useCallback(() => {
+    // back() keeps the history stack honest when the reader arrived by link
+    // from inside the app; a cold visit has nothing to go back to, so fall
+    // through to the app root instead of trapping them on the page.
+    if (window.history.length > 1) window.history.back();
+    else window.history.pushState(null, '', '/');
+    setLegalRoute(null);
+  }, []);
+
   // Settings lives inside the Profile tab (id still `stats`). The hash keeps
   // the deep link; it is not a seventh nav tab. The WelcomeGate still wins
   // while it is up — a guest who has not entered the app cannot skip it by
@@ -1061,6 +1099,9 @@ export default function App() {
   const sessionUnresolved = authStatus === 'loading' && !mayHaveSession();
   const showGate =
     !gateDismissed && isAuthConfigured() && (authStatus === 'anonymous' || sessionUnresolved);
+
+  if (legalRoute === 'privacy') return <PrivacyPolicy onBack={closeLegal} />;
+  if (legalRoute === 'terms') return <TermsOfService onBack={closeLegal} />;
 
   if (showGate) {
     return (
@@ -1485,26 +1526,37 @@ export default function App() {
           )}
         </PageFrame>
 
-        {/* ── Footer — hidden on mobile ─────────────────────────── */}
-        {!mobile && (
-          <footer
-            style={{
-              borderTop: `2px solid ${COLORS.ink}`,
-              padding: '16px 32px',
-              marginTop: 64,
-              display: 'flex',
-              justifyContent: 'space-between',
-              fontFamily: FONT_MONO,
-              fontSize: 10,
-              letterSpacing: '0.15em',
-              color: COLORS.mute,
-              textTransform: 'uppercase',
-            }}
-          >
-            <span>Lernen × Sprechen × Verstehen</span>
-            <span>// Powered by Claude</span>
-          </footer>
-        )}
+        {/* ── Footer ────────────────────────────────────────────────
+            The decorative strap line stays desktop-only as before. The legal
+            links do NOT: hiding them on mobile would leave a phone user with
+            no route to the privacy policy at all, which is the one thing they
+            exist to prevent. One <footer> so there is a single contentinfo
+            landmark either way. */}
+        <footer
+          style={{
+            borderTop: `2px solid ${COLORS.ink}`,
+            marginTop: 64,
+            fontFamily: FONT_MONO,
+            fontSize: 10,
+            letterSpacing: '0.15em',
+            color: COLORS.mute,
+            textTransform: 'uppercase',
+          }}
+        >
+          {!mobile && (
+            <div
+              style={{
+                padding: '16px 32px',
+                display: 'flex',
+                justifyContent: 'space-between',
+              }}
+            >
+              <span>Lernen × Sprechen × Verstehen</span>
+              <span>// Powered by Claude</span>
+            </div>
+          )}
+          <LegalFooter onNavigate={openLegal} />
+        </footer>
 
         {/* Only reachable past the entry gate, which early-returns above — so a
           brand-new account meets the gate first and the tour on the frame after
