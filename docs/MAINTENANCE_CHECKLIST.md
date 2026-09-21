@@ -26,8 +26,10 @@ serves its own stub-config target). Treat the surfaces below as machine-checked
 for what the table says and only that: **text contrast against WCAG AA**
 everywhere, and **horizontal fit** — element edges, and where noted
 `scrollWidth - clientWidth` — on the surfaces that carry it. Spend the manual
-passes on what it cannot see: audio, keyboard order, sync round trips, offline,
-and anything only a human reads as wrong.
+passes on what it cannot see: audio, keyboard order, offline, and anything only
+a human reads as wrong. The sync lane and leagues are covered by the signed-in
+smoke below — but against a fixture, never against production, so a real round
+trip is still a manual check.
 
 | Surface                                          | Widths           | Contrast                             | Horizontal fit                | States                                                                                                  |
 | ------------------------------------------------ | ---------------- | ------------------------------------ | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
@@ -44,6 +46,38 @@ that output means it was never reached — read it before trusting a clean run.
 
 Not machine-checked: a label that breaks inside a word, an overlay not listed
 in the script, anything behind a live network call, and `VitalsOverlay`.
+
+### What the browser smokes already cover
+
+Two more CI jobs walk the journey rather than measuring a surface.
+`npm run smoke:learning-path` takes the guest path; `npm run
+smoke:auth-learning-path` takes the half a guest can never reach. Both build
+and serve their own target, and the signed-in one needs a **stub** Supabase
+build — a real `VITE_SUPABASE_*` rejects its seeded session, so do not point
+it at production.
+
+The signed-in walk repeats every step below at **1280, 375 and 320**, so each
+row is asserted three times against a differently sized shell.
+
+| Step                       | What passing actually proves                                                                                                            |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Session restore            | the seeded session satisfies `useAuth`; the chip renders and "Sign in" does not                                                         |
+| Answer → sync              | **that** answer's event reaches the wire and is acked, not merely that a POST happened                                                  |
+| Reload after a local wipe  | progress is rebuilt from the server, so the reconcile lane actually ran                                                                 |
+| Profile → Leagues          | a ranked standings table with the caller highlighted and zone dividers — not the soft error line                                        |
+| Account controls, sign-out | Export and Delete are present, the sheet shows the signed-in email, and sign-out returns to the guest shell with the session key cleared |
+| Fit, at five points in the walk | Home, Vocab, after the reload, Leagues and the signed-out shell each measured for `scrollWidth - clientWidth`, a child spilling its parent, and a nav button clipping its own label |
+
+Against a **fixture server**, so this says nothing about production PostgREST,
+GoTrue or the AI lane. Delete is asserted by presence only — it is never
+clicked.
+
+Read its step lines, not only its exit code: the run aborts at the first
+failure, so a missing `✓ narrow@320` means that width never ran rather than
+that it passed. That is not hypothetical — the job was added after #311 gave
+the Settings segmented control a second `aria-label="Account"`, which killed
+the run at step 5 on the first viewport and left 375 and 320 unwalked while
+the footer redesign (#312) landed on top of it and the suite stayed green.
 
 The guest path and core practice work with no AI backend. Chat replies, custom
 deck generation, and B1 translation grading require the deployed `/api/v1/ai/*`
@@ -143,9 +177,12 @@ playback may require a direct press because browsers restrict autoplay.
 - Record console errors, failed Network requests, viewport overflow values,
   and the first failed step. A passing build or rendered button is not proof
   that its production backend works.
-- For a branch-side browser check, run `npm run smoke:learning-path`. It tests
-  guest practice in an isolated local build; it does not verify production auth
-  or AI.
+- For a branch-side browser check, run `npm run smoke:learning-path` for guest
+  practice and `npm run smoke:auth-learning-path` for the signed-in half — sync,
+  leagues, account controls, at 1280 / 375 / 320. Both run in CI and both use an
+  isolated local build; neither verifies production auth or AI. Run the
+  signed-in one after any change to the masthead, the Settings route, or the
+  league table, and read its step lines rather than its exit code alone.
 - Run `npm run audit:contrast` after any change to colour tokens, type tiers,
   a popover, or the Settings route. It builds and serves its own target, so it
   needs no running dev server, and takes about two minutes. Read the coverage
