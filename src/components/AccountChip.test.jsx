@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, within, cleanup } from '@testing-library/react';
+import { render, screen, within, cleanup, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import AccountChip from './AccountChip';
 
@@ -297,6 +297,48 @@ describe('AccountChip — set status', () => {
 
     expect(screen.getByText('Lerne Perfekt')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /^set status$/i })).toBeNull();
+  });
+
+  it('strips control characters before storing a status', async () => {
+    await open();
+    await userEvent.click(screen.getByRole('button', { name: /set status/i }));
+    fireEvent.change(screen.getByRole('textbox', { name: /status/i }), {
+      target: { value: 'Lerne\n\u0000Perfekt' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(localStorage.getItem('deutsch-account-status')).toBe('LernePerfekt');
+  });
+
+  it('truncates a status to the hard limit before storing it', async () => {
+    await open();
+    await userEvent.click(screen.getByRole('button', { name: /set status/i }));
+    fireEvent.change(screen.getByRole('textbox', { name: /status/i }), {
+      target: { value: 'x'.repeat(81) },
+    });
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(localStorage.getItem('deutsch-account-status')).toBe('x'.repeat(80));
+  });
+
+  it('rejects non-string status values', async () => {
+    const getItem = vi
+      .spyOn(Storage.prototype, 'getItem')
+      .mockReturnValue({ status: 'Lerne Perfekt' });
+
+    try {
+      await open();
+      expect(screen.getByRole('button', { name: /set status/i })).toBeInTheDocument();
+    } finally {
+      getItem.mockRestore();
+    }
+  });
+
+  it('sanitizes a status written by an older build before displaying it', async () => {
+    localStorage.setItem('deutsch-account-status', '  Lerne\n\u0000Perfekt  ');
+    await open();
+
+    expect(screen.getByRole('button', { name: /edit status/i }).textContent).toBe('LernePerfekt');
   });
 
   it('can clear a status it previously set', async () => {

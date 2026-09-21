@@ -11,10 +11,20 @@ import Avatar from './ui/Avatar';
 // which is the honest behaviour for something stored in localStorage — not a
 // button that pretends to save.
 const STATUS_KEY = 'deutsch-account-status';
+const STATUS_MAX_LENGTH = 80;
+
+function sanitizeStatus(raw) {
+  if (typeof raw !== 'string') return '';
+
+  return raw
+    .replace(/[^\p{L}\p{M}\p{N}\p{P}\p{S} ]/gu, '')
+    .trim()
+    .slice(0, STATUS_MAX_LENGTH);
+}
 
 function readStatus() {
   try {
-    return localStorage.getItem(STATUS_KEY) || '';
+    return sanitizeStatus(localStorage.getItem(STATUS_KEY));
   } catch {
     // Private mode, blocked site data: a missing status is not an error.
     return '';
@@ -23,7 +33,8 @@ function readStatus() {
 
 function writeStatus(value) {
   try {
-    if (value) localStorage.setItem(STATUS_KEY, value);
+    const safeValue = sanitizeStatus(value);
+    if (safeValue) localStorage.setItem(STATUS_KEY, safeValue);
     else localStorage.removeItem(STATUS_KEY);
     return true;
   } catch {
@@ -202,7 +213,7 @@ export default function AccountChip({
   const name = profileName(profile);
   const showHandle = Boolean(profile?.handle) && name !== profile.handle;
   const saveStatus = () => {
-    const next = draft.trim();
+    const next = sanitizeStatus(draft);
     setStatus(next);
     writeStatus(next);
     setEditingStatus(false);
@@ -319,7 +330,7 @@ export default function AccountChip({
                   aria-label="Status"
                   value={draft}
                   autoFocus
-                  maxLength={80}
+                  maxLength={STATUS_MAX_LENGTH}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key !== 'Enter') return;
