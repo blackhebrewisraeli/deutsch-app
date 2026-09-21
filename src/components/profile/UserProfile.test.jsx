@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 
 // The standings table fetches on its own and is covered by its own suite; this
 // page only has to PLACE it. Stubbing it keeps these assertions about layout
@@ -107,8 +107,12 @@ describe('UserProfile — the consolidated profile page', () => {
     render(<UserProfile user={USER} local={local} />);
     // The local numbers come from localStorage and are still true, so a failed
     // social fetch must not blank the whole page.
-    await waitFor(() => expect(screen.getByTestId('profile-metrics')).toBeInTheDocument());
-    expect(screen.getByTestId('profile-metrics')).toHaveTextContent('1240');
+    //
+    // findBy* rather than waitFor(() => expect(...)): it is the same wait with
+    // the assertion built in, and it does not put an assertion inside a
+    // callback that may run several times.
+    const metrics = await screen.findByTestId('profile-metrics');
+    expect(metrics).toHaveTextContent('1240');
   });
 
   it('no grid relies on the implicit auto column', async () => {

@@ -25,8 +25,13 @@ function writeStatus(value) {
   try {
     if (value) localStorage.setItem(STATUS_KEY, value);
     else localStorage.removeItem(STATUS_KEY);
+    return true;
   } catch {
-    /* nothing to do: the sheet still shows it for this session */
+    // Private mode, blocked site data, quota. There is nothing for a caller to
+    // DO about it — the sheet still shows the status for this session — but the
+    // outcome is reported rather than swallowed by an empty block, matching
+    // hasStoredLevel's shape in levelPref.js.
+    return false;
   }
 }
 
