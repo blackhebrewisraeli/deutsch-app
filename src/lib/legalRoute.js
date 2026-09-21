@@ -14,12 +14,28 @@ export const LEGAL_ROUTES = {
   '/terms': 'terms',
 };
 
+/**
+ * Strip trailing slashes with a single backward scan.
+ *
+ * Deliberately not `replace(/\/+$/, '')`. A `+` quantifier anchored at the end
+ * backtracks: on a long run of slashes the engine retries from each position,
+ * which is super-linear and what SonarCloud flags. This walks the string once,
+ * never re-examines a character, and allocates one slice.
+ */
+function stripTrailingSlashes(value) {
+  let end = value.length;
+  while (end > 0 && value.charAt(end - 1) === '/') end -= 1;
+  return value.slice(0, end);
+}
+
 /** @returns {'privacy'|'terms'|null} the route for a location, or null. */
 export function legalRouteFor({ pathname = '', hash = '' } = {}) {
   // Trailing slashes are equivalent: /privacy and /privacy/ are one route.
-  const path = pathname.replace(/\/+$/, '') || '/';
+  const path = stripTrailingSlashes(pathname) || '/';
   if (LEGAL_ROUTES[path]) return LEGAL_ROUTES[path];
-  const fromHash = hash.replace(/^#/, '').replace(/\/+$/, '');
+  // startsWith/slice rather than an anchored regex, for the same reason.
+  const bare = hash.startsWith('#') ? hash.slice(1) : hash;
+  const fromHash = stripTrailingSlashes(bare);
   if (LEGAL_ROUTES[fromHash]) return LEGAL_ROUTES[fromHash];
   return null;
 }
