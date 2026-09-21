@@ -260,9 +260,9 @@ describe('PersonalHub', () => {
   // standing, so it must never grow an email, a sign-out or a delete control.
   //
   // It no longer carries the one control it used to own either: the "Settings →"
-  // link is gone, and the header account bubble is the single door to Profile and
-  // Settings. The hub is fully read-only now, which is what the zero-button
-  // assertion below pins.
+  // link is gone, and the header account bubble is the single door to Settings.
+  // The hub is fully read-only now, which is what the zero-button assertion
+  // below pins.
   it('carries no account management, and no controls at all', () => {
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.queryByText(/semion@example\.com/)).not.toBeInTheDocument();

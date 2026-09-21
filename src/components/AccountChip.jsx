@@ -3,15 +3,19 @@ import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW } from '../lib/theme';
 import { isAuthConfigured } from '../lib/auth.js';
 
 // Header account affordance. Guest: a quiet "Sign in" link. Signed-in: an
-// initial-in-a-circle that opens a small sheet (email · profile · settings ·
-// sign out). Full management lives in the Profile tab's Settings view; this is
-// the glance + escape.
+// initial-in-a-circle that opens a small sheet (email · settings · sign out).
+// Full management lives in the tabbed Settings route; this is the glance +
+// escape.
 //
-// This sheet is the ONE door to that tab's two views. Home's identity strip used
-// to carry a "Settings →" link of its own, which made two Settings doors on the
-// landing screen and none of them the account bubble; the link is gone, so the
-// sheet reaches the Profile OVERVIEW as well as Settings. Losing the overview row
-// would leave the bubble able to open only the deeper of the two views.
+// This sheet is the ONE door to Settings. Home's identity strip used to carry a
+// "Settings →" link of its own, which made two Settings doors on the landing
+// screen and none of them the account bubble; that link is gone.
+//
+// It used to carry a "Profile →" row beside Settings. Both rows landed on the
+// same tab — Profile on its overview view, Settings on the deeper one — and in
+// one small sheet, inches apart, that read as two destinations when it was one.
+// Settings became a tabbed route in #311, which is the overview now, so the
+// extra row was a second name for a place the sheet already went.
 //
 // The sheet is a `dialog`, matching ThemeChip and StatusChip. It previously
 // advertised `aria-haspopup="true"` — which means MENU — over a panel carrying
@@ -26,8 +30,9 @@ import { isAuthConfigured } from '../lib/auth.js';
 // email line and the red "Sign out" — had never been contrast-audited,
 // because a sheet that never opens contributes no pairings.
 
-// The two navigation rows in the sheet are the same control twice over, so the
-// recipe lives once. Sign out keeps its own (red) styling.
+// The sheet's navigation row. Kept as a named recipe rather than inlined: it
+// carried two rows until the Profile one went, and Sign out deliberately does
+// NOT share it (it is red).
 const SHEET_LINK = {
   display: 'block',
   background: 'none',
@@ -44,7 +49,6 @@ export default function AccountChip({
   user,
   onSignIn,
   onSignOut,
-  onOpenProfile,
   onOpenSettings,
   pending = false,
 }) {
@@ -188,26 +192,11 @@ export default function AccountChip({
             {user.email}
           </div>
           {/* The sheet stays the glance-and-escape it always was; full account
-              management lives in the Profile route these two rows point at.
-              Overview first, then the deeper view — Settings is a destination
-              inside Profile, not a sibling of it. */}
+              management lives in the tabbed Settings route this row points at. */}
           <button
             type="button"
-            // Both rows are explicitly labelled rather than read from their own
-            // text: "Profile →" and "Settings →" sit inches apart in one small
-            // sheet, and an unlabelled pair is ambiguous to a screen reader as
-            // well as to a test querying by name.
-            aria-label="Open profile"
-            onClick={() => {
-              setOpen(false);
-              onOpenProfile?.();
-            }}
-            style={SHEET_LINK}
-          >
-            Profile →
-          </button>
-          <button
-            type="button"
+            // Labelled explicitly rather than read from its own text, so the
+            // trailing arrow never becomes part of the accessible name.
             aria-label="Open settings"
             onClick={() => {
               setOpen(false);
