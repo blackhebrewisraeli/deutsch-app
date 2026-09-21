@@ -352,6 +352,47 @@ async function dismissEntryScreens(page) {
   }
 }
 
+/**
+ * The masthead's AccountChip trigger, scoped to the banner landmark.
+ *
+ * `aria-label="Account"` is NOT unique in the document: #311 gave the
+ * Settings segmented control a section button with the same accessible name
+ * (`SETTINGS_SECTIONS` in `src/components/settings/SettingsRoute.jsx`). An
+ * unscoped `getByRole('button', { name: 'Account' })` therefore matched two
+ * elements the moment a step stood on `#/settings`, and step 5 died of a
+ * Playwright strict-mode violation — which is how this smoke went red one
+ * day after it shipped. Both names are legitimate on their own surface, so
+ * the test scopes instead of asking the UI to rename anything.
+ *
+ * `<header>` is the app shell's only banner (it is not nested in a
+ * `<section>` or `<article>`), so this holds regardless of what the page
+ * body grows next.
+ */
+function mastheadAccountButton(page) {
+  return page.getByRole('banner').getByRole('button', { name: 'Account', exact: true });
+}
+
+/**
+ * Fail in this file's own words if the masthead ever grows a SECOND
+ * "Account" button — the scope above only rules out collisions in the page
+ * body. Without this the next collision surfaces as a raw strict-mode stack
+ * trace, or worse as some unrelated step's error text.
+ *
+ * It fails ONLY on more than one. Absence is not this function's business:
+ * step 1 waits for the chip to appear and step 5 asserts it is there, and
+ * both say something more useful about a missing chip than this could.
+ */
+async function assertNoMastheadAccountAmbiguity(page, label) {
+  const count = await mastheadAccountButton(page).count();
+  if (count > 1) {
+    throw new Error(
+      `smoke-auth-learning-path: the masthead has ${count} "Account" buttons at ${label}, ` +
+        'so every account assertion in this walk is ambiguous. Give the new one a distinct ' +
+        'accessible name rather than widening this locator.'
+    );
+  }
+}
+
 function horizontalOverflow() {
   return document.documentElement.scrollWidth - document.documentElement.clientWidth;
 }
@@ -573,12 +614,17 @@ async function stepRestoreSession(context, page, seed) {
   void context;
   void seed;
 
-  const account = page.getByRole('button', { name: 'Account', exact: true });
+  const account = mastheadAccountButton(page);
   const signIn = page.getByRole('button', { name: 'Sign in', exact: true });
 
   try {
     await account.waitFor({ state: 'visible', timeout: 10000 });
   } catch (err) {
+    // Ambiguity reaches this catch too — `waitFor` on a 2-match locator throws
+    // a strict-mode violation, not a timeout — and blaming the session seed for
+    // it sends the next reader to entirely the wrong layer. Ask which failure
+    // this actually is before naming a cause.
+    await assertNoMastheadAccountAmbiguity(page, 'session restore');
     throw new Error(
       'smoke-auth-learning-path: signed-in pass never reached the account chrome. ' +
         'The session seed no longer satisfies useAuth — check SESSION_KEY ' +
@@ -1169,8 +1215,10 @@ async function stepAccountControlsAndLogout(page) {
   }
   // Deliberately NOT clicked. Presence is the whole assertion for delete.
 
-  // The chip sheet.
-  const account = page.getByRole('button', { name: 'Account', exact: true });
+  // The chip sheet. Scoped to the banner: the Settings segmented control this
+  // step is standing on carries its own "Account" button (#311).
+  await assertNoMastheadAccountAmbiguity(page, 'Settings');
+  const account = mastheadAccountButton(page);
   await account.waitFor({ state: 'visible', timeout: 10000 });
   await account.click();
 
