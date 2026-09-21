@@ -1,26 +1,19 @@
 #!/usr/bin/env node
 /**
- * Browser smoke for the AUTHENTICATED learning path.  ⚠ SCAFFOLD ONLY.
+ * Browser smoke for the AUTHENTICATED learning path.
  *
  * Sibling of `smoke-learning-path.mjs`, which walks the same journey as a
  * guest. That one proves local persistence survives a reload. This one is
  * about the half a guest can never reach: the sync lane, leagues, and the
  * account controls.
  *
- * ── Status ───────────────────────────────────────────────────────────────
- * The HARNESS below is real and runs: stub-env build, preview server,
- * Chromium launch, a seeded signed-in session, and the viewport loop.
- * The six SMOKE STEPS are `// TODO` stubs. Running this today exits 2 and
- * prints what is unimplemented — deliberately NOT 0, so it cannot be wired
- * into CI and sit there reporting green on an empty walk.
- *
- * ── What it will prove, once the steps are filled in ──────────────────────
+ * ── What it proves ───────────────────────────────────────────────────────
  *   1. A stub session restores without secrets (no real token, no network).
- *   2. Finishing an exercise fires the expected sync write.
- *   3. A reload keeps that progress — server state, not just localStorage.
- *   4. Leagues opens and renders a standings table, not the error line.
+ *   2. Finishing an exercise puts THAT answer's event on the sync wire.
+ *   3. A reload rebuilds progress from the server after a local wipe.
+ *   4. Leagues renders a real standings table, not the soft error line.
  *   5. Account controls are present and sign-out returns to the guest shell.
- *   6. None of the above overflows at 1280 / 375 / 320.
+ *   6. None of the above overflows or clips at 1280 / 375 / 320.
  *
  * ── Why this builds its own target (do not "simplify" this away) ──────────
  * The signed-in pass seeds a Supabase session into localStorage. A build
@@ -41,8 +34,8 @@
  * Same AUDIT_BASE / AUDIT_SKIP_BUILD / AUDIT_PORT contract as
  * smoke-learning-path.mjs and audit-contrast.mjs.
  *
- * Exit 0 on a clean walk of all three viewports; 1 on failure; 2 while the
- * steps are still scaffolded.
+ * Exit 0 on a clean walk of all three viewports; 1 on failure. A failing
+ * viewport also writes smoke-auth-failure-<name>-<width>.png.
  */
 
 import { chromium } from 'playwright';
@@ -50,7 +43,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DECK_ID, STATE_KEY, learningPathSeed, srsKey } from './learning-path-seed.js';
+import { DECK_ID, STATE_KEY, learningPathSeed } from './learning-path-seed.js';
 // The SAME pure module LeaderboardSection and the settle endpoint both use, so
 // the zone dividers this smoke expects can never drift from the ones the app
 // draws. Importing it beats hardcoding 7/5 here.
@@ -108,6 +101,9 @@ const SESSION_KEY = `sb-${SUPABASE_REF}-auth-token`;
 // src/lib/progressQueue.js owns this key; the queue is the only place the
 // id a given answer enqueued is observable from outside the bundle.
 const QUEUE_KEY = 'deutsch-app-progress-queue-v1';
+
+/** Set by step 5 to stop the init script re-seeding the session after logout. */
+const NO_RESEED_FLAG = '__smoke_auth_no_reseed';
 
 let previewServer = null;
 
@@ -280,14 +276,21 @@ async function installBaselineSeed(context, seed) {
  */
 async function installSignedInSeed(context, key) {
   await context.addInitScript(
-    ({ storageKey, session }) => {
+    ({ storageKey, session, stopFlag }) => {
       try {
+        // Step 5 sets this before signing out. Without it the seed would run
+        // again on the hard reload `signOutAndReset` performs, put the session
+        // straight back, and a COMPLETELY BROKEN logout would look like a
+        // working one. sessionStorage is the right home for the flag:
+        // `clearUserLocalState` wipes localStorage only, so it survives the
+        // very reload it has to survive.
+        if (sessionStorage.getItem(stopFlag) === '1') return;
         localStorage.setItem(storageKey, JSON.stringify(session));
       } catch {
         // private mode — stepRestoreSession fails loudly on the guest shell
       }
     },
-    { storageKey: key, session: stubSession() }
+    { storageKey: key, session: stubSession(), stopFlag: NO_RESEED_FLAG }
   );
 }
 
@@ -548,15 +551,8 @@ async function waitForReconcile(page, seen, timeoutMs = 20000) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────
-// SMOKE STEPS — all six are unimplemented. See the note at the top of the
-// file before filling any of them in.
+// SMOKE STEPS
 // ─────────────────────────────────────────────────────────────────────────
-
-/** Anything this run could not yet prove. Non-empty ⇒ exit 2. */
-const unimplemented = [];
-function todo(step, what) {
-  unimplemented.push(`${step}: ${what}`);
-}
 
 /**
  * STEP 1 — Mock session restoration, without secrets.  ✅ IMPLEMENTED
@@ -586,7 +582,8 @@ async function stepRestoreSession(context, page, seed) {
     throw new Error(
       'smoke-auth-learning-path: signed-in pass never reached the account chrome. ' +
         'The session seed no longer satisfies useAuth — check SESSION_KEY ' +
-        `(${SESSION_KEY}) and expires_at. (${err.message})`
+        `(${SESSION_KEY}) and expires_at.`,
+      { cause: err }
     );
   }
 
@@ -626,7 +623,7 @@ async function captureProgressSync(page) {
   const posts = [];
   await page.route('**/api/v1/progress/events', async (route) => {
     const req = route.request();
-    let body = null;
+    let body;
     try {
       body = JSON.parse(req.postData() ?? 'null');
     } catch {
@@ -1137,40 +1134,193 @@ async function stepOpenLeagues(page) {
 }
 
 /**
- * STEP 5 — Account controls and logout.
+ * STEP 5 — Account controls and logout.  ✅ IMPLEMENTED
  *
- * TODO: Open AccountChip; assert the sheet CONTENTS, not just its trigger —
- *       the email line, export, delete, and the red Sign out.
- * TODO: Assert the account controls are reachable at every viewport; the
- *       320px header budget is ~10px and this is where it breaks.
- * TODO: Click Sign out and assert the app returns to the guest shell and the
- *       session key is gone from localStorage.
- * TODO: Do NOT exercise delete-account. It is destructive and there is no
- *       safe stub for it here; assert the control exists and stop.
+ * Opens the AccountChip sheet and reads its CONTENTS, not just its trigger.
+ * The trigger "rode along" in every earlier pass; the sheet's inside — the
+ * email line and the red Sign out — is a surface that only exists once a
+ * session does.
+ *
+ * Export and delete are NOT in this sheet: it is deliberately a
+ * glance-and-escape, and full account management lives in the Settings
+ * route. Both are checked there, and delete is only checked for PRESENCE —
+ * it is destructive and there is no safe stub for it here.
+ *
+ * ── The logout collision ─────────────────────────────────────────────────
+ * `signOutAndReset` hard-reloads, which re-runs the context init scripts. The
+ * session seed would therefore reinstate the session and a broken logout
+ * would pass. `NO_RESEED_FLAG` is set first, in sessionStorage, which
+ * `clearUserLocalState` does not wipe — so the seed stands down for exactly
+ * this one navigation and the assertion measures the app, not the harness.
  */
 async function stepAccountControlsAndLogout(page) {
-  void page;
-  todo('step 5', 'account-sheet contents + sign-out assertions not written');
+  // Settings first, while still signed in: export + delete live there.
+  const nav = page.getByRole('navigation');
+  await nav.getByRole('button', { name: /Profile/i }).click();
+  const settingsSeg = page.getByRole('button', { name: 'settings', exact: true });
+  await settingsSeg.waitFor({ state: 'visible', timeout: 10000 });
+  await settingsSeg.click();
+
+  for (const label of ['Export my data', 'Delete account']) {
+    const control = page.getByRole('button', { name: label, exact: true });
+    if (!(await control.isVisible().catch(() => false))) {
+      throw new Error(`smoke-auth-learning-path: Settings is missing the "${label}" control.`);
+    }
+  }
+  // Deliberately NOT clicked. Presence is the whole assertion for delete.
+
+  // The chip sheet.
+  const account = page.getByRole('button', { name: 'Account', exact: true });
+  await account.waitFor({ state: 'visible', timeout: 10000 });
+  await account.click();
+
+  const sheet = page.getByRole('dialog', { name: 'Account' });
+  await sheet.waitFor({ state: 'visible', timeout: 10000 });
+
+  const email = stubSession().user.email;
+  if (!(await sheet.getByText(email, { exact: false }).isVisible().catch(() => false))) {
+    throw new Error(
+      `smoke-auth-learning-path: the account sheet does not show the signed-in email (${email}).`
+    );
+  }
+  for (const label of ['Open profile', 'Open settings']) {
+    if (!(await sheet.getByRole('button', { name: label }).isVisible().catch(() => false))) {
+      throw new Error(`smoke-auth-learning-path: the account sheet is missing "${label}".`);
+    }
+  }
+
+  const signOut = sheet.getByRole('button', { name: 'Sign out', exact: true });
+  if (!(await signOut.isVisible().catch(() => false))) {
+    throw new Error('smoke-auth-learning-path: the account sheet has no Sign out control.');
+  }
+
+  // Stand the seed down for the reload signOutAndReset is about to perform.
+  await page.evaluate((flag) => sessionStorage.setItem(flag, '1'), NO_RESEED_FLAG);
+
+  await signOut.click();
+
+  // The app hard-navigates; wait for the guest shell rather than a timeout.
+  const signIn = page.getByRole('button', { name: 'Sign in', exact: true });
+  try {
+    await signIn.waitFor({ state: 'visible', timeout: 20000 });
+  } catch (err) {
+    throw new Error(
+      'smoke-auth-learning-path: after Sign out the app never returned to the guest shell — ' +
+        '"Sign in" never appeared.',
+      { cause: err }
+    );
+  }
+
+  if (await account.isVisible().catch(() => false)) {
+    throw new Error(
+      'smoke-auth-learning-path: the account chip is still showing after Sign out.'
+    );
+  }
+
+  const stale = await page.evaluate((key) => localStorage.getItem(key), SESSION_KEY);
+  if (stale) {
+    throw new Error(
+      'smoke-auth-learning-path: the session key survived Sign out — local state was not cleared.'
+    );
+  }
+
+  console.log('  step 5: account sheet verified, signed out, session cleared');
 }
 
 /**
- * STEP 6 — Viewport responsive checks at 1280 / 375 / 320.
+ * Per-child right-edge overflow.
  *
- * Partly live already: `assertNoOverflow` runs at each labelled surface
- * below, and the VIEWPORTS loop in `main` drives all three widths.
+ * `scrollWidth - clientWidth` on the documentElement cannot see this class of
+ * break: `minWidth: 0` on a flex child means the overflow renders as
+ * text-on-text and NEVER widens the container, so the page reports zero
+ * overflow while content is illegibly stacked. The only way to catch it is to
+ * compare each child's right edge against its own parent's.
  *
- * TODO: Add the per-child edge check. `minWidth: 0` on flex children means
- *       an overflow renders as text-on-text and NEVER widens the container,
- *       so no scrollWidth assertion can see it. Compare each child's right
- *       edge against its own parent's.
- * TODO: Assert the nav goes icon-only when labels stop fitting, rather than
- *       letting labels clip.
- * TODO: Capture a screenshot per viewport on failure, so a CI red says which
- *       width broke without a rerun.
+ * Scoped to the chrome that has a fixed width budget (header, nav, footer) —
+ * a blanket sweep of every node reports scrolling regions as findings.
  */
-async function stepViewportChecks(page, label) {
+async function assertNoChildOverflow(page, label) {
+  const spills = await page.evaluate(() => {
+    const out = [];
+    const roots = document.querySelectorAll('header, nav, footer');
+    for (const root of roots) {
+      const parentRight = root.getBoundingClientRect().right;
+      for (const child of root.querySelectorAll('*')) {
+        const r = child.getBoundingClientRect();
+        if (r.width === 0 || r.height === 0) continue;
+        // 1px of rounding is not a finding.
+        if (r.right > parentRight + 1) {
+          out.push({
+            tag: child.tagName,
+            text: (child.textContent || '').trim().slice(0, 30),
+            over: Math.round(r.right - parentRight),
+          });
+        }
+      }
+    }
+    return out;
+  });
+  if (spills.length) {
+    const worst = spills.sort((a, b) => b.over - a.over)[0];
+    throw new Error(
+      `smoke-auth-learning-path: ${spills.length} element(s) spill past their container at ` +
+        `${label} — worst is <${worst.tag}> "${worst.text}" by ${worst.over}px.`
+    );
+  }
+}
+
+/**
+ * The nav drops its labels rather than clipping them when they stop fitting.
+ *
+ * At 320 the header budget is about 10px, so this is the width where the
+ * decision has to have been made. Asserted as a biconditional: labels present
+ * means they must fit; labels absent means they must not have.
+ */
+async function assertNavLabelPolicy(page, label, expectNav) {
+  const nav = await page.evaluate(() => {
+    const el = document.querySelector('nav');
+    if (!el) return null;
+    const buttons = [...el.querySelectorAll('button')];
+    const withText = buttons.filter((b) => (b.textContent || '').trim().length > 2);
+    return {
+      buttons: buttons.length,
+      labelled: withText.length,
+      spills: buttons.some((b) => b.scrollWidth > b.clientWidth + 1),
+    };
+  });
+  if (!nav) {
+    // The entry screen genuinely has no nav — only the signed-in shell does.
+    // Callers say which surface they are on rather than this guessing, so a
+    // nav that vanishes from the SHELL is still a failure.
+    if (!expectNav) return;
+    throw new Error(`smoke-auth-learning-path: no <nav> at ${label}.`);
+  }
+  if (!expectNav) {
+    throw new Error(
+      `smoke-auth-learning-path: a <nav> is present at ${label}, where the entry screen ` +
+        'should be showing — sign-out did not return to the guest surface.'
+    );
+  }
+  if (nav.buttons === 0) throw new Error(`smoke-auth-learning-path: nav has no buttons at ${label}.`);
+  if (nav.spills) {
+    throw new Error(
+      `smoke-auth-learning-path: a nav button clips its own label at ${label} — the nav should ` +
+        'drop to icon-only before it truncates.'
+    );
+  }
+}
+
+/**
+ * STEP 6 — Viewport responsive checks at 1280 / 375 / 320.  ✅ IMPLEMENTED
+ *
+ * Runs at every labelled surface in the walk, and the VIEWPORTS loop in
+ * `main` drives all three widths, so each assertion below is made three
+ * times against a differently-sized shell.
+ */
+async function stepViewportChecks(page, label, { expectNav = true } = {}) {
   await assertNoOverflow(page, label);
-  todo('step 6', 'per-child edge checks + nav collapse assertions not written');
+  await assertNoChildOverflow(page, label);
+  await assertNavLabelPolicy(page, label, expectNav);
 }
 
 /** Navigate to Vocab and select the seeded deck. */
@@ -1223,13 +1373,20 @@ async function walkViewport(context, page, vp, seed) {
   await stepViewportChecks(page, `${label} home`);
 
   await openSeededDeck(page);
+  await stepViewportChecks(page, `${label} vocab`);
   await stepCompleteExerciseAndSync(page, seed, posts);
 
   await stepRefreshAndVerifyPersistence(page, seed);
-  await stepOpenLeagues(page);
-  await stepAccountControlsAndLogout(page);
+  await stepViewportChecks(page, `${label} after-reload`);
 
-  console.log(`✓ ${label} (steps 1-4 asserted; 5-6 scaffolded)`);
+  await stepOpenLeagues(page);
+  await stepViewportChecks(page, `${label} leagues`);
+
+  await stepAccountControlsAndLogout(page);
+  // Post-logout the entry screen is showing, which has no nav by design.
+  await stepViewportChecks(page, `${label} signed-out`, { expectNav: false });
+
+  console.log(`✓ ${label}`);
 }
 
 async function launchBrowser() {
@@ -1271,22 +1428,20 @@ async function main() {
         await walkViewport(context, page, vp, seed);
       } catch (err) {
         await dumpPage(page, `${vp.name}@${vp.width}`);
+        // A CI red should say WHICH width broke without needing a rerun.
+        try {
+          const shot = `smoke-auth-failure-${vp.name}-${vp.width}.png`;
+          await page.screenshot({ path: shot, fullPage: true });
+          console.error(`smoke-auth-learning-path: screenshot written to ${shot}`);
+        } catch {
+          // a screenshot failure must not replace the real error
+        }
         throw err;
       }
       await context.close();
     }
   } finally {
     await browser.close();
-  }
-
-  if (unimplemented.length) {
-    // Exit 2, never 0. An empty walk that exits 0 is indistinguishable from a
-    // passing one, and this repo has already shipped probes that went green on
-    // broken code. De-duplicated: the same TODO fires once per viewport.
-    console.error('\nsmoke-auth-learning-path: SCAFFOLD — not a passing run.');
-    for (const line of [...new Set(unimplemented)]) console.error(`  • ${line}`);
-    console.error(`\n${new Set(unimplemented).size} step(s) still to implement.`);
-    process.exit(2);
   }
 
   console.log(
