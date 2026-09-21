@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { User, BookOpen, MessageSquare, Type, Languages, Home } from 'lucide-react';
+import { User, BookOpen, MessageSquare, Type, Languages, Home, Shield } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
@@ -35,6 +35,7 @@ import { sanitizeEnabledInterests } from './lib/interests';
 import { AUTO_MODEL, sanitizePreferredModel } from './lib/ai-routing/preference.js';
 import HomeTab from './components/HomeTab';
 import SettingsRoute from './components/settings/SettingsRoute';
+import AdminTab from './components/admin/AdminTab';
 import { deriveMissions } from './lib/missions';
 import { deriveQuests, questHistory } from './lib/quests';
 import { deckProgressFor, completedDeckCount } from './lib/deckProgress';
@@ -53,9 +54,10 @@ import {
   backfillFromSrs,
 } from './lib/learnedWords';
 import { useLeagueStanding } from './lib/useLeagueStanding';
+import { useAdminSession } from './lib/useAdminSession.js';
 
-// Settings lives inside the Profile tab. The hash is what makes the Settings
-// view deep-linkable and reload-safe, without spending a seventh nav slot.
+// Settings lives inside the Profile tab. The hash keeps that view deep-linkable
+// and reload-safe; the separate seventh nav slot is reserved for verified admins.
 const SETTINGS_HASH = '#/settings';
 import { fetchMyProfile } from './lib/profile';
 import ChatTab from './components/ChatTab';
@@ -390,6 +392,13 @@ export default function App() {
 
   // Auth
   const { user, status: authStatus, signupRejected } = useAuth();
+  const adminSession = useAdminSession(user);
+  const isAdmin = Boolean(user && adminSession.me?.isAdmin);
+  useEffect(() => {
+    if (tab === 'admin' && adminSession.status !== 'loading' && !isAdmin) {
+      setTab('stats');
+    }
+  }, [adminSession.status, isAdmin, tab]);
   // applyProgress is registered once (empty deps) but needs the CURRENT user to
   // reconstruct quest history — a stale closure would evaluate quest badges
   // against the guest seed while the board shows the signed-in one. A ref keeps
@@ -970,6 +979,7 @@ export default function App() {
     { id: 'vocab', label: 'Vocab', icon: BookOpen, num: '04' },
     { id: 'translate', label: 'Translate', icon: Languages, num: '05' },
     { id: 'stats', label: 'Profile', icon: User, num: '06' },
+    ...(isAdmin ? [{ id: 'admin', label: 'Admin', icon: Shield, num: '07' }] : []),
   ];
 
   // Stats nav badge — count of wrong items + due vocab cards.
@@ -1047,6 +1057,7 @@ export default function App() {
     <SettingsRoute
       user={user}
       profile={profile}
+      adminMe={adminSession.me}
       onProfileSaved={setProfile}
       onToast={(title) => pushToasts([{ kind: 'info', title, sub: '', icon: '✅' }])}
       level={level}
@@ -1524,6 +1535,7 @@ export default function App() {
               settingsPanel={settingsPanel}
             />
           )}
+          {tab === 'admin' && isAdmin && <AdminTab me={adminSession.me} />}
         </PageFrame>
 
         {/* ── Footer ────────────────────────────────────────────────

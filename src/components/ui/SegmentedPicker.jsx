@@ -36,6 +36,7 @@ export default function SegmentedPicker({ options, activeKey, onPick, ariaLabel 
             key={o.key}
             type="button"
             onClick={() => onPick(o)}
+            aria-label={o.label}
             aria-pressed={active}
             style={{
               border: 'none',
