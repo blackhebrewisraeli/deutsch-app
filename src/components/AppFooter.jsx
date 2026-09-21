@@ -105,7 +105,7 @@ export default function AppFooter({ mobile = false, onNavigate }) {
           {!mobile && (
             <>
               {dot}
-              <span>// Powered by Claude</span>
+              <span>{'// Powered by Claude'}</span>
             </>
           )}
         </div>
