@@ -146,12 +146,14 @@ password security) → enable **Leaked password protection**.
 This is a hosted Auth setting. Editing `supabase/config.toml` only affects
 local `supabase start`.
 
-## 8. Apply pending security-hardening migrations — ✅ RESOLVED 2026-09-21
+## 8. Apply pending security-hardening migrations — ⚠️ ONE OUTSTANDING (8c)
 
-Two files, in this order: **#290 then #293** (BACKLOG owner actions #6
-then #7). **Both are now applied in production.** Nothing is left to do
-in this section; it is kept as the record of what ran and how it was
-verified.
+Two files were applied on 2026-09-21, in this order: **#290 then #293**
+(BACKLOG owner actions #6 then #7). A **third arrived on 2026-09-22**
+(§8c, the `profile_follows` follow-up to #316) and is **not applied**.
+
+8a and 8b are kept below as the record of what ran and how it was
+verified. 8c is the one still to do.
 
 Verified 2026-09-21 by production read-only check plus Migration Drift
 CI — see *Verification* below. No `supabase migration repair`, `db push`,
@@ -190,6 +192,44 @@ Migration Drift sees the new name.
 
 Ignore a red **Supabase Preview** check — that asks the inverse question
 and is stale on `main` on purpose (`AGENTS.md`).
+
+### 8c. `#316` follow-up — deny-all policies on `profile_follows`
+
+Repo file: `supabase/migrations/20260921210000_profile_follows_deny_policies.sql`.
+
+**NOT APPLIED — owner action.** Apply it in the Sprachschule dashboard SQL
+editor, after the two above (they are already applied). No
+`migration repair`, `db push`, `db reset`, or MCP apply.
+
+`#316` added `public.profile_follows` with RLS enabled and every grant
+revoked from `anon` and `authenticated`, which already denies the Data
+API — the table is **fail-closed today and this is not a vulnerability**.
+Supabase advisor INFO 0008 (`rls_enabled_no_policy`) flags it anyway,
+because "RLS on, no policies" cannot be told apart from a forgotten
+policy.
+
+That ambiguity is the whole reason to fix it. On this schema a table with
+no policy should always mean somebody forgot; §8b settled that convention
+for `rate_limits` and `progress_events_seen`, and leaving the third
+server-only table outside it makes the advisor's INFO line unreadable as
+a signal.
+
+The grant list is deliberately NARROWER than §8b's: a follow row is
+created or removed, never edited, so `service_role` gets
+`select`/`insert`/`delete` and **not** `update`.
+`supabase/tests/rls/server-only-tables.test.js` asserts both the granted
+and the withheld privileges.
+
+After it runs: advisor 0008 should clear for `profile_follows`, leaving
+`auth_leaked_password_protection` (§7) as the only outstanding security
+advisor. The profile endpoints are unaffected — they already use the
+service role. There is no UI smoke test; learners never touch this table
+from the browser.
+
+Verified red→green against a clean local stack (`supabase db reset
+--local`): without the migration exactly one assertion fails — the
+missing `profile_follows` deny-all policy — and with it the file's 7
+tests and the full 14-file / 129-test RLS suite pass.
 
 ### Verification (2026-09-21)
 
