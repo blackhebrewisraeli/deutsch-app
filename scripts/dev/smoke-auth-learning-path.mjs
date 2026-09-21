@@ -1038,19 +1038,22 @@ async function stepRefreshAndVerifyPersistence(page, seed) {
  */
 async function stepOpenLeagues(page) {
   // The leagues surface lives in StatsTab, which the nav labels "Profile"
-  // (section 06) — there is no "Stats" tab to click.
+  // (section 06) — there is no "Stats" tab to click, and since the segmented
+  // control went, no sub-tab either: opening Profile IS opening leagues.
   const nav = page.getByRole('navigation');
   const profile = nav.getByRole('button', { name: /Profile/i });
   await profile.waitFor({ state: 'visible', timeout: 10000 });
   await profile.click();
 
-  // The segment button's accessible name is its aria-label ("leagues"),
-  // not the uppercase "LEAGUES" it renders.
-  const leaguesBtn = page.getByRole('button', { name: 'leagues', exact: true });
-  await leaguesBtn.waitFor({ state: 'visible', timeout: 10000 });
-  await leaguesBtn.click();
-
-  await page.getByRole('heading', { name: 'Ligen' }).waitFor({ timeout: 10000 });
+  // No click from here on. Leagues used to be a segment in a STATS / LEAGUES /
+  // SETTINGS control with its own "Ligen" hero; the Profile tab is one page
+  // now, so the league card and the full standings are already on screen once
+  // Profile opens. Waiting for the card is what tells us the page has painted
+  // — the standings below it load separately and are handled after this.
+  await page.locator('[data-testid="profile-league"]').waitFor({
+    state: 'visible',
+    timeout: 10000,
+  });
 
   // The soft-failure surfaces. Wait for the table rather than asserting on a
   // still-loading widget.
@@ -1211,9 +1214,13 @@ async function stepAccountControlsAndLogout(page) {
   // Settings first, while still signed in: export + delete live there.
   const nav = page.getByRole('navigation');
   await nav.getByRole('button', { name: /Profile/i }).click();
-  const settingsSeg = page.getByRole('button', { name: 'settings', exact: true });
-  await settingsSeg.waitFor({ state: 'visible', timeout: 10000 });
-  await settingsSeg.click();
+  // The door to Settings is a button on the profile page now, not a segment
+  // in a STATS / LEAGUES / SETTINGS control. Signed in it reads "Edit
+  // profile" — the spec's secondary self action, and the same destination the
+  // account sheet opens.
+  const settingsDoor = page.getByRole('button', { name: 'Edit profile', exact: true });
+  await settingsDoor.waitFor({ state: 'visible', timeout: 10000 });
+  await settingsDoor.click();
 
   for (const label of ['Export my data', 'Delete account']) {
     const control = page.getByRole('button', { name: label, exact: true });
@@ -1223,8 +1230,8 @@ async function stepAccountControlsAndLogout(page) {
   }
   // Deliberately NOT clicked. Presence is the whole assertion for delete.
 
-  // The chip sheet. Scoped to the banner: the Settings segmented control this
-  // step is standing on carries its own "Account" button (#311).
+  // The chip sheet. Scoped to the banner: the Settings route this step is
+  // standing on carries its own "Account" button (#311).
   await assertNoMastheadAccountAmbiguity(page, 'Settings');
   const account = mastheadAccountButton(page);
   await account.waitFor({ state: 'visible', timeout: 10000 });
@@ -1253,24 +1260,24 @@ async function stepAccountControlsAndLogout(page) {
     throw new Error('smoke-auth-learning-path: the account sheet is missing "Open settings".');
   }
 
-  // The sheet carried an "Open profile" row beside Settings until the tabbed
-  // Settings route made it a second name for the same destination. Asserted
-  // as an ABSENCE and as a COUNT, because neither half is the whole claim: a
-  // regrown Profile row passes a bare "Open settings" check, and a Settings
-  // row duplicated in its place passes a bare "no Profile" check. Sign out is
-  // excluded — it is not a navigation row and carries no arrow.
-  if (await sheet.getByRole('button', { name: /profile/i }).count()) {
+  // The sheet carries BOTH destinations again. It had an "Open profile" row
+  // beside Settings until #314, when the tabbed Settings route made the two a
+  // second name for one place. That premise died when the Profile tab became
+  // a single consolidated page and Settings became a route off it: they are
+  // two destinations now, and the sheet names both.
+  //
+  // Still asserted as a COUNT and not just a presence, for the reason the old
+  // version gave: a duplicated row passes a bare "is it there" check. Sign out
+  // is excluded — it is not a navigation row.
+  const navRows = await sheet
+    .getByRole('button')
+    .filter({ hasText: /Your profile|Settings/ })
+    .allInnerTexts();
+  const normalised = navRows.map((t) => t.trim()).sort();
+  if (normalised.length !== 2 || normalised.join('|') !== 'Settings|Your profile') {
     throw new Error(
-      'smoke-auth-learning-path: the account sheet still offers a Profile row — ' +
-        "Settings is the sheet's only destination."
-    );
-  }
-
-  const navRows = await sheet.getByRole('button').filter({ hasText: '\u2192' }).allInnerTexts();
-  if (navRows.length !== 1 || !/^Settings\s*\u2192$/.test(navRows[0].trim())) {
-    throw new Error(
-      'smoke-auth-learning-path: expected exactly one navigation row ("Settings \u2192") in the ' +
-        `account sheet, found ${navRows.length}: ${JSON.stringify(navRows)}`
+      'smoke-auth-learning-path: expected exactly two navigation rows ("Your profile", ' +
+        `"Settings") in the account sheet, found ${navRows.length}: ${JSON.stringify(navRows)}`
     );
   }
 

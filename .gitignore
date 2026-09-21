@@ -62,3 +62,4 @@ supabase/.branches/
 .cache/
 .bench-baseline.json
 smoke-auth-failure-*.png
+dist-profile-audit/

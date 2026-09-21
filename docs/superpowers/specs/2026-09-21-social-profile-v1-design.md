@@ -1,7 +1,7 @@
 # Social Profile v1
 
 - **Date:** 2026-09-21
-- **Status:** approved for implementation planning
+- **Status:** partially implemented — see §12 Revision (2026-09-22)
 - **Scope:** a real in-app social profile, backed by follower relationships
 - **Branch:** `codex/social-profile-v1`
 
@@ -238,3 +238,111 @@ Supabase stack are available; it is not replaced by production writes.
 - Anonymous public web profiles.
 - Applying the migration to production.
 - Merging the implementation branch without owner approval.
+
+
+## 12. Revision — 2026-09-22 (owner-directed consolidation)
+
+Branch `fix/profile-tab-and-dropdown-overhaul`. What shipped differs from the
+plan above in three decided ways, plus one discovery. Recorded here so the
+spec stops describing a design nobody built.
+
+### 12.1 Stats and Leagues did NOT move to Home
+
+§1 said the dense stats and the leagues surface would move to Home under a
+separate dashboard redesign, leaving Profile purely social. The owner decided
+the opposite: the Profile tab is ONE page carrying everything about "me", in
+this reading order.
+
+1. Identity — avatar, display name, `@handle`, member-since.
+2. Metrics — XP, CEFR level, streak, followers, following, in one band.
+3. League — the compact `ProfileLeagueCard` (shield, tier, wins).
+4. **The full standings**, in the main column, not behind a sub-tab.
+5. The detailed charts — heatmap, per-section bars, accuracy, review queue —
+   last, as the secondary material they always were.
+
+§6's `ProfileLeagueCard` survives as the expressive element; the choice
+between it and the full table was resolved as "both, in that order".
+
+The segmented control (STATS / LEAGUES / SETTINGS) is gone and must not come
+back; `UserProfile.test.jsx` and `StatsTab.test.jsx` both guard it.
+
+### 12.2 The `/api/v1/profile` reshape was NOT built
+
+§3 specifies a new `GET /api/v1/profile?userId=` returning a presentation-shaped
+model. Building it would have meant migrating `ProfileCard` and the league
+passport onto a different response shape in the same change.
+
+§3 permits the alternative — "remain as a compatibility wrapper during
+migration" — so `api/v1/league/profile.js` was extended **additively** with
+`display_name`, `followers_count` and `following_count`. Counts only, via
+`head: true`: a passport that shipped the follower list would publish the
+social graph of an entire league. The reshape remains open work.
+
+### 12.3 Follow / Unfollow is NOT implemented
+
+§5's mutation API does not exist. The Profile tab is the learner's OWN profile
+and nobody follows themselves, so the page needs counts, not mutations. The
+Follow button belongs to `ProfileCard` (other people's profiles) and is
+deferred with the rest of §5.
+
+`profile_follows` therefore has no writers yet. The counts are real — they
+read the real table — and both render `0` until following exists.
+
+### 12.4 Discovery: removing the sub-tabs removed two things nobody planned to remove
+
+Neither was cosmetic, and both are fixed on the branch:
+
+- **Settings had no other door for a signed-out learner.** The header account
+  sheet shows "Sign in" and no sheet at all without a user, so the SETTINGS
+  segment was the only way in — and level, daily goal and sound all live there
+  and none of them need an account. The page now carries its own door:
+  "Edit profile" signed in (§8's secondary self action), plain "Settings" as a
+  guest.
+- **The segmented control was also the way BACK.** SETTINGS stayed on screen
+  while you were inside it, with STATS beside it. `SettingsRoute` has no back
+  control of its own, so removing the segments made the route a dead end you
+  could only leave by switching tabs. There is now a "← Back to profile" link.
+
+A guest keeps the entire practice dashboard. Only the SOCIAL half is withheld
+(§9); local XP, streak and charts are real data.
+
+### 12.5 Identity fields
+
+§7 shipped in full: `display_name` is in `EDITABLE_FIELDS` (max 40), in
+`PROFILE_COLUMNS`, and in the passport response. Two guard tests asserted the
+OLD decision — that the column was deliberately unwritable and unread — and
+were flipped deliberately, keeping the half of each that guards privilege
+(`avatar_emoji`, `blocked_at`, `role`, `isAdmin`).
+
+`profileName()` in `src/lib/profile.js` is the ONE resolution of
+display_name → handle → `Anonym`, shared by the passport body, the profile
+header and the account sheet.
+
+### 12.6 Account sheet
+
+Not in the original spec. The sheet became an identity surface: avatar,
+display name, `@handle`, a **Set status** control, and grouped rows with icons
+and `COLORS.mute` dividers.
+
+**Status is local-only.** `profiles` has no status column; adding one means a
+migration, an allowlist entry and a sync path for a decoration. It persists
+per device in `localStorage` under `deutsch-account-status`. Server
+persistence is open work — until then, do not describe it as synced.
+
+### 12.7 Narrow-viewport verification
+
+Verified in a real browser on a stub-env build, not in jsdom.
+
+The first cut overflowed **222px at 375px** (page 597px wide in a 375px
+viewport). Cause: the page root was `display: grid` with no template, so its
+single implicit column was sized `auto` = max-content, and the metrics grid —
+a grid item, hence `min-width: auto` — refused to shrink, so `auto-fit` laid
+all five cards on one row.
+
+jsdom could not see it: it does no layout. The guard that should have caught
+it only inspected elements that already HAD a `grid-template-columns`, and the
+offending root had none. Both the fix and a guard for the blind spot are on
+the branch, and the guard is proven to fail on the original markup.
+
+After the fix: **0px document overflow at 375px and at 320px**, metrics
+wrapping 3+2 and 2+2+1, and the account sheet fitting inside 320px.

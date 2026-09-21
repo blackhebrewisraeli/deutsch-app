@@ -238,3 +238,30 @@ describe('PassportBody — micro-interactions', () => {
     expect(document.querySelector('.self-glow')).toBeNull();
   });
 });
+
+// ── Display name (Social Profile v1 §7) ─────────────────────────────
+describe('PassportBody identity', () => {
+  const row = { handle: 'sam', tier: 0, total_xp: 10, longest_streak: 2, achievements: [] };
+
+  it('leads with the display name and keeps the handle as the social identifier', () => {
+    render(<PassportBody profile={{ ...row, display_name: 'Sam Vimes' }} userId="u1" />);
+    expect(screen.getByRole('heading', { name: 'Sam Vimes' })).toBeInTheDocument();
+    // The handle does not disappear when a display name exists — it is the
+    // unique identifier, and a profile that shows only a chosen nickname
+    // cannot be matched to the person on the leaderboard.
+    expect(screen.getByText('@sam')).toBeInTheDocument();
+  });
+
+  it('falls back to the handle as the heading when no display name is set', () => {
+    render(<PassportBody profile={{ ...row, display_name: null }} userId="u1" />);
+    expect(screen.getByRole('heading', { name: 'sam' })).toBeInTheDocument();
+    // …and then does NOT also print "@sam" underneath, which would be the same
+    // word twice stacked.
+    expect(screen.queryByText('@sam')).not.toBeInTheDocument();
+  });
+
+  it('falls all the way back to the anonymous label', () => {
+    render(<PassportBody profile={{ ...row, handle: null }} userId="u1" />);
+    expect(screen.getByRole('heading', { name: 'Anonym' })).toBeInTheDocument();
+  });
+});

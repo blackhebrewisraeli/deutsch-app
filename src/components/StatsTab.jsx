@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, RADIUS, SHADOW } from '../lib/theme';
+import { SPACE } from '../lib/theme';
 import { loadState } from '../lib/storage';
 import {
   todayKey,
@@ -10,7 +10,7 @@ import {
   getReviewItems,
 } from '../lib/stats';
 import { score } from '../lib/gamification';
-import { Hero, SectionLabel } from './UI';
+import { SectionLabel } from './UI';
 import TodaySnapshot from './stats/TodaySnapshot';
 import Heatmap, { HeatmapLegend } from './stats/Heatmap';
 import PerTabBars from './stats/PerTabBars';
@@ -20,9 +20,10 @@ import VocabSrsWidget from './stats/VocabSrsWidget';
 import LevelCard from './gamification/LevelCard';
 import BadgeGrid from './gamification/BadgeGrid';
 import Button from './ui/Button';
-import LeaderboardSection from './stats/LeaderboardSection';
 import ProfileCard from './stats/ProfileCard';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
+import UserProfile from './profile/UserProfile';
+import { readLevel } from '../lib/levelPref.js';
 import { isAuthConfigured } from '../lib/auth.js';
 
 const VIEWS = {
@@ -31,20 +32,22 @@ const VIEWS = {
   settings: 'settings',
 };
 
-const NAV_BUTTON_BASE = {
-  border: 'none',
-  borderRadius: RADIUS.md,
-  fontFamily: FONTS.mono,
-  fontSize: FONT_SIZE.sm,
-  letterSpacing: LETTER_SPACING.widest,
-  padding: `${SPACE[2]}px ${SPACE[4]}px`,
-  cursor: 'pointer',
-};
-
-// Section 06 — the Profile tab. Three views behind one segmented control:
-// practice dashboard, weekly leagues, and Settings. Goal and level editing
-// live only in Settings, so this surface cannot drift into a second copy
-// of the same writers.
+// Section 06 — the Profile tab.
+//
+// It used to be three views behind a segmented control (STATS / LEAGUES /
+// SETTINGS). That split one identity across three destinations: the page a
+// learner thinks of as "me" could never show who they were, what league they
+// were in, and how they were doing at once, and it opened on a bar chart.
+//
+// Now it is ONE page. UserProfile owns the identity, the metrics, the league
+// card and the standings; the detailed charts below are passed to it as
+// children and render last, as the secondary material they always were.
+//
+// Settings did NOT fold into the page. It stays a route (`#/settings`) whose
+// one door is the account sheet (#314) — this component still renders the
+// panel for that route, which is why `view` and `settingsPanel` survive.
+// Goal and level editing live only there, so this surface cannot drift into a
+// second copy of the same writers.
 export default function StatsTab({
   mobile = false,
   onReview,
@@ -55,15 +58,23 @@ export default function StatsTab({
   settingsPanel = null,
 }) {
   const [state, setState] = useState(() => loadState() ?? {});
-  const [internalView, setInternalView] = useState(VIEWS.stats);
+  // Uncontrolled default. Nothing sets it: the page has no view switcher any
+  // more, so an isolated render simply stays on the profile view.
+  const [internalView] = useState(VIEWS.stats);
   const [selectedUser, setSelectedUser] = useState(null);
 
+  // `view` is owned by App when the settings route is in play, and by this
+  // component otherwise. Nothing in here CHANGES it any more — the segmented
+  // control that used to is gone, and the only way into the settings view is
+  // the account sheet, which drives App's state directly. The setter stayed
+  // behind as dead code when the buttons went; `internalView` remains as the
+  // uncontrolled default so an isolated render still has a view.
   const controlled = typeof view === 'string' && typeof onViewChange === 'function';
   const activeView = controlled ? view : internalView;
-  const setActiveView = (next) => {
-    if (controlled) onViewChange(next);
-    else setInternalView(next);
-  };
+  // The page's own door to the settings route. Not a sub-tab: it navigates to
+  // `#/settings`, the same destination the account sheet opens, rather than
+  // switching a segment in place.
+  const openSettings = controlled ? () => onViewChange(VIEWS.settings) : undefined;
 
   useEffect(() => {
     const onFocus = () => setState(loadState() ?? {});
@@ -85,37 +96,10 @@ export default function StatsTab({
   const accByLevel = getAccuracyByLevel(daily);
   const review = getReviewItems(items, 10);
 
-  const showingLeagues = LEAGUES_ENABLED && activeView === VIEWS.leagues;
   const showingSettings = activeView === VIEWS.settings;
-
-  const segmentBtn = (key, label, ariaLabel) => {
-    const active = activeView === key;
-    return (
-      <button
-        type="button"
-        aria-label={ariaLabel}
-        aria-pressed={active}
-        onClick={() => setActiveView(key)}
-        style={{
-          ...NAV_BUTTON_BASE,
-          background: active ? COLORS.ink : COLORS.card,
-          color: active ? COLORS.paper : COLORS.ink,
-          boxShadow: SHADOW.press(COLORS.lip),
-        }}
-      >
-        {label}
-      </button>
-    );
-  };
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: SPACE[3], marginBottom: SPACE[4], flexWrap: 'wrap' }}>
-        {segmentBtn(VIEWS.stats, 'STATS', 'stats')}
-        {LEAGUES_ENABLED && segmentBtn(VIEWS.leagues, 'LEAGUES', 'leagues')}
-        {segmentBtn(VIEWS.settings, 'SETTINGS', 'settings')}
-      </div>
-
       {LEAGUES_ENABLED && selectedUser && (
         <ProfileCard
           userId={selectedUser}
@@ -125,29 +109,29 @@ export default function StatsTab({
       )}
 
       {showingSettings ? (
-        settingsPanel
-      ) : showingLeagues ? (
-        <div>
-          <Hero
-            kicker="Section 06"
-            title="Ligen"
-            sub="Compete with learners at your level. Weekly XP decides who advances."
-          />
-          <div style={{ marginTop: SPACE[8] }}>
-            <LeaderboardSection onSelectUser={setSelectedUser} />
-          </div>
+        <div style={{ display: 'grid', gap: SPACE[4], justifyItems: 'start' }}>
+          {/* The way back. The segmented control used to provide it for free —
+              SETTINGS stayed on screen while you were inside it, with STATS
+              beside it — so removing the control turned this route into a dead
+              end reachable only by leaving the tab. SettingsRoute has no back
+              control of its own. */}
+          {controlled && (
+            <Button variant="secondary" onClick={() => onViewChange(VIEWS.stats)}>
+              ← Back to profile
+            </Button>
+          )}
+          {settingsPanel}
         </div>
       ) : (
-        <div>
-          <Hero
-            kicker="Section 06"
-            title="Statistik"
-            sub="A picture of your practice. Today's snapshot, the year so far, and how your effort breaks down across the four sections."
-          />
-
-          <div
-            style={{ display: 'flex', flexDirection: 'column', gap: SPACE[8], marginTop: SPACE[8] }}
-          >
+        <UserProfile
+          user={user}
+          onSignIn={onSignIn}
+          onSelectUser={setSelectedUser}
+          onOpenSettings={openSettings}
+          mobile={mobile}
+          local={{ xp: sc.totalXp, level: readLevel(), streak: stats.streak ?? 0 }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[8] }}>
             <section>
               <SectionLabel num="0" text="Fortschritt" />
               <LevelCard lvl={sc} totalXp={sc.totalXp} learnedCount={stats.learnedCount ?? 0} />
@@ -202,7 +186,7 @@ export default function StatsTab({
               <VocabSrsWidget srs={srs} now={nowMs} />
             </section>
           </div>
-        </div>
+        </UserProfile>
       )}
     </div>
   );

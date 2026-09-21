@@ -2,11 +2,12 @@ import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { adminClient } from './helpers.js';
 
-// Catalog + service-role check for 20260918213000: rate_limits and
-// progress_events_seen stay RLS-on, server-only. Deny-all policies for
-// anon/authenticated silence advisor 0008 without granting Data API access.
-// service_role keeps BYPASSRLS + GRANT ALL so the existing RPCs and admin
-// cleanup still work.
+// Catalog + service-role check for 20260918213000 and 20260921210000:
+// rate_limits, progress_events_seen and profile_follows stay RLS-on,
+// server-only. Deny-all policies for anon/authenticated silence advisor 0008
+// without granting Data API access. service_role keeps BYPASSRLS + the DML it
+// actually uses, so the existing RPCs, admin cleanup and the profile
+// endpoints still work.
 //
 // WHY psql AND NOT supabase-js for the catalog: pg_policies, pg_class, and
 // table ACLs live in pg_catalog, which PostgREST does not expose. Data API
@@ -14,9 +15,20 @@ import { adminClient } from './helpers.js';
 
 const DB_URL = process.env.DB_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
-const TABLES = ['rate_limits', 'progress_events_seen'];
+const TABLES = ['rate_limits', 'progress_events_seen', 'profile_follows'];
 const CLIENT_ROLES = ['anon', 'authenticated'];
 const DML = ['SELECT', 'INSERT', 'UPDATE', 'DELETE'];
+
+// service_role DML is per-table. A follow row is created or removed, never
+// edited, so 20260921192802 grants profile_follows only select/insert/delete.
+// Asserting a blanket four here would either fail or pressure the schema into
+// a grant it deliberately withholds — so state the intent per table and assert
+// the withheld privilege too, or "no UPDATE" would never be checked.
+const SERVICE_ROLE_DML = {
+  rate_limits: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
+  progress_events_seen: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
+  profile_follows: ['SELECT', 'INSERT', 'DELETE'],
+};
 
 function sql(q) {
   return execFileSync('psql', [DB_URL, '-At', '-c', q], { encoding: 'utf8' }).trim();
@@ -62,7 +74,7 @@ describe('server-only tables: catalog (advisor 0008 hygiene)', () => {
        and tablename in (${TABLES.map((t) => `'${t}'`).join(', ')});
   `);
 
-  it('inspected both server-only tables — the denominator, not just the findings', () => {
+  it('inspected every server-only table — the denominator, not just the findings', () => {
     expect(tables.map((t) => t.relname).sort()).toEqual([...TABLES].sort());
     expect(tables).toHaveLength(TABLES.length);
   });
@@ -76,6 +88,7 @@ describe('server-only tables: catalog (advisor 0008 hygiene)', () => {
 
   it('has exactly one deny-all Data API policy per table, and no granting policy', () => {
     expect(policies.map((p) => `${p.tablename}.${p.policyname}`).sort()).toEqual([
+      'profile_follows.no client access',
       'progress_events_seen.no client access',
       'rate_limits.no client access',
     ]);
@@ -100,13 +113,25 @@ describe('server-only tables: catalog (advisor 0008 hygiene)', () => {
     }
   });
 
-  it('keeps service_role DML so existing server code still works', () => {
+  it('keeps the service_role DML each table actually uses', () => {
     for (const table of TABLES) {
-      for (const priv of DML) {
+      for (const priv of SERVICE_ROLE_DML[table]) {
         expect(
           flag(`has_table_privilege('service_role', 'public.${table}', '${priv}')`),
           `service_role ${priv} on ${table}`
         ).toBe('t');
+      }
+    }
+  });
+
+  it('withholds the DML a table has no use for (profile_follows rows are immutable)', () => {
+    for (const table of TABLES) {
+      const withheld = DML.filter((priv) => !SERVICE_ROLE_DML[table].includes(priv));
+      for (const priv of withheld) {
+        expect(
+          flag(`has_table_privilege('service_role', 'public.${table}', '${priv}')`),
+          `service_role ${priv} on ${table}`
+        ).toBe('f');
       }
     }
   });

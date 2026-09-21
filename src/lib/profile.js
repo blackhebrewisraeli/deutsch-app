@@ -9,7 +9,10 @@ import { getAccessToken, getSupabase, refreshAccessToken } from './auth.js';
 // league_members, and both of those need the server, so they go through
 // PATCH /api/v1/account/profile.
 
-export const PROFILE_COLUMNS = 'handle, avatar_path, created_at';
+// display_name leads: it is what the profile header and the account sheet
+// render, falling back to @handle and then the anonymous label. Social Profile
+// v1 §7.
+export const PROFILE_COLUMNS = 'display_name, handle, avatar_path, created_at';
 
 /**
  * @returns the caller's profile row, or null when there is no backend, no
@@ -38,6 +41,32 @@ export async function fetchMyProfile(userId) {
  *
  * @throws {Error} with the server's human message (e.g. "That handle is taken.")
  */
+/**
+ * The anonymous label. PassportBody used to spell this inline, as the only
+ * place that needed it; the profile header and the account sheet need the same
+ * word, and three copies of a fallback is how two of them drift.
+ */
+export const ANONYMOUS_NAME = 'Anonym';
+
+/**
+ * What to call this person: display name, else handle, else anonymous.
+ *
+ * Social Profile v1 §7. Takes any row carrying `display_name` / `handle` —
+ * the own-profile row and the public profile row both do — so the passport
+ * body, the profile header and the account sheet cannot disagree.
+ *
+ * Whitespace counts as absent. The write path trims to null, but a row that
+ * predates that guard can still hold "   ", and a header rendering blank
+ * reads as a bug rather than as a missing name.
+ */
+export function profileName(profile) {
+  const display = typeof profile?.display_name === 'string' ? profile.display_name.trim() : '';
+  if (display) return display;
+  const handle = typeof profile?.handle === 'string' ? profile.handle.trim() : '';
+  if (handle) return handle;
+  return ANONYMOUS_NAME;
+}
+
 export const SESSION_EXPIRED_MESSAGE = 'Your session expired. Please sign in again and retry.';
 
 const send = (token, patch) =>

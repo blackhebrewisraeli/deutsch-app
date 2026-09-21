@@ -10,6 +10,7 @@ import {
 import { TIER_NAMES } from '../../lib/leagues.js';
 import { ACHIEVEMENTS } from '../../lib/gamification';
 import Avatar from '../ui/Avatar';
+import { profileName } from '../../lib/profile.js';
 
 // The Learning Passport — everything inside ProfileCard's dialog chrome.
 //
@@ -61,6 +62,8 @@ function Stat({ label, value }) {
 
 export default function PassportBody({ profile, userId, isSelf = false }) {
   const badges = (profile.achievements ?? []).map((id) => BADGES.get(id)).filter(Boolean);
+  const name = profileName(profile);
+  const showHandle = Boolean(profile.handle) && name !== profile.handle;
 
   return (
     <div>
@@ -77,8 +80,20 @@ export default function PassportBody({ profile, userId, isSelf = false }) {
               color: COLORS.ink,
             }}
           >
-            {profile.handle ?? 'Anonym'}
+            {name}
           </h3>
+          {/* The handle stays visible whenever it is NOT already the heading.
+              display_name is chosen and can be anything; handle is the unique
+              identifier and the name the leaderboard renders, so a profile
+              that showed only a nickname could not be matched to the row that
+              row-clicked into it. When there is no display name the heading IS
+              the handle, and printing it again underneath is the same word
+              twice. */}
+          {showHandle && (
+            <div style={{ ...labelStyle, textTransform: 'none', overflowWrap: 'anywhere' }}>
+              @{profile.handle}
+            </div>
+          )}
           <div style={{ ...labelStyle, textTransform: 'none' }}>
             {TIER_NAMES[profile.tier]}
             {profile.join_year ? ` · seit ${profile.join_year}` : ''}

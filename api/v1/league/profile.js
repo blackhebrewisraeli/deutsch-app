@@ -99,10 +99,12 @@ export default async function handler(req, res) {
       { data: member },
       { data: wins },
       { data: settings },
+      { count: followers_count },
+      { count: following_count },
     ] = await Promise.all([
       db
         .from('profiles')
-        .select('handle, avatar_path, created_at')
+        .select('display_name, handle, avatar_path, created_at')
         .eq('user_id', target)
         .maybeSingle(),
       db.from('stats_daily').select('day, counters').eq('user_id', target),
@@ -121,6 +123,21 @@ export default async function handler(req, res) {
       // Badges come from the row the learner's own client already syncs —
       // see publicAchievements for why they are read rather than recomputed.
       db.from('settings').select('data').eq('user_id', target).maybeSingle(),
+      // COUNTS ONLY, never the edges. `head: true` asks PostgREST for the
+      // count header and no rows, so the social graph itself never leaves the
+      // database — a passport that shipped the follower LIST would publish who
+      // follows whom for everyone in the league.
+      //
+      // followed_id = people pointing at this profile (its followers).
+      // follower_id = people this profile points at (who it follows).
+      db
+        .from('profile_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('followed_id', target),
+      db
+        .from('profile_follows')
+        .select('*', { count: 'exact', head: true })
+        .eq('follower_id', target),
     ]);
 
     const rows = stats ?? [];
@@ -128,6 +145,11 @@ export default async function handler(req, res) {
     const longest_streak = longestStreak(rows.map((r) => r.day));
 
     return res.status(200).json({
+      // display_name is the chosen name; handle stays the identifier. Both
+      // ship, and the client decides which to lead with (src/lib/profile.js
+      // profileName) so the passport, the profile header and the account
+      // sheet cannot disagree about what to call someone.
+      display_name: profile?.display_name ?? null,
       handle: profile?.handle ?? null,
       avatar_path: profile?.avatar_path ?? null,
       join_year: joinYear(profile?.created_at),
@@ -135,6 +157,10 @@ export default async function handler(req, res) {
       total_xp,
       longest_streak,
       league_wins: wins?.length ?? 0,
+      // A profile nobody follows has zero followers, not an unknown number of
+      // them — `null` here would render as an empty metric card.
+      followers_count: followers_count ?? 0,
+      following_count: following_count ?? 0,
       achievements: publicAchievements(settings?.data),
     });
   } catch {
