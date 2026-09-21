@@ -414,10 +414,9 @@ async function assertNoOverflow(page, label) {
 async function dumpPage(page, label) {
   try {
     const url = page.url();
-    const text = (await page.evaluate(() => (document.body?.innerText || '').slice(0, 800))).replace(
-      /\s+/g,
-      ' '
-    );
+    const text = (
+      await page.evaluate(() => (document.body?.innerText || '').slice(0, 800))
+    ).replace(/\s+/g, ' ');
     console.error(`smoke-auth-learning-path dump (${label}) ${url}: ${text}`);
   } catch (err) {
     console.error(`smoke-auth-learning-path dump (${label}) failed: ${err.message}`);
@@ -741,9 +740,7 @@ async function practiceUntilComplete(page, seed) {
 
     const card = await visibleCard(page, seed.cards);
     if (!card) {
-      throw new Error(
-        `smoke-auth-learning-path: no food-deck headword visible on card ${i + 1}`
-      );
+      throw new Error(`smoke-auth-learning-path: no food-deck headword visible on card ${i + 1}`);
     }
 
     const choice = page.getByRole('button', { name: card.en, exact: true });
@@ -1072,7 +1069,12 @@ async function stepOpenLeagues(page) {
     if (count >= LEAGUE_ROWS) break;
     await page.waitForTimeout(250);
   }
-  if (await page.getByText('Loading league…').isVisible().catch(() => false)) {
+  if (
+    await page
+      .getByText('Loading league…')
+      .isVisible()
+      .catch(() => false)
+  ) {
     throw new Error('smoke-auth-learning-path: leagues never left the loading state.');
   }
   if (count !== LEAGUE_ROWS) {
@@ -1144,7 +1146,13 @@ async function stepOpenLeagues(page) {
     ['↑ Promotion', /↑\s*Promotion/i],
     ['↓ Relegation', /↓\s*Relegation/i],
   ]) {
-    if (!(await page.getByText(re).first().isVisible().catch(() => false))) {
+    if (
+      !(await page
+        .getByText(re)
+        .first()
+        .isVisible()
+        .catch(() => false))
+    ) {
       throw new Error(`smoke-auth-learning-path: zone label "${label}" is missing from the table.`);
     }
   }
@@ -1226,15 +1234,44 @@ async function stepAccountControlsAndLogout(page) {
   await sheet.waitFor({ state: 'visible', timeout: 10000 });
 
   const email = stubSession().user.email;
-  if (!(await sheet.getByText(email, { exact: false }).isVisible().catch(() => false))) {
+  if (
+    !(await sheet
+      .getByText(email, { exact: false })
+      .isVisible()
+      .catch(() => false))
+  ) {
     throw new Error(
       `smoke-auth-learning-path: the account sheet does not show the signed-in email (${email}).`
     );
   }
-  for (const label of ['Open profile', 'Open settings']) {
-    if (!(await sheet.getByRole('button', { name: label }).isVisible().catch(() => false))) {
-      throw new Error(`smoke-auth-learning-path: the account sheet is missing "${label}".`);
-    }
+  if (
+    !(await sheet
+      .getByRole('button', { name: 'Open settings' })
+      .isVisible()
+      .catch(() => false))
+  ) {
+    throw new Error('smoke-auth-learning-path: the account sheet is missing "Open settings".');
+  }
+
+  // The sheet carried an "Open profile" row beside Settings until the tabbed
+  // Settings route made it a second name for the same destination. Asserted
+  // as an ABSENCE and as a COUNT, because neither half is the whole claim: a
+  // regrown Profile row passes a bare "Open settings" check, and a Settings
+  // row duplicated in its place passes a bare "no Profile" check. Sign out is
+  // excluded — it is not a navigation row and carries no arrow.
+  if (await sheet.getByRole('button', { name: /profile/i }).count()) {
+    throw new Error(
+      'smoke-auth-learning-path: the account sheet still offers a Profile row — ' +
+        "Settings is the sheet's only destination."
+    );
+  }
+
+  const navRows = await sheet.getByRole('button').filter({ hasText: '\u2192' }).allInnerTexts();
+  if (navRows.length !== 1 || !/^Settings\s*\u2192$/.test(navRows[0].trim())) {
+    throw new Error(
+      'smoke-auth-learning-path: expected exactly one navigation row ("Settings \u2192") in the ' +
+        `account sheet, found ${navRows.length}: ${JSON.stringify(navRows)}`
+    );
   }
 
   const signOut = sheet.getByRole('button', { name: 'Sign out', exact: true });
@@ -1260,9 +1297,7 @@ async function stepAccountControlsAndLogout(page) {
   }
 
   if (await account.isVisible().catch(() => false)) {
-    throw new Error(
-      'smoke-auth-learning-path: the account chip is still showing after Sign out.'
-    );
+    throw new Error('smoke-auth-learning-path: the account chip is still showing after Sign out.');
   }
 
   const stale = await page.evaluate((key) => localStorage.getItem(key), SESSION_KEY);
@@ -1349,7 +1384,8 @@ async function assertNavLabelPolicy(page, label, expectNav) {
         'should be showing — sign-out did not return to the guest surface.'
     );
   }
-  if (nav.buttons === 0) throw new Error(`smoke-auth-learning-path: nav has no buttons at ${label}.`);
+  if (nav.buttons === 0)
+    throw new Error(`smoke-auth-learning-path: nav has no buttons at ${label}.`);
   if (nav.spills) {
     throw new Error(
       `smoke-auth-learning-path: a nav button clips its own label at ${label} — the nav should ` +
