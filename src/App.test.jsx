@@ -249,7 +249,9 @@ describe('App navigation a11y', () => {
 
     expect(admin).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('heading', { name: 'Admin' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /feedback/i })).toBeInTheDocument();
+    // The admin panel's own section switcher is a tablist, not a row of the
+    // app's primary-action pills — see AdminRail.
+    expect(screen.getByRole('tab', { name: /feedback/i })).toBeInTheDocument();
   });
 
   it('mobile icon-only nav buttons keep their accessible names', () => {
