@@ -79,6 +79,7 @@ function Metric({ icon: Icon, label, value }) {
 
 export default function UserProfile({
   user,
+  profile: ownProfile = null,
   local = {},
   onSignIn,
   onSelectUser,
@@ -86,7 +87,7 @@ export default function UserProfile({
   mobile = false,
   children = null,
 }) {
-  const [profile, setProfile] = useState(null);
+  const [socialProfile, setSocialProfile] = useState(null);
   const userId = user?.id ?? null;
 
   useEffect(() => {
@@ -97,10 +98,10 @@ export default function UserProfile({
     // swallowed into "no social row" rather than raised into an error state.
     fetchProfile(userId)
       .then((row) => {
-        if (live) setProfile(row ?? null);
+        if (live) setSocialProfile(row ?? null);
       })
       .catch(() => {
-        if (live) setProfile(null);
+        if (live) setSocialProfile(null);
       });
     return () => {
       live = false;
@@ -140,6 +141,13 @@ export default function UserProfile({
       </div>
     );
   }
+
+  // The social endpoint owns public metrics (followers, league, XP), while
+  // App owns the caller's current profile row. Profile edits update that App
+  // state from the stored PATCH response, so overlay its identity fields here:
+  // the Profile page and Account sheet then repaint in the same React update
+  // without waiting for this independent social fetch to run again.
+  const profile = ownProfile ? { ...socialProfile, ...ownProfile } : socialProfile;
 
   const name = profileName(profile);
   const handle = profile?.handle ?? null;

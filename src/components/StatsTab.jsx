@@ -52,6 +52,7 @@ export default function StatsTab({
   mobile = false,
   onReview,
   user,
+  profile,
   onSignIn,
   view,
   onViewChange,
@@ -125,6 +126,7 @@ export default function StatsTab({
       ) : (
         <UserProfile
           user={user}
+          profile={profile}
           onSignIn={onSignIn}
           onSelectUser={setSelectedUser}
           onOpenSettings={openSettings}

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import StatsTab from './StatsTab';
 
@@ -64,6 +64,8 @@ vi.mock('../lib/leagues.js', () => ({
   fetchProfile: vi.fn().mockResolvedValue({ handle: 'sam', tier: 0 }),
 }));
 
+afterEach(() => vi.unstubAllEnvs());
+
 describe('StatsTab — one consolidated page, no sub-tabs', () => {
   const USER = { id: 'u1', email: 'sam@example.com' };
 
@@ -79,6 +81,27 @@ describe('StatsTab — one consolidated page, no sub-tabs', () => {
   it('renders the standings inline, with no click needed to reach them', () => {
     render(<StatsTab user={USER} />);
     expect(screen.getByText('stub-leaderboard')).toBeTruthy();
+  });
+
+  it('passes the saved own avatar through to the consolidated profile surface', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://proj.supabase.co');
+    render(
+      <StatsTab
+        user={USER}
+        profile={{
+          display_name: 'Sam Vimes',
+          handle: 'sam',
+          avatar_path: 'u1/saved.webp',
+          created_at: '2026-01-01T00:00:00.000Z',
+        }}
+      />
+    );
+
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+    expect(document.querySelector('img[data-avatar="image"]')).toHaveAttribute(
+      'src',
+      'https://proj.supabase.co/storage/v1/object/public/avatars/u1/saved.webp'
+    );
   });
 
   it('clicking a leaderboard row still opens ProfileCard', () => {
