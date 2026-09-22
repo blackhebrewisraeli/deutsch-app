@@ -34,11 +34,23 @@ export default function QuestBoard({ quests = [], onGo }) {
         id="quests-heading"
         style={{
           fontFamily: FONTS.display,
-          fontSize: FONT_SIZE.lg,
+          // xl (18), not lg (16). The rows under this heading set their copy at
+          // `base` (13) and their destination at `tag` (10); a 16px heading sat
+          // one step above its own body text, which is not enough contrast for
+          // the only landmark on the section. 18 separates them without
+          // competing with the page's own h1.
+          fontSize: FONT_SIZE.xl,
           fontWeight: FONT_WEIGHT.bold,
-          lineHeight: 1.2,
+          // 1.3, not 1.2. Fraunces sets a deep descender and the heading words
+          // here carry them ("Tagesaufgaben" has a g); at 1.2 the glyph box
+          // sits within ~1px of the line box, which is the margin that goes
+          // negative the moment a translation is longer or the face changes.
+          lineHeight: 1.3,
           color: COLORS.ink,
-          margin: `0 0 ${SPACE[3]}px`,
+          // SPACE[4], not SPACE[3]: this is the gap between a section title and
+          // its list, and it was the same 12px as the gap BETWEEN rows — so the
+          // heading read as one more row rather than as the thing above them.
+          margin: `0 0 ${SPACE[4]}px`,
         }}
       >
         {chrome.heading}

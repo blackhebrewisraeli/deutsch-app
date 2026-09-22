@@ -77,6 +77,20 @@ describe('UserProfile — the consolidated profile page', () => {
     expect(metrics).toHaveTextContent(/B1/i);
   });
 
+  // auto-fit collapses the unused tracks to 0 and splits the whole row between
+  // the three that remain, so on a wide profile these three small stats were
+  // measured at 317px EACH inside a 976px column (424px at 1600px). The cap is
+  // what stops a "9d" streak occupying a 424px card.
+  it('caps the metrics band so three small stats cannot stretch across the card', async () => {
+    render(<UserProfile user={USER} local={local} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+    const metrics = screen.getByTestId('profile-metrics');
+    expect(metrics.style.maxWidth).toBe('480px');
+    // The floor and the shrinkable track are what fixed a 222px overflow at
+    // 375px — the cap must not have replaced them.
+    expect(metrics.style.gridTemplateColumns).toContain('minmax(96px, 1fr)');
+  });
+
   it('uses the portrait height for metrics on wide screens and keeps them below on mobile', async () => {
     window.innerWidth = 1280;
     const { rerender } = render(<UserProfile user={USER} local={local} />);

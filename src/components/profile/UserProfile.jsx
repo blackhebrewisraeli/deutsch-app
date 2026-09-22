@@ -240,6 +240,18 @@ export default function UserProfile({
         // can shrink below its contents without widening the page.
         gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))',
         gap: SPACE[3],
+        // The cap the `1fr` needs. auto-fit collapses the unused tracks to 0
+        // and splits the whole row between the three that remain, so on a wide
+        // profile these three small stats were measured at 317px EACH inside a
+        // 976px column — 424px at 1600px. A streak of "9d" does not need a
+        // 424px card, and stretching it there is what made the identity row
+        // read as sparse rather than generous.
+        //
+        // maxWidth rather than a smaller minmax max: the 96px floor and the
+        // shrinkable 1fr are what fixed a 222px overflow at 375px, and this
+        // cap never engages at those widths — the container is already
+        // narrower than it.
+        maxWidth: 480,
       }}
     >
       <Metric icon={Sparkles} label="XP" value={local.xp ?? profile?.total_xp ?? 0} />

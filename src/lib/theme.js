@@ -366,6 +366,15 @@ export const TEXT = {
     color: COLORS.paper,
     padding: `2px ${SPACE[2]}px`,
   },
+  // BUG: `lineHeight: 1` clips the glyph box of every Heading that uses this
+  // recipe. Measured in a real browser on the rendered app: "Dein Profil"
+  // (24px/24px) and "Recommended for you" (20px/20px) each report
+  // scrollHeight - clientHeight = 2px, because Fraunces' ascent + descent
+  // exceeds one em. It is 2px, not a layout break, and every heading in the
+  // app shares it — so raising it shifts vertical rhythm on every screen at
+  // once and belongs in its own change with its own audit, not smuggled into
+  // an achievements PR. Deliberately left alone here; see the note in
+  // MissionBoard/QuestBoard, which set their own lineHeight and do NOT clip.
   display: {
     fontFamily: FONTS.display,
     fontWeight: FONT_WEIGHT.black,
