@@ -23,6 +23,7 @@ vi.mock('../../lib/leagues.js', async (orig) => ({
 
 import UserProfile from './UserProfile';
 import { ANONYMOUS_NAME } from '../../lib/profile.js';
+import { SPACE } from '../../lib/theme';
 
 const USER = { id: 'u1', email: 'sam@example.com' };
 const ROW = {
@@ -75,6 +76,33 @@ describe('UserProfile — the consolidated profile page', () => {
     expect(metrics).toHaveTextContent('1240');
     expect(metrics).toHaveTextContent('9');
     expect(metrics).toHaveTextContent(/B1/i);
+  });
+
+  // Two rhythms meet on this page: the identity blocks sit SPACE[5] apart
+  // because they are one group, while the sections inside `children` sit
+  // SPACE[8] apart. Measured in a browser, the step INTO the analytics region
+  // was 20px — smaller than the 32px steps within it — so the charts read as
+  // one more identity block rather than as a new region.
+  it('steps into the secondary region by at least as much as that region steps internally', async () => {
+    render(
+      <UserProfile user={USER} local={local}>
+        <div data-testid="charts">charts</div>
+      </UserProfile>
+    );
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+
+    const secondary = screen.getByTestId('profile-secondary');
+    expect(secondary).toContainElement(screen.getByTestId('charts'));
+    // The grid's own SPACE[5] plus this margin is the boundary a reader sees.
+    expect(secondary.style.marginTop).toBe(`${SPACE[3]}px`);
+    expect(SPACE[5] + SPACE[3]).toBe(SPACE[8]);
+  });
+
+  // The tallest thing on the page, and the one the tab is named after.
+  it('gives the identity card a hero inset rather than a list-row one', async () => {
+    render(<UserProfile user={USER} local={local} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+    expect(screen.getByTestId('profile-identity')).toHaveStyle({ padding: `${SPACE[6]}px` });
   });
 
   // auto-fit collapses the unused tracks to 0 and splits the whole row between

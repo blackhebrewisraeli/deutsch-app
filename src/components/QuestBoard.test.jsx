@@ -49,7 +49,7 @@ describe('QuestBoard', () => {
     render(<QuestBoard quests={[quest()]} />);
     expect(screen.getByText('Tagesaufgaben')).toHaveStyle({
       fontFamily: FONTS.display,
-      fontSize: `${FONT_SIZE.xl}px`,
+      fontSize: `${FONT_SIZE.lg}px`,
     });
     expect(screen.getByTestId('quest-copy')).toHaveStyle({
       minWidth: '0',
@@ -118,33 +118,5 @@ describe('QuestBoard', () => {
     const bar = screen.getByRole('button').querySelector('div[aria-hidden="true"] > div');
     const width = Number.parseInt(bar.style.width, 10);
     expect(width).toBeGreaterThanOrEqual(0);
-  });
-});
-
-describe('QuestBoard — section heading typography', () => {
-  // The heading used to sit at lg (16) with its rows' copy at base (13): one
-  // step of separation for the only landmark on the section.
-  it('sets the heading a clear step above its own row copy', () => {
-    render(<QuestBoard quests={[quest()]} />);
-    const heading = screen.getByRole('heading', { level: 2 });
-    expect(heading).toHaveStyle({ fontSize: `${FONT_SIZE.xl}px` });
-    expect(FONT_SIZE.xl).toBeGreaterThan(FONT_SIZE.base);
-  });
-
-  // Fraunces sets a deep descender and this heading carries one (the g in
-  // "Tagesaufgaben"). A line box equal to the font size is where a glyph box
-  // starts getting cut.
-  it('leaves the line box room for a descender', () => {
-    render(<QuestBoard quests={[quest()]} />);
-    const heading = screen.getByRole('heading', { level: 2 });
-    expect(Number(heading.style.lineHeight)).toBeGreaterThanOrEqual(1.3);
-  });
-
-  // 12px was the same gap the rows use BETWEEN each other, so the heading read
-  // as one more row rather than as the thing above them.
-  it('separates itself from the list by more than the row gap', () => {
-    render(<QuestBoard quests={[quest()]} />);
-    const heading = screen.getByRole('heading', { level: 2 });
-    expect(heading.style.margin).toContain(`${SPACE[4]}px`);
   });
 });

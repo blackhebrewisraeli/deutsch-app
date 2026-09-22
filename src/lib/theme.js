@@ -138,6 +138,49 @@ export const FONT_WEIGHT = {
   black: 900,
 };
 
+/**
+ * Line height, as a ratio.
+ *
+ * Thirty components set this inline today, across TWELVE distinct values
+ * (1, 1.05, 1.1, 1.15, 1.2, 1.25, 1.3, 1.35, 1.4, 1.5, 2, and 0) — which is
+ * what an unnamed number does over time. This is the scale they should be
+ * reaching for.
+ *
+ * Deliberately NOT applied to those thirty in this change: that is a
+ * codebase-wide refactor with its own blast radius, and a line height is load
+ * bearing for vertical rhythm on every screen it touches. Same reasoning, and
+ * the same conclusion, as the note on the SectionLabel primitive. Migrate them
+ * deliberately, not by grep.
+ */
+export const LINE_HEIGHT = {
+  // Display type, where the line box is meant to hug the glyph.
+  flat: 1,
+  // Headlines and single-line glyphs.
+  tight: 1.1,
+  // Multi-line UI text that still needs to read as one block.
+  snug: 1.25,
+  // Small labels and captions.
+  normal: 1.4,
+  // Prose, and anything carrying stacked diacritics.
+  relaxed: 1.5,
+};
+
+/**
+ * Deliberate transparency, as opposed to a colour.
+ *
+ * Reach for a COLOUR token first: `COLORS.mute` is a real foreground with a
+ * measured contrast ratio, and this app audits rendered contrast in CI.
+ * Opacity is for when the thing being softened is DECORATIVE — an icon whose
+ * meaning is already spelled out in text beside it — because fading real text
+ * is how a contrast gate starts failing.
+ */
+export const OPACITY = {
+  // Present but receded. Matches the value TEXT.ipa already ships.
+  muted: 0.75,
+  // Clearly inactive. Only for decoration.
+  dim: 0.4,
+};
+
 export const LETTER_SPACING = {
   tight: '-0.04em',
   normal: '0em',
@@ -171,6 +214,11 @@ export const BORDER = {
   // Hairline from the structural border token — visible on dark surfaces
   // where SHADOW.card's light-mode rgba is nearly invisible.
   panel: `1px solid ${COLORS.border}`,
+  // `panel`'s dashed sibling, for an outline that means "not filled in yet".
+  // BORDER.dashed is a different idea: it is drawn in COLORS.ink, the full
+  // strength used for a deliberate cut line, and reads as emphasis rather than
+  // as absence.
+  panelDashed: `1px dashed ${COLORS.border}`,
 };
 
 // ── Radius ───────────────────────────────────────────────────

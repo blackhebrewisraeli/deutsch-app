@@ -272,7 +272,11 @@ export default function UserProfile({
           Portrait, name, and the two social counts, on ONE surface. */}
       <Surface
         elevation={2}
-        padding={5}
+        // 6 (24px), not 5 (20px). This card is 254-351px tall depending on
+        // width — the tallest thing on the page and the one the whole tab is
+        // named after. A 20px inset is a list-row inset; at this size it read
+        // as a portrait pressed against its own frame.
+        padding={6}
         radius="xl"
         data-testid="profile-identity"
         style={{
@@ -459,8 +463,20 @@ export default function UserProfile({
 
       {/* ── Secondary: the detailed charts ───────────────────────
           Last, deliberately. These are the dense analytics that used to BE
-          the Profile tab. */}
-      {children}
+          the Profile tab.
+
+          The extra margin is a measured correction, not decoration. This page
+          renders two rhythms: the identity blocks above sit SPACE[5] (20px)
+          apart because they are one group — portrait, metrics, league, all
+          answering "who am I" — while the sections inside `children` sit
+          SPACE[8] (32px) apart. That made the step INTO the analytics region
+          smaller than every step within it, so the charts read as one more
+          identity block instead of as a new region. SPACE[3] on top of the
+          grid's own SPACE[5] brings the boundary up to the same 32px the
+          sections below it use. */}
+      <div data-testid="profile-secondary" style={{ marginTop: SPACE[3], minWidth: 0 }}>
+        {children}
+      </div>
     </div>
   );
 }

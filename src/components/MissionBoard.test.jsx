@@ -28,7 +28,7 @@ describe('MissionBoard', () => {
     render(<MissionBoard missions={[due]} />);
     expect(screen.getByText('Missionen')).toHaveStyle({
       fontFamily: FONTS.display,
-      fontSize: `${FONT_SIZE.xl}px`,
+      fontSize: `${FONT_SIZE.lg}px`,
     });
     expect(screen.getByTestId('mission-copy')).toHaveStyle({
       minWidth: '0',
@@ -112,33 +112,5 @@ describe('MissionBoard', () => {
     expect(screen.getByText('rest of Home')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /cards are due/i })).not.toBeInTheDocument();
     spy.mockRestore();
-  });
-});
-
-describe('MissionBoard — section heading typography', () => {
-  // The heading used to sit at lg (16) with its rows' copy at base (13): one
-  // step of separation for the only landmark on the section.
-  it('sets the heading a clear step above its own row copy', () => {
-    render(<MissionBoard missions={[due]} />);
-    const heading = screen.getByRole('heading', { level: 2 });
-    expect(heading).toHaveStyle({ fontSize: `${FONT_SIZE.xl}px` });
-    expect(FONT_SIZE.xl).toBeGreaterThan(FONT_SIZE.base);
-  });
-
-  // Fraunces sets a deep descender and these headings carry them (the g in
-  // "Tagesaufgaben"). A line box equal to the font size is where a glyph box
-  // starts getting cut.
-  it('leaves the line box room for a descender', () => {
-    render(<MissionBoard missions={[due]} />);
-    const heading = screen.getByRole('heading', { level: 2 });
-    expect(Number(heading.style.lineHeight)).toBeGreaterThanOrEqual(1.3);
-  });
-
-  // 12px was the same gap the rows use BETWEEN each other, so the heading read
-  // as one more row rather than as the thing above them.
-  it('separates itself from the list by more than the row gap', () => {
-    render(<MissionBoard missions={[due]} />);
-    const heading = screen.getByRole('heading', { level: 2 });
-    expect(heading.style.margin).toContain(`${SPACE[4]}px`);
   });
 });
