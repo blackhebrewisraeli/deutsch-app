@@ -27,7 +27,7 @@ import { zoneCounts } from './leagueZones.js';
 
 /**
  * @param {string|undefined} userId
- * @returns {{rank: number, cohortSize: number, inDemotionZone: boolean}|null}
+ * @returns {{tier: number, rank: number, cohortSize: number, inDemotionZone: boolean}|null}
  */
 export function useLeagueStanding(userId) {
   const [standing, setStanding] = useState(null);
@@ -60,7 +60,17 @@ export function useLeagueStanding(userId) {
         }
 
         const { demote } = zoneCounts(cohortSize);
-        setStanding({ rank, cohortSize, inDemotionZone: demote > 0 && rank > cohortSize - demote });
+        setStanding({
+          // The tier rides along with the membership read — it costs nothing
+          // extra (it is an embedded to-one on the same row) and it is what
+          // Home's league badge renders. Without it Home would have to call
+          // joinLeague to find out, which is the write this whole hook exists
+          // to avoid.
+          tier: membership.tier ?? 0,
+          rank,
+          cohortSize,
+          inDemotionZone: demote > 0 && rank > cohortSize - demote,
+        });
       } catch {
         // Best-effort: a failed league read must never break Home. The mission
         // just does not appear.

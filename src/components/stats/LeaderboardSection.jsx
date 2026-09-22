@@ -1,13 +1,7 @@
-import { useEffect, useState, Fragment } from 'react';
+import { useEffect, useRef, useState, Fragment } from 'react';
 import { Users, AlertTriangle } from 'lucide-react';
 import { useAuth, getSupabase } from '../../lib/auth.js';
-import {
-  joinLeague,
-  refreshLeague,
-  fetchStandings,
-  TIER_NAMES,
-  LEAGUES_ENABLED,
-} from '../../lib/leagues.js';
+import { joinLeague, refreshLeague, fetchStandings, LEAGUES_ENABLED } from '../../lib/leagues.js';
 import { zoneCounts } from '../../lib/leagueZones.js';
 import { weekRemaining } from '../../lib/leagueCountdown.js';
 import { COLORS, RADIUS, SPACE } from '../../lib/theme.js';
@@ -35,11 +29,33 @@ function ZoneLabel({ text, color }) {
   );
 }
 
-export default function LeaderboardSection({ onSelectUser }) {
+// The standings table.
+//
+// It no longer prints the tier. It used to open with `<h3>{TIER} League</h3>`,
+// which was the page's SECOND league display — the profile card above it stated
+// a tier of its own, from a different source, and across a settle week the two
+// disagreed. This section is the one place that knows which league the learner
+// is really in this week (joinLeague resolves it), so it reports that upward
+// through `onLeague` and the profile card renders it. One fetch, one tier, no
+// way for the page to contradict itself.
+//
+// @param onLeague — called with {tier, leagueId, rank, cohortSize} once the
+//   standings resolve, and with null on failure. Optional: this section still
+//   renders standalone.
+export default function LeaderboardSection({ onSelectUser, onLeague }) {
   const { user } = useAuth();
   const userId = user?.id;
   const [state, setState] = useState({ status: 'idle', league: null, rows: [] });
   const [nonce, setNonce] = useState(0);
+
+  // Held in a ref, NOT in the effect's dependency list. joinLeague() is a
+  // WRITE; a parent that passes an inline arrow would give this callback a new
+  // identity on every render and re-run the join each time. The ref keeps the
+  // latest callback without making the effect depend on it.
+  const onLeagueRef = useRef(onLeague);
+  useEffect(() => {
+    onLeagueRef.current = onLeague;
+  }, [onLeague]);
 
   // Depend on the stable id, not the user object — a fresh object identity on
   // re-render would otherwise re-fire join/refresh and could double-create a
@@ -63,11 +79,26 @@ export default function LeaderboardSection({ onSelectUser }) {
         const league = await joinLeague();
         await refreshLeague();
         const rows = await fetchStandings(await getSupabase(), league.league_id);
-        if (!cancelled) setState({ status: 'ready', league, rows });
+        if (cancelled) return;
+        setState({ status: 'ready', league, rows });
+        // Position is DERIVED, not read: league_members.rank is written only by
+        // the weekly settle cron and is NULL during the live week, so the only
+        // truthful ordering is the one this list is already showing.
+        const rank = rows.findIndex((r) => r.user_id === userId) + 1;
+        onLeagueRef.current?.({
+          tier: league.tier,
+          leagueId: league.league_id,
+          rank: rank > 0 ? rank : null,
+          cohortSize: rows.length,
+        });
         // Reward claiming lives in the app-load useLeagueRewards hook so winners
         // are credited even without opening this tab.
       } catch {
-        if (!cancelled) setState({ status: 'error', league: null, rows: [] });
+        if (cancelled) return;
+        setState({ status: 'error', league: null, rows: [] });
+        // Tell the parent the tier is unknown rather than leaving a stale one
+        // on screen beside an error note.
+        onLeagueRef.current?.(null);
       }
     })();
     return () => {
@@ -113,7 +144,9 @@ export default function LeaderboardSection({ onSelectUser }) {
           marginBottom: SPACE[2],
         }}
       >
-        <h3 style={{ margin: 0, color: COLORS.ink }}>{TIER_NAMES[state.league.tier]} League</h3>
+        {/* "Rangliste", not "<Tier> League". The tier belongs to the league
+            card above this section and is stated once, there. */}
+        <h3 style={{ margin: 0, color: COLORS.ink }}>Rangliste</h3>
         <span style={{ fontSize: 13, color: COLORS.mute }}>
           {countdown.ended ? 'Settling soon' : `Ends in ${countdown.label}`}
         </span>

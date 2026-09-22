@@ -3,8 +3,12 @@ import { render, screen, waitFor, cleanup, fireEvent } from '@testing-library/re
 import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 
-vi.mock('../../lib/leagues.js', () => ({
-  TIER_NAMES: ['Bronze', 'Silver', 'Gold', 'Sapphire', 'Ruby'],
+// Partial: only the network call is stubbed. TIER_NAMES and tierName are pure
+// and shared, and a hand-written copy of them here is a second definition free
+// to drift from the one the app renders — which is exactly how this mock broke
+// when tierName was added.
+vi.mock('../../lib/leagues.js', async (importOriginal) => ({
+  ...(await importOriginal()),
   fetchProfile: vi.fn(),
 }));
 

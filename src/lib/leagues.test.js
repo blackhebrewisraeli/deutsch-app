@@ -2,13 +2,22 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 
 vi.mock('./auth.js', () => ({ getAccessToken: vi.fn().mockResolvedValue('tok') }));
 
-import { joinLeague, TIER_NAMES, fetchMyResults, fetchMyMembership } from './leagues.js';
+import { joinLeague, TIER_NAMES, tierName, fetchMyResults, fetchMyMembership } from './leagues.js';
+import { TIER_NAMES as pureTierNames, tierName as pureTierName } from './leagueTier.js';
 
 afterEach(() => vi.clearAllMocks());
 
 describe('TIER_NAMES', () => {
   it('has five tiers Bronze..Ruby', () => {
     expect(TIER_NAMES).toEqual(['Bronze', 'Silver', 'Gold', 'Sapphire', 'Ruby']);
+  });
+
+  it('re-exports the pure module rather than redefining it', () => {
+    // A second copy here would be a second definition, free to drift from the
+    // one components render. Identity, not equality: two arrays with the same
+    // contents is exactly the failure this is meant to catch.
+    expect(TIER_NAMES).toBe(pureTierNames);
+    expect(tierName).toBe(pureTierName);
   });
 });
 
@@ -78,17 +87,35 @@ describe('fetchMyMembership', () => {
     return { supabase: { from }, from, select, eq1, eq2 };
   };
 
-  it('reads one own row scoped to the given period', async () => {
-    const row = { league_id: 'L1', weekly_xp: 120 };
+  it('reads one own row scoped to the given period, with its league tier', async () => {
+    const row = { league_id: 'L1', weekly_xp: 120, leagues: { tier: 2 } };
     const { supabase, from, select, eq1, eq2 } = build(row);
 
     const out = await fetchMyMembership(supabase, 'me', '2026-06-22');
 
     expect(from).toHaveBeenCalledWith('league_members');
-    expect(select).toHaveBeenCalledWith('league_id, weekly_xp');
+    // The tier is an embedded to-one on the SAME row, not a second round trip.
+    // It is what Home's league badge renders; asking joinLeague instead would
+    // make opening the landing tab a WRITE, which is what this function exists
+    // to avoid.
+    expect(select).toHaveBeenCalledWith('league_id, weekly_xp, leagues!inner(tier)');
     expect(eq1).toHaveBeenCalledWith('user_id', 'me');
     expect(eq2).toHaveBeenCalledWith('period_start', '2026-06-22');
-    expect(out).toEqual(row);
+    // FLATTENED: callers want a membership, not PostgREST's join shape.
+    expect(out).toEqual({ league_id: 'L1', weekly_xp: 120, tier: 2 });
+    expect(out.leagues).toBeUndefined();
+  });
+
+  it('reads a missing embedded league as Bronze rather than as undefined', async () => {
+    // The `!inner` join should make this unreachable, but a membership whose
+    // tier arrives as undefined would otherwise propagate into the badge as a
+    // blank. Tier 0 is the floor, so it is the correct floor here too.
+    const { supabase } = build({ league_id: 'L1', weekly_xp: 5 });
+    await expect(fetchMyMembership(supabase, 'me', '2026-06-22')).resolves.toEqual({
+      league_id: 'L1',
+      weekly_xp: 5,
+      tier: 0,
+    });
   });
 
   it('returns null when the caller has no membership for the period', async () => {

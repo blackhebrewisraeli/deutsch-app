@@ -4,8 +4,14 @@ import { render, screen, act } from '@testing-library/react';
 // The standings table fetches on its own and is covered by its own suite; this
 // page only has to PLACE it. Stubbing it keeps these assertions about layout
 // rather than about Supabase.
+const board = vi.hoisted(() => ({ onLeague: null }));
 vi.mock('../stats/LeaderboardSection', () => ({
-  default: () => <div data-testid="standings">standings</div>,
+  // Captures the upward callback so a test can play the role of a resolved
+  // join without a Supabase client.
+  default: ({ onLeague }) => {
+    board.onLeague = onLeague;
+    return <div data-testid="standings">standings</div>;
+  },
 }));
 
 const leagues = vi.hoisted(() => ({ fetchProfile: vi.fn() }));
@@ -62,15 +68,45 @@ describe('UserProfile — the consolidated profile page', () => {
     expect(screen.getByText(/2026/)).toBeInTheDocument();
   });
 
-  it('shows the social counts and the progress metrics together', async () => {
+  it('shows the practice metrics in their own band', async () => {
     render(<UserProfile user={USER} local={local} />);
     await screen.findByRole('heading', { name: 'Sam Vimes' });
     const metrics = screen.getByTestId('profile-metrics');
-    expect(metrics).toHaveTextContent('3');
-    expect(metrics).toHaveTextContent('5');
     expect(metrics).toHaveTextContent('1240');
     expect(metrics).toHaveTextContent('9');
     expect(metrics).toHaveTextContent(/B1/i);
+  });
+
+  it('puts the follower counts inside the identity card, not the metrics grid', async () => {
+    // Followers and Following describe the PERSON; XP, level and streak
+    // describe their practice. Mixing all five into one row of identical
+    // tiles is what made "Follower" read as a peer of "XP" — and it is the
+    // arrangement every social profile has already taught people to read.
+    render(<UserProfile user={USER} local={local} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+
+    const social = screen.getByTestId('profile-social');
+    expect(social).toHaveTextContent('Follower');
+    expect(social).toHaveTextContent('Folgt');
+    expect(social).toHaveTextContent('3');
+    expect(social).toHaveTextContent('5');
+
+    // Inside the identity card, beside the portrait — not a separate band.
+    expect(screen.getByTestId('profile-identity')).toContainElement(social);
+    expect(screen.getByTestId('profile-metrics')).not.toHaveTextContent('Follower');
+  });
+
+  it('counts zero followers as zero, never as a blank', async () => {
+    leagues.fetchProfile.mockResolvedValue({
+      ...ROW,
+      followers_count: 0,
+      following_count: 0,
+    });
+    render(<UserProfile user={USER} local={local} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+    const social = screen.getByTestId('profile-social');
+    expect(social.textContent).toMatch(/0\s*Follower/);
+    expect(social.textContent).toMatch(/0\s*Folgt/);
   });
 
   it('places the full standings in the main column, under the league card', async () => {
@@ -95,6 +131,69 @@ describe('UserProfile — the consolidated profile page', () => {
     expect(
       standings.compareDocumentPosition(detailed) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
+  });
+
+  it('shows exactly one league display', async () => {
+    // The defect this page shipped with: the card below read `profile.tier`
+    // (the endpoint's view of the learner's most recent membership) while the
+    // standings section printed the tier of the league joinLeague() had just
+    // put them in. Across a settle week those differ, so the page said Silver
+    // in one place and Gold in the next.
+    render(<UserProfile user={USER} local={local} />);
+    await screen.findByTestId('profile-league');
+    expect(screen.getAllByTestId('profile-league')).toHaveLength(1);
+    expect(screen.getAllByTestId('league-badge-tier')).toHaveLength(1);
+  });
+
+  it('prefers the live league over the profile row’s stored tier', async () => {
+    // ROW.tier is 2 (Gold). The league actually joined this week is tier 1
+    // (Silver), and that is the one the learner is competing in right now.
+    render(<UserProfile user={USER} local={local} />);
+    await screen.findByTestId('profile-league');
+    expect(screen.getByTestId('league-badge-tier')).toHaveTextContent('Gold');
+
+    await act(async () => {
+      board.onLeague({ tier: 1, leagueId: 'L1', rank: 4, cohortSize: 25 });
+    });
+    expect(screen.getByTestId('league-badge-tier')).toHaveTextContent('Silver');
+    expect(screen.getByTestId('profile-league')).toHaveTextContent('Platz 4 / 25');
+  });
+
+  it('falls back to Bronze when neither source has a tier', async () => {
+    // Bronze is the FLOOR every player starts on, not a placeholder: a blank
+    // where the tier goes is what indexing TIER_NAMES raw produces.
+    leagues.fetchProfile.mockResolvedValue({ ...ROW, tier: undefined });
+    render(<UserProfile user={USER} local={local} />);
+    await screen.findByTestId('profile-league');
+    expect(screen.getByTestId('league-badge-tier')).toHaveTextContent('Bronze');
+  });
+
+  it('drops the live league when the account changes', async () => {
+    // The standings section keeps rendering the previous learner's league
+    // until its own effect re-runs, so the card must not hold the old tier
+    // over the new person's name.
+    const { rerender } = render(<UserProfile user={USER} local={local} />);
+    await screen.findByTestId('profile-league');
+    await act(async () => {
+      board.onLeague({ tier: 4, leagueId: 'L1', rank: 1, cohortSize: 25 });
+    });
+    expect(screen.getByTestId('league-badge-tier')).toHaveTextContent('Ruby');
+
+    leagues.fetchProfile.mockResolvedValue({ ...ROW, tier: 0 });
+    rerender(<UserProfile user={{ id: 'u2' }} local={local} />);
+    await act(async () => {});
+    expect(screen.getByTestId('league-badge-tier')).toHaveTextContent('Bronze');
+  });
+
+  it.each([320, 375, 1280])('offers exactly one Edit profile control at %ipx', async (width) => {
+    // The wide layout puts the action beside the name and the narrow one puts
+    // it under the counts. Rendering both would be two controls with the same
+    // accessible name pointing at the same destination — which is what a
+    // reader of the JSX would expect, since both branches are written out.
+    window.innerWidth = width;
+    render(<UserProfile user={USER} local={local} onOpenSettings={vi.fn()} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+    expect(screen.getAllByRole('button', { name: /edit profile/i })).toHaveLength(1);
   });
 
   it('never fabricates profile data for a guest', async () => {
@@ -137,6 +236,7 @@ describe('UserProfile — the consolidated profile page', () => {
     // Tier falls back to 0 and the win line to its empty phrasing — the row
     // is absent, so there is nothing to count.
     expect(screen.getByTestId('profile-league')).toHaveTextContent('Noch kein Ligasieg');
+    expect(screen.getByTestId('league-badge-tier')).toHaveTextContent('Bronze');
     // The local numbers are from localStorage and are still true.
     const metrics = screen.getByTestId('profile-metrics');
     expect(metrics).toHaveTextContent('1240');
