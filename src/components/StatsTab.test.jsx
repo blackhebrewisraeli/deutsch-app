@@ -173,3 +173,24 @@ describe('StatsTab — one consolidated page, no sub-tabs', () => {
     expect(screen.queryByText(/sound: off/i)).toBeNull();
   });
 });
+
+describe('StatsTab — finding people', () => {
+  const USER = { id: 'u1', email: 'sam@example.com' };
+
+  // The nav has no room for a Search tab (six items, seven for an admin, and
+  // the seventh was measured to fit 320px with no slack), so the Profile page
+  // is where this has to be reachable. If it stops rendering here it is not
+  // reachable anywhere.
+  it('puts the people search on the profile page', () => {
+    render(<StatsTab user={USER} />);
+    expect(screen.getByRole('searchbox')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Find people' })).toBeInTheDocument();
+  });
+
+  // Both social endpoints require auth, so a signed-out box could only ever
+  // produce an error.
+  it('hides it when signed out', () => {
+    render(<StatsTab user={null} />);
+    expect(screen.queryByRole('searchbox')).toBeNull();
+  });
+});
