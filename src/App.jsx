@@ -1530,6 +1530,7 @@ export default function App() {
               mobile={mobile}
               onReview={handleReview}
               user={user}
+              profile={profile}
               onSignIn={requestSignIn}
               view={profileView}
               onViewChange={handleProfileView}

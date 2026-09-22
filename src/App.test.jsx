@@ -32,6 +32,13 @@ const asReturningLearner = () => {
   if (!localStorage.getItem('deutsch-level')) localStorage.setItem('deutsch-level', 'a1');
 };
 
+const profileMock = vi.hoisted(() => ({ fetchMyProfile: vi.fn() }));
+
+vi.mock('./lib/profile', async (importOriginal) => ({
+  ...(await importOriginal()),
+  fetchMyProfile: profileMock.fetchMyProfile,
+}));
+
 beforeEach(() => {
   asReturningLearner();
   window.location.hash = '';
@@ -40,6 +47,7 @@ beforeEach(() => {
   authMock.token = null;
   adminSessionMock.status = 'ready';
   adminSessionMock.me = { isAdmin: false, isSystemAccount: false, blocked: false };
+  profileMock.fetchMyProfile.mockReset().mockResolvedValue(null);
 });
 
 const authMock = vi.hoisted(() => ({
@@ -328,6 +336,50 @@ describe('App navigation a11y', () => {
     renderPastEntry(<App />);
     const nav = within(screen.getByRole('navigation'));
     expect(nav.getByRole('button', { name: 'Translate' })).toHaveTextContent('Translate');
+  });
+});
+
+describe('profile identity propagation', () => {
+  beforeEach(() => {
+    Element.prototype.scrollIntoView = vi.fn();
+    authMock.status = 'authenticated';
+    authMock.mayHaveSession = true;
+    setViewportWidth(1280);
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('shows the same saved avatar in the account sheet and the main Profile page', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://proj.supabase.co');
+    profileMock.fetchMyProfile.mockResolvedValue({
+      display_name: 'Sam Vimes',
+      handle: 'sam',
+      avatar_path: 'u1/saved.webp',
+      created_at: '2026-01-01T00:00:00.000Z',
+    });
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+
+    const account = within(screen.getByRole('banner')).getByRole('button', { name: 'Account' });
+    await user.click(account);
+    const sheet = screen.getByRole('dialog', { name: 'Account' });
+    await waitFor(() =>
+      expect(sheet.querySelector('img[data-avatar="image"]')).toHaveAttribute(
+        'src',
+        'https://proj.supabase.co/storage/v1/object/public/avatars/u1/saved.webp'
+      )
+    );
+
+    await user.click(account);
+    await user.click(
+      within(screen.getByRole('navigation')).getByRole('button', { name: 'Profile' })
+    );
+
+    expect(await screen.findByRole('heading', { name: 'Sam Vimes' })).toBeInTheDocument();
+    expect(document.querySelector('img[data-avatar="image"]')).toHaveAttribute(
+      'src',
+      'https://proj.supabase.co/storage/v1/object/public/avatars/u1/saved.webp'
+    );
   });
 });
 

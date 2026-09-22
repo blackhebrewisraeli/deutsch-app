@@ -37,7 +37,10 @@ const local = { level: 'b1', streak: 9, xp: 1240 };
 beforeEach(() => {
   leagues.fetchProfile.mockResolvedValue(ROW);
 });
-afterEach(() => vi.clearAllMocks());
+afterEach(() => {
+  vi.clearAllMocks();
+  vi.unstubAllEnvs();
+});
 
 describe('UserProfile — the consolidated profile page', () => {
   it('has no internal sub-tab navigation', async () => {
@@ -113,6 +116,38 @@ describe('UserProfile — the consolidated profile page', () => {
     // callback that may run several times.
     const metrics = await screen.findByTestId('profile-metrics');
     expect(metrics).toHaveTextContent('1240');
+  });
+
+  it('renders the parent’s saved avatar after a profile-state rerender without refetching', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://proj.supabase.co');
+    leagues.fetchProfile.mockResolvedValue({ ...ROW, avatar_path: 'u1/old.webp' });
+    const ownProfile = {
+      display_name: 'Sam Vimes',
+      handle: 'sam',
+      avatar_path: 'u1/old.webp',
+      created_at: '2026-01-01T00:00:00.000Z',
+    };
+    const { rerender } = render(<UserProfile user={USER} profile={ownProfile} local={local} />);
+
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+    expect(document.querySelector('img[data-avatar="image"]')).toHaveAttribute(
+      'src',
+      'https://proj.supabase.co/storage/v1/object/public/avatars/u1/old.webp'
+    );
+
+    rerender(
+      <UserProfile
+        user={USER}
+        profile={{ ...ownProfile, avatar_path: 'u1/new.webp' }}
+        local={local}
+      />
+    );
+
+    expect(document.querySelector('img[data-avatar="image"]')).toHaveAttribute(
+      'src',
+      'https://proj.supabase.co/storage/v1/object/public/avatars/u1/new.webp'
+    );
+    expect(leagues.fetchProfile).toHaveBeenCalledTimes(1);
   });
 
   it('no grid relies on the implicit auto column', async () => {
