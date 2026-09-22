@@ -7,6 +7,7 @@ const profile = { handle: 'sam' };
 const profileWithPicture = { ...profile, avatar_path: 'u1/old.webp' };
 
 const handleField = () => screen.getByRole('textbox', { name: /handle/i });
+const displayNameField = () => screen.getByRole('textbox', { name: /display name/i });
 const saveButton = () => screen.getByRole('button', { name: /save profile/i });
 
 describe('ProfileSection', () => {
@@ -15,11 +16,11 @@ describe('ProfileSection', () => {
     expect(handleField()).toHaveValue('sam');
   });
 
-  // display_name was a second name field that nothing ever populated. One
-  // identity, one name — and this fails if it is ever added back.
-  it('offers no Display name field', () => {
-    render(<ProfileSection profile={profile} save={vi.fn()} />);
-    expect(screen.queryByRole('textbox', { name: /display name/i })).not.toBeInTheDocument();
+  it('edits the display name separately from the unique handle', () => {
+    render(<ProfileSection profile={{ ...profile, display_name: 'Sam Vimes' }} save={vi.fn()} />);
+    expect(displayNameField()).toHaveValue('Sam Vimes');
+    expect(handleField()).toHaveValue('sam');
+    expect(screen.getByText('@', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
   });
 
   it('offers no Avatar emoji field', () => {
@@ -50,16 +51,16 @@ describe('ProfileSection', () => {
     expect(saveButton()).toBeDisabled();
   });
 
-  it('sends the handle and reports success', async () => {
-    const save = vi.fn().mockResolvedValue(profile);
+  it('sends both identity fields and reports success', async () => {
+    const save = vi.fn().mockResolvedValue({ ...profile, display_name: 'Sam Vimes' });
     const onToast = vi.fn();
     render(<ProfileSection profile={profile} save={save} onToast={onToast} />);
+    await userEvent.type(displayNameField(), 'Sam Vimes');
     await userEvent.clear(handleField());
     await userEvent.type(handleField(), 'semion');
     await userEvent.click(saveButton());
 
-    // display_name is gone from the payload entirely — not sent as null.
-    expect(save).toHaveBeenCalledWith({ handle: 'semion' });
+    expect(save).toHaveBeenCalledWith({ display_name: 'Sam Vimes', handle: 'semion' });
     expect(onToast).toHaveBeenCalledWith(expect.stringMatching(/saved/i));
   });
 

@@ -184,6 +184,14 @@ describe('PATCH /api/v1/account/profile', () => {
     expect(updates).toHaveLength(0);
   });
 
+  it('rejects clearing the required unique handle', async () => {
+    const res = createRes();
+    await handler(req({ handle: '   ' }), res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body?.error?.message).toMatch(/handle is required/i);
+    expect(updates).toHaveLength(0);
+  });
+
   it('accepts a display_name exactly at the limit', async () => {
     const res = createRes();
     await handler(req({ display_name: 'x'.repeat(40) }), res);

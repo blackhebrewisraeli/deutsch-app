@@ -90,15 +90,11 @@ export default function PersonalHub({
   const lvl = score ?? EMPTY_SCORE;
   const wide = useWindowWidth() >= bp.wide;
 
-  // The league handle, then the email's local part. `display_name` used to sit
-  // at the front of this chain; it was written by a form nobody filled in and
-  // was null for every account, so the chain always fell through it. `handle`
-  // is the one name: it is unique, it is denormalised onto league_members, and
-  // it is what other learners already see on the leaderboard.
-  //
-  // A guest has neither and is greeted without a name rather than with a
-  // placeholder that implies an account.
-  const name = user ? (profile?.handle ?? user.email?.split('@')[0] ?? null) : null;
+  // A chosen display name is how the app addresses the learner. The handle is
+  // the unique social identifier and stays visible on its own line; it is only
+  // a greeting fallback when no display name has been chosen yet.
+  const displayName = typeof profile?.display_name === 'string' ? profile.display_name.trim() : '';
+  const name = user ? displayName || profile?.handle || user.email?.split('@')[0] || null : null;
 
   const createdAt = profile?.created_at ? new Date(profile.created_at) : null;
   const showsAccountLine = Boolean(user);

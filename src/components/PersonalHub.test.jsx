@@ -38,14 +38,14 @@ describe('PersonalHub', () => {
     setViewportWidth(1024);
   });
 
-  it('greets a signed-in learner by handle, with handle and join month', () => {
+  it('greets a signed-in learner by display name, with handle and join month', () => {
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
-    expect(screen.getByRole('heading', { name: /guten tag, semion/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /guten tag, Semion/i })).toBeInTheDocument();
     expect(screen.getByText(/@semion/)).toBeInTheDocument();
     expect(screen.getByText(/member since jun 2026/i)).toBeInTheDocument();
   });
 
-  it('falls back handle → email local-part when there is no display name', () => {
+  it('falls back from display name to handle, then the email local-part', () => {
     const { unmount } = render(
       <PersonalHub
         user={user}
@@ -280,18 +280,19 @@ describe('PersonalHub', () => {
   // jsdom has no layout, so overflow is asserted as the styles that let a
   // long token give way: wrap the greeting/rank, ellipsize the @handle line.
   it('constrains a long handle and rank so they cannot push the panel wide', () => {
+    const longDisplayName = 'Maximiliane Schwarzenberger von Hohenfels';
     const longHandle = 'Maximiliane_Schwarzenberger';
     const longRank = 'Muttersprachler';
     render(
       <PersonalHub
         user={user}
-        profile={{ ...profile, handle: longHandle }}
+        profile={{ ...profile, display_name: longDisplayName, handle: longHandle }}
         cefrLevel="a2"
         score={{ ...score, rankName: longRank }}
       />
     );
     const greeting = screen.getByRole('heading', {
-      name: new RegExp(`guten tag, ${longHandle}`, 'i'),
+      name: new RegExp(`guten tag, ${longDisplayName}`, 'i'),
     });
     expect(greeting).toHaveStyle({ overflowWrap: 'anywhere', maxWidth: '100%' });
 
