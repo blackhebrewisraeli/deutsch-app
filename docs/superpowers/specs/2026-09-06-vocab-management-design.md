@@ -165,11 +165,9 @@ and resets to Practice — same as today's `deckId` reset. Do not lift mode to
 
 ## 5 · Status derivation
 
-Two helpers exist and must not drift further:
-
-**Table rows** (`toVocabRows` in [vocabRows.js](../../../src/lib/vocabRows.js))
-keep a **base status** plus two flags, because a mastered card can also be due
-and a learning card can also be learned:
+`toVocabRows` in [vocabRows.js](../../../src/lib/vocabRows.js) is the canonical
+status derivation. Rows keep a **base status** plus two flags, because a
+mastered card can also be due and a learning card can also be learned:
 
 | Field | Meaning |
 | --- | --- |
@@ -179,16 +177,6 @@ and a learning card can also be learned:
 
 The Status column paints additive pills (Learning + Due, Learning + Learned,
 Mastered + Due). Filter chips read those fields independently.
-
-**Collapsed helper** (`statusForCard` in
-[vocabStatus.js](../../../src/components/vocab/vocabStatus.js)) is first-match
-for callers that still want one enum:
-
-`new` → `mastered` → `due` → `learned` → `learning`
-
-`learned` here is also `isLearned`, **not** "has an SRS row that is not due".
-That older reading shipped in the first #245 commit and was corrected in the
-same PR.
 
 ---
 
@@ -230,7 +218,6 @@ Custom surface that P4 immediately re-lays-out.
 - `src/components/vocab/VocabBrowse.jsx` + test
 - `src/components/vocab/VocabBrowser.jsx` + test
 - `src/components/vocab/VocabTable.jsx` + test
-- `src/components/vocab/vocabStatus.js`
 - `src/lib/vocabRows.js` + test
 
 **Do not touch for leftover P2 or for copy/density follow-ups:** `App.jsx`,
