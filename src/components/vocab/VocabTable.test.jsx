@@ -2,10 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VocabTable from './VocabTable';
-import { BROWSE_PAGE_SIZE, statusForCard } from './vocabStatus';
 import { MASTERED_BOX, srsKey } from '../../lib/srs';
 import { TEXT } from '../../lib/theme';
-import { toVocabRows } from '../../lib/vocabRows';
+import { ROWS_PER_PAGE, toVocabRows } from '../../lib/vocabRows';
 
 const breadCard = {
   id: 'n:brot',
@@ -23,68 +22,6 @@ const waterCard = { id: 'das Wasser', de: 'das Wasser', en: 'water' };
 const now = 1_000_000;
 
 const rowsOf = (cards, over = {}) => toVocabRows({ cards, deckId: 'food', now, ...over });
-
-describe('statusForCard', () => {
-  const bread = { id: 'das Brot', de: 'das Brot', en: 'bread', ipa: '/bʁoːt/' };
-
-  it('is new when the card has no SRS row', () => {
-    expect(statusForCard({ card: bread, deckId: 'food', srs: {}, now })).toBe('new');
-  });
-
-  it('is mastered when the box is 5, even if the card is also due', () => {
-    const srs = {
-      [srsKey('food', bread.id)]: { box: MASTERED_BOX, nextDue: now - 1, lastReviewed: 1, reps: 8 },
-    };
-    expect(statusForCard({ card: bread, deckId: 'food', srs, now })).toBe('mastered');
-  });
-
-  it('is due when nextDue has passed and the card is not mastered', () => {
-    const srs = {
-      [srsKey('food', bread.id)]: { box: 2, nextDue: now - 1, lastReviewed: 1, reps: 2 },
-    };
-    expect(statusForCard({ card: bread, deckId: 'food', srs, now })).toBe('due');
-  });
-
-  it('is learning when an SRS row is not due and the card is not in a learned map', () => {
-    const srs = {
-      [srsKey('food', bread.id)]: { box: 2, nextDue: now + 10, lastReviewed: 1, reps: 2 },
-    };
-    expect(statusForCard({ card: bread, deckId: 'food', srs, now })).toBe('learning');
-  });
-
-  it('is learned only when a learned map says so, not merely because SRS is not due', () => {
-    const srs = {
-      [srsKey('food', bread.id)]: { box: 2, nextDue: now + 10, lastReviewed: 1, reps: 2 },
-    };
-    expect(
-      statusForCard({
-        card: bread,
-        deckId: 'food',
-        srs,
-        now,
-        learnedByDeck: { food: { [bread.id]: true } },
-      })
-    ).toBe('learned');
-    expect(
-      statusForCard({
-        card: bread,
-        deckId: 'food',
-        srs,
-        now,
-        learnedWords: { [bread.id]: true },
-      })
-    ).toBe('learned');
-    expect(
-      statusForCard({
-        card: bread,
-        deckId: 'food',
-        srs,
-        now,
-        learnedByDeck: { travel: { [bread.id]: true } },
-      })
-    ).toBe('learning');
-  });
-});
 
 describe('VocabTable', () => {
   it('renders term, article, meaning, IPA, level, category and status', () => {
@@ -151,17 +88,17 @@ describe('VocabTable', () => {
   });
 
   it('renders the rows it is given — paging belongs to the caller', () => {
-    const cards = Array.from({ length: BROWSE_PAGE_SIZE + 10 }, (_, i) => ({
+    const cards = Array.from({ length: ROWS_PER_PAGE + 10 }, (_, i) => ({
       id: `w-${i}`,
       de: `Wort ${i}`,
       en: `word ${i}`,
     }));
     render(<VocabTable rows={rowsOf(cards)} />);
     expect(
-      screen.queryByText(`Showing ${BROWSE_PAGE_SIZE} of ${cards.length}`)
+      screen.queryByText(`Showing ${ROWS_PER_PAGE} of ${cards.length}`)
     ).not.toBeInTheDocument();
     expect(screen.getByText('Wort 0')).toBeInTheDocument();
-    expect(screen.getByText(`Wort ${BROWSE_PAGE_SIZE}`)).toBeInTheDocument();
+    expect(screen.getByText(`Wort ${ROWS_PER_PAGE}`)).toBeInTheDocument();
   });
 
   it('stacks as a list on mobile instead of a wide table', () => {
