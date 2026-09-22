@@ -7,14 +7,10 @@ import { updateProfile } from '../../lib/profile';
 import AvatarPicker from './AvatarPicker';
 import { AlertTriangle } from 'lucide-react';
 
-// Personal details: league handle, plus the avatar picture picker.
-//
-// display_name is gone. It shipped as a third field here and was populated on
-// zero accounts, which made it a question the learner had to answer twice —
-// "name" and "handle" — for one identity. `handle` wins because it is unique,
-// already denormalised onto league_members, and already what other learners
-// see. The COLUMN is left in place; dropping it is irreversible and it costs
-// nothing empty.
+// Personal details: a chosen display name, a unique social handle, and the
+// avatar picture picker. The two text fields are intentionally distinct:
+// display_name is how the app addresses the learner, while @handle is the
+// stable identifier other learners see on leaderboards.
 //
 // Avatar is a picture or a generated identicon — one identity surface, the
 // picture picker. There is no emoji field.
@@ -27,6 +23,7 @@ import { AlertTriangle } from 'lucide-react';
 // value the form already shows. The stored row it returns is the source of
 // truth, and it is what the fields are reset to on success.
 const asForm = (profile) => ({
+  display_name: profile?.display_name ?? '',
   handle: profile?.handle ?? '',
 });
 
@@ -41,6 +38,7 @@ const inputStyle = {
   background: 'transparent',
   color: COLORS.ink,
   width: '100%',
+  boxSizing: 'border-box',
 };
 
 export default function ProfileSection({
@@ -55,10 +53,11 @@ export default function ProfileSection({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Dirty-tracking: Save is meaningless until the handle actually changed, and
-  // a live Save button invites a pointless round trip on a UNIQUE column.
-  const dirty = form.handle !== saved.handle;
+  // Dirty-tracking keeps a unique-column write off the wire until either
+  // identity field actually changed.
+  const dirty = form.display_name !== saved.display_name || form.handle !== saved.handle;
 
+  const onDisplayNameChange = (e) => setForm((prev) => ({ ...prev, display_name: e.target.value }));
   const onHandleChange = (e) => setForm((prev) => ({ ...prev, handle: e.target.value }));
 
   const onSave = async () => {
@@ -66,6 +65,7 @@ export default function ProfileSection({
     setError(null);
     try {
       const stored = await save({
+        display_name: form.display_name,
         handle: form.handle,
       });
       // Reset to what the SERVER stored, not to what was typed.
@@ -95,13 +95,39 @@ export default function ProfileSection({
       />
 
       <label style={{ display: 'block' }}>
-        <span style={labelStyle}>Handle</span>
+        <span style={labelStyle}>Display name</span>
         <input
-          value={form.handle}
-          onChange={onHandleChange}
-          placeholder="semion"
-          style={inputStyle}
+          value={form.display_name}
+          onChange={onDisplayNameChange}
+          placeholder="First and last name"
+          maxLength={40}
+          style={{ ...inputStyle, fontFamily: FONTS.body }}
         />
+      </label>
+
+      <label style={{ display: 'block' }}>
+        <span style={labelStyle}>Handle</span>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            borderRadius: RADIUS.sm,
+            border: `1px solid ${COLORS.mute}`,
+            color: COLORS.mute,
+            paddingLeft: SPACE[2],
+          }}
+        >
+          <span aria-hidden="true" style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.base }}>
+            @
+          </span>
+          <input
+            value={form.handle}
+            onChange={onHandleChange}
+            placeholder="semion"
+            maxLength={24}
+            style={{ ...inputStyle, border: 'none', paddingLeft: SPACE[1] }}
+          />
+        </div>
       </label>
 
       {error && (

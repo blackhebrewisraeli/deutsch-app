@@ -1,4 +1,4 @@
-import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, RADIUS, SPACE } from '../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE } from '../lib/theme';
 import { Stack } from './ui/Layout';
 import InteractiveCard from './ui/InteractiveCard';
 import { activePack } from '../packs';
@@ -30,20 +30,19 @@ export default function QuestBoard({ quests = [], onGo }) {
 
   return (
     <section aria-labelledby="quests-heading">
-      <div
+      <h2
         id="quests-heading"
         style={{
-          fontFamily: FONTS.mono,
-          fontSize: FONT_SIZE.tag,
+          fontFamily: FONTS.display,
+          fontSize: FONT_SIZE.lg,
           fontWeight: FONT_WEIGHT.bold,
-          letterSpacing: LETTER_SPACING.caps,
-          textTransform: 'uppercase',
-          color: COLORS.mute,
-          marginBottom: SPACE[2],
+          lineHeight: 1.2,
+          color: COLORS.ink,
+          margin: `0 0 ${SPACE[3]}px`,
         }}
       >
         {chrome.heading}
-      </div>
+      </h2>
 
       <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
         <Stack gap={1} as="div">
@@ -74,37 +73,44 @@ export default function QuestBoard({ quests = [], onGo }) {
                       // minmax(0, 1fr), never a bare 1fr: a 1fr track keeps
                       // min-width auto and pushes the page wider than the
                       // viewport instead of letting the text shrink.
-                      gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-                      alignItems: 'center',
-                      gap: SPACE[2],
+                      gridTemplateColumns: 'auto minmax(0, 1fr)',
+                      alignItems: 'start',
+                      columnGap: SPACE[2],
                     }}
                   >
-                    <span aria-hidden="true" style={{ fontSize: FONT_SIZE.md }}>
+                    <span aria-hidden="true" style={{ fontSize: FONT_SIZE.md, marginTop: 2 }}>
                       {quest.done ? '✅' : entry.icon}
                     </span>
-                    <span
-                      style={{
-                        fontFamily: FONTS.body,
-                        fontSize: FONT_SIZE.base,
-                        color: quest.done ? COLORS.mute : COLORS.ink,
-                        textDecoration: quest.done ? 'line-through' : 'none',
-                        minWidth: 0,
-                      }}
-                    >
-                      {label}
-                    </span>
-                    <span
-                      aria-hidden="true"
-                      data-testid="quest-progress"
-                      style={{
-                        fontFamily: FONTS.mono,
-                        fontSize: FONT_SIZE.tag,
-                        color: quest.done ? COLORS.green : COLORS.mute,
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      {quest.progress} / {quest.target}
-                    </span>
+                    <div style={{ minWidth: 0 }}>
+                      <span
+                        data-testid="quest-copy"
+                        style={{
+                          display: 'block',
+                          minWidth: 0,
+                          fontFamily: FONTS.body,
+                          fontSize: FONT_SIZE.base,
+                          lineHeight: 1.4,
+                          color: quest.done ? COLORS.mute : COLORS.ink,
+                          textDecoration: quest.done ? 'line-through' : 'none',
+                          overflowWrap: 'anywhere',
+                        }}
+                      >
+                        {label}
+                      </span>
+                      <span
+                        aria-hidden="true"
+                        data-testid="quest-progress"
+                        style={{
+                          display: 'block',
+                          marginTop: SPACE[1],
+                          fontFamily: FONTS.mono,
+                          fontSize: FONT_SIZE.tag,
+                          color: quest.done ? COLORS.green : COLORS.mute,
+                        }}
+                      >
+                        {quest.progress} / {quest.target}
+                      </span>
+                    </div>
                   </div>
 
                   {/* A bounded bar, never a per-unit strip: a target scales with

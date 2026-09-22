@@ -220,9 +220,11 @@ describe('AccountChip — identity header and grouped rows', () => {
   it('leads with the avatar, the display name and the handle', async () => {
     await open();
     const sheet = screen.getByRole('dialog', { name: /account/i });
+    const identity = within(sheet).getByTestId('account-identity');
     expect(within(sheet).getByText('Sam Vimes')).toBeInTheDocument();
     expect(within(sheet).getByText('@sam')).toBeInTheDocument();
-    expect(sheet.querySelector('img[data-avatar]')).toBeTruthy();
+    expect(within(identity).getByText('sam@example.com')).toBeInTheDocument();
+    expect(identity.querySelector('[data-avatar]')).toHaveAttribute('width', '64');
   });
 
   it('falls back to the handle, then the anonymous label, never a blank header', async () => {
@@ -230,11 +232,13 @@ describe('AccountChip — identity header and grouped rows', () => {
     expect(within(screen.getByRole('dialog')).getByText('sam')).toBeInTheDocument();
   });
 
-  it('keeps the email, on the mono face', async () => {
+  it('keeps the email in the identity block, on a deliberately smaller face', async () => {
     await open();
     const email = screen.getByText('sam@example.com');
     expect(email).toBeInTheDocument();
     expect(email.getAttribute('style')).toMatch(/--f-mono/);
+    expect(email).toHaveStyle({ fontSize: '9px' });
+    expect(screen.getByTestId('account-identity')).toContainElement(email);
   });
 
   it('separates the groups with real dividers rather than bare whitespace', async () => {

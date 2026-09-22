@@ -119,6 +119,12 @@ export const profileHandler = createAccountHandler({
     if (Object.keys(patch).length === 0) {
       return sendError(res, 'bad_request', 'Nothing to update.');
     }
+    // Handles identify people on leaderboards and profile links. The database
+    // now guarantees every profile has one, so clearing it is not a valid edit
+    // (buildPatch turns whitespace into null before this check).
+    if ('handle' in patch && patch.handle === null) {
+      return sendError(res, 'bad_request', 'A handle is required.');
+    }
     const over = tooLong(patch);
     if (over) {
       return sendError(res, 'bad_request', `That ${over.replace('_', ' ')} is too long.`);
