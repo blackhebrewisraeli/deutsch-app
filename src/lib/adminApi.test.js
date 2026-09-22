@@ -12,7 +12,11 @@ import {
   deleteFeedback,
   fetchAdminUsers,
   setUserBlocked,
+  fetchUserProgress,
+  adjustUserXp,
+  setUserLeagueTier,
 } from './adminApi.js';
+import { todayKey } from './stats.js';
 
 describe('adminApi', () => {
   beforeEach(() => {
@@ -90,5 +94,42 @@ describe('adminApi', () => {
   it('loads the user list', async () => {
     await fetchAdminUsers();
     expect(fetch.mock.calls[0][0]).toBe('/api/v1/admin?op=users');
+  });
+
+  it('reads one user\u2019s progress, naming the day it is asking about', async () => {
+    await fetchUserProgress('u1', '2026-09-23');
+    expect(fetch.mock.calls[0][0]).toBe('/api/v1/admin?op=progress&userId=u1&today=2026-09-23');
+  });
+
+  it('posts an XP adjustment with the caller\u2019s own day', async () => {
+    await adjustUserXp('u1', -50, '2026-09-23');
+    expect(fetch.mock.calls[0][0]).toBe('/api/v1/admin?op=xp');
+    expect(fetch.mock.calls[0][1].method).toBe('POST');
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+      userId: 'u1',
+      deltaXp: -50,
+      day: '2026-09-23',
+    });
+  });
+
+  it('posts a league move', async () => {
+    await setUserLeagueTier('u1', 3, '2026-09-23');
+    expect(fetch.mock.calls[0][0]).toBe('/api/v1/admin?op=league');
+    expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({
+      userId: 'u1',
+      tier: 3,
+      day: '2026-09-23',
+    });
+  });
+
+  it('defaults the day to the shared LOCAL date key, not a UTC one', async () => {
+    // Asserted against todayKey rather than a literal: a hardcoded date makes
+    // this test a clock, and asserting the UTC property directly is inert on a
+    // UTC runner — where local and UTC never differ. What is actually worth
+    // pinning here is the WIRING: this lane uses the same local-date helper the
+    // progress lane does, so an adjustment cannot land in a different day (and
+    // therefore a different league week) than the drill answers around it.
+    await adjustUserXp('u1', 10);
+    expect(JSON.parse(fetch.mock.calls[0][1].body).day).toBe(todayKey());
   });
 });

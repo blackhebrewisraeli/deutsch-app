@@ -1,4 +1,5 @@
 import { getAccessToken } from './auth.js';
+import { todayKey } from './stats.js';
 
 async function adminFetch(op, { method = 'GET', query = {}, body } = {}) {
   const token = await getAccessToken();
@@ -55,4 +56,23 @@ export function fetchAdminUsers() {
 
 export function setUserBlocked(userId, blocked) {
   return adminFetch('block', { method: 'POST', body: { userId, blocked } });
+}
+
+// ── God Mode ────────────────────────────────────────────────────────────────
+//
+// Every God Mode call carries the ADMIN'S local date key. The server writes an
+// XP correction onto that day, so sending it is what keeps an adjustment made
+// at 01:00 local from landing in the previous UTC day — and therefore in the
+// previous league week.
+
+export function fetchUserProgress(userId, today = todayKey()) {
+  return adminFetch('progress', { query: { userId, today } });
+}
+
+export function adjustUserXp(userId, deltaXp, day = todayKey()) {
+  return adminFetch('xp', { method: 'POST', body: { userId, deltaXp, day } });
+}
+
+export function setUserLeagueTier(userId, tier, day = todayKey()) {
+  return adminFetch('league', { method: 'POST', body: { userId, tier, day } });
 }

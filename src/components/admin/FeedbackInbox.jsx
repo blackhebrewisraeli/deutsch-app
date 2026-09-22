@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { COLORS, FONTS, FONT_SIZE, SPACE, RADIUS } from '../../lib/theme';
+import { SPACE } from '../../lib/theme';
 import { Stack, Row } from '../ui/Layout';
 import Button from '../ui/Button';
-import Surface from '../ui/Surface';
 import { Body, Meta } from '../ui/Text';
+import { AdminFilterRail } from './AdminRail';
+import { AdminList, AdminListRow, AdminDetail, AdminFlag } from './AdminList';
+import { COMPACT_BUTTON } from './adminStyles';
 import { deleteFeedback, fetchFeedback, updateFeedbackStatus } from '../../lib/adminApi.js';
 
 const FILTERS = [
@@ -95,18 +97,12 @@ export default function FeedbackInbox() {
 
   return (
     <Stack gap={4}>
-      <Row gap={2} wrap>
-        {FILTERS.map((filter) => (
-          <Button
-            key={filter.key || 'all'}
-            variant={status === filter.key ? 'primary' : 'secondary'}
-            aria-pressed={status === filter.key}
-            onClick={() => onFilter(filter.key)}
-          >
-            {filter.label}
-          </Button>
-        ))}
-      </Row>
+      <AdminFilterRail
+        options={FILTERS}
+        activeKey={status}
+        onPick={onFilter}
+        ariaLabel="Filter reports"
+      />
       {error ? (
         <Body tone="error" style={{ overflowWrap: 'anywhere' }}>
           {error}
@@ -114,68 +110,44 @@ export default function FeedbackInbox() {
       ) : null}
       {loading ? <Meta>Loading…</Meta> : null}
       {!loading && items.length === 0 ? <Meta>No reports.</Meta> : null}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr)',
-          gap: SPACE[3],
-        }}
-      >
-        {items.map((row) => (
-          <Surface key={row.id} elevation={1} padding={4} style={{ minWidth: 0 }}>
-            <Stack gap={3}>
-              <Row gap={2} justify="space-between" align="flex-start">
-                <Meta>
-                  {row.status} · {row.category}
-                </Meta>
-                <Meta>{row.created_at ? new Date(row.created_at).toLocaleString() : ''}</Meta>
-              </Row>
-              <Body style={{ overflowWrap: 'anywhere', margin: 0 }}>{row.message}</Body>
-              <div
-                style={{
-                  fontFamily: FONTS.mono,
-                  fontSize: FONT_SIZE.tag,
-                  color: COLORS.mute,
-                  overflowWrap: 'anywhere',
-                }}
+      <AdminList>
+        {items.map((row, index) => (
+          <AdminListRow key={row.id} first={index === 0}>
+            <Row gap={2} justify="space-between" align="flex-start">
+              <AdminFlag tone={row.status === 'handled' ? 'muted' : 'default'}>
+                {row.status} · {row.category}
+              </AdminFlag>
+              <AdminFlag>
+                {row.created_at ? new Date(row.created_at).toLocaleString() : ''}
+              </AdminFlag>
+            </Row>
+            <Body style={{ overflowWrap: 'anywhere', margin: 0 }}>{row.message}</Body>
+            <AdminDetail>
+              {[row.surface, row.cefr_level, row.deck_id, row.item_id].filter(Boolean).join(' · ')}
+              {row.item_label ? ` · ${row.item_label}` : ''}
+              {row.user_id ? ` · ${row.user_id}` : ' · guest'}
+            </AdminDetail>
+            <Row gap={2} wrap style={{ paddingTop: SPACE[1] }}>
+              <Button
+                variant="secondary"
+                style={COMPACT_BUTTON}
+                busy={busyId === row.id}
+                onClick={() => onStatus(row.id, row.status === 'handled' ? 'open' : 'handled')}
               >
-                {[row.surface, row.cefr_level, row.deck_id, row.item_id]
-                  .filter(Boolean)
-                  .join(' · ')}
-                {row.item_label ? ` · ${row.item_label}` : ''}
-                {row.user_id ? ` · ${row.user_id}` : ' · guest'}
-              </div>
-              <Row gap={2} wrap>
-                {row.status !== 'handled' ? (
-                  <Button
-                    variant="secondary"
-                    busy={busyId === row.id}
-                    onClick={() => onStatus(row.id, 'handled')}
-                  >
-                    Mark handled
-                  </Button>
-                ) : (
-                  <Button
-                    variant="secondary"
-                    busy={busyId === row.id}
-                    onClick={() => onStatus(row.id, 'open')}
-                  >
-                    Reopen
-                  </Button>
-                )}
-                <Button
-                  variant="danger"
-                  busy={busyId === row.id}
-                  onClick={() => onDelete(row.id)}
-                  style={{ borderRadius: RADIUS.md }}
-                >
-                  {pendingDelete === row.id ? 'Confirm delete' : 'Delete'}
-                </Button>
-              </Row>
-            </Stack>
-          </Surface>
+                {row.status === 'handled' ? 'Reopen' : 'Mark handled'}
+              </Button>
+              <Button
+                variant="danger"
+                style={COMPACT_BUTTON}
+                busy={busyId === row.id}
+                onClick={() => onDelete(row.id)}
+              >
+                {pendingDelete === row.id ? 'Confirm delete' : 'Delete'}
+              </Button>
+            </Row>
+          </AdminListRow>
         ))}
-      </div>
+      </AdminList>
     </Stack>
   );
 }

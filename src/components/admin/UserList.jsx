@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
-import { COLORS, FONTS, FONT_SIZE, SPACE } from '../../lib/theme';
+import { SPACE } from '../../lib/theme';
 import { Stack, Row } from '../ui/Layout';
 import Button from '../ui/Button';
-import Surface from '../ui/Surface';
 import { Body, Meta } from '../ui/Text';
+import { AdminList, AdminListRow, AdminDetail, AdminFlag } from './AdminList';
+import { COMPACT_BUTTON } from './adminStyles';
 import { fetchAdminUsers, setUserBlocked } from '../../lib/adminApi.js';
 
 export default function UserList() {
@@ -76,41 +77,31 @@ export default function UserList() {
       ) : null}
       {loading ? <Meta>Loading…</Meta> : null}
       {!loading && items.length === 0 ? <Meta>No users.</Meta> : null}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'minmax(0, 1fr)',
-          gap: SPACE[3],
-        }}
-      >
-        {items.map((user) => (
-          <Surface key={user.userId} elevation={1} padding={4} style={{ minWidth: 0 }}>
-            <Stack gap={3}>
+      <AdminList>
+        {items.map((user, index) => (
+          <AdminListRow key={user.userId} first={index === 0}>
+            <Row gap={3} justify="space-between" align="flex-start">
               <Body style={{ overflowWrap: 'anywhere', margin: 0 }}>
                 {user.email ?? user.userId}
               </Body>
-              <div
-                style={{
-                  fontFamily: FONTS.mono,
-                  fontSize: FONT_SIZE.tag,
-                  color: COLORS.mute,
-                  overflowWrap: 'anywhere',
-                }}
-              >
-                {user.handle ? `@${user.handle} · ` : ''}
-                {user.providers?.length ? `${user.providers.join(', ')} · ` : ''}
-                {user.userId}
-              </div>
-              <Row gap={2} wrap>
-                {user.isAdmin ? <Meta>admin</Meta> : null}
-                {user.isSystemAccount ? <Meta>system</Meta> : null}
-                {user.blockedAt ? <Meta tone="error">blocked</Meta> : null}
+              <Row gap={3} wrap>
+                {user.isAdmin ? <AdminFlag>admin</AdminFlag> : null}
+                {user.isSystemAccount ? <AdminFlag>system</AdminFlag> : null}
+                {user.blockedAt ? <AdminFlag tone="error">blocked</AdminFlag> : null}
               </Row>
+            </Row>
+            <AdminDetail>
+              {user.handle ? `@${user.handle} · ` : ''}
+              {user.providers?.length ? `${user.providers.join(', ')} · ` : ''}
+              {user.userId}
+            </AdminDetail>
+            <div style={{ paddingTop: SPACE[1] }}>
               {user.isAdmin ? (
                 <Meta>Admin accounts cannot be blocked.</Meta>
               ) : (
                 <Button
                   variant={user.blockedAt ? 'secondary' : 'danger'}
+                  style={COMPACT_BUTTON}
                   busy={busyId === user.userId}
                   onClick={() => onBlock(user, !user.blockedAt)}
                 >
@@ -123,10 +114,10 @@ export default function UserList() {
                       : 'Block'}
                 </Button>
               )}
-            </Stack>
-          </Surface>
+            </div>
+          </AdminListRow>
         ))}
-      </div>
+      </AdminList>
     </Stack>
   );
 }
