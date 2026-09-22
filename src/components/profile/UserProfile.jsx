@@ -240,6 +240,18 @@ export default function UserProfile({
         // can shrink below its contents without widening the page.
         gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))',
         gap: SPACE[3],
+        // The cap the `1fr` needs. auto-fit collapses the unused tracks to 0
+        // and splits the whole row between the three that remain, so on a wide
+        // profile these three small stats were measured at 317px EACH inside a
+        // 976px column — 424px at 1600px. A streak of "9d" does not need a
+        // 424px card, and stretching it there is what made the identity row
+        // read as sparse rather than generous.
+        //
+        // maxWidth rather than a smaller minmax max: the 96px floor and the
+        // shrinkable 1fr are what fixed a 222px overflow at 375px, and this
+        // cap never engages at those widths — the container is already
+        // narrower than it.
+        maxWidth: 480,
       }}
     >
       <Metric icon={Sparkles} label="XP" value={local.xp ?? profile?.total_xp ?? 0} />
@@ -260,7 +272,11 @@ export default function UserProfile({
           Portrait, name, and the two social counts, on ONE surface. */}
       <Surface
         elevation={2}
-        padding={5}
+        // 6 (24px), not 5 (20px). This card is 254-351px tall depending on
+        // width — the tallest thing on the page and the one the whole tab is
+        // named after. A 20px inset is a list-row inset; at this size it read
+        // as a portrait pressed against its own frame.
+        padding={6}
         radius="xl"
         data-testid="profile-identity"
         style={{
@@ -447,8 +463,20 @@ export default function UserProfile({
 
       {/* ── Secondary: the detailed charts ───────────────────────
           Last, deliberately. These are the dense analytics that used to BE
-          the Profile tab. */}
-      {children}
+          the Profile tab.
+
+          The extra margin is a measured correction, not decoration. This page
+          renders two rhythms: the identity blocks above sit SPACE[5] (20px)
+          apart because they are one group — portrait, metrics, league, all
+          answering "who am I" — while the sections inside `children` sit
+          SPACE[8] (32px) apart. That made the step INTO the analytics region
+          smaller than every step within it, so the charts read as one more
+          identity block instead of as a new region. SPACE[3] on top of the
+          grid's own SPACE[5] brings the boundary up to the same 32px the
+          sections below it use. */}
+      <div data-testid="profile-secondary" style={{ marginTop: SPACE[3], minWidth: 0 }}>
+        {children}
+      </div>
     </div>
   );
 }
