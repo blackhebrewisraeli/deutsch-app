@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { User, Settings as SettingsIcon, LogOut, Mail, Smile } from 'lucide-react';
+import { User, Settings as SettingsIcon, LogOut, Smile } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, RADIUS, SHADOW, SPACE } from '../lib/theme';
 import { isAuthConfigured } from '../lib/auth.js';
 import { profileName } from '../lib/profile.js';
@@ -211,7 +211,6 @@ export default function AccountChip({
 
   const initial = (user.email?.[0] ?? '?').toUpperCase();
   const name = profileName(profile);
-  const showHandle = Boolean(profile?.handle) && name !== profile.handle;
   const saveStatus = () => {
     const next = sanitizeStatus(draft);
     setStatus(next);
@@ -286,44 +285,72 @@ export default function AccountChip({
             border: `1px solid ${COLORS.ink}`,
             borderRadius: RADIUS.md,
             boxShadow: SHADOW.bar,
-            padding: 12,
-            minWidth: 200,
+            padding: SPACE[2],
+            width: 304,
+            maxWidth: 'calc(100vw - 24px)',
+            boxSizing: 'border-box',
             zIndex: 60,
           }}
         >
           {/* ── Identity ─────────────────────────────────────── */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: SPACE[2], minWidth: 0 }}>
-            <Avatar profile={profile ?? {}} userId={user.id} size={36} />
-            <div style={{ minWidth: 0 }}>
+          <div
+            data-testid="account-identity"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: SPACE[3],
+              minWidth: 0,
+              padding: SPACE[3],
+              borderRadius: RADIUS.md,
+              border: `1px solid ${COLORS.border}`,
+              background: COLORS.surface2,
+            }}
+          >
+            <Avatar profile={profile ?? {}} userId={user.id} size={64} />
+            <div style={{ minWidth: 0, flex: 1 }}>
               <div
                 style={{
-                  fontFamily: FONTS.sans,
+                  fontFamily: FONTS.display,
                   fontWeight: FONT_WEIGHT.bold,
-                  fontSize: FONT_SIZE.tag,
+                  fontSize: FONT_SIZE.xl,
+                  lineHeight: 1.15,
                   color: COLORS.ink,
                   overflowWrap: 'anywhere',
                 }}
               >
                 {name}
               </div>
-              {showHandle && (
+              {profile?.handle && (
                 <div
                   style={{
                     fontFamily: FONTS.mono,
-                    fontSize: FONT_SIZE.tag,
-                    color: COLORS.mute,
+                    fontSize: FONT_SIZE.ipa,
+                    color: COLORS.inkSoft,
                     overflowWrap: 'anywhere',
+                    marginTop: SPACE[1],
                   }}
                 >
                   @{profile.handle}
                 </div>
               )}
+              <div
+                style={{
+                  fontFamily: FONTS.mono,
+                  fontSize: FONT_SIZE.label,
+                  lineHeight: 1.35,
+                  color: COLORS.mute,
+                  overflowWrap: 'anywhere',
+                  marginTop: SPACE[1],
+                }}
+              >
+                {user.email}
+              </div>
             </div>
           </div>
 
           {/* ── Status ───────────────────────────────────────────
               Local to this device until `profiles` has a column for it. */}
-          <div style={{ marginTop: SPACE[2] }}>
+          <div style={{ marginTop: SPACE[3] }}>
             {editingStatus ? (
               <div style={{ display: 'flex', gap: SPACE[1], alignItems: 'center' }}>
                 <input
@@ -340,7 +367,7 @@ export default function AccountChip({
                   style={{
                     flex: 1,
                     minWidth: 0,
-                    fontFamily: FONTS.sans,
+                    fontFamily: FONTS.body,
                     fontSize: FONT_SIZE.tag,
                     color: COLORS.ink,
                     background: COLORS.surface,
@@ -406,22 +433,6 @@ export default function AccountChip({
                 onOpenSettings?.();
               }}
             />
-          </div>
-
-          {/* ── The account itself ───────────────────────────── */}
-          <div style={GROUP}>
-            <div
-              style={{
-                ...ROW,
-                cursor: 'default',
-                fontFamily: FONTS.mono,
-                color: COLORS.mute,
-                overflowWrap: 'anywhere',
-              }}
-            >
-              <Mail size={14} aria-hidden="true" />
-              <span style={{ fontFamily: FONTS.mono }}>{user.email}</span>
-            </div>
           </div>
 
           <div style={GROUP}>

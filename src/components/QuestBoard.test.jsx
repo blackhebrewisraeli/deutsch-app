@@ -3,7 +3,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import QuestBoard from './QuestBoard';
 import { activePack } from '../packs';
-import { SPACE } from '../lib/theme';
+import { FONTS, FONT_SIZE, SPACE } from '../lib/theme';
 
 const quest = (over = {}) => ({
   id: 'answer-cards',
@@ -43,6 +43,19 @@ describe('QuestBoard', () => {
   it('shows progress as a ratio', () => {
     render(<QuestBoard quests={[quest()]} />);
     expect(screen.getByTestId('quest-progress')).toHaveTextContent('3 / 7');
+  });
+
+  it('uses a display heading and keeps progress below wrapping task copy', () => {
+    render(<QuestBoard quests={[quest()]} />);
+    expect(screen.getByText('Tagesaufgaben')).toHaveStyle({
+      fontFamily: FONTS.display,
+      fontSize: `${FONT_SIZE.lg}px`,
+    });
+    expect(screen.getByTestId('quest-copy')).toHaveStyle({
+      minWidth: '0',
+      overflowWrap: 'anywhere',
+    });
+    expect(screen.getByTestId('quest-progress')).toHaveStyle({ marginTop: `${SPACE[1]}px` });
   });
 
   it('names the destination for a screen reader, since the ratio is aria-hidden', () => {

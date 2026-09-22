@@ -1,4 +1,4 @@
-import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE } from '../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, SPACE } from '../lib/theme';
 import { Stack } from './ui/Layout';
 import InteractiveCard from './ui/InteractiveCard';
 import StatusNote from './ui/StatusNote';
@@ -25,20 +25,19 @@ export default function MissionBoard({ missions = [], onGo }) {
 
   return (
     <section aria-labelledby="missions-heading">
-      <div
+      <h2
         id="missions-heading"
         style={{
-          fontFamily: FONTS.mono,
-          fontSize: FONT_SIZE.tag,
+          fontFamily: FONTS.display,
+          fontSize: FONT_SIZE.lg,
           fontWeight: FONT_WEIGHT.bold,
-          letterSpacing: LETTER_SPACING.caps,
-          textTransform: 'uppercase',
-          color: COLORS.mute,
-          marginBottom: SPACE[2],
+          lineHeight: 1.2,
+          color: COLORS.ink,
+          margin: `0 0 ${SPACE[3]}px`,
         }}
       >
         {chrome.heading}
-      </div>
+      </h2>
 
       {missions.length === 0 ? (
         <StatusNote tone="empty" icon={ListChecks}>
@@ -69,34 +68,43 @@ export default function MissionBoard({ missions = [], onGo }) {
                         // minmax(0, 1fr), never a bare 1fr: a 1fr track keeps
                         // min-width auto and pushes the page wider than the
                         // viewport instead of letting the text shrink.
-                        gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-                        alignItems: 'center',
-                        gap: SPACE[2],
+                        gridTemplateColumns: 'auto minmax(0, 1fr)',
+                        alignItems: 'start',
+                        columnGap: SPACE[2],
                       }}
                     >
-                      <span aria-hidden="true" style={{ fontSize: FONT_SIZE.md }}>
+                      <span aria-hidden="true" style={{ fontSize: FONT_SIZE.md, marginTop: 2 }}>
                         {entry.icon}
                       </span>
-                      <span
-                        style={{
-                          fontFamily: FONTS.body,
-                          fontSize: FONT_SIZE.base,
-                          color: COLORS.ink,
-                        }}
-                      >
-                        {label}
-                      </span>
-                      <span
-                        aria-hidden="true"
-                        style={{
-                          fontFamily: FONTS.mono,
-                          fontSize: FONT_SIZE.tag,
-                          color: COLORS.mute,
-                          whiteSpace: 'nowrap',
-                        }}
-                      >
-                        {destination} →
-                      </span>
+                      <div style={{ minWidth: 0 }}>
+                        <span
+                          data-testid="mission-copy"
+                          style={{
+                            display: 'block',
+                            minWidth: 0,
+                            fontFamily: FONTS.body,
+                            fontSize: FONT_SIZE.base,
+                            lineHeight: 1.4,
+                            color: COLORS.ink,
+                            overflowWrap: 'anywhere',
+                          }}
+                        >
+                          {label}
+                        </span>
+                        <span
+                          data-testid="mission-destination"
+                          aria-hidden="true"
+                          style={{
+                            display: 'block',
+                            marginTop: SPACE[1],
+                            fontFamily: FONTS.mono,
+                            fontSize: FONT_SIZE.tag,
+                            color: COLORS.mute,
+                          }}
+                        >
+                          {destination} →
+                        </span>
+                      </div>
                     </div>
                   </InteractiveCard>
                 </li>

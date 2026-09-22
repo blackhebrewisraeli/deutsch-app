@@ -77,6 +77,24 @@ describe('UserProfile — the consolidated profile page', () => {
     expect(metrics).toHaveTextContent(/B1/i);
   });
 
+  it('uses the portrait height for metrics on wide screens and keeps them below on mobile', async () => {
+    window.innerWidth = 1280;
+    const { rerender } = render(<UserProfile user={USER} local={local} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+    expect(screen.getByTestId('profile-identity-details')).toContainElement(
+      screen.getByTestId('profile-metrics')
+    );
+
+    act(() => {
+      window.innerWidth = 375;
+      window.dispatchEvent(new Event('resize'));
+    });
+    rerender(<UserProfile user={USER} local={local} />);
+    expect(screen.getByTestId('profile-identity')).not.toContainElement(
+      screen.getByTestId('profile-metrics')
+    );
+  });
+
   it('puts the follower counts inside the identity card, not the metrics grid', async () => {
     // Followers and Following describe the PERSON; XP, level and streak
     // describe their practice. Mixing all five into one row of identical

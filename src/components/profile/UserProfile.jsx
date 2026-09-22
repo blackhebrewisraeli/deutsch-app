@@ -229,6 +229,25 @@ export default function UserProfile({
   // the row instead.
   const avatarSize = wide ? 200 : mobile ? 132 : 160;
 
+  const practiceMetrics = (
+    <div
+      data-testid="profile-metrics"
+      style={{
+        minWidth: 0,
+        width: '100%',
+        display: 'grid',
+        // auto-fit drops tracks as the viewport narrows; every remaining track
+        // can shrink below its contents without widening the page.
+        gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))',
+        gap: SPACE[3],
+      }}
+    >
+      <Metric icon={Sparkles} label="XP" value={local.xp ?? profile?.total_xp ?? 0} />
+      <Metric icon={GraduationCap} label="Level" value={(local.level ?? 'a1').toUpperCase()} />
+      <Metric icon={Flame} label="Streak" value={`${local.streak ?? 0}d`} />
+    </div>
+  );
+
   return (
     // A single implicit grid column is sized `auto`, i.e. max-content, so the
     // widest child decides the column — and a grid ITEM defaults to
@@ -273,13 +292,16 @@ export default function UserProfile({
         </div>
 
         <div
+          data-testid="profile-identity-details"
           style={{
             display: 'flex',
             flexDirection: 'column',
             alignItems: wide ? 'flex-start' : 'center',
+            justifyContent: wide ? 'space-between' : 'flex-start',
             gap: SPACE[3],
             minWidth: 0,
             width: '100%',
+            alignSelf: 'stretch',
           }}
         >
           {/* Name and the edit action share a row on wide. Stacked, the button
@@ -376,6 +398,11 @@ export default function UserProfile({
             <SocialCount label="Folgt" value={profile?.following_count ?? 0} />
           </div>
 
+          {/* On desktop, the portrait creates a 200px-tall column. Keeping the
+              practice band here uses the lower half of that same visual row
+              instead of leaving an empty shelf under the identity copy. */}
+          {wide ? practiceMetrics : null}
+
           {/* The narrow layout keeps the action last, under the counts: there
               is no room beside a centred name for it. Exactly one of the two
               renders — a second would be a duplicate control with the same
@@ -388,25 +415,10 @@ export default function UserProfile({
         </div>
       </Surface>
 
-      {/* ── Practice metrics ─────────────────────────────────────
-          What the learner has DONE, as opposed to who they are. */}
-      <div
-        data-testid="profile-metrics"
-        style={{
-          // Without this the grid item keeps min-width:auto and auto-fit
-          // never wraps — see the note on the root grid above.
-          minWidth: 0,
-          display: 'grid',
-          // auto-fit + minmax(0, …) so the row reflows to two columns at
-          // 320px instead of overflowing. A bare 1fr would refuse to shrink.
-          gridTemplateColumns: 'repeat(auto-fit, minmax(96px, 1fr))',
-          gap: SPACE[3],
-        }}
-      >
-        <Metric icon={Sparkles} label="XP" value={local.xp ?? profile?.total_xp ?? 0} />
-        <Metric icon={GraduationCap} label="Level" value={(local.level ?? 'a1').toUpperCase()} />
-        <Metric icon={Flame} label="Streak" value={`${local.streak ?? 0}d`} />
-      </div>
+      {/* On narrow viewports the metrics remain a full-width band below the
+          portrait card, where three tiles beside a centred avatar would be too
+          compressed to scan. */}
+      {!wide ? practiceMetrics : null}
 
       {LEAGUES_ENABLED && (
         <>

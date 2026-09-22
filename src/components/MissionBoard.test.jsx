@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import MissionBoard from './MissionBoard';
 import ErrorBoundary from './ErrorBoundary';
-import { SPACE } from '../lib/theme';
+import { FONTS, FONT_SIZE, SPACE } from '../lib/theme';
 
 const due = { id: 'srs-due', count: 12, tab: 'vocab', priority: 0 };
 const goal = { id: 'goal-remaining', count: 30, tab: 'chat', priority: 2 };
@@ -22,6 +22,19 @@ describe('MissionBoard', () => {
     expect(screen.getByRole('button')).toHaveStyle({
       padding: `${SPACE[2]}px ${SPACE[3]}px`,
     });
+  });
+
+  it('uses a display heading and lets card copy wrap inside its frame', () => {
+    render(<MissionBoard missions={[due]} />);
+    expect(screen.getByText('Missionen')).toHaveStyle({
+      fontFamily: FONTS.display,
+      fontSize: `${FONT_SIZE.lg}px`,
+    });
+    expect(screen.getByTestId('mission-copy')).toHaveStyle({
+      minWidth: '0',
+      overflowWrap: 'anywhere',
+    });
+    expect(screen.getByTestId('mission-destination')).toHaveStyle({ marginTop: `${SPACE[1]}px` });
   });
 
   // The whole reason InteractiveCard is mandated here: fourteen league rows
