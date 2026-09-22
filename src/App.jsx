@@ -1439,6 +1439,7 @@ export default function App() {
               cefrLevel={level}
               missions={missions}
               quests={quests}
+              league={leagueStanding}
               onGoToTab={goToTab}
               showPlacementOffer={placementOfferVisible}
               onRetakePlacement={acceptPlacementOffer}

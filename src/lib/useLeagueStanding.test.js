@@ -70,7 +70,7 @@ describe('useLeagueStanding', () => {
   it('reports the demotion zone for a last-place member of a full cohort', async () => {
     // 25 members → zoneCounts gives demote 5 → ranks 21..25 are at risk.
     const { client } = fakeSupabase({
-      membership: { league_id: 'L1', weekly_xp: 10 },
+      membership: { league_id: 'L1', weekly_xp: 10, leagues: { tier: 2 } },
       standings: cohort(25, 25),
     });
     getSupabase.mockResolvedValue(client);
@@ -79,12 +79,12 @@ describe('useLeagueStanding', () => {
     const { result } = renderHook(() => useLeagueStanding('me'));
 
     await waitFor(() => expect(result.current).not.toBeNull());
-    expect(result.current).toEqual({ rank: 25, cohortSize: 25, inDemotionZone: true });
+    expect(result.current).toEqual({ tier: 2, rank: 25, cohortSize: 25, inDemotionZone: true });
   });
 
   it('does not report the demotion zone for a mid-table member', async () => {
     const { client } = fakeSupabase({
-      membership: { league_id: 'L1', weekly_xp: 160 },
+      membership: { league_id: 'L1', weekly_xp: 160, leagues: { tier: 2 } },
       standings: cohort(25, 10),
     });
     getSupabase.mockResolvedValue(client);
@@ -93,7 +93,7 @@ describe('useLeagueStanding', () => {
     const { result } = renderHook(() => useLeagueStanding('me'));
 
     await waitFor(() => expect(result.current).not.toBeNull());
-    expect(result.current).toEqual({ rank: 10, cohortSize: 25, inDemotionZone: false });
+    expect(result.current).toEqual({ tier: 2, rank: 10, cohortSize: 25, inDemotionZone: false });
   });
 
   it('treats the first at-risk rank as in the zone and the one above it as safe', async () => {
@@ -102,7 +102,7 @@ describe('useLeagueStanding', () => {
       [21, true],
     ]) {
       const { client } = fakeSupabase({
-        membership: { league_id: 'L1', weekly_xp: 1 },
+        membership: { league_id: 'L1', weekly_xp: 1, leagues: { tier: 2 } },
         standings: cohort(25, rank),
       });
       getSupabase.mockResolvedValue(client);
@@ -116,7 +116,7 @@ describe('useLeagueStanding', () => {
   it('never reports a zone when the cohort is too small to demote anyone', async () => {
     // zoneCounts clamps demote to 0 for a cohort of 1, so last place is not "at risk".
     const { client } = fakeSupabase({
-      membership: { league_id: 'L1', weekly_xp: 10 },
+      membership: { league_id: 'L1', weekly_xp: 10, leagues: { tier: 2 } },
       standings: cohort(1, 1),
     });
     getSupabase.mockResolvedValue(client);
@@ -125,7 +125,7 @@ describe('useLeagueStanding', () => {
     const { result } = renderHook(() => useLeagueStanding('me'));
 
     await waitFor(() => expect(result.current).not.toBeNull());
-    expect(result.current).toEqual({ rank: 1, cohortSize: 1, inDemotionZone: false });
+    expect(result.current).toEqual({ tier: 2, rank: 1, cohortSize: 1, inDemotionZone: false });
   });
 
   it('returns null when there is no membership for the current period', async () => {
@@ -141,7 +141,7 @@ describe('useLeagueStanding', () => {
 
   it('returns null when the caller is missing from their own cohort rows', async () => {
     const { client } = fakeSupabase({
-      membership: { league_id: 'L1', weekly_xp: 10 },
+      membership: { league_id: 'L1', weekly_xp: 10, leagues: { tier: 2 } },
       standings: cohort(5, 0), // nobody is 'me'
     });
     getSupabase.mockResolvedValue(client);
@@ -157,7 +157,7 @@ describe('useLeagueStanding', () => {
     'returns null when the %s read fails',
     async (failOn) => {
       const { client } = fakeSupabase({
-        membership: { league_id: 'L1', weekly_xp: 10 },
+        membership: { league_id: 'L1', weekly_xp: 10, leagues: { tier: 2 } },
         standings: cohort(25, 25),
         failOn,
       });
@@ -182,7 +182,7 @@ describe('useLeagueStanding', () => {
 
   it('returns null without touching the network when leagues are disabled', async () => {
     const { client } = fakeSupabase({
-      membership: { league_id: 'L1', weekly_xp: 10 },
+      membership: { league_id: 'L1', weekly_xp: 10, leagues: { tier: 2 } },
       standings: cohort(25, 25),
     });
     getSupabase.mockResolvedValue(client);
@@ -200,7 +200,7 @@ describe('useLeagueStanding', () => {
     // path does two writes on mount. This is the assertion most likely to be
     // quietly broken later by someone reusing joinLeague()/refreshLeague().
     const { client, seen } = fakeSupabase({
-      membership: { league_id: 'L1', weekly_xp: 10 },
+      membership: { league_id: 'L1', weekly_xp: 10, leagues: { tier: 2 } },
       standings: cohort(25, 25),
     });
     getSupabase.mockResolvedValue(client);
@@ -215,7 +215,7 @@ describe('useLeagueStanding', () => {
 
   it('reads only the caller row for the current league week, then the cohort', async () => {
     const { client, seen } = fakeSupabase({
-      membership: { league_id: 'L1', weekly_xp: 10 },
+      membership: { league_id: 'L1', weekly_xp: 10, leagues: { tier: 2 } },
       standings: cohort(25, 25),
     });
     getSupabase.mockResolvedValue(client);
@@ -224,7 +224,10 @@ describe('useLeagueStanding', () => {
     const { result } = renderHook(() => useLeagueStanding('me'));
     await waitFor(() => expect(result.current).not.toBeNull());
 
-    expect(seen.selects[0]).toBe('league_id, weekly_xp');
+    // The tier is an embedded to-one on the SAME row, not a second round trip:
+    // Home renders the league badge from it, and asking joinLeague instead
+    // would make opening the landing tab a write.
+    expect(seen.selects[0]).toBe('league_id, weekly_xp, leagues!inner(tier)');
     expect(seen.filters[0]).toEqual(['user_id', 'me']);
     // period_start is a Monday (UTC) in YYYY-MM-DD — the current league week.
     const [col, period] = seen.filters[1];
@@ -236,7 +239,7 @@ describe('useLeagueStanding', () => {
 
   it('does not set state after unmount', async () => {
     const { client } = fakeSupabase({
-      membership: { league_id: 'L1', weekly_xp: 10 },
+      membership: { league_id: 'L1', weekly_xp: 10, leagues: { tier: 2 } },
       standings: cohort(25, 25),
     });
     getSupabase.mockResolvedValue(client);

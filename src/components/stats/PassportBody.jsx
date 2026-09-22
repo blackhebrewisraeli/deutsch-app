@@ -7,7 +7,7 @@ import {
   RADIUS,
   SPACE,
 } from '../../lib/theme.js';
-import { TIER_NAMES } from '../../lib/leagues.js';
+import { tierName } from '../../lib/leagueTier.js';
 import { ACHIEVEMENTS } from '../../lib/gamification';
 import Avatar from '../ui/Avatar';
 import { profileName } from '../../lib/profile.js';
@@ -95,7 +95,7 @@ export default function PassportBody({ profile, userId, isSelf = false }) {
             </div>
           )}
           <div style={{ ...labelStyle, textTransform: 'none' }}>
-            {TIER_NAMES[profile.tier]}
+            {tierName(profile.tier)}
             {profile.join_year ? ` · seit ${profile.join_year}` : ''}
           </div>
           {isSelf && (

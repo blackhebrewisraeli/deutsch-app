@@ -55,16 +55,79 @@ it('shows the sign-in teaser when signed out', () => {
   expect(document.querySelector('[data-ui="status-note"]')).not.toBeNull();
 });
 
-it('renders standings, tier, a countdown, and the sparse note for a small league', async () => {
+it('renders standings, a countdown, and the sparse note for a small league', async () => {
   signIn([
     { user_id: 'me', handle: 'Me', weekly_xp: 30, rank: null },
     { user_id: 'x', handle: 'Rival', weekly_xp: 10, rank: null },
   ]);
   render(<LeaderboardSection onSelectUser={() => {}} />);
   await waitFor(() => expect(screen.getByText('Rival')).toBeTruthy());
-  expect(screen.getByText(/Bronze League/)).toBeTruthy();
+  expect(screen.getByRole('heading', { name: 'Rangliste' })).toBeTruthy();
   expect(screen.getByText(/Ends in/)).toBeTruthy();
   expect(screen.getByText(/still filling up/i)).toBeTruthy();
+});
+
+it('states no tier of its own — the league card above owns that', async () => {
+  // The page had TWO league displays and they disagreed by construction: this
+  // section's heading came from the league joinLeague() had just resolved,
+  // while the card above it read the profile row's stored tier. Across a
+  // settle those are different numbers, printed six pixels apart. This section
+  // reports its tier UPWARD now; printing one again would restore the bug.
+  signIn([{ user_id: 'me', handle: 'Me', weekly_xp: 30, rank: null }], 2);
+  const { container } = render(<LeaderboardSection onSelectUser={() => {}} />);
+  await waitFor(() => expect(screen.getByText('Me')).toBeTruthy());
+  for (const tier of ['Bronze', 'Silver', 'Gold', 'Sapphire', 'Ruby']) {
+    expect(container).not.toHaveTextContent(tier);
+  }
+});
+
+it('reports the live league upward, with the derived rank and cohort size', async () => {
+  // Rank is DERIVED from the ordering, not read: league_members.rank is NULL
+  // until the weekly settle cron writes it, so a parent trusting the column
+  // would render "Platz 0" all week.
+  const onLeague = vi.fn();
+  signIn(
+    [
+      { user_id: 'x', handle: 'Rival', weekly_xp: 90, rank: null },
+      { user_id: 'me', handle: 'Me', weekly_xp: 30, rank: null },
+    ],
+    3
+  );
+  render(<LeaderboardSection onSelectUser={() => {}} onLeague={onLeague} />);
+  await waitFor(() => expect(onLeague).toHaveBeenCalled());
+  expect(onLeague).toHaveBeenCalledWith({
+    tier: 3,
+    leagueId: 'L1',
+    rank: 2,
+    cohortSize: 2,
+  });
+});
+
+it('clears the reported league when the load fails', async () => {
+  // Otherwise the parent keeps painting a tier beside an error note that says
+  // the league could not be loaded.
+  const onLeague = vi.fn();
+  useAuth.mockReturnValue({ user: { id: 'me' } });
+  joinLeague.mockRejectedValue(new Error('boom'));
+  render(<LeaderboardSection onSelectUser={() => {}} onLeague={onLeague} />);
+
+  expect(await screen.findByRole('alert')).toBeInTheDocument();
+  expect(onLeague).toHaveBeenCalledWith(null);
+});
+
+it('does not re-join when the parent passes a fresh callback identity', async () => {
+  // joinLeague() is a WRITE. A parent rendering `onLeague={(l) => ...}` inline
+  // hands this component a new function every render; if that identity were in
+  // the effect's dependency list, every re-render of the profile page would
+  // replay join + refresh.
+  signIn([{ user_id: 'me', handle: 'Me', weekly_xp: 30, rank: null }]);
+  const { rerender } = render(<LeaderboardSection onSelectUser={() => {}} onLeague={() => {}} />);
+  await waitFor(() => expect(screen.getByText('Me')).toBeTruthy());
+  expect(joinLeague).toHaveBeenCalledTimes(1);
+
+  rerender(<LeaderboardSection onSelectUser={() => {}} onLeague={() => {}} />);
+  await waitFor(() => expect(screen.getByText('Me')).toBeTruthy());
+  expect(joinLeague).toHaveBeenCalledTimes(1);
 });
 
 it('shows promotion and relegation zone labels in a full league (no sparse note)', async () => {
@@ -178,7 +241,7 @@ it('refetches when Retry is pressed', async () => {
   // Assert on the recovered UI, not on a call count: the count is an
   // implementation detail and would pass even if the retry re-rendered the
   // same error.
-  expect(await screen.findByRole('heading', { name: /League/ })).toBeInTheDocument();
+  expect(await screen.findByRole('heading', { name: 'Rangliste' })).toBeInTheDocument();
 });
 
 it('shows loading feedback between two consecutive failures, not a frozen error', async () => {

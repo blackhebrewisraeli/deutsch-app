@@ -16,6 +16,8 @@ import { Body, Meta } from './ui/Text';
 import { activePack } from '../packs';
 import Avatar from './ui/Avatar';
 import GoalRing from './gamification/GoalRing';
+import LeagueBadge from './league/LeagueBadge';
+import { LEAGUES_ENABLED } from '../lib/leagues.js';
 import { useWindowWidth, bp } from '../lib/useWindowWidth';
 
 const EMPTY_SCORE = {
@@ -80,6 +82,7 @@ export default function PersonalHub({
   streak = 0,
   goalPct = 0,
   goalMet = false,
+  league = null,
   today = null,
   recommended = null,
 }) {
@@ -266,6 +269,21 @@ export default function PersonalHub({
               {streak}
             </span>
           </span>
+        ) : null}
+        {/* Standing at a glance. A READ-ONLY badge: `league` comes from
+            useLeagueStanding, which deliberately never joins or refreshes — see
+            that hook's header for why Home must not write on open. A signed-in
+            learner with no membership yet still sees Bronze, because Bronze is
+            the floor everyone starts on rather than an unknown. This is the
+            league STANDING, not the leaderboard: the roster of 25 names stays
+            exclusive to the Profile tab (HomeTab's E5 exclusion). */}
+        {LEAGUES_ENABLED && user ? (
+          <LeagueBadge
+            variant="compact"
+            tier={league?.tier}
+            rank={league?.rank ?? null}
+            cohortSize={league?.cohortSize ?? null}
+          />
         ) : null}
       </Row>
 

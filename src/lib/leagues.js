@@ -1,7 +1,11 @@
 import { getAccessToken } from './auth.js';
 
 export const LEAGUES_ENABLED = import.meta.env.VITE_LEAGUES_ENABLED === 'true';
-export const TIER_NAMES = ['Bronze', 'Silver', 'Gold', 'Sapphire', 'Ruby'];
+// Re-exported, not redefined: TIER_NAMES lives in the pure leagueTier module
+// so components can read it without importing this one (which owns the network
+// calls and is therefore stubbed wholesale in component tests). Existing
+// callers that import it from here keep working.
+export { TIER_NAMES, tierName } from './leagueTier.js';
 
 async function post(path) {
   const token = await getAccessToken();
@@ -53,21 +57,29 @@ export async function fetchMyResults(supabase, userId) {
 }
 
 // The caller's membership for the CURRENT league week, or null if they have not
-// joined one. A single own-row read: period_start is denormalised onto
-// league_members and carries a unique (user_id, period_start) constraint, so no
-// join to `leagues` is needed.
+// joined one. An own-row read on league_members, plus the tier off the league
+// it points at.
+//
+// The `leagues!inner(tier)` join is safe under RLS: the "read my leagues"
+// policy is `is_league_member(id, auth.uid())`, so a member can read the row
+// for their own league and nothing else. It is here because the tier is what
+// Home's league badge renders, and the alternative — Home calling joinLeague
+// to find out — is the write this function exists to avoid.
 //
 // Deliberately a READ. Home is the landing tab and must never join or refresh a
 // league as a side effect of being opened — see useLeagueStanding.
 export async function fetchMyMembership(supabase, userId, periodStart) {
   const { data, error } = await supabase
     .from('league_members')
-    .select('league_id, weekly_xp')
+    .select('league_id, weekly_xp, leagues!inner(tier)')
     .eq('user_id', userId)
     .eq('period_start', periodStart)
     .maybeSingle();
   if (error) throw error;
-  return data ?? null;
+  if (!data) return null;
+  // Flattened: callers want a membership, not a nested join shape. PostgREST
+  // returns the embedded row as an object for a to-one relationship.
+  return { league_id: data.league_id, weekly_xp: data.weekly_xp, tier: data.leagues?.tier ?? 0 };
 }
 
 // Standings via the RLS-scoped Supabase client (reads only the caller's league).
