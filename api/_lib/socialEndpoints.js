@@ -240,7 +240,7 @@ export const listHandler = createAccountHandler({
     if (list !== 'followers' && list !== 'following') {
       return sendError(res, 'bad_request', 'Invalid list.');
     }
-    const offset = Math.max(0, parseInt(req.query?.offset, 10) || 0);
+    const offset = Math.max(0, Number.parseInt(req.query?.offset, 10) || 0);
 
     // followers = people whose edge POINTS AT me (followed_id = me); the other
     // side of that edge (follower_id) is who to show. following is the mirror.

@@ -42,9 +42,11 @@ describe('Modal', () => {
     fireEvent.click(screen.getByText('Hello'));
     expect(onClose).not.toHaveBeenCalled();
 
-    // The scrim is the dialog's own parent — clicking it, not the card, is a
-    // click outside the content.
-    fireEvent.click(screen.getByRole('dialog').parentElement);
+    // The scrim is a real <button> so it is keyboard/screen-reader operable —
+    // aria-hidden takes it out of the accessibility tree (Escape and the
+    // explicit Close button already cover that path), so it is found here by
+    // its position: the dialog's previous sibling, exactly as Modal renders it.
+    fireEvent.click(screen.getByRole('dialog').previousElementSibling);
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 

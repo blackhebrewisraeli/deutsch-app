@@ -58,25 +58,57 @@ export default function Modal({ label, onClose, maxWidth = 400, children }) {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: COLORS.scrim,
         zIndex: Z.modal,
         padding: SPACE[4],
         boxSizing: 'border-box',
       }}
-      onClick={onClose}
     >
-      <div
+      {/* The click-outside-to-close backdrop is a real, natively-interactive
+          <button> rather than an onClick on this whole wrapper: a plain div
+          with a click handler is not reachable or operable from a keyboard or
+          screen reader. It sits BEHIND the card by DOM order — both this
+          button and the card below are positioned (button absolute, card
+          relative) so painting follows document order, the card second and
+          therefore on top — so a click anywhere on the card never reaches it
+          and needs no stopPropagation. tabIndex=-1 keeps it out of the tab
+          order: Escape and the explicit Close button already cover keyboard
+          dismissal, and a full-screen tab stop with no visible label would
+          only be confusing to land on. */}
+      <button
+        type="button"
+        aria-hidden="true"
+        tabIndex={-1}
+        onClick={onClose}
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          background: COLORS.scrim,
+          border: 'none',
+          padding: 0,
+          margin: 0,
+          cursor: 'default',
+        }}
+      />
+      <dialog
         ref={cardRef}
+        open
         className="modal-card-in"
-        role="dialog"
         aria-modal="true"
         aria-label={label}
         tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
         style={{
+          // The UA stylesheet gives <dialog> position:absolute + margin:auto
+          // (for the showModal() centering case we are not using) and a
+          // visible border — all three overridden here so it behaves as an
+          // ordinary flex-centered block, identical to the div it replaces.
+          position: 'relative',
+          margin: 0,
           background: COLORS.card,
           padding: `${SPACE[6]}px`,
           borderRadius: RADIUS.md,
+          border: 'none',
           boxSizing: 'border-box',
           width: '100%',
           minWidth: 0,
@@ -101,7 +133,7 @@ export default function Modal({ label, onClose, maxWidth = 400, children }) {
           ✕
         </button>
         {children}
-      </div>
+      </dialog>
     </div>
   );
 }

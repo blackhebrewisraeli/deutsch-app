@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { render, screen, cleanup, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, cleanup, fireEvent } from '@testing-library/react';
 
 vi.mock('../../lib/social.js', async (importOriginal) => ({
   ...(await importOriginal()),
@@ -30,7 +30,7 @@ describe('FollowListModal — followers', () => {
     render(<FollowListModal kind="followers" onClose={() => {}} />);
 
     expect(screen.getByText('Loading…')).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('Sam Weber')).toBeInTheDocument());
+    expect(await screen.findByText('Sam Weber')).toBeInTheDocument();
     expect(listFollows).toHaveBeenCalledWith('followers');
     expect(screen.getByRole('dialog', { name: 'Follower' })).toBeInTheDocument();
   });
@@ -49,7 +49,7 @@ describe('FollowListModal — followers', () => {
     expect(await screen.findByText('Could not load that list.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
 
-    await waitFor(() => expect(screen.getByText('Sam Weber')).toBeInTheDocument());
+    expect(await screen.findByText('Sam Weber')).toBeInTheDocument();
     expect(listFollows).toHaveBeenCalledTimes(2);
   });
 
@@ -61,9 +61,7 @@ describe('FollowListModal — followers', () => {
     const button = await screen.findByRole('button', { name: /^Follow Sam Weber$/ });
     fireEvent.click(button);
 
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^Unfollow Sam Weber$/ })).toBeInTheDocument()
-    );
+    expect(await screen.findByRole('button', { name: /^Unfollow Sam Weber$/ })).toBeInTheDocument();
     expect(followUser).toHaveBeenCalledWith(SAM.user_id);
   });
 
@@ -83,7 +81,7 @@ describe('FollowListModal — followers', () => {
     const loadMore = screen.getByRole('button', { name: 'Load more' });
     fireEvent.click(loadMore);
 
-    await waitFor(() => expect(screen.getByText('sue_de')).toBeInTheDocument());
+    expect(await screen.findByText('sue_de')).toBeInTheDocument();
     expect(screen.getByText('Sam Weber')).toBeInTheDocument();
     expect(listFollows).toHaveBeenLastCalledWith('followers', { offset: 1 });
     expect(screen.queryByRole('button', { name: 'Load more' })).toBeNull();
@@ -101,9 +99,7 @@ describe('FollowListModal — following', () => {
     expect(listFollows).toHaveBeenCalledWith('following');
 
     fireEvent.click(screen.getByRole('button', { name: /^Unfollow Sam Weber$/ }));
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /^Follow Sam Weber$/ })).toBeInTheDocument()
-    );
+    expect(await screen.findByRole('button', { name: /^Follow Sam Weber$/ })).toBeInTheDocument();
     expect(unfollowUser).toHaveBeenCalledWith(SAM.user_id);
   });
 
