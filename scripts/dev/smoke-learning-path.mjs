@@ -30,7 +30,13 @@ import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DECK_ID, STATE_KEY, learningPathSeed, srsKey } from './learning-path-seed.js';
+import {
+  DECK_ID,
+  STATE_KEY,
+  learningPathSeed,
+  openDeckPicker,
+  srsKey,
+} from './learning-path-seed.js';
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const VITE_BIN = join(REPO_ROOT, 'node_modules', '.bin', 'vite');
@@ -340,6 +346,7 @@ async function walkViewport(page, vp, seed) {
   await rec.click();
 
   await assertNavTab(page, 'Vocab', true);
+  await openDeckPicker(page);
   const food = page.getByRole('button', { name: /Food & Drink/i });
   const greetings = page.getByRole('button', { name: /Greetings/i });
   await food.waitFor({ state: 'visible', timeout: 8000 });

@@ -4,10 +4,17 @@ import { BORDER, COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../../l
 
 // Fisher–Yates. Tiles carry their ORIGINAL index as identity, so a sentence
 // with a repeated word ("die … die") still has two distinct tiles.
+//
+// crypto.getRandomValues rather than Math.random: nothing here is
+// security-sensitive, but it costs nothing and keeps the pseudorandom-generator
+// rule (Sonar S2245) from gating the PR. Modulo bias over a handful of tiles is
+// irrelevant to a shuffle.
 function jumble(words) {
   const tiles = words.map((word, id) => ({ id, word }));
+  const rand = new Uint32Array(tiles.length);
+  crypto.getRandomValues(rand);
   for (let i = tiles.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = rand[i] % (i + 1);
     [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
   }
   return tiles;
@@ -88,10 +95,21 @@ export default function WordBank({ words, thinking, onSend, onSwitchToTyping }) 
         )}
       </div>
 
-      <div
-        role="group"
+      {/* A native fieldset carries the group role itself; the UA border,
+          padding, margin and min-width are reset so it lays out as a plain
+          flex row. */}
+      <fieldset
         aria-label="Word bank"
-        style={{ display: 'flex', flexWrap: 'wrap', gap: SPACE[2], justifyContent: 'center' }}
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: SPACE[2],
+          justifyContent: 'center',
+          border: 'none',
+          margin: 0,
+          padding: 0,
+          minWidth: 0,
+        }}
       >
         {bank.map((t) => {
           const used = placedIds.has(t.id);
@@ -112,7 +130,7 @@ export default function WordBank({ words, thinking, onSend, onSwitchToTyping }) 
             </button>
           );
         })}
-      </div>
+      </fieldset>
 
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: SPACE[2] }}>
         <button
