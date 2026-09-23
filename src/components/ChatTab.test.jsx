@@ -24,7 +24,15 @@ async function expectNoAutoSpeech() {
   expect(speak).not.toHaveBeenCalled();
 }
 
+// A1 (the default band) opens Chat in word-bank mode; these tests cover the
+// free-text composer, so they switch to it first.
+async function typeInstead() {
+  const toggle = screen.queryByRole('button', { name: 'Type instead' });
+  if (toggle) await userEvent.click(toggle);
+}
+
 async function sendHallo() {
+  await typeInstead();
   await userEvent.type(screen.getByRole('textbox', { name: 'Chat message in German' }), 'Hallo');
   await userEvent.click(screen.getByRole('button', { name: 'Send chat message' }));
 }
@@ -188,6 +196,7 @@ describe('ChatTab speech', () => {
 
   it('does not speak when an assistant reply arrives', async () => {
     render(<ChatTab />);
+    await typeInstead();
     await userEvent.type(screen.getByRole('textbox', { name: 'Chat message in German' }), 'Hallo');
     await userEvent.click(screen.getByRole('button', { name: 'Send chat message' }));
     await waitFor(() => {
@@ -288,7 +297,8 @@ describe('ChatTab conversation-first layout', () => {
     // Ordered after the conversation panel, not stacked above it.
     const grid = chatLayoutGrid(container);
     const slots = [...grid.children];
-    const composer = screen.getByRole('textbox', { name: 'Chat message in German' });
+    // The Send button exists in every input mode, so it locates the thread.
+    const composer = screen.getByRole('button', { name: 'Send chat message' });
     const thread = slots.find((el) => el.contains(composer));
     const control = slots.find((el) => el.contains(trigger));
     expect(slots.indexOf(control)).toBeGreaterThan(slots.indexOf(thread));
@@ -318,5 +328,55 @@ describe('ChatTab conversation-first layout', () => {
     const { container } = render(<ChatTab wide={false} />);
     const grid = chatLayoutGrid(container);
     expect(grid.style.gridTemplateColumns).toBe('minmax(0, 1fr)');
+  });
+});
+
+describe('ChatTab — input modes (mocked scaffolding)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    Element.prototype.scrollIntoView = vi.fn();
+    callClaude.mockResolvedValue(JSON.stringify({ de: 'Gern!', en: 'Sure!' }));
+  });
+
+  it('starts an A1 learner in the word bank and sends the arranged sentence', async () => {
+    setUserLevel('a1');
+    render(<ChatTab />);
+    expect(
+      screen.queryByRole('textbox', { name: 'Chat message in German' })
+    ).not.toBeInTheDocument();
+
+    const bank = screen.getByRole('group', { name: 'Word bank' });
+    const send = screen.getByRole('button', { name: 'Send chat message' });
+    expect(send).toBeDisabled();
+
+    await userEvent.click(within(bank).getByRole('button', { name: 'Ich' }));
+    await userEvent.click(within(bank).getByRole('button', { name: 'möchte' }));
+    const placed = () =>
+      within(screen.getByLabelText('Your sentence'))
+        .queryAllByRole('button')
+        .map((b) => b.textContent);
+    expect(placed()).toEqual(['Ich', 'möchte']);
+
+    // Tapping a placed word puts it back.
+    await userEvent.click(screen.getByRole('button', { name: 'Remove möchte' }));
+    expect(placed()).toEqual(['Ich']);
+
+    await userEvent.click(send);
+    // The arranged sentence goes through the same send path as typed text.
+    await waitFor(() => expect(callClaude).toHaveBeenCalled());
+    expect(callClaude.mock.calls[0][1]).toBe('Ich');
+  });
+
+  it('starts a B1 learner in free text, and each mode can switch to the other', async () => {
+    setUserLevel('b1');
+    render(<ChatTab />);
+    expect(screen.getByRole('textbox', { name: 'Chat message in German' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Use word bank' }));
+    expect(screen.getByRole('group', { name: 'Word bank' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Type instead' }));
+    expect(screen.getByRole('textbox', { name: 'Chat message in German' })).toBeInTheDocument();
   });
 });

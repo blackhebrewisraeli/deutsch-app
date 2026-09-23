@@ -43,7 +43,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DECK_ID, STATE_KEY, learningPathSeed } from './learning-path-seed.js';
+import { DECK_ID, STATE_KEY, learningPathSeed, openDeckPicker } from './learning-path-seed.js';
 // The SAME pure module LeaderboardSection and the settle endpoint both use, so
 // the zone dividers this smoke expects can never drift from the ones the app
 // draws. Importing it beats hardcoding 7/5 here.
@@ -1424,11 +1424,15 @@ async function openSeededDeck(page) {
     throw new Error('smoke-auth-learning-path: Vocab did not become the active tab.');
   }
 
+  await openDeckPicker(page);
   const food = page.getByRole('button', { name: /Food & Drink/i });
   await food.waitFor({ state: 'visible', timeout: 10000 });
   if ((await food.getAttribute('aria-pressed')) !== 'true') {
     await food.click();
     await page.waitForTimeout(300);
+    // Picking a deck closes the mobile drawer, which takes the rows out of
+    // the accessibility tree; reopen it so the check below can see them.
+    await openDeckPicker(page);
   }
   if ((await food.getAttribute('aria-pressed')) !== 'true') {
     throw new Error('smoke-auth-learning-path: Food & Drink never became the selected deck.');

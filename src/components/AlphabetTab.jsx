@@ -187,40 +187,52 @@ export default function AlphabetTab({
             LETTER
           </div>
 
-          {/* Play button — the only thing in this tab that makes a sound. */}
-          <button
-            type="button"
-            onClick={playTarget}
-            aria-label={played ? 'Play the letter again' : 'Play the letter'}
+          {/* Play button — the only thing in this tab that makes a sound. An
+              icon-sized control inline with its instruction, not a 100px disc:
+              the four letters below are the task, the speaker is just how you
+              start it. */}
+          <div
             style={{
-              width: 100,
-              height: 100,
-              borderRadius: '50%',
-              background: COLORS.gold,
-              border: 'none',
-              boxShadow: SHADOW.press(COLORS.goldLip),
-              fontSize: 40,
-              cursor: 'pointer',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              margin: '0 auto',
-              transition: 'transform .08s ease, box-shadow .08s ease',
-            }}
-          >
-            🔊
-          </button>
-          <div
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.sm,
-              letterSpacing: LETTER_SPACING.widest,
-              color: COLORS.mute,
-              marginTop: SPACE[3],
+              gap: SPACE[3],
               marginBottom: SPACE[6],
             }}
           >
-            {played ? 'TAP TO HEAR AGAIN' : 'TAP TO HEAR THE LETTER'}
+            <button
+              type="button"
+              onClick={playTarget}
+              aria-label={played ? 'Play the letter again' : 'Play the letter'}
+              style={{
+                width: SPACE[12],
+                height: SPACE[12],
+                flexShrink: 0,
+                borderRadius: '50%',
+                background: COLORS.gold,
+                // Gold is the accent FILL; its ink is accentOn, never plain ink.
+                color: COLORS.accentOn,
+                border: 'none',
+                boxShadow: SHADOW.press(COLORS.goldLip),
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'transform .08s ease, box-shadow .08s ease',
+              }}
+            >
+              <Volume2 size={FONT_SIZE.lg} aria-hidden="true" />
+            </button>
+            <span
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: FONT_SIZE.sm,
+                letterSpacing: LETTER_SPACING.widest,
+                color: COLORS.mute,
+              }}
+            >
+              {played ? 'TAP TO HEAR AGAIN' : 'TAP TO HEAR THE LETTER'}
+            </span>
           </div>
 
           {/* Four letter options */}

@@ -8,6 +8,17 @@ vi.mock('../../lib/social.js', async (importOriginal) => ({
   unfollowUser: vi.fn(),
 }));
 
+vi.mock('../stats/ProfileCard', () => ({
+  default: ({ userId, onClose }) => (
+    <div role="dialog" aria-label="Learning passport">
+      passport:{userId}
+      <button type="button" onClick={onClose}>
+        close passport
+      </button>
+    </div>
+  ),
+}));
+
 import FollowListModal from './FollowListModal';
 import { listFollows, followUser, unfollowUser } from '../../lib/social.js';
 
@@ -107,5 +118,28 @@ describe('FollowListModal — following', () => {
     listFollows.mockResolvedValue({ results: [], hasMore: false });
     render(<FollowListModal kind="following" onClose={() => {}} />);
     expect(await screen.findByText('Not following anyone yet.')).toBeInTheDocument();
+  });
+});
+
+describe('FollowListModal — public profile', () => {
+  it("opens the tapped person's passport over the list, and Escape closes only that layer", async () => {
+    listFollows.mockResolvedValue({ results: [SAM], hasMore: false });
+    const onClose = vi.fn();
+    render(<FollowListModal kind="followers" onClose={onClose} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: "View Sam Weber's profile" }));
+    expect(screen.getByText(`passport:${SAM.user_id}`)).toBeInTheDocument();
+
+    // The list stays mounted underneath, so closing the passport returns to it.
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'close passport' }));
+    expect(screen.queryByText(/passport:/)).not.toBeInTheDocument();
+    expect(screen.getByText('Sam Weber')).toBeInTheDocument();
+    expect(listFollows).toHaveBeenCalledTimes(1);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onClose).toHaveBeenCalledTimes(1);
   });
 });

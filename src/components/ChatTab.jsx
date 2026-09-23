@@ -22,6 +22,8 @@ import ScenarioPicker from './chat/ScenarioPicker';
 import TaskPanel from './chat/TaskPanel';
 import MessageList from './chat/MessageList';
 import ChatInput from './chat/ChatInput';
+import WordBank from './chat/WordBank';
+import { INPUT_MODES, defaultInputMode } from '../lib/chatInputModes';
 
 const WELCOME_KEY = 'deutsch-welcome-dismissed';
 
@@ -68,6 +70,8 @@ export default function ChatTab({
   const [thinking, setThinking] = useState(false);
   const [taskIdx, setTaskIdx] = useState(0);
   const [hintVisible, setHintVisible] = useState(false);
+  // MOCK: the starting mode is band-based until the AI turn payload decides it.
+  const [inputMode, setInputMode] = useState(() => defaultInputMode(chatLevel));
   const [tasksCompleted, setTasksCompleted] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(() => {
     try {
@@ -291,15 +295,27 @@ export default function ChatTab({
             compact={mobile}
           />
 
-          <ChatInput
-            input={input}
-            setInput={setInput}
-            listening={listening}
-            thinking={thinking}
-            onSend={sendMessage}
-            onStartListening={startListening}
-            onStopListening={stopListening}
-          />
+          {inputMode === INPUT_MODES.WORD_BANK ? (
+            <WordBank
+              // Keyed like MessageList: a new scenario starts a fresh bank.
+              key={`word-bank-${scenario}`}
+              words={activePack.content.chatWordBankMock}
+              thinking={thinking}
+              onSend={sendMessage}
+              onSwitchToTyping={() => setInputMode(INPUT_MODES.FREE_TEXT)}
+            />
+          ) : (
+            <ChatInput
+              input={input}
+              setInput={setInput}
+              listening={listening}
+              thinking={thinking}
+              onSend={sendMessage}
+              onStartListening={startListening}
+              onStopListening={stopListening}
+              onSwitchToWordBank={() => setInputMode(INPUT_MODES.WORD_BANK)}
+            />
+          )}
           <div
             style={{
               padding: `0 ${SPACE[4]}px ${SPACE[3]}px`,

@@ -114,3 +114,8 @@ export const CHAT_TASKS = {
  * Each group is four letters that sound similar or are visually confusable.
  * AlphabetTab plays one letter and asks the learner to identify it from these four.
  */
+
+// MOCK scaffolding content for the Chat word-bank input mode. Stands in for the
+// per-turn words the AI will generate once that backend exists; until then one
+// fixed target sentence, pre-split into the tokens the learner arranges.
+export const CHAT_WORD_BANK_MOCK = ['Ich', 'möchte', 'einen', 'Kaffee', 'bitte'];

@@ -119,3 +119,19 @@ function todayStamp(date = new Date()) {
   const d = String(date.getDate()).padStart(2, '0');
   return `${y}-${m}-${d}`;
 }
+
+/**
+ * Expand the Vocab deck picker if it is collapsed. On mobile widths DeckPicker
+ * folds into a <details> whose summary names only the current deck, so the
+ * deck rows are not visible until it opens; on wide layouts there is no
+ * <details> and this is a no-op. Checks `open` first rather than clicking the
+ * summary blindly, because a click on an already-open disclosure closes it.
+ *
+ * @param {import('playwright').Page} page
+ */
+export async function openDeckPicker(page) {
+  const picker = page.locator('details:has(summary:has-text("Deck"))');
+  if ((await picker.count()) === 0) return;
+  if (await picker.evaluate((el) => el.open)) return;
+  await picker.locator('summary').click();
+}

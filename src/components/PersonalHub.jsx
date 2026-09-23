@@ -99,6 +99,105 @@ export default function PersonalHub({
   const createdAt = profile?.created_at ? new Date(profile.created_at) : null;
   const showsAccountLine = Boolean(user);
 
+  // Standing as a grid of equal tiles, not one wrapping flex row. The row put
+  // ring, XP, level, streak and league into the text column's leftover width,
+  // and at a narrow viewport — where that column is half the band — the five
+  // items wrapped at different points and collided. Tiles have fixed tracks, so
+  // each fact gets its own cell whatever the width. It lives under the avatar
+  // on wide (that column is otherwise empty below the circle) and full-width
+  // under the identity band on narrow.
+  const tile = {
+    display: 'flex',
+    alignItems: 'center',
+    gap: SPACE[2],
+    minWidth: 0,
+    padding: SPACE[2],
+    border: BORDER.panel,
+    borderRadius: RADIUS.md,
+    boxSizing: 'border-box',
+  };
+  const statValue = {
+    fontFamily: FONTS.display,
+    fontWeight: FONT_WEIGHT.bold,
+    fontSize: FONT_SIZE['3xl'],
+    lineHeight: 1,
+    color: COLORS.ink,
+  };
+  const standing = (
+    <div
+      data-testid="home-identity-standing"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        gap: SPACE[2],
+        minWidth: 0,
+      }}
+    >
+      <div data-testid="home-identity-xp" aria-label={`${lvl.totalXp ?? 0} XP`} style={tile}>
+        <GoalRing pct={goalPct} met={goalMet} size={SPACE[12]} />
+        <span style={{ display: 'flex', alignItems: 'baseline', gap: SPACE[1], minWidth: 0 }}>
+          <span data-testid="home-identity-xp-value" style={statValue}>
+            {lvl.totalXp ?? 0}
+          </span>{' '}
+          <Meta tone="soft" style={{ letterSpacing: LETTER_SPACING.wider }}>
+            XP
+          </Meta>
+        </span>
+      </div>
+      <div
+        data-testid="home-identity-level-group"
+        style={{ ...tile, alignItems: 'baseline', flexWrap: 'wrap', columnGap: SPACE[1] }}
+      >
+        <Meta>Level</Meta>{' '}
+        <span data-testid="home-identity-level" style={statValue}>
+          {lvl.level}
+        </span>
+        {lvl.rankName ? (
+          <>
+            {' · '}
+            <Body size="sm" tone="soft" as="span" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+              {lvl.rankName}
+            </Body>
+          </>
+        ) : null}
+      </div>
+      {streak > 0 ? (
+        <div aria-label={`Streak ${streak}`} style={{ ...tile, color: COLORS.gold }}>
+          <Flame size={FONT_SIZE.lg} aria-hidden="true" />
+          <span
+            data-testid="home-identity-streak"
+            style={{
+              fontFamily: FONTS.mono,
+              fontWeight: FONT_WEIGHT.bold,
+              fontSize: FONT_SIZE.sm,
+              lineHeight: 1,
+              color: COLORS.inkSoft,
+            }}
+          >
+            {streak}
+          </span>
+        </div>
+      ) : null}
+      {/* Standing at a glance. A READ-ONLY badge: `league` comes from
+          useLeagueStanding, which deliberately never joins or refreshes — see
+          that hook's header for why Home must not write on open. A signed-in
+          learner with no membership yet still sees Bronze, because Bronze is
+          the floor everyone starts on rather than an unknown. This is the
+          league STANDING, not the leaderboard: the roster of 25 names stays
+          exclusive to the Profile tab (HomeTab's E5 exclusion). */}
+      {LEAGUES_ENABLED && user ? (
+        <div style={tile}>
+          <LeagueBadge
+            variant="compact"
+            tier={league?.tier}
+            rank={league?.rank ?? null}
+            cohortSize={league?.cohortSize ?? null}
+          />
+        </div>
+      ) : null}
+    </div>
+  );
+
   const identityFacts = (
     <Stack gap={2} style={{ minWidth: 0 }}>
       <Stack gap={1} style={{ minWidth: 0 }}>
@@ -168,121 +267,6 @@ export default function PersonalHub({
         )}
       </Stack>
 
-      <Row wrap gap={2} align="center" data-testid="home-identity-standing" style={{ minWidth: 0 }}>
-        <GoalRing pct={goalPct} met={goalMet} size={SPACE[12]} />
-        <span
-          data-testid="home-identity-xp"
-          aria-label={`${lvl.totalXp ?? 0} XP`}
-          style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            gap: SPACE[1],
-            minWidth: 0,
-            flexShrink: 0,
-          }}
-        >
-          <span
-            data-testid="home-identity-xp-value"
-            style={{
-              fontFamily: FONTS.display,
-              fontWeight: FONT_WEIGHT.bold,
-              fontSize: FONT_SIZE['3xl'],
-              lineHeight: 1,
-              color: COLORS.ink,
-            }}
-          >
-            {lvl.totalXp ?? 0}
-          </span>{' '}
-          <Meta tone="soft" style={{ letterSpacing: LETTER_SPACING.wider }}>
-            XP
-          </Meta>
-        </span>
-        <span
-          data-testid="home-identity-level-group"
-          style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            columnGap: SPACE[1],
-            rowGap: SPACE[1],
-            flexWrap: 'wrap',
-            minWidth: 0,
-            overflowWrap: 'anywhere',
-            flex: '1 1 8ch',
-            borderLeft: BORDER.panel,
-            paddingLeft: SPACE[2],
-          }}
-        >
-          <Meta>Level</Meta>{' '}
-          <span
-            data-testid="home-identity-level"
-            style={{
-              fontFamily: FONTS.display,
-              fontWeight: FONT_WEIGHT.bold,
-              fontSize: FONT_SIZE['3xl'],
-              lineHeight: 1,
-              color: COLORS.ink,
-            }}
-          >
-            {lvl.level}
-          </span>
-          {lvl.rankName ? (
-            <>
-              {' · '}
-              <Body
-                size="sm"
-                tone="soft"
-                as="span"
-                style={{ minWidth: 0, overflowWrap: 'anywhere' }}
-              >
-                {lvl.rankName}
-              </Body>
-            </>
-          ) : null}
-        </span>
-        {streak > 0 ? (
-          <span
-            aria-label={`Streak ${streak}`}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: SPACE[1],
-              minWidth: 0,
-              flexShrink: 0,
-              color: COLORS.gold,
-            }}
-          >
-            <Flame size={FONT_SIZE.lg} aria-hidden="true" />
-            <span
-              data-testid="home-identity-streak"
-              style={{
-                fontFamily: FONTS.mono,
-                fontWeight: FONT_WEIGHT.bold,
-                fontSize: FONT_SIZE.sm,
-                lineHeight: 1,
-                color: COLORS.inkSoft,
-              }}
-            >
-              {streak}
-            </span>
-          </span>
-        ) : null}
-        {/* Standing at a glance. A READ-ONLY badge: `league` comes from
-            useLeagueStanding, which deliberately never joins or refreshes — see
-            that hook's header for why Home must not write on open. A signed-in
-            learner with no membership yet still sees Bronze, because Bronze is
-            the floor everyone starts on rather than an unknown. This is the
-            league STANDING, not the leaderboard: the roster of 25 names stays
-            exclusive to the Profile tab (HomeTab's E5 exclusion). */}
-        {LEAGUES_ENABLED && user ? (
-          <LeagueBadge
-            variant="compact"
-            tier={league?.tier}
-            rank={league?.rank ?? null}
-            cohortSize={league?.cohortSize ?? null}
-          />
-        ) : null}
-      </Row>
-
       {/* The Settings link stood here, between the level line and the today slot.
           Nothing replaces it: both are direct children of this Stack, so the
           gap collapses to a single SPACE step rather than leaving a hole. */}
@@ -302,30 +286,33 @@ export default function PersonalHub({
           minWidth: 0,
         }}
       >
-        <div
-          data-testid="home-identity-avatar"
-          style={{
-            width: '100%',
-            aspectRatio: '1 / 1',
-            maxWidth: '100%',
-            minWidth: 0,
-            borderRadius: '50%',
-            background: COLORS.paperDeep,
-            border: `1px solid ${COLORS.border}`,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            boxSizing: 'border-box',
-          }}
-        >
-          <Avatar
-            profile={profile}
-            userId={user?.id}
-            size={AVATAR_DESKTOP}
-            style={{ width: '100%', height: '100%' }}
-          />
-        </div>
+        <Stack gap={3} style={{ minWidth: 0 }}>
+          <div
+            data-testid="home-identity-avatar"
+            style={{
+              width: '100%',
+              aspectRatio: '1 / 1',
+              maxWidth: '100%',
+              minWidth: 0,
+              borderRadius: '50%',
+              background: COLORS.paperDeep,
+              border: `1px solid ${COLORS.border}`,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              overflow: 'hidden',
+              boxSizing: 'border-box',
+            }}
+          >
+            <Avatar
+              profile={profile}
+              userId={user?.id}
+              size={AVATAR_DESKTOP}
+              style={{ width: '100%', height: '100%' }}
+            />
+          </div>
+          {wide ? standing : null}
+        </Stack>
 
         {/* minmax(0, 1fr) semantics: this column must be allowed to shrink, or
             a long handle pushes the chip off a 320px screen. Wrapping the
@@ -335,6 +322,7 @@ export default function PersonalHub({
         {identityFacts}
       </div>
 
+      {!wide && <div style={{ marginTop: SPACE[3], minWidth: 0 }}>{standing}</div>}
       {!wide && today && <div style={{ marginTop: SPACE[3], minWidth: 0 }}>{today}</div>}
 
       {recommended && (

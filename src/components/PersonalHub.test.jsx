@@ -70,7 +70,8 @@ describe('PersonalHub', () => {
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.getByTestId('home-identity-xp')).toHaveTextContent('300 XP');
     expect(screen.getByTestId('home-identity-level-group')).toHaveTextContent('Level 3 · Anfänger');
-    expect(screen.getByTestId('home-identity-level-group').style.borderLeft).toBe(
+    // Its own tile now, not a divider inside one shared row.
+    expect(screen.getByTestId('home-identity-level-group').style.border).toBe(
       '1px solid var(--c-border)'
     );
     expect(screen.getByText('Anfänger')).toBeInTheDocument();
