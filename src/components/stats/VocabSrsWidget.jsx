@@ -10,6 +10,7 @@ import {
 } from '../../lib/theme';
 import { getDueCount, getMasteredCount, srsKey, MASTERED_BOX } from '../../lib/srs';
 import { activePack } from '../../packs';
+import { bp, useWindowWidth } from '../../lib/useWindowWidth';
 const { decks: PRESET_DECKS } = activePack.content;
 
 const DECK_LABELS = {
@@ -21,6 +22,7 @@ const DECK_LABELS = {
 
 // Section F — SRS overview: due-now count, mastered progress, per-deck bars.
 export default function VocabSrsWidget({ srs, now }) {
+  const tiny = useWindowWidth() < bp.tiny;
   const dueTotal = getDueCount(srs, PRESET_DECKS, now);
   const masteredTotal = getMasteredCount(srs);
   const cardTotal = Object.values(PRESET_DECKS).reduce((sum, deck) => sum + deck.length, 0);
@@ -28,16 +30,18 @@ export default function VocabSrsWidget({ srs, now }) {
   return (
     <div>
       <div
+        data-testid="vocab-srs-summary"
         style={{
           borderRadius: RADIUS.lg,
           boxShadow: SHADOW.card,
           background: COLORS.card,
-          padding: SPACE[6],
+          padding: tiny ? SPACE[4] : SPACE[6],
           display: 'grid',
           gridTemplateColumns: 'auto minmax(0, 1fr)',
-          gap: SPACE[8],
+          gap: tiny ? SPACE[4] : SPACE[8],
           alignItems: 'center',
           marginBottom: SPACE[4],
+          minWidth: 0,
         }}
       >
         <div>
@@ -55,7 +59,7 @@ export default function VocabSrsWidget({ srs, now }) {
           <div
             style={{
               fontFamily: FONTS.display,
-              fontSize: FONT_SIZE['6xl'],
+              fontSize: tiny ? FONT_SIZE['5xl'] : FONT_SIZE['6xl'],
               fontWeight: FONT_WEIGHT.black,
               letterSpacing: LETTER_SPACING.tight,
               lineHeight: 1,
@@ -77,7 +81,7 @@ export default function VocabSrsWidget({ srs, now }) {
           </div>
         </div>
 
-        <div>
+        <div style={{ minWidth: 0 }}>
           <div
             style={{
               fontFamily: FONTS.mono,

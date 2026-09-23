@@ -4,6 +4,7 @@ import PersonalHub from './PersonalHub';
 import { FONT_SIZE, SPACE } from '../lib/theme';
 
 const AVATAR_DESKTOP = SPACE[16] * 4;
+const AVATAR_TINY = SPACE[12] * 2;
 
 // isAuthConfigured() reads import.meta.env.VITE_SUPABASE_*, which Vitest loads
 // from .env — true on a developer's machine and false in CI. Unmocked, this
@@ -163,26 +164,28 @@ describe('PersonalHub', () => {
     });
   });
 
-  it('gives the avatar half the identity band on a 375px viewport', () => {
+  it('gives the greeting the flexible track beside a compact avatar at 375px', () => {
     setViewportWidth(375);
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.getByTestId('home-identity-row')).toHaveStyle({
-      gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+      gridTemplateColumns: `${AVATAR_TINY}px minmax(0, 1fr)`,
+      gap: `${SPACE[3]}px`,
     });
   });
 
-  it('keeps the half-band avatar on a 320px viewport', () => {
+  it('keeps the compact avatar and flexible greeting track at 320px', () => {
     setViewportWidth(320);
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.getByTestId('home-identity-row')).toHaveStyle({
-      gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)',
+      gridTemplateColumns: `${AVATAR_TINY}px minmax(0, 1fr)`,
+      gap: `${SPACE[3]}px`,
     });
   });
 
-  // At 320px the avatar owns half the identity band, so the greeting has a
+  // At 320px the old half-band avatar plus level chip left the greeting a
   // measured 77px of track — 36px display type broke "Guten Tag" into three
-  // lines and split the word mid-syllable. The display face steps down with
-  // the space it has, the same way Heading size="display" does.
+  // lines. The compact layout still steps the display face down with the space
+  // it has, the same way Heading size="display" does.
   it.each([
     [1280, FONT_SIZE['4xl']],
     [375, FONT_SIZE['2xl']],
@@ -308,6 +311,62 @@ describe('PersonalHub', () => {
       whiteSpace: 'nowrap',
     });
   });
+
+  it.each([320, 375])('clamps a long mobile greeting to two lines at %spx', (width) => {
+    setViewportWidth(width);
+    const longDisplayName = 'blackhebrewisraeli';
+    render(
+      <PersonalHub
+        user={user}
+        profile={{ ...profile, display_name: longDisplayName }}
+        cefrLevel="a2"
+        score={score}
+      />
+    );
+
+    const greeting = screen.getByRole('heading', {
+      name: new RegExp(`guten tag, ${longDisplayName}`, 'i'),
+    });
+    expect(greeting).toHaveAttribute('title', `Guten Tag, ${longDisplayName}`);
+    expect(greeting).toHaveStyle({ display: '-webkit-box', overflow: 'hidden' });
+    expect(greeting.style.WebkitBoxOrient).toBe('vertical');
+    expect(greeting.style.WebkitLineClamp).toBe('2');
+    expect(screen.getByLabelText(/level a2/i).parentElement).toHaveStyle({
+      flexDirection: 'column',
+    });
+  });
+
+  it.each([320, 375])(
+    'stacks massive XP and a long rank into full-width tiles at %spx',
+    (width) => {
+      setViewportWidth(width);
+      render(
+        <PersonalHub
+          user={user}
+          profile={profile}
+          cefrLevel="a2"
+          score={{ ...score, totalXp: 55087, rankName: 'Muttersprachler' }}
+        />
+      );
+
+      expect(screen.getByTestId('home-identity-xp')).toHaveStyle({
+        gridColumn: '1 / -1',
+        flexWrap: 'wrap',
+      });
+      expect(screen.getByTestId('home-identity-xp-value')).toHaveStyle({
+        maxWidth: '100%',
+        overflowWrap: 'anywhere',
+      });
+      expect(screen.getByTestId('home-identity-level-group')).toHaveStyle({
+        gridColumn: '1 / -1',
+        flexWrap: 'wrap',
+      });
+      expect(screen.getByText('Muttersprachler')).toHaveStyle({
+        minWidth: '0',
+        overflowWrap: 'anywhere',
+      });
+    }
+  );
 
   // Decision E5 keeps account MANAGEMENT off Home. The hub is identity +
   // standing, so it must never grow an email, a sign-out or a delete control.

@@ -301,6 +301,13 @@ describe('UserProfile — the consolidated profile page', () => {
     expect(leagues.fetchProfile).not.toHaveBeenCalled();
   });
 
+  it('gives the guest note its required icon (no StatusNote console error)', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<UserProfile user={null} local={local} onSignIn={vi.fn()} />);
+    expect(error).not.toHaveBeenCalledWith(expect.stringContaining('StatusNote'));
+    error.mockRestore();
+  });
+
   it('keeps the page usable when the profile fetch fails', async () => {
     leagues.fetchProfile.mockRejectedValue(new Error('offline'));
     render(<UserProfile user={USER} local={local} />);

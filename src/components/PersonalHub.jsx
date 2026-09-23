@@ -31,12 +31,43 @@ const EMPTY_SCORE = {
 
 // SPACE[16] is the original hub chip (64). #268 doubled it to 128, which still
 // reads as ~10–15% of the card. Desktop grows to 4× the chip so the mark is a
-// column, not a header button; mobile gives the avatar its own equal track so
-// it is half the identity band. Never a bare `1fr` — minmax(0, 1fr) is what
-// lets the column shrink below its content instead of pushing the page wide.
+// column, not a header button. Standard narrow layouts give it an equal track;
+// below 414px it steps down to a fixed 96px so the greeting remains the lead.
+// Never a bare `1fr` — minmax(0, 1fr) is what lets the text column shrink below
+// its content instead of pushing the page wide.
 const AVATAR_DESKTOP = SPACE[16] * 4;
+const AVATAR_TINY = SPACE[12] * 2;
 const IDENTITY_COLUMNS_WIDE = `${AVATAR_DESKTOP}px minmax(0, 1fr)`;
 const IDENTITY_COLUMNS_NARROW = 'minmax(0, 1fr) minmax(0, 1fr)';
+const IDENTITY_COLUMNS_TINY = `${AVATAR_TINY}px minmax(0, 1fr)`;
+
+function identityColumns(wide, tiny) {
+  if (wide) return IDENTITY_COLUMNS_WIDE;
+  return tiny ? IDENTITY_COLUMNS_TINY : IDENTITY_COLUMNS_NARROW;
+}
+
+// Every below-bp.tiny adjustment, looked up once per render rather than
+// branched on at each use. Stat tiles take the full row; the level chip stacks
+// under the greeting; the greeting clamps to two lines.
+const FIT_TINY = {
+  tileSpan: '1 / -1',
+  headingRowGap: 1,
+  headingRowDirection: 'column',
+  greetingClamp: {
+    display: '-webkit-box',
+    WebkitBoxOrient: 'vertical',
+    WebkitLineClamp: 2,
+    overflow: 'hidden',
+  },
+  identityGap: SPACE[3],
+};
+const FIT_REGULAR = {
+  tileSpan: undefined,
+  headingRowGap: 2,
+  headingRowDirection: 'row',
+  greetingClamp: {},
+  identityGap: SPACE[4],
+};
 
 const TRUNCATE = {
   overflow: 'hidden',
@@ -88,13 +119,17 @@ export default function PersonalHub({
 }) {
   const copy = activePack.content.identity ?? {};
   const lvl = score ?? EMPTY_SCORE;
-  const wide = useWindowWidth() >= bp.wide;
+  const viewportWidth = useWindowWidth();
+  const wide = viewportWidth >= bp.wide;
+  const tiny = viewportWidth < bp.tiny;
+  const fit = tiny ? FIT_TINY : FIT_REGULAR;
 
   // A chosen display name is how the app addresses the learner. The handle is
   // the unique social identifier and stays visible on its own line; it is only
   // a greeting fallback when no display name has been chosen yet.
   const displayName = typeof profile?.display_name === 'string' ? profile.display_name.trim() : '';
   const name = user ? displayName || profile?.handle || user.email?.split('@')[0] || null : null;
+  const greeting = copy.greeting?.(name);
 
   const createdAt = profile?.created_at ? new Date(profile.created_at) : null;
   const showsAccountLine = Boolean(user);
@@ -122,6 +157,9 @@ export default function PersonalHub({
     fontSize: FONT_SIZE['3xl'],
     lineHeight: 1,
     color: COLORS.ink,
+    minWidth: 0,
+    maxWidth: '100%',
+    overflowWrap: 'anywhere',
   };
   const standing = (
     <div
@@ -133,9 +171,27 @@ export default function PersonalHub({
         minWidth: 0,
       }}
     >
-      <div data-testid="home-identity-xp" aria-label={`${lvl.totalXp ?? 0} XP`} style={tile}>
+      <div
+        data-testid="home-identity-xp"
+        aria-label={`${lvl.totalXp ?? 0} XP`}
+        style={{
+          ...tile,
+          gridColumn: fit.tileSpan,
+          flexWrap: 'wrap',
+        }}
+      >
         <GoalRing pct={goalPct} met={goalMet} size={SPACE[12]} />
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: SPACE[1], minWidth: 0 }}>
+        <span
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            flex: '1 1 0',
+            flexWrap: 'wrap',
+            gap: SPACE[1],
+            minWidth: 0,
+            overflowWrap: 'anywhere',
+          }}
+        >
           <span data-testid="home-identity-xp-value" style={statValue}>
             {lvl.totalXp ?? 0}
           </span>{' '}
@@ -146,7 +202,13 @@ export default function PersonalHub({
       </div>
       <div
         data-testid="home-identity-level-group"
-        style={{ ...tile, alignItems: 'baseline', flexWrap: 'wrap', columnGap: SPACE[1] }}
+        style={{
+          ...tile,
+          alignItems: 'baseline',
+          gridColumn: fit.tileSpan,
+          flexWrap: 'wrap',
+          columnGap: SPACE[1],
+        }}
       >
         <Meta>Level</Meta>{' '}
         <span data-testid="home-identity-level" style={statValue}>
@@ -201,10 +263,22 @@ export default function PersonalHub({
   const identityFacts = (
     <Stack gap={2} style={{ minWidth: 0 }}>
       <Stack gap={1} style={{ minWidth: 0 }}>
-        <Row wrap={false} align="flex-start" gap={2} style={{ minWidth: 0 }}>
+        <Row
+          wrap={false}
+          align="flex-start"
+          gap={fit.headingRowGap}
+          style={{
+            minWidth: 0,
+            // On the narrowest phones the level chip must not take width away
+            // from the learner's name. It sits under the greeting instead of
+            // turning the heading into a 70px-wide newspaper column.
+            flexDirection: fit.headingRowDirection,
+          }}
+        >
           <Heading
             id={IDENTITY_HEADING_ID}
             level={2}
+            title={greeting}
             style={{
               margin: 0,
               overflowWrap: 'anywhere',
@@ -218,16 +292,18 @@ export default function PersonalHub({
               // Heading's global scale.
               //
               // Narrow steps down to 2xl, and that is not taste. At 320px the
-              // avatar owns half the identity band, which leaves the greeting
-              // a measured 77px of track — so "Guten Tag" broke as "Gut / en /
-              // Tag", three lines of a two-word greeting, with the word split
-              // mid-syllable. Same curve as Heading size="display": the
-              // display face scales with the space it has instead of holding
-              // one size until it shatters.
+              // old half-band avatar plus level chip left the greeting 77px —
+              // "Guten Tag" broke as "Gut / en / Tag". The compact avatar and
+              // stacked chip recover the width; the smaller display face keeps
+              // a long learner name readable inside the two-line clamp.
               fontSize: wide ? FONT_SIZE['4xl'] : FONT_SIZE['2xl'],
+              // Two lines preserve the welcome and as much of a long display
+              // name as the phone can carry. The full greeting remains the
+              // heading's accessible text and is also exposed by `title`.
+              ...fit.greetingClamp,
             }}
           >
-            {copy.greeting?.(name)}
+            {greeting}
           </Heading>
           {/* The band chip beside a 36px greeting. It sat at 10px with the
               widest tracking, which is the recipe for a label you SCAN past —
@@ -280,8 +356,8 @@ export default function PersonalHub({
         data-testid="home-identity-row"
         style={{
           display: 'grid',
-          gridTemplateColumns: wide ? IDENTITY_COLUMNS_WIDE : IDENTITY_COLUMNS_NARROW,
-          gap: SPACE[4],
+          gridTemplateColumns: identityColumns(wide, tiny),
+          gap: fit.identityGap,
           alignItems: 'start',
           minWidth: 0,
         }}

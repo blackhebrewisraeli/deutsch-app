@@ -1,8 +1,17 @@
 import { useState } from 'react';
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import VocabModeTabs from './VocabModeTabs';
+import { FONT_SIZE, LETTER_SPACING, SPACE } from '../../lib/theme';
+
+const setViewportWidth = (width) => {
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: width,
+  });
+};
 
 function Controlled({ initial = 'practice', onPick }) {
   const [active, setActive] = useState(initial);
@@ -18,6 +27,8 @@ function Controlled({ initial = 'practice', onPick }) {
 }
 
 describe('VocabModeTabs', () => {
+  beforeEach(() => setViewportWidth(1024));
+
   it('exposes a labelled tablist with the three modes', () => {
     render(<VocabModeTabs active="practice" onPick={() => {}} />);
     expect(screen.getByRole('tablist', { name: 'Vocabulary mode' })).toBeInTheDocument();
@@ -114,5 +125,25 @@ describe('VocabModeTabs', () => {
     expect(screen.getByRole('button', { name: 'after' })).toHaveFocus();
     expect(screen.getByRole('tab', { name: 'Practice' })).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('tab', { name: 'Browse' })).toHaveAttribute('tabindex', '-1');
+  });
+
+  it.each([320, 375])('keeps every mode label on one line at %spx', (width) => {
+    setViewportWidth(width);
+    render(<VocabModeTabs active="practice" onPick={() => {}} />);
+
+    const tabs = screen.getAllByRole('tab');
+    expect(screen.getByRole('tablist')).toHaveStyle({
+      gap: `${SPACE[2]}px`,
+      marginTop: `${SPACE[4]}px`,
+    });
+    for (const tab of tabs) {
+      expect(tab).toHaveStyle({
+        fontSize: `${FONT_SIZE.sm}px`,
+        letterSpacing: LETTER_SPACING.wider,
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
+        whiteSpace: 'nowrap',
+      });
+    }
   });
 });

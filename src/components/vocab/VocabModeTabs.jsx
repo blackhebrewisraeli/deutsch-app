@@ -11,6 +11,7 @@ import {
   TRANSITION,
 } from '../../lib/theme';
 import { VOCAB_MODES, vocabTabId, vocabPanelId } from './vocabModes';
+import { bp, useWindowWidth } from '../../lib/useWindowWidth';
 
 const KEYS = VOCAB_MODES.map((m) => m.key);
 
@@ -28,6 +29,7 @@ export default function VocabModeTabs({
 }) {
   const refs = useRef({});
   const [focusedKey, setFocusedKey] = useState(null);
+  const tiny = useWindowWidth() < bp.tiny;
 
   const current = KEYS.includes(active) ? active : 'practice';
   const rovingKey = focusedKey ?? current;
@@ -61,8 +63,8 @@ export default function VocabModeTabs({
       style={{
         display: 'grid',
         gridTemplateColumns: `repeat(${VOCAB_MODES.length}, minmax(0, 1fr))`,
-        gap: SPACE[3],
-        marginTop: SPACE[6],
+        gap: tiny ? SPACE[2] : SPACE[3],
+        marginTop: tiny ? SPACE[4] : SPACE[6],
       }}
     >
       {VOCAB_MODES.map((mode) => {
@@ -87,17 +89,21 @@ export default function VocabModeTabs({
               boxShadow: SHADOW.press(selected ? COLORS.ink : COLORS.lip),
               background: selected ? COLORS.ink : COLORS.card,
               color: selected ? COLORS.paper : COLORS.ink,
-              padding: SPACE[4],
+              padding: tiny ? `${SPACE[3]}px ${SPACE[2]}px` : SPACE[4],
               cursor: 'pointer',
               fontFamily: FONTS.mono,
               fontWeight: FONT_WEIGHT.bold,
-              letterSpacing: LETTER_SPACING.widest,
+              letterSpacing: tiny ? LETTER_SPACING.wider : LETTER_SPACING.widest,
+              // 12px everywhere: 10px is too small for primary navigation. Narrow
+              // phones find the room in tracking and padding instead.
               fontSize: FONT_SIZE.sm,
               textTransform: 'uppercase',
               textAlign: 'center',
               transition: TRANSITION.fast,
               minWidth: 0,
-              overflowWrap: 'anywhere',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
             }}
           >
             {mode.label}

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Coins, Flame, Sparkles, GraduationCap } from 'lucide-react';
+import { Coins, Flame, Sparkles, GraduationCap, UserRound } from 'lucide-react';
 import {
   BORDER,
   COLORS,
@@ -218,7 +218,7 @@ export default function UserProfile({
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: SPACE[6] }}>
         <div style={{ display: 'grid', gap: SPACE[4], justifyItems: 'start', minWidth: 0 }}>
           <Heading level={2}>Dein Profil</Heading>
-          <StatusNote>
+          <StatusNote icon={UserRound}>
             Sign in to keep your progress, earn badges and join a weekly league.
           </StatusNote>
           <div style={{ display: 'flex', gap: SPACE[3], flexWrap: 'wrap' }}>
