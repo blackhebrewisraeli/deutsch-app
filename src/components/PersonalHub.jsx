@@ -41,6 +41,34 @@ const IDENTITY_COLUMNS_WIDE = `${AVATAR_DESKTOP}px minmax(0, 1fr)`;
 const IDENTITY_COLUMNS_NARROW = 'minmax(0, 1fr) minmax(0, 1fr)';
 const IDENTITY_COLUMNS_TINY = `${AVATAR_TINY}px minmax(0, 1fr)`;
 
+function identityColumns(wide, tiny) {
+  if (wide) return IDENTITY_COLUMNS_WIDE;
+  return tiny ? IDENTITY_COLUMNS_TINY : IDENTITY_COLUMNS_NARROW;
+}
+
+// Every below-bp.tiny adjustment, looked up once per render rather than
+// branched on at each use. Stat tiles take the full row; the level chip stacks
+// under the greeting; the greeting clamps to two lines.
+const FIT_TINY = {
+  tileSpan: '1 / -1',
+  headingRowGap: 1,
+  headingRowDirection: 'column',
+  greetingClamp: {
+    display: '-webkit-box',
+    WebkitBoxOrient: 'vertical',
+    WebkitLineClamp: 2,
+    overflow: 'hidden',
+  },
+  identityGap: SPACE[3],
+};
+const FIT_REGULAR = {
+  tileSpan: undefined,
+  headingRowGap: 2,
+  headingRowDirection: 'row',
+  greetingClamp: {},
+  identityGap: SPACE[4],
+};
+
 const TRUNCATE = {
   overflow: 'hidden',
   textOverflow: 'ellipsis',
@@ -94,6 +122,7 @@ export default function PersonalHub({
   const viewportWidth = useWindowWidth();
   const wide = viewportWidth >= bp.wide;
   const tiny = viewportWidth < bp.tiny;
+  const fit = tiny ? FIT_TINY : FIT_REGULAR;
 
   // A chosen display name is how the app addresses the learner. The handle is
   // the unique social identifier and stays visible on its own line; it is only
@@ -147,7 +176,7 @@ export default function PersonalHub({
         aria-label={`${lvl.totalXp ?? 0} XP`}
         style={{
           ...tile,
-          gridColumn: tiny ? '1 / -1' : undefined,
+          gridColumn: fit.tileSpan,
           flexWrap: 'wrap',
         }}
       >
@@ -176,7 +205,7 @@ export default function PersonalHub({
         style={{
           ...tile,
           alignItems: 'baseline',
-          gridColumn: tiny ? '1 / -1' : undefined,
+          gridColumn: fit.tileSpan,
           flexWrap: 'wrap',
           columnGap: SPACE[1],
         }}
@@ -237,13 +266,13 @@ export default function PersonalHub({
         <Row
           wrap={false}
           align="flex-start"
-          gap={tiny ? 1 : 2}
+          gap={fit.headingRowGap}
           style={{
             minWidth: 0,
             // On the narrowest phones the level chip must not take width away
             // from the learner's name. It sits under the greeting instead of
             // turning the heading into a 70px-wide newspaper column.
-            flexDirection: tiny ? 'column' : 'row',
+            flexDirection: fit.headingRowDirection,
           }}
         >
           <Heading
@@ -271,14 +300,7 @@ export default function PersonalHub({
               // Two lines preserve the welcome and as much of a long display
               // name as the phone can carry. The full greeting remains the
               // heading's accessible text and is also exposed by `title`.
-              ...(tiny
-                ? {
-                    display: '-webkit-box',
-                    WebkitBoxOrient: 'vertical',
-                    WebkitLineClamp: 2,
-                    overflow: 'hidden',
-                  }
-                : {}),
+              ...fit.greetingClamp,
             }}
           >
             {greeting}
@@ -334,12 +356,8 @@ export default function PersonalHub({
         data-testid="home-identity-row"
         style={{
           display: 'grid',
-          gridTemplateColumns: wide
-            ? IDENTITY_COLUMNS_WIDE
-            : tiny
-              ? IDENTITY_COLUMNS_TINY
-              : IDENTITY_COLUMNS_NARROW,
-          gap: tiny ? SPACE[3] : SPACE[4],
+          gridTemplateColumns: identityColumns(wide, tiny),
+          gap: fit.identityGap,
           alignItems: 'start',
           minWidth: 0,
         }}
