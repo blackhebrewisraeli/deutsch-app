@@ -7,8 +7,8 @@ import { forwardToProvider, isAnyProviderConfigured } from './forward.js';
 // One factory builds every AI endpoint: same chain, per-endpoint quotas.
 // Rate limiting runs before validation on purpose — malformed requests
 // still consume quota, so garbage cannot be free.
-export function createAiHandler({ rate, afterValidate }) {
-  const checkRate = createRateLimiter({ ...rate, store: defaultStore() });
+export function createAiHandler({ name, rate, afterValidate }) {
+  const checkRate = createRateLimiter({ ...rate, scope: name, store: defaultStore() });
 
   return async function handler(req, res) {
     if (req.method !== 'POST') {
