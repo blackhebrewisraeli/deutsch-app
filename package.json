@@ -25,7 +25,7 @@
     "smoke:auth-learning-path": "node scripts/dev/smoke-auth-learning-path.mjs",
     "bench:perf": "node scripts/dev/bench-perf.mjs",
     "clean": "node scripts/clean.js",
-    "prepare": "husky",
+    "prepare": "husky || true",
     "vendor:fonts": "node scripts/vendor-fonts/index.js",
     "gen:assets": "node scripts/gen-assets/index.js",
     "check:migrations": "node scripts/check-migrations/index.js",
