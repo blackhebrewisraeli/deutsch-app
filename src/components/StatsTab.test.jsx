@@ -55,6 +55,10 @@ vi.mock('./stats/ProfileCard.jsx', () => ({
   default: ({ userId }) => <div>stub-card-{userId}</div>,
 }));
 
+vi.mock('./social/FollowListModal.jsx', () => ({
+  default: ({ kind }) => <div>stub-follow-list-{kind}</div>,
+}));
+
 // Mock leagues flag as ENABLED
 vi.mock('../lib/leagues.js', () => ({
   LEAGUES_ENABLED: true,
@@ -177,20 +181,31 @@ describe('StatsTab — one consolidated page, no sub-tabs', () => {
 describe('StatsTab — finding people', () => {
   const USER = { id: 'u1', email: 'sam@example.com' };
 
-  // The nav has no room for a Search tab (six items, seven for an admin, and
-  // the seventh was measured to fit 320px with no slack), so the Profile page
-  // is where this has to be reachable. If it stops rendering here it is not
-  // reachable anywhere.
-  it('puts the people search on the profile page', () => {
+  // Search moved out of the Profile page into a header-triggered modal
+  // (SearchModal, opened from App's global nav) — this guards against it
+  // silently coming back as an inline box here, which is what regressed once
+  // already when it lived only in this tab.
+  it('no longer renders an inline people-search box', () => {
     render(<StatsTab user={USER} />);
-    expect(screen.getByRole('searchbox')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Find people' })).toBeInTheDocument();
+    expect(screen.queryByRole('searchbox')).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Find people' })).toBeNull();
+  });
+});
+
+describe('StatsTab — follow lists', () => {
+  const USER = { id: 'u1', email: 'sam@example.com' };
+
+  it('opens the followers list from the Follower count', async () => {
+    render(<StatsTab user={USER} />);
+    expect(screen.queryByText('stub-follow-list-followers')).toBeNull();
+
+    fireEvent.click(await screen.findByRole('button', { name: '0 Follower' }));
+    expect(screen.getByText('stub-follow-list-followers')).toBeInTheDocument();
   });
 
-  // Both social endpoints require auth, so a signed-out box could only ever
-  // produce an error.
-  it('hides it when signed out', () => {
-    render(<StatsTab user={null} />);
-    expect(screen.queryByRole('searchbox')).toBeNull();
+  it('opens the following list from the Folgt count', async () => {
+    render(<StatsTab user={USER} />);
+    fireEvent.click(await screen.findByRole('button', { name: '0 Folgt' }));
+    expect(screen.getByText('stub-follow-list-following')).toBeInTheDocument();
   });
 });

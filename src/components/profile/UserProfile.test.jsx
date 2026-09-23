@@ -169,6 +169,31 @@ describe('UserProfile — the consolidated profile page', () => {
     expect(social.textContent).toMatch(/0\s*Folgt/);
   });
 
+  it('does not make the counts clickable without a handler', async () => {
+    render(<UserProfile user={USER} local={local} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+    expect(screen.queryByRole('button', { name: /Follower/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Folgt/ })).toBeNull();
+  });
+
+  it('opens the followers list when the Follower count is clicked', async () => {
+    const onOpenFollowList = vi.fn();
+    render(<UserProfile user={USER} local={local} onOpenFollowList={onOpenFollowList} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+
+    screen.getByRole('button', { name: '3 Follower' }).click();
+    expect(onOpenFollowList).toHaveBeenCalledWith('followers');
+  });
+
+  it('opens the following list when the Folgt count is clicked', async () => {
+    const onOpenFollowList = vi.fn();
+    render(<UserProfile user={USER} local={local} onOpenFollowList={onOpenFollowList} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+
+    screen.getByRole('button', { name: '5 Folgt' }).click();
+    expect(onOpenFollowList).toHaveBeenCalledWith('following');
+  });
+
   it('places the full standings in the main column, under the league card', async () => {
     render(<UserProfile user={USER} local={local} />);
     await screen.findByTestId('standings');

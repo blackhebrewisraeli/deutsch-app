@@ -23,7 +23,7 @@ import Button from './ui/Button';
 import ProfileCard from './stats/ProfileCard';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
 import UserProfile from './profile/UserProfile';
-import UserSearch from './social/UserSearch';
+import FollowListModal from './social/FollowListModal';
 import { readLevel } from '../lib/levelPref.js';
 import { isAuthConfigured } from '../lib/auth.js';
 
@@ -64,6 +64,9 @@ export default function StatsTab({
   // more, so an isolated render simply stays on the profile view.
   const [internalView] = useState(VIEWS.stats);
   const [selectedUser, setSelectedUser] = useState(null);
+  // 'followers' | 'following' | null — which of the caller's own lists is
+  // open, opened from the Follower/Folgt counts on the identity card.
+  const [followListKind, setFollowListKind] = useState(null);
 
   // `view` is owned by App when the settings route is in play, and by this
   // component otherwise. Nothing in here CHANGES it any more — the segmented
@@ -110,6 +113,10 @@ export default function StatsTab({
         />
       )}
 
+      {followListKind && (
+        <FollowListModal kind={followListKind} onClose={() => setFollowListKind(null)} />
+      )}
+
       {showingSettings ? (
         <div style={{ display: 'grid', gap: SPACE[4], justifyItems: 'start' }}>
           {/* The way back. The segmented control used to provide it for free —
@@ -131,19 +138,11 @@ export default function StatsTab({
           onSignIn={onSignIn}
           onSelectUser={setSelectedUser}
           onOpenSettings={openSettings}
+          onOpenFollowList={setFollowListKind}
           mobile={mobile}
           local={{ xp: sc.totalXp, level: readLevel(), streak: stats.streak ?? 0 }}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[8] }}>
-            {/* First of the secondary sections, because finding people is the
-                one thing on this page that is about somebody ELSE — and the
-                nav has no room for a tab of its own (six items, seven for an
-                admin, and the seventh was measured to fit 320px with no slack).
-
-                Signed out there is nothing to show: both social endpoints
-                require auth, so the box would only ever produce an error. */}
-            {user && <UserSearch mobile={mobile} />}
-
             <section>
               <SectionLabel num="0" text="Fortschritt" />
               <LevelCard lvl={sc} totalXp={sc.totalXp} learnedCount={stats.learnedCount ?? 0} />

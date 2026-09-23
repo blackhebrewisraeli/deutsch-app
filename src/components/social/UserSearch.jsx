@@ -11,8 +11,9 @@ import {
   SHADOW,
   SPACE,
 } from '../../lib/theme';
-import { followUser, isSearchable, searchUsers, unfollowUser } from '../../lib/social.js';
+import { isSearchable, searchUsers } from '../../lib/social.js';
 import { useDebouncedValue } from '../../lib/useDebouncedValue.js';
+import { useFollowToggle } from '../../lib/useFollowToggle.js';
 import { profileName } from '../../lib/profile.js';
 import Avatar from '../ui/Avatar';
 import Button from '../ui/Button';
@@ -51,7 +52,7 @@ export default function UserSearch({ mobile = false, num = '✱' }) {
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState('idle');
   const [error, setError] = useState(null);
-  const [pending, setPending] = useState({});
+  const { pending, toggle } = useFollowToggle(setResults);
 
   const settled = useDebouncedValue(term, DEBOUNCE_MS);
 
@@ -95,35 +96,17 @@ export default function UserSearch({ mobile = false, num = '✱' }) {
       });
   }, [settled]);
 
-  /**
-   * Flip the button NOW, reconcile after.
-   *
-   * The write is idempotent on the server — following twice is the same state
-   * as following once — so the only case that has to undo itself is a genuine
-   * failure, and that restores the value the server still holds rather than
-   * re-fetching the whole page.
-   */
-  const toggleFollow = useCallback(async (row) => {
-    const next = !row.is_following;
-    const id = row.user_id;
-
-    setResults((prev) => prev.map((r) => (r.user_id === id ? { ...r, is_following: next } : r)));
-    setPending((prev) => ({ ...prev, [id]: true }));
-    setError(null);
-
-    try {
-      await (next ? followUser(id) : unfollowUser(id));
-    } catch (err) {
-      setResults((prev) => prev.map((r) => (r.user_id === id ? { ...r, is_following: !next } : r)));
-      setError(err?.message ?? 'Could not save that.');
-    } finally {
-      setPending((prev) => {
-        const rest = { ...prev };
-        delete rest[id];
-        return rest;
-      });
-    }
-  }, []);
+  // The optimistic flip-then-reconcile logic lives in useFollowToggle, shared
+  // with the followers/following list modal — this wrapper only owns what is
+  // specific to a search box: clearing a stale error before a fresh attempt.
+  const toggleFollow = useCallback(
+    async (row) => {
+      setError(null);
+      const message = await toggle(row);
+      if (message) setError(message);
+    },
+    [toggle]
+  );
 
   const showEmpty = status === 'done' && results.length === 0;
 
