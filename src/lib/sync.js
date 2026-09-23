@@ -195,6 +195,22 @@ export async function pullAndMerge(userId) {
   ]);
 }
 
+/**
+ * Server daily counters for the progress flush, or null when the read failed.
+ * supabase-js resolves { data: null, error } offline instead of throwing, so
+ * `data ?? []` would report an empty server — see flushNow in progressQueue.js.
+ */
+export async function loadRemoteDaily() {
+  try {
+    const c = await client();
+    if (!c) return null;
+    const { data, error } = await c.from('stats_daily').select();
+    return error ? null : dailyFromRows(data ?? []);
+  } catch {
+    return null;
+  }
+}
+
 /** Debounced push and tab-resume both call the reconcile path (no naive daily overwrite). */
 export async function pushAll(userId) {
   return pullAndMerge(userId);
@@ -211,6 +227,7 @@ let status = { pending: false, lastSyncedAt: null, settled: false };
 let activeUserId = null;
 let debounceTimer = null;
 let visibilityHandler = null;
+let onlineHandler = null;
 let forceEnabledForTest = false;
 let reconciling = false;
 let rerunRequested = false;
@@ -288,7 +305,19 @@ export function start(userId) {
     }
   };
   document.addEventListener('visibilitychange', visibilityHandler);
+  // An offline reconcile reads nothing and pushes nothing. Without this, what
+  // was learned offline waits for the next answer or tab switch to leave.
+  if (onlineHandler) window.removeEventListener('online', onlineHandler);
+  onlineHandler = () => {
+    if (activeUserId) void reconcileNow(activeUserId);
+  };
+  window.addEventListener('online', onlineHandler);
   void reconcileNow(userId);
+}
+
+function removeOnlineHandler() {
+  if (onlineHandler) window.removeEventListener('online', onlineHandler);
+  onlineHandler = null;
 }
 
 export function stop() {
@@ -301,6 +330,7 @@ export function stop() {
     document.removeEventListener('visibilitychange', visibilityHandler);
     visibilityHandler = null;
   }
+  removeOnlineHandler();
   setStatus({ pending: false, lastSyncedAt: status.lastSyncedAt, settled: status.settled });
 }
 
@@ -315,6 +345,7 @@ export function __resetSyncState({ enabled, userId } = {}) {
     document.removeEventListener('visibilitychange', visibilityHandler);
     visibilityHandler = null;
   }
+  removeOnlineHandler();
   activeUserId = userId ?? null;
   reconciling = false;
   rerunRequested = false;

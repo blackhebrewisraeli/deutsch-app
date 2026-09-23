@@ -174,7 +174,8 @@ let flushAgain = false;
 let onlineHandler = null;
 let visibilityHandler = null;
 let getToken = async () => null;
-let getRemoteDaily = async () => ({});
+// null = "could not read the server", which is not the same as an empty one.
+let getRemoteDaily = async () => null;
 
 export function __setFlushHooksForTest({ getAccessToken, loadRemoteDaily } = {}) {
   if (getAccessToken) getToken = getAccessToken;
@@ -200,9 +201,15 @@ export async function flushNow() {
       } catch {
         localDaily = {};
       }
-      const remoteDaily = (await getRemoteDaily()) ?? {};
-      const extra = expandGuestBacklog({ localDaily, remoteDaily, queue });
-      if (extra.length) saveQueue([...extra, ...loadQueue()]);
+      // Offline, the read fails while the cached JWT still works. Diffing local
+      // against a missing server would re-queue all local history under fresh
+      // ids and the RPC would count it twice. Skip the backlog; the queued
+      // events are idempotent and still flush.
+      const remoteDaily = await getRemoteDaily();
+      if (remoteDaily) {
+        const extra = expandGuestBacklog({ localDaily, remoteDaily, queue });
+        if (extra.length) saveQueue([...extra, ...loadQueue()]);
+      }
       await flushQueue({ token });
     } while (flushAgain);
   } finally {

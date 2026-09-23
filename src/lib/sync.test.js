@@ -95,7 +95,17 @@ vi.mock('./auth.js', () => ({
   isAuthConfigured: () => true,
 }));
 
-import { pushAll, pullAndMerge, __setClientForTest, __reconcileNowForTest } from './sync.js';
+import {
+  pushAll,
+  pullAndMerge,
+  loadRemoteDaily,
+  start,
+  stop,
+  getSyncStatus,
+  __setClientForTest,
+  __reconcileNowForTest,
+  __resetSyncState,
+} from './sync.js';
 
 describe('sync engine', () => {
   beforeEach(() => {
@@ -739,5 +749,83 @@ describe('deck-scoped mastery syncs in its own column', () => {
     await pullAndMerge('user-1');
 
     expect(JSON.stringify(seeded._tables.settings[0].learned_by_deck)).toBe(first);
+  });
+});
+
+describe('offline edges', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    __resetSyncState();
+  });
+
+  // supabase-js does not throw offline: it resolves { data: null, error }.
+  // `data ?? []` turned that into "the server has nothing", and the progress
+  // flush re-queued the whole local history on top of it.
+  it('loadRemoteDaily answers null, not {}, when the read fails', async () => {
+    __setClientForTest({
+      from: () => ({ select: async () => ({ data: null, error: { message: 'Failed to fetch' } }) }),
+    });
+    expect(await loadRemoteDaily()).toBeNull();
+  });
+
+  // A network failure can also THROW (a fetch rejection the client does not
+  // wrap). That is the same unknown, and must answer the same null.
+  it('loadRemoteDaily answers null when the read throws', async () => {
+    __setClientForTest({
+      from: () => ({
+        select: async () => {
+          throw new TypeError('Failed to fetch');
+        },
+      }),
+    });
+    expect(await loadRemoteDaily()).toBeNull();
+  });
+
+  it('loadRemoteDaily answers the rows when the read succeeds', async () => {
+    __setClientForTest(makeFakeClient({ stats_daily: [{ day: DAY, counters: counters(2) }] }));
+    expect((await loadRemoteDaily())[DAY].total).toBe(2);
+  });
+
+  it('reconciles when the connection comes back', async () => {
+    __resetSyncState({ enabled: true });
+    const seeded = makeFakeClient();
+    __setClientForTest(seeded);
+    start('user-1');
+    await vi.waitFor(() => expect(seeded._calls.upserts.length).toBeGreaterThan(0));
+    seeded._calls.upserts = [];
+
+    window.dispatchEvent(new Event('online'));
+
+    await vi.waitFor(() => expect(seeded._calls.upserts.length).toBeGreaterThan(0));
+  });
+
+  // start() runs on every sign-in and stop() on every sign-out. A listener that
+  // start() stacked would reconcile twice per reconnect. After stop(), nothing
+  // may reconcile a signed-out session — held twice over: stop() detaches the
+  // listener AND clears activeUserId, which the handler checks, so this
+  // asserts the outcome rather than either mechanism alone.
+  it('reconciles once per reconnect across restarts, and never after stop()', async () => {
+    __resetSyncState({ enabled: true });
+    const seeded = makeFakeClient();
+    __setClientForTest(seeded);
+    const from = vi.spyOn(seeded, 'from');
+    const reconciles = () => from.mock.calls.filter(([t]) => t === 'srs_state').length;
+    const settled = () => vi.waitFor(() => expect(getSyncStatus().pending).toBe(false));
+
+    start('user-1');
+    start('user-1');
+    await settled();
+    from.mockClear();
+
+    window.dispatchEvent(new Event('online'));
+    await vi.waitFor(() => expect(reconciles()).toBeGreaterThan(0));
+    await settled();
+    expect(reconciles()).toBe(1);
+
+    stop();
+    from.mockClear();
+    window.dispatchEvent(new Event('online'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(reconciles()).toBe(0);
   });
 });

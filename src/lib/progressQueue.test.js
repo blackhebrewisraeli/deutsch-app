@@ -154,6 +154,34 @@ describe('flushNow', () => {
     vi.unstubAllGlobals();
   });
 
+  // Offline with a cached JWT: the stats_daily read fails, and a failed read
+  // is not an empty server. Treating it as {} re-queued the whole local
+  // history under fresh ids, which the RPC then counted a second time.
+  it('does not synthesise backlog when the remote read is unknown (null)', async () => {
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ daily: applyEvent({}, '2026-09-01', 'vocab', 'a1', 'correct', 0) })
+    );
+    enqueue(event());
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => ({}),
+      headers: { get: () => null },
+    });
+    vi.stubGlobal('fetch', fetchImpl);
+    __setFlushHooksForTest({
+      getAccessToken: async () => 'tok',
+      loadRemoteDaily: async () => null,
+    });
+    await flushNow();
+    // The queued event is idempotent and still goes; the history does not.
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body).id).toBe(ID);
+    expect(loadQueue()).toEqual([]);
+    vi.unstubAllGlobals();
+  });
+
   it('does not POST without a token', async () => {
     enqueue(event());
     const fetchImpl = vi.fn();

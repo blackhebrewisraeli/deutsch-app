@@ -80,15 +80,13 @@ import SearchModal from './components/social/SearchModal';
 import {
   useAuth,
   getAccessToken,
-  getSupabase,
   isAuthConfigured,
   mayHaveSession,
   signInWithGoogle,
   humanAuthError,
 } from './lib/auth';
 import { signOutAndReset } from './lib/clearUserState';
-import { SYNC_ENABLED, start, stop, markDirty } from './lib/sync';
-import { dailyFromRows } from './lib/sync/adapters';
+import { SYNC_ENABLED, start, stop, markDirty, loadRemoteDaily } from './lib/sync';
 import { startProgressFlush, stopProgressFlush, scheduleFlush } from './lib/progressQueue';
 import { setLevelBoostEnabled } from './lib/xpEntitlement';
 import { useSyncStatus } from './lib/useSyncStatus';
@@ -649,19 +647,7 @@ export default function App() {
       stopProgressFlush();
       return;
     }
-    startProgressFlush({
-      getAccessToken,
-      loadRemoteDaily: async () => {
-        try {
-          const c = await getSupabase();
-          if (!c) return {};
-          const { data } = await c.from('stats_daily').select();
-          return dailyFromRows(data ?? []);
-        } catch {
-          return {};
-        }
-      },
-    });
+    startProgressFlush({ getAccessToken, loadRemoteDaily });
     const onProgress = () => scheduleFlush(500);
     window.addEventListener('deutsch:progress', onProgress);
     return () => {
