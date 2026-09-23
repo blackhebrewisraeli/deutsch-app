@@ -128,7 +128,7 @@ describe('SettingsRoute', () => {
     await selectSection(u, 'Learning');
     await u.click(screen.getByRole('button', { name: /retake placement/i }));
     expect(onRetakePlacement).toHaveBeenCalledTimes(1);
-    expect(screen.getByText(/three vocab decks/i)).toBeInTheDocument();
+    expect(screen.getByText(/once you reach 500 XP/i)).toBeInTheDocument();
     expect(screen.getByText(/override classification/i)).toBeInTheDocument();
   });
 

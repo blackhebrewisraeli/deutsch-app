@@ -1044,13 +1044,54 @@ describe('entry gate', () => {
     expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
-  it('sends a first-time learner to placement instead of the shell', () => {
+  it('offers a first-time learner the test, already classified at A1', () => {
     authMock.configured = false;
     localStorage.removeItem('deutsch-level');
     render(<App />);
     expect(screen.queryByRole('navigation')).toBeNull();
     expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^start$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /skip for now — start at a1/i })).toBeInTheDocument();
+    // Classified the moment the test painted, so no exit can leave them unplaced.
+    expect(localStorage.getItem('deutsch-level')).toBe('a1');
+    expect(loadState()?.placement?.source).toBe('default');
+  });
+
+  it('skipping lands in the app at A1 and never shows the test again', async () => {
+    authMock.configured = false;
+    localStorage.removeItem('deutsch-level');
+    const first = render(<App />);
+    await userEvent.click(screen.getByRole('button', { name: /skip for now — start at a1/i }));
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(localStorage.getItem('deutsch-level')).toBe('a1');
+
+    // THE LOOP: the next load used to put them straight back into the test.
+    first.unmount();
+    render(<App />);
+    expect(screen.queryByRole('heading', { name: /find your level/i })).toBeNull();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+  });
+
+  it('abandoning the test (closed tab / reload) does not force it again', () => {
+    authMock.configured = false;
+    localStorage.removeItem('deutsch-level');
+    const first = render(<App />);
+    expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
+    // No click at all — the learner just leaves.
+    first.unmount();
+    render(<App />);
+    expect(screen.queryByRole('heading', { name: /find your level/i })).toBeNull();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+  });
+
+  it('does not classify a visitor who is still on the welcome gate', () => {
+    // They may pick "Sign in" next, and their account's real level must not be
+    // pre-empted by an A1 default written behind the gate.
+    authMock.status = 'anonymous';
+    authMock.mayHaveSession = false;
+    localStorage.removeItem('deutsch-level');
+    render(<App />);
+    expect(gate()).toBeInTheDocument();
     expect(localStorage.getItem('deutsch-level')).toBeNull();
   });
 
@@ -1222,17 +1263,17 @@ describe('entry gate', () => {
   });
 });
 
-describe('placement access after completed decks', () => {
-  const seedCompletedPresetDecks = (n) => {
-    const learnedWords = {};
-    Object.values(activePack.content.decks)
-      .slice(0, n)
-      .forEach((cards) => {
-        for (const card of cards) learnedWords[card.id] = true;
-      });
+describe('placement suggestion after 500 XP', () => {
+  // XP rides `bonusXp` on a PAST day so the fixture moves lifetime XP without
+  // touching today's goal, streak or the guest trial.
+  const seedXp = (xp) => {
     const current = loadState() ?? {};
-    localStorage.setItem('deutsch-app-state-v1', JSON.stringify({ ...current, learnedWords }));
+    localStorage.setItem(
+      'deutsch-app-state-v1',
+      JSON.stringify({ ...current, daily: { '2026-01-01': { byLevel: {}, bonusXp: xp } } })
+    );
   };
+  const invite = () => screen.queryByRole('region', { name: /ready to check your level/i });
 
   beforeEach(() => {
     Element.prototype.scrollIntoView = vi.fn();
@@ -1244,38 +1285,39 @@ describe('placement access after completed decks', () => {
     setViewportWidth(1280);
   });
 
-  it('does not invite a retake before three decks are finished', async () => {
-    seedCompletedPresetDecks(2);
+  it('does not suggest the test below 500 XP', async () => {
+    seedXp(499);
     renderPastEntry(<App />);
     await screen.findByRole('heading', { name: /guten tag/i });
-    expect(screen.queryByRole('region', { name: /ready to retake placement/i })).toBeNull();
+    expect(invite()).toBeNull();
   });
 
-  it('invites a retake on Home once three distinct decks are complete', async () => {
-    seedCompletedPresetDecks(3);
+  it('suggests the test on Home once the learner reaches 500 XP — without blocking it', async () => {
+    seedXp(500);
     renderPastEntry(<App />);
-    expect(
-      await screen.findByRole('region', { name: /ready to retake placement/i })
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: /ready to check your level/i })).toBeVisible();
+    // A suggestion, not a wall: the shell is still there and usable.
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /find your level/i })).toBeNull();
     expect(loadState()?.placementOffer?.shownAt).toEqual(expect.any(Number));
   });
 
-  it('does not spam the invite after dismiss, even with more completed decks', async () => {
-    seedCompletedPresetDecks(3);
+  it('does not come back after dismiss, even with more XP', async () => {
+    seedXp(500);
     const first = renderPastEntry(<App />);
     await userEvent.click(await screen.findByRole('button', { name: /not now/i }));
-    expect(screen.queryByRole('region', { name: /ready to retake placement/i })).toBeNull();
+    expect(invite()).toBeNull();
     expect(loadState()?.placementOffer?.dismissedAt).toEqual(expect.any(Number));
 
     first.unmount();
-    seedCompletedPresetDecks(4);
+    seedXp(5000);
     renderPastEntry(<App />);
     await screen.findByRole('heading', { name: /guten tag/i });
-    expect(screen.queryByRole('region', { name: /ready to retake placement/i })).toBeNull();
+    expect(invite()).toBeNull();
   });
 
-  it('still opens placement from Settings after the Home invite is dismissed', async () => {
-    seedCompletedPresetDecks(3);
+  it('still opens placement from Settings after the suggestion is dismissed', async () => {
+    seedXp(500);
     renderPastEntry(<App />);
     await userEvent.click(await screen.findByRole('button', { name: /not now/i }));
 
@@ -1288,12 +1330,16 @@ describe('placement access after completed decks', () => {
     expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
   });
 
-  it('opens placement from the Home invite', async () => {
-    seedCompletedPresetDecks(3);
+  it('opens placement from the suggestion, as a leavable retake', async () => {
+    seedXp(500);
     renderPastEntry(<App />);
-    await userEvent.click(await screen.findByRole('button', { name: /retake placement/i }));
+    await userEvent.click(await screen.findByRole('button', { name: /take the test/i }));
     expect(screen.getByRole('heading', { name: /find your level/i })).toBeInTheDocument();
     expect(loadState()?.placementOffer?.dismissedAt).toEqual(expect.any(Number));
+    // Leaving keeps the level they had.
+    await userEvent.click(screen.getByRole('button', { name: /keep my current level/i }));
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+    expect(localStorage.getItem('deutsch-level')).toBe('a1');
   });
 });
 
@@ -2858,6 +2904,29 @@ describe('placement gate while a signed-in level is still in flight', () => {
       syncMock.setStatus({ pending: false, lastSyncedAt: null, settled: true });
     });
     expect(placement()).toBeInTheDocument();
+  });
+
+  // The reported loop: an unclassified (e.g. test) account met the test on
+  // every login. Now it is offered once, skippable, and the skip sticks.
+  it('offers an unclassified account the test once, and a skip sticks across logins', async () => {
+    const user = userEvent.setup();
+    const first = render(<App />);
+    await act(async () => {
+      syncMock.setStatus({ pending: false, lastSyncedAt: Date.now(), settled: true });
+    });
+    expect(placement()).toBeInTheDocument();
+    expect(localStorage.getItem('deutsch-level')).toBe('a1');
+    await user.click(screen.getByRole('button', { name: /skip for now — start at a1/i }));
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
+
+    first.unmount();
+    syncMock.setStatus({ pending: true, lastSyncedAt: null, settled: false });
+    render(<App />);
+    await act(async () => {
+      syncMock.setStatus({ pending: false, lastSyncedAt: Date.now(), settled: true });
+    });
+    expect(placement()).toBeNull();
+    expect(screen.getByRole('navigation')).toBeInTheDocument();
   });
 
   it('never opens for a returning learner, reconcile or not', async () => {

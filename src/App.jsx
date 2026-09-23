@@ -5,6 +5,7 @@ import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
 import { readLevel, LEVEL_CHANGE_EVENT, hasStoredLevel } from './lib/levelPref';
 import { shouldOpenPlacement } from './lib/placementGate';
+import { applyDefaultPlacement } from './lib/placement';
 import { SessionGuardContext, useSessionGuardValue } from './lib/sessionGuard';
 import { getReviewItems, todayKey, TABS } from './lib/stats';
 import { trialStatus } from './lib/trial';
@@ -39,7 +40,7 @@ import AppFooter from './components/AppFooter';
 import AdminTab from './components/admin/AdminTab';
 import { deriveMissions } from './lib/missions';
 import { deriveQuests, questHistory } from './lib/quests';
-import { deckProgressFor, completedDeckCount } from './lib/deckProgress';
+import { deckProgressFor } from './lib/deckProgress';
 import {
   shouldStartPlacementOffer,
   readPlacementOffer,
@@ -676,9 +677,10 @@ export default function App() {
 
   // Onboarding + level
   const [level, setLevel] = useState(readLevel);
-  // First-time learners classify instead of freely picking. Returning learners
-  // with a stored CEFR code skip this; they retake from Settings / StatusChip
-  // or from the 3-deck Home invite.
+  // Placement is OPTIONAL. A first-time learner is offered it once — already
+  // default-classified at A1, so skipping or abandoning it still leaves a level
+  // behind. Anyone with a stored CEFR code never meets it unasked; they retake
+  // from Settings / StatusChip or from the 500 XP Home suggestion.
   //
   // TWO SOURCES, DELIBERATELY SEPARATE.
   //   `retakePlacement` — the learner ASKED. It outranks everything and is the
@@ -717,24 +719,35 @@ export default function App() {
       })
     );
   }, [authStatus, user?.id, syncStatus.settled, levelTick]);
-  const showPlacement = retakePlacement || autoPlacement;
+  // `firstRunPlacement` — the gate fired and the test has actually PAINTED, so
+  //     the learner has been default-classified (applyDefaultPlacement) and is
+  //     looking at an optional test. Sticky until they finish or skip: once the
+  //     default lands, `autoPlacement` goes false (they now HAVE a level), and
+  //     without this the screen would vanish out from under them.
+  const [firstRunPlacement, setFirstRunPlacement] = useState(false);
+  const showPlacement = retakePlacement || autoPlacement || firstRunPlacement;
   const closePlacement = useCallback(() => {
     setRetakePlacement(false);
     setAutoPlacement(false);
+    setFirstRunPlacement(false);
   }, []);
-  // One-shot Home invite after 3 completed preset decks. Session-visible
-  // until dismiss; `shownAt` on the blob stops it coming back next load.
+  // One-shot, dismissible Home invite once the learner has earned
+  // PLACEMENT_OFFER_XP. A suggestion, never a block. Session-visible until
+  // dismissed; `shownAt` on the blob (synced) stops it coming back next load.
   const [placementOfferVisible, setPlacementOfferVisible] = useState(false);
 
   useEffect(() => {
     if (showPlacement || !hasStoredLevel()) return;
-    const count = completedDeckCount(
-      deckProgressFor({ decks: PRESET_DECKS, learnedWords, learnedByDeck })
-    );
-    if (shouldStartPlacementOffer({ completedCount: count, offer: readPlacementOffer() })) {
+    // Empty local state is not absence: after a storage wipe `daily` and
+    // `placementOffer.shownAt` both come back on the first reconcile. Deciding
+    // before it lands would re-invite a learner who already dismissed this.
+    if (authStatus === 'loading') return;
+    if (authStatus === 'authenticated' && SYNC_ENABLED && !syncStatus.settled) return;
+    const xp = totalXp(loadState()?.daily ?? {});
+    if (shouldStartPlacementOffer({ xp, offer: readPlacementOffer() })) {
       setPlacementOfferVisible(true);
     }
-  }, [learnedWords, learnedByDeck, showPlacement]);
+  }, [game, showPlacement, authStatus, syncStatus.settled]);
 
   useEffect(() => {
     if (tab !== 'home' || !placementOfferVisible || showPlacement) return;
@@ -1114,6 +1127,23 @@ export default function App() {
   const showGate =
     !gateDismissed && isAuthConfigured() && (authStatus === 'anonymous' || sessionUnresolved);
 
+  // Default-classify at the moment the optional test first PAINTS — not when
+  // the gate decides. Waiting for the paint matters: a guest on the welcome
+  // gate who picks "Sign in" instead must not be stamped A1 before their own
+  // account's level has had a chance to arrive. From here on the learner has a
+  // level, so the gate can never fire for them again, whatever they do next.
+  const placementPainting =
+    autoPlacement &&
+    !retakePlacement &&
+    !showGate &&
+    legalRoute !== 'privacy' &&
+    legalRoute !== 'terms';
+  useEffect(() => {
+    if (!placementPainting) return;
+    applyDefaultPlacement();
+    setFirstRunPlacement(true);
+  }, [placementPainting]);
+
   if (legalRoute === 'privacy') return <PrivacyPolicy onBack={closeLegal} />;
   if (legalRoute === 'terms') return <TermsOfService onBack={closeLegal} />;
 
@@ -1137,7 +1167,7 @@ export default function App() {
         <PlacementTest
           onComplete={closePlacement}
           onCancel={closePlacement}
-          allowCancel={hasStoredLevel()}
+          firstRun={!retakePlacement}
         />
         {authOverlay}
       </>

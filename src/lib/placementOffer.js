@@ -1,15 +1,21 @@
-// One-shot invite to retake placement after N curated decks are completed.
-// PURE decision + blob persistence. No DOM. The CEFR write itself stays in
-// placement.js; this module only records whether the Home banner has been
-// shown or dismissed so it cannot nag every session.
+// One-shot invite to take (or retake) placement once a learner has earned
+// PLACEMENT_OFFER_XP. PURE decision + blob persistence. No DOM. The CEFR write
+// itself stays in placement.js; this module only records whether the Home
+// banner has been shown or dismissed so it cannot nag every session.
 //
-// Completed-deck arithmetic lives in deckProgress.js — this file does not
+// Why XP and not a first-run wall: placement is optional. A learner who skips
+// it starts at the default band, and by a few hundred XP they know whether that
+// band is too easy — which is exactly when a nudge is useful rather than in the
+// way. (This used to fire after 3 completed decks; XP counts every tab, where
+// decks counted only Vocab.)
+//
+// XP arithmetic lives in gamification.js (totalXp) — this file does not
 // re-derive it. Storage is additive on deutsch-app-state-v1 (no new key).
 
 import { loadState, saveState } from './storage.js';
 import { stampSettings } from './settingsStamp.js';
 
-export const PLACEMENT_OFFER_THRESHOLD = 3;
+export const PLACEMENT_OFFER_XP = 500;
 
 /**
  * @param {unknown} offer
@@ -25,17 +31,15 @@ export function normalizePlacementOffer(offer) {
 }
 
 /**
- * Start showing the Home banner? True only the first time the count crosses
- * the threshold. `shownAt` or `dismissedAt` means the invite has already
- * been used for this profile — Settings still opens placement.
+ * Start showing the Home banner? True only the first time lifetime XP reaches
+ * the threshold. `shownAt` or `dismissedAt` means the invite has already been
+ * used for this profile — Settings still opens placement.
  *
- * @param {{ completedCount?: number, offer?: object | null }} args
+ * @param {{ xp?: number, offer?: object | null }} args
  * @returns {boolean}
  */
-export function shouldStartPlacementOffer({ completedCount = 0, offer = null } = {}) {
-  if (!Number.isFinite(completedCount) || completedCount < PLACEMENT_OFFER_THRESHOLD) {
-    return false;
-  }
+export function shouldStartPlacementOffer({ xp = 0, offer = null } = {}) {
+  if (!Number.isFinite(xp) || xp < PLACEMENT_OFFER_XP) return false;
   const record = normalizePlacementOffer(offer);
   if (record?.shownAt || record?.dismissedAt) return false;
   return true;
@@ -57,7 +61,7 @@ export function readPlacementOffer() {
 export function writePlacementOffer(patch, { now = Date.now() } = {}) {
   const current = loadState() ?? {};
   const next = {
-    milestone: PLACEMENT_OFFER_THRESHOLD,
+    milestone: PLACEMENT_OFFER_XP,
     ...normalizePlacementOffer(current.placementOffer),
     ...normalizePlacementOffer(patch),
   };

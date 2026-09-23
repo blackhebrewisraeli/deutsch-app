@@ -20,6 +20,7 @@ import { replayTutorial } from '../../lib/tutorialPref';
 import { userTierOf } from '../../lib/ai-routing/preference.js';
 import { getThemeModeForUI, setThemePreference } from '../../lib/themeMode';
 import { writeLevel, LEVEL_NAMES, LEVEL_MODES } from '../../lib/levelPref';
+import { PLACEMENT_OFFER_XP } from '../../lib/placementOffer';
 import { LEVEL_MULTIPLIERS } from '../../lib/gameConfig';
 
 const SETTINGS_SECTIONS = [
@@ -179,8 +180,8 @@ export default function SettingsRoute({
                     Retake placement
                   </Button>
                   <Hint>
-                    The learner path for changing practice level. Also offered on Home after you
-                    finish three vocab decks.
+                    The learner path for changing practice level. Also suggested on Home once you
+                    reach {PLACEMENT_OFFER_XP} XP.
                   </Hint>
                   <Body size="sm" tone="soft" style={{ overflowWrap: 'anywhere' }}>
                     <strong>{LEVEL_NAMES[level] ?? ''}</strong>

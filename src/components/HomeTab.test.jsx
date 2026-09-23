@@ -126,12 +126,12 @@ describe('HomeTab', () => {
     expect(screen.getByText(/alles erledigt/i)).toBeInTheDocument();
   });
 
-  it('shows the placement retake invite when asked, and hides it otherwise', async () => {
+  it('shows the placement suggestion when asked, and hides it otherwise', async () => {
     const { default: userEvent } = await import('@testing-library/user-event');
     const onRetakePlacement = vi.fn();
     const onDismissPlacementOffer = vi.fn();
     const { rerender } = render(<HomeTab {...hubProps} />);
-    expect(screen.queryByRole('region', { name: /ready to retake placement/i })).toBeNull();
+    expect(screen.queryByRole('region', { name: /ready to check your level/i })).toBeNull();
 
     rerender(
       <HomeTab
@@ -141,7 +141,7 @@ describe('HomeTab', () => {
         onDismissPlacementOffer={onDismissPlacementOffer}
       />
     );
-    await userEvent.click(screen.getByRole('button', { name: /retake placement/i }));
+    await userEvent.click(screen.getByRole('button', { name: /take the test/i }));
     expect(onRetakePlacement).toHaveBeenCalledTimes(1);
   });
 

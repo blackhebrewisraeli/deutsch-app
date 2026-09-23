@@ -63,17 +63,40 @@ describe('PlacementTest', () => {
     expect(container.firstChild.style.background).not.toBe('var(--c-fg)');
   });
 
-  it('does not offer a cancel path on the first-time run', () => {
-    render(<PlacementTest onComplete={() => {}} />);
-    expect(screen.queryByRole('button', { name: /keep my current level/i })).toBeNull();
+  // Placement is optional. The first-time run used to have NO exit, which is
+  // what made it a wall.
+  it('offers a skip on the first-time run, naming the default level', async () => {
+    const onCancel = vi.fn();
+    render(<PlacementTest onComplete={() => {}} onCancel={onCancel} firstRun />);
+    await userEvent.click(screen.getByRole('button', { name: /skip for now — start at a1/i }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
+    // Skipping writes nothing itself: the caller already default-classified.
+    expect(hasStoredLevel()).toBe(false);
+  });
+
+  it('lets a first-time learner leave halfway through the questions', async () => {
+    const onCancel = vi.fn();
+    render(<PlacementTest onComplete={() => {}} onCancel={onCancel} firstRun />);
+    await userEvent.click(screen.getByRole('button', { name: /^start$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /skip the test/i }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
   it('lets a retake cancel without writing a level', async () => {
     const onCancel = vi.fn();
-    render(<PlacementTest onComplete={() => {}} onCancel={onCancel} allowCancel />);
+    render(<PlacementTest onComplete={() => {}} onCancel={onCancel} />);
+    expect(screen.queryByRole('button', { name: /skip for now/i })).toBeNull();
     await userEvent.click(screen.getByRole('button', { name: /keep my current level/i }));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(hasStoredLevel()).toBe(false);
+  });
+
+  it('lets a retake stop mid-test and keep the level', async () => {
+    const onCancel = vi.fn();
+    render(<PlacementTest onComplete={() => {}} onCancel={onCancel} />);
+    await userEvent.click(screen.getByRole('button', { name: /^start$/i }));
+    await userEvent.click(screen.getByRole('button', { name: /stop and keep my level/i }));
+    expect(onCancel).toHaveBeenCalledTimes(1);
   });
 
   it('starts on an A1 tile item from the pack, not a free picker', async () => {

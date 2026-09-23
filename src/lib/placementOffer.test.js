@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { deckProgressFor, isDeckComplete, completedDeckCount } from './deckProgress.js';
 import {
-  PLACEMENT_OFFER_THRESHOLD,
+  PLACEMENT_OFFER_XP,
   shouldStartPlacementOffer,
   readPlacementOffer,
   writePlacementOffer,
@@ -48,44 +48,49 @@ describe('isDeckComplete / completedDeckCount', () => {
 });
 
 describe('shouldStartPlacementOffer', () => {
-  it('starts only at the 3-deck threshold', () => {
-    expect(PLACEMENT_OFFER_THRESHOLD).toBe(3);
-    expect(shouldStartPlacementOffer({ completedCount: 2 })).toBe(false);
-    expect(shouldStartPlacementOffer({ completedCount: 3 })).toBe(true);
-    expect(shouldStartPlacementOffer({ completedCount: 4 })).toBe(true);
+  it('starts only at the 500 XP threshold', () => {
+    expect(PLACEMENT_OFFER_XP).toBe(500);
+    expect(shouldStartPlacementOffer({ xp: 0 })).toBe(false);
+    expect(shouldStartPlacementOffer({ xp: 499 })).toBe(false);
+    expect(shouldStartPlacementOffer({ xp: 500 })).toBe(true);
+    expect(shouldStartPlacementOffer({ xp: 2000 })).toBe(true);
+  });
+
+  it('does not start with no XP argument at all', () => {
+    expect(shouldStartPlacementOffer()).toBe(false);
   });
 
   it('does not start again after the banner was shown or dismissed', () => {
-    expect(shouldStartPlacementOffer({ completedCount: 3, offer: { shownAt: 1 } })).toBe(false);
-    expect(shouldStartPlacementOffer({ completedCount: 5, offer: { dismissedAt: 1 } })).toBe(false);
-    expect(
-      shouldStartPlacementOffer({ completedCount: 4, offer: { shownAt: 1, dismissedAt: 2 } })
-    ).toBe(false);
+    expect(shouldStartPlacementOffer({ xp: 500, offer: { shownAt: 1 } })).toBe(false);
+    expect(shouldStartPlacementOffer({ xp: 900, offer: { dismissedAt: 1 } })).toBe(false);
+    expect(shouldStartPlacementOffer({ xp: 600, offer: { shownAt: 1, dismissedAt: 2 } })).toBe(
+      false
+    );
   });
 
   it('ignores junk offer blobs rather than throwing', () => {
-    expect(shouldStartPlacementOffer({ completedCount: 3, offer: 'nope' })).toBe(true);
-    expect(shouldStartPlacementOffer({ completedCount: 3, offer: [] })).toBe(true);
-    expect(shouldStartPlacementOffer({ completedCount: Number.NaN })).toBe(false);
+    expect(shouldStartPlacementOffer({ xp: 500, offer: 'nope' })).toBe(true);
+    expect(shouldStartPlacementOffer({ xp: 500, offer: [] })).toBe(true);
+    expect(shouldStartPlacementOffer({ xp: Number.NaN })).toBe(false);
   });
 });
 
 describe('placementOffer persistence', () => {
   it('writes shownAt once and does not clobber it on a second record', () => {
     recordPlacementOfferShown({ now: 100 });
-    expect(readPlacementOffer()).toMatchObject({ milestone: 3, shownAt: 100 });
+    expect(readPlacementOffer()).toMatchObject({ milestone: 500, shownAt: 100 });
     recordPlacementOfferShown({ now: 200 });
     expect(readPlacementOffer().shownAt).toBe(100);
     expect(loadState().placementOffer.shownAt).toBe(100);
   });
 
-  it('records dismiss separately so a later deck cannot re-open the invite', () => {
+  it('records dismiss separately so more XP cannot re-open the invite', () => {
     recordPlacementOfferShown({ now: 100 });
     recordPlacementOfferDismissed({ now: 150 });
     const offer = readPlacementOffer();
     expect(offer.shownAt).toBe(100);
     expect(offer.dismissedAt).toBe(150);
-    expect(shouldStartPlacementOffer({ completedCount: 4, offer })).toBe(false);
+    expect(shouldStartPlacementOffer({ xp: 600, offer })).toBe(false);
   });
 
   it('merges onto the existing blob instead of replacing it', () => {
