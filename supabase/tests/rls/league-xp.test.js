@@ -158,12 +158,4 @@ describe('apply_progress_event maintains league weekly_xp', () => {
     // here; it must not leak into the current week's standing.
     expect(await weeklyXpOf(A.id)).toBe(31);
   });
-
-  it('is a no-op for a user with no membership at all', async () => {
-    const C = await createSignedInUser('league-xp-c');
-    const { error } = await admin.rpc('apply_progress_event', event({ p_user_id: C.id }));
-    expect(error).toBeNull();
-    await admin.from('progress_events_seen').delete().eq('user_id', C.id);
-    await admin.from('stats_daily').delete().eq('user_id', C.id);
-  });
 });

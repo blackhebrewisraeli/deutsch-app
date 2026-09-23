@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 import { XP_PER_VERDICT } from '../../src/lib/gameConfig.js';
+import { LEAGUE_SIZE, TIERS } from './leagueLogic.js';
 
 // The XP formula now exists TWICE: xpForDay in src/lib/xpCore.js, and
 // progress_day_xp in the L1 migration. SQL cannot import gameConfig, so the
@@ -18,6 +19,19 @@ import { XP_PER_VERDICT } from '../../src/lib/gameConfig.js';
 const MIGRATION = 'supabase/migrations/20260905203500_league_xp_from_progress_event.sql';
 
 const sql = readFileSync(MIGRATION, 'utf8');
+
+// CREATE OR REPLACE means the NEWEST migration defining a function is the one
+// the database runs, so guards on a function's body must read that file.
+const DIR = 'supabase/migrations';
+const latestDefinition = (fn) => {
+  const file = readdirSync(DIR)
+    .sort()
+    .filter((f) => readFileSync(`${DIR}/${f}`, 'utf8').includes(`function public.${fn}(`))
+    .at(-1);
+  return readFileSync(`${DIR}/${file}`, 'utf8');
+};
+const eventSql = latestDefinition('apply_progress_event');
+const bucketSql = latestDefinition('assign_user_to_bucket');
 
 // The three weighted terms inside progress_day_xp, e.g.
 //   coalesce((lv.value->>'correct')::integer, 0) * 10
@@ -55,14 +69,14 @@ describe('the SQL XP formula matches the JS one', () => {
   it('keys the league week off the event day, not the delivery time', () => {
     // now() would attribute a queued offline event to the week it was
     // delivered rather than the week it was earned.
-    expect(sql).toMatch(/v_period\s*:=\s*date_trunc\('week',\s*p_day\)::date/);
-    expect(sql).not.toMatch(/date_trunc\('week',\s*now\(\)\)/);
+    expect(eventSql).toMatch(/v_period\s*:=\s*date_trunc\('week',\s*p_day\)::date/);
+    expect(eventSql).not.toMatch(/v_period\s*:=\s*date_trunc\('week',\s*now\(\)/);
   });
 
   it('keeps the RPC at eight arguments', () => {
     // E4's outage was a deployed endpoint calling an 8-arg RPC against a 7-arg
     // database. A signature change here must be a deliberate, separate act.
-    const signature = sql.match(
+    const signature = eventSql.match(
       /create or replace function public\.apply_progress_event\(([\s\S]*?)\)\s*returns/
     );
     expect(signature).not.toBeNull();
@@ -71,5 +85,21 @@ describe('the SQL XP formula matches the JS one', () => {
       .map((l) => l.trim())
       .filter((l) => l.startsWith('p_'));
     expect(args).toHaveLength(8);
+  });
+});
+
+describe('the SQL cohort rules match the JS ones', () => {
+  it('caps a cohort at LEAGUE_SIZE', () => {
+    // The leaderboard's promotion/relegation zones scale with LEAGUE_SIZE
+    // (zoneCounts); a cohort filled to a different cap would misplace them.
+    const cap = bucketSql.match(/where m\.league_id = l\.id\)\s*<\s*(\d+)/);
+    expect(cap, 'no cohort cap found in assign_user_to_bucket').not.toBeNull();
+    expect(Number(cap[1])).toBe(LEAGUE_SIZE);
+  });
+
+  it('clamps the tier to the same ladder as nextTier', () => {
+    const clamp = bucketSql.match(/greatest\((\d+),\s*least\((\d+),/);
+    expect(clamp, 'no tier clamp found in assign_user_to_bucket').not.toBeNull();
+    expect([Number(clamp[1]), Number(clamp[2])]).toEqual([TIERS.MIN, TIERS.MAX]);
   });
 });

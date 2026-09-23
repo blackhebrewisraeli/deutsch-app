@@ -146,6 +146,12 @@ function makeDb(state) {
 
   return {
     from: vi.fn(chain),
+    rpc: vi.fn((fn, args) => {
+      writes.push({ table: fn, op: 'rpc', payload: args });
+      return Promise.resolve(
+        state.rpcError ? { data: null, error: state.rpcError } : { data: {}, error: null }
+      );
+    }),
     auth: {
       admin: {
         getUserById: vi
@@ -329,38 +335,22 @@ describe('god mode — XP', () => {
 
 describe('god mode — league placement', () => {
   const post = (body) => req({ method: 'POST', body: { day: DAY, ...body } });
+  const placement = () => writeTo('assign_user_to_bucket', 'rpc');
 
-  it('moves the member into an open cohort at the target tier, carrying their XP', async () => {
+  // Cohort filling, the tier pin and the XP carry-over are SQL
+  // (assign_user_to_bucket) and are proven against a real Postgres in
+  // supabase/tests/rls/league-bucket.test.js. Here: the handler's own logic.
+  it('removes the old membership, then places the user at the pinned tier', async () => {
     const res = createRes();
     await leagueHandler(post({ userId: TARGET, tier: 3 }), res);
     expect(res.statusCode).toBe(200);
     expect(res.body.moved).toBe(true);
 
-    expect(writeTo('league_members', 'delete').filters).toMatchObject({
-      user_id: TARGET,
-      league_id: LEAGUE,
-    });
-    expect(writeTo('league_members', 'insert').payload).toMatchObject({
-      league_id: OTHER_LEAGUE,
-      user_id: TARGET,
-      handle: 'target',
-      weekly_xp: 30,
-      period_start: PERIOD,
-    });
-    // An open cohort existed, so no new league was opened.
-    expect(writeTo('leagues', 'insert')).toBeUndefined();
-  });
-
-  it('opens a league when no cohort at that tier has room', async () => {
-    const state = DEFAULT_STATE();
-    state.leagues = [
-      { id: 'full-1', tier: 4, period_start: PERIOD, league_members: [{ count: 25 }] },
-    ];
-    serviceClient.mockReturnValue(makeDb(state));
-    const res = createRes();
-    await leagueHandler(post({ userId: TARGET, tier: 4 }), res);
-    expect(writeTo('leagues', 'insert').payload).toEqual({ tier: 4, period_start: PERIOD });
-    expect(writeTo('league_members', 'insert').payload.league_id).toBe('league-new');
+    const del = writeTo('league_members', 'delete');
+    expect(del.filters).toMatchObject({ user_id: TARGET, league_id: LEAGUE });
+    expect(placement().payload).toEqual({ p_user_id: TARGET, p_period: PERIOD, p_tier: 3 });
+    // The unique (user_id, period_start) index means the delete must land first.
+    expect(writes.indexOf(del)).toBeLessThan(writes.indexOf(placement()));
   });
 
   it('refuses to rewrite a settled week', async () => {
@@ -380,7 +370,7 @@ describe('god mode — league placement', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.moved).toBe(false);
     expect(writeTo('league_members', 'delete')).toBeUndefined();
-    expect(writeTo('league_members', 'insert')).toBeUndefined();
+    expect(placement()).toBeUndefined();
   });
 
   it('rejects a tier off the ladder', async () => {
@@ -391,26 +381,20 @@ describe('god mode — league placement', () => {
     }
   });
 
-  it('refuses a user with no handle rather than minting a second one', async () => {
-    serviceClient.mockReturnValue(
-      makeDb({ ...DEFAULT_STATE(), league_members: null, profiles: { handle: null } })
-    );
-    const res = createRes();
-    await leagueHandler(post({ userId: TARGET, tier: 2 }), res);
-    expect(res.statusCode).toBe(400);
-    expect(res.body.error.message).toMatch(/handle/i);
-  });
-
-  it('creates the membership for a user who is not in a league yet', async () => {
+  it('places a user who is not in a league yet, with nothing to delete', async () => {
     serviceClient.mockReturnValue(makeDb({ ...DEFAULT_STATE(), league_members: null }));
     const res = createRes();
     await leagueHandler(post({ userId: TARGET, tier: 3 }), res);
     expect(res.statusCode).toBe(200);
     expect(writeTo('league_members', 'delete')).toBeUndefined();
-    expect(writeTo('league_members', 'insert').payload).toMatchObject({
-      league_id: OTHER_LEAGUE,
-      weekly_xp: 0,
-    });
+    expect(placement().payload).toEqual({ p_user_id: TARGET, p_period: PERIOD, p_tier: 3 });
+  });
+
+  it('fails the request when placement fails', async () => {
+    serviceClient.mockReturnValue(makeDb({ ...DEFAULT_STATE(), rpcError: { message: 'boom' } }));
+    const res = createRes();
+    await leagueHandler(post({ userId: TARGET, tier: 3 }), res);
+    expect(res.statusCode).toBe(500);
   });
 });
 
