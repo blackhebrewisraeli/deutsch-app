@@ -94,6 +94,7 @@ describe('server-only tables: catalog (advisor 0008 hygiene)', () => {
       'profile_follows.no client access',
       'progress_events_seen.no client access',
       'rate_limits.no client access',
+      'token_ledger.no client access',
     ]);
     for (const p of policies) {
       expect(p.cmd, `${p.tablename} cmd`).toBe('ALL');
