@@ -2,8 +2,9 @@ import { describe, it, expect } from 'vitest';
 import { execFileSync } from 'node:child_process';
 import { adminClient } from './helpers.js';
 
-// Catalog + service-role check for 20260918213000 and 20260921210000:
-// rate_limits, progress_events_seen and profile_follows stay RLS-on,
+// Catalog + service-role check for 20260918213000, 20260921210000 and
+// 20260923120000: rate_limits, progress_events_seen, profile_follows and
+// token_ledger stay RLS-on,
 // server-only. Deny-all policies for anon/authenticated silence advisor 0008
 // without granting Data API access. service_role keeps BYPASSRLS + the DML it
 // actually uses, so the existing RPCs, admin cleanup and the profile
@@ -15,7 +16,7 @@ import { adminClient } from './helpers.js';
 
 const DB_URL = process.env.DB_URL || 'postgresql://postgres:postgres@127.0.0.1:54322/postgres';
 
-const TABLES = ['rate_limits', 'progress_events_seen', 'profile_follows'];
+const TABLES = ['rate_limits', 'progress_events_seen', 'profile_follows', 'token_ledger'];
 const CLIENT_ROLES = ['anon', 'authenticated'];
 const DML = ['SELECT', 'INSERT', 'UPDATE', 'DELETE'];
 
@@ -28,6 +29,8 @@ const SERVICE_ROLE_DML = {
   rate_limits: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
   progress_events_seen: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
   profile_follows: ['SELECT', 'INSERT', 'DELETE'],
+  // 20260923120000 grants all; the award/spend RPCs run as the definer.
+  token_ledger: ['SELECT', 'INSERT', 'UPDATE', 'DELETE'],
 };
 
 function sql(q) {

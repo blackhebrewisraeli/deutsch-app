@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, act } from '@testing-library/react';
+import { render, screen, act, within } from '@testing-library/react';
 
 // The standings table fetches on its own and is covered by its own suite; this
 // page only has to PLACE it. Stubbing it keeps these assertions about layout
@@ -109,6 +109,17 @@ describe('UserProfile — the consolidated profile page', () => {
   // the three that remain, so on a wide profile these three small stats were
   // measured at 317px EACH inside a 976px column (424px at 1600px). The cap is
   // what stops a "9d" streak occupying a 424px card.
+  it('shows the token balance only once the server has answered', async () => {
+    const { rerender } = render(<UserProfile user={USER} local={local} tokens={null} />);
+    await screen.findByRole('heading', { name: 'Sam Vimes' });
+    expect(within(screen.getByTestId('profile-metrics')).queryByText('Tokens')).toBeNull();
+
+    rerender(<UserProfile user={USER} local={local} tokens={5010} />);
+    const metrics = screen.getByTestId('profile-metrics');
+    expect(within(metrics).getByText('Tokens')).toBeInTheDocument();
+    expect(within(metrics).getByText('5,010')).toBeInTheDocument();
+  });
+
   it('caps the metrics band so three small stats cannot stretch across the card', async () => {
     render(<UserProfile user={USER} local={local} />);
     await screen.findByRole('heading', { name: 'Sam Vimes' });

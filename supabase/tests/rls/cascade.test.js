@@ -30,6 +30,7 @@ const USER_OWNED = [
   'league_members',
   'progress_events_seen',
   'feedback',
+  'token_ledger',
 ];
 
 let admin;
@@ -76,6 +77,9 @@ beforeAll(async () => {
       category: 'ui',
       message: 'cascade probe',
     }),
+    admin
+      .from('token_ledger')
+      .insert({ user_id: userId, reason: 'daily_quest', idem_key: 'cascade-probe', delta: 10 }),
   ];
   for (const q of seed) {
     const { error } = await q;

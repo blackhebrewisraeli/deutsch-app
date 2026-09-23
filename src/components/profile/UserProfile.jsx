@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Flame, Sparkles, GraduationCap } from 'lucide-react';
+import { Coins, Flame, Sparkles, GraduationCap } from 'lucide-react';
 import {
   BORDER,
   COLORS,
@@ -165,6 +165,7 @@ function Metric({ icon: Icon, label, value }) {
 export default function UserProfile({
   user,
   profile: ownProfile = null,
+  tokens = null,
   local = {},
   onSignIn,
   onSelectUser,
@@ -288,6 +289,11 @@ export default function UserProfile({
       <Metric icon={Sparkles} label="XP" value={local.xp ?? profile?.total_xp ?? 0} />
       <Metric icon={GraduationCap} label="Level" value={(local.level ?? 'a1').toUpperCase()} />
       <Metric icon={Flame} label="Streak" value={`${local.streak ?? 0}d`} />
+      {/* Only once the server has answered: null means signed out, no
+          backend, or not migrated yet — never render a guessed balance. */}
+      {typeof tokens === 'number' && (
+        <Metric icon={Coins} label="Tokens" value={tokens.toLocaleString('en-US')} />
+      )}
     </div>
   );
 

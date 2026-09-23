@@ -62,6 +62,7 @@ import { useAdminSession } from './lib/useAdminSession.js';
 // and reload-safe; the separate seventh nav slot is reserved for verified admins.
 const SETTINGS_HASH = '#/settings';
 import { fetchMyProfile } from './lib/profile';
+import { useTokenBalance } from './lib/useTokenBalance';
 import ChatTab from './components/ChatTab';
 import AlphabetTab from './components/AlphabetTab';
 import VocabTab from './components/VocabTab';
@@ -1068,6 +1069,8 @@ export default function App() {
     todayKey: todayKey(),
     daily: liveState.daily,
   });
+  // Server-held balance; each completed quest pays once (see useTokenBalance).
+  const tokens = useTokenBalance({ userId: user?.id, quests, todayKey: todayKey() });
 
   const settingsPanel = (
     <SettingsRoute
@@ -1579,6 +1582,7 @@ export default function App() {
               onReview={handleReview}
               user={user}
               profile={profile}
+              tokens={tokens}
               onSignIn={requestSignIn}
               view={profileView}
               onViewChange={handleProfileView}
