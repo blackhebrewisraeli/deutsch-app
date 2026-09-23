@@ -9,7 +9,9 @@ import {
 } from '../../lib/theme.js';
 import { tierName } from '../../lib/leagueTier.js';
 import { ACHIEVEMENTS } from '../../lib/gamification';
+import { Lock } from 'lucide-react';
 import Avatar from '../ui/Avatar';
+import StatusNote from '../ui/StatusNote';
 import { profileName } from '../../lib/profile.js';
 
 // The Learning Passport — everything inside ProfileCard's dialog chrome.
@@ -64,6 +66,10 @@ export default function PassportBody({ profile, userId, isSelf = false }) {
   const badges = (profile.achievements ?? []).map((id) => BADGES.get(id)).filter(Boolean);
   const name = profileName(profile);
   const showHandle = Boolean(profile.handle) && name !== profile.handle;
+  // A private learner's passport arrives with name, handle and avatar only
+  // (api/v1/league/profile.js). Saying so beats drawing the missing metrics as
+  // zeros, which would be a false claim about them. The owner sees it all.
+  const locked = Boolean(profile.is_private) && !isSelf;
 
   return (
     <div>
@@ -94,10 +100,12 @@ export default function PassportBody({ profile, userId, isSelf = false }) {
               @{profile.handle}
             </div>
           )}
-          <div style={{ ...labelStyle, textTransform: 'none' }}>
-            {tierName(profile.tier)}
-            {profile.join_year ? ` · seit ${profile.join_year}` : ''}
-          </div>
+          {!locked && (
+            <div style={{ ...labelStyle, textTransform: 'none' }}>
+              {tierName(profile.tier)}
+              {profile.join_year ? ` · seit ${profile.join_year}` : ''}
+            </div>
+          )}
           {isSelf && (
             <div
               // A slow accent glow, defined in injectGlobalStyles. It is the
@@ -134,94 +142,102 @@ export default function PassportBody({ profile, userId, isSelf = false }) {
         </div>
       </div>
 
-      <div
-        style={{
-          display: 'grid',
-          // Three columns that can each shrink to nothing rather than pushing
-          // the card wide; auto-fit keeps them on one row when there is room.
-          gridTemplateColumns: 'repeat(auto-fit, minmax(0, 1fr))',
-          gap: SPACE[3],
-          marginTop: SPACE[5],
-          paddingTop: SPACE[4],
-          borderTop: `1px solid ${COLORS.border}`,
-        }}
-      >
-        <Stat label="XP" value={profile.total_xp ?? 0} />
-        <Stat label="Streak" value={`${profile.longest_streak ?? 0}d`} />
-        <Stat label="Ligasiege" value={profile.league_wins ?? 0} />
-      </div>
+      {locked ? (
+        <StatusNote icon={Lock} style={{ marginTop: SPACE[5] }}>
+          This profile is private.
+        </StatusNote>
+      ) : (
+        <>
+          <div
+            style={{
+              display: 'grid',
+              // Three columns that can each shrink to nothing rather than pushing
+              // the card wide; auto-fit keeps them on one row when there is room.
+              gridTemplateColumns: 'repeat(auto-fit, minmax(0, 1fr))',
+              gap: SPACE[3],
+              marginTop: SPACE[5],
+              paddingTop: SPACE[4],
+              borderTop: `1px solid ${COLORS.border}`,
+            }}
+          >
+            <Stat label="XP" value={profile.total_xp ?? 0} />
+            <Stat label="Streak" value={`${profile.longest_streak ?? 0}d`} />
+            <Stat label="Ligasiege" value={profile.league_wins ?? 0} />
+          </div>
 
-      <div
-        style={{
-          marginTop: SPACE[5],
-          paddingTop: SPACE[4],
-          borderTop: `1px solid ${COLORS.border}`,
-        }}
-      >
-        <div style={{ ...labelStyle, marginBottom: SPACE[2] }}>
-          Abzeichen {badges.length > 0 ? `· ${badges.length}` : ''}
-        </div>
-        {badges.length === 0 ? (
-          <p
+          <div
             style={{
-              margin: 0,
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              color: COLORS.mute,
+              marginTop: SPACE[5],
+              paddingTop: SPACE[4],
+              borderTop: `1px solid ${COLORS.border}`,
             }}
           >
-            {isSelf ? 'Noch keine — üben lohnt sich.' : 'Noch keine Abzeichen.'}
-          </p>
-        ) : (
-          <ul
-            style={{
-              listStyle: 'none',
-              margin: 0,
-              padding: 0,
-              display: 'flex',
-              flexWrap: 'wrap',
-              gap: SPACE[2],
-            }}
-          >
-            {badges.map((b) => (
-              <li
-                key={b.id}
-                data-badge={b.id}
-                // The name is the accessible text; the emoji is decoration
-                // beside it, so it must not be announced twice.
-                //
-                // badge-chip is a hover lift, gated on a fine pointer by the
-                // global sheet — a phone would otherwise latch the lifted
-                // state on tap and keep it. Deliberately quieter than a
-                // button's hover: no pointer cursor and no colour change,
-                // because a chip that looks pressable and does nothing when
-                // pressed is a worse bargain than one that never invited it.
-                //
-                // The rule only moves and shadows the chip. `border` below is
-                // an inline shorthand and would beat any border declaration
-                // the sheet tried to make, so the hover deliberately does not
-                // reach for one.
-                className="badge-chip"
+            <div style={{ ...labelStyle, marginBottom: SPACE[2] }}>
+              Abzeichen {badges.length > 0 ? `· ${badges.length}` : ''}
+            </div>
+            {badges.length === 0 ? (
+              <p
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: SPACE[1],
-                  background: COLORS.surface2,
-                  border: `1px solid ${COLORS.border}`,
-                  borderRadius: RADIUS.pill,
-                  padding: `${SPACE[1]}px ${SPACE[2]}px`,
+                  margin: 0,
                   fontFamily: FONTS.mono,
                   fontSize: FONT_SIZE.tag,
-                  color: COLORS.ink,
+                  color: COLORS.mute,
                 }}
               >
-                <span aria-hidden="true">{b.icon}</span>
-                {b.name}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+                {isSelf ? 'Noch keine — üben lohnt sich.' : 'Noch keine Abzeichen.'}
+              </p>
+            ) : (
+              <ul
+                style={{
+                  listStyle: 'none',
+                  margin: 0,
+                  padding: 0,
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: SPACE[2],
+                }}
+              >
+                {badges.map((b) => (
+                  <li
+                    key={b.id}
+                    data-badge={b.id}
+                    // The name is the accessible text; the emoji is decoration
+                    // beside it, so it must not be announced twice.
+                    //
+                    // badge-chip is a hover lift, gated on a fine pointer by the
+                    // global sheet — a phone would otherwise latch the lifted
+                    // state on tap and keep it. Deliberately quieter than a
+                    // button's hover: no pointer cursor and no colour change,
+                    // because a chip that looks pressable and does nothing when
+                    // pressed is a worse bargain than one that never invited it.
+                    //
+                    // The rule only moves and shadows the chip. `border` below is
+                    // an inline shorthand and would beat any border declaration
+                    // the sheet tried to make, so the hover deliberately does not
+                    // reach for one.
+                    className="badge-chip"
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: SPACE[1],
+                      background: COLORS.surface2,
+                      border: `1px solid ${COLORS.border}`,
+                      borderRadius: RADIUS.pill,
+                      padding: `${SPACE[1]}px ${SPACE[2]}px`,
+                      fontFamily: FONTS.mono,
+                      fontSize: FONT_SIZE.tag,
+                      color: COLORS.ink,
+                    }}
+                  >
+                    <span aria-hidden="true">{b.icon}</span>
+                    {b.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

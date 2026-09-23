@@ -252,6 +252,21 @@ describe('GET — search', () => {
     expect(search.filters.limit).toBe(SEARCH_LIMIT);
   });
 
+  // A private profile is hidden from Find People (profiles.is_private,
+  // 20260924120000). The filter rides the same query as the match, so a
+  // private learner is never fetched, not fetched-then-dropped.
+  it('never returns a private profile', async () => {
+    const db = mockDb();
+    serviceClient.mockReturnValue(db);
+    searchRows = [];
+    await searchHandler(req('GET', { query: { q: 'sam' } }), createRes());
+
+    const search = db.from.mock.results
+      .map((r) => r.value)
+      .find((b) => b.filters['neq:user_id'] !== undefined);
+    expect(search.filters['eq:is_private']).toBe(false);
+  });
+
   it('asks only who the CALLER follows, never who follows them', async () => {
     const db = mockDb();
     serviceClient.mockReturnValue(db);

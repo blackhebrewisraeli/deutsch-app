@@ -1,13 +1,18 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ProfileSection from './ProfileSection';
 
-const profile = { handle: 'sam' };
+// Named by default: every save sends the whole form, and First/Last are
+// required, so a nameless fixture could not save at all. The nameless case has
+// its own test below.
+const profile = { handle: 'sam', first_name: 'Sam', last_name: 'Vimes' };
 const profileWithPicture = { ...profile, avatar_path: 'u1/old.webp' };
 
 const handleField = () => screen.getByRole('textbox', { name: /handle/i });
-const displayNameField = () => screen.getByRole('textbox', { name: /display name/i });
+const firstField = () => screen.getByRole('textbox', { name: /first name/i });
+const middleField = () => screen.getByRole('textbox', { name: /middle name/i });
+const lastField = () => screen.getByRole('textbox', { name: /last name/i });
 const saveButton = () => screen.getByRole('button', { name: /save profile/i });
 
 describe('ProfileSection', () => {
@@ -16,11 +21,32 @@ describe('ProfileSection', () => {
     expect(handleField()).toHaveValue('sam');
   });
 
-  it('edits the display name separately from the unique handle', () => {
-    render(<ProfileSection profile={{ ...profile, display_name: 'Sam Vimes' }} save={vi.fn()} />);
-    expect(displayNameField()).toHaveValue('Sam Vimes');
+  it('edits first, middle and last name separately from the unique handle', () => {
+    render(<ProfileSection profile={{ ...profile, middle_name: 'Q' }} save={vi.fn()} />);
+    expect(firstField()).toHaveValue('Sam');
+    expect(middleField()).toHaveValue('Q');
+    expect(lastField()).toHaveValue('Vimes');
     expect(handleField()).toHaveValue('sam');
     expect(screen.getByText('@', { selector: '[aria-hidden="true"]' })).toBeInTheDocument();
+  });
+
+  it('marks first and last name required, and middle name optional', () => {
+    render(<ProfileSection profile={profile} save={vi.fn()} />);
+    expect(firstField()).toBeRequired();
+    expect(lastField()).toBeRequired();
+    expect(middleField()).not.toBeRequired();
+  });
+
+  // Sign-up creates the profile with no name (most accounts have none), so
+  // the form is where a name gets supplied — and it cannot be skipped.
+  it('will not save without a first and last name, and says why', async () => {
+    const save = vi.fn();
+    render(<ProfileSection profile={{ handle: 'sam' }} save={save} />);
+    await userEvent.type(handleField(), '!');
+    await userEvent.click(saveButton());
+
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByText(/first and last name are required/i)).toBeInTheDocument();
   });
 
   it('offers no Avatar emoji field', () => {
@@ -51,17 +77,47 @@ describe('ProfileSection', () => {
     expect(saveButton()).toBeDisabled();
   });
 
-  it('sends both identity fields and reports success', async () => {
-    const save = vi.fn().mockResolvedValue({ ...profile, display_name: 'Sam Vimes' });
+  it('sends every field and reports success', async () => {
+    const save = vi.fn().mockResolvedValue(profile);
     const onToast = vi.fn();
-    render(<ProfileSection profile={profile} save={save} onToast={onToast} />);
-    await userEvent.type(displayNameField(), 'Sam Vimes');
+    render(<ProfileSection profile={{ handle: 'sam' }} save={save} onToast={onToast} />);
+    await userEvent.type(firstField(), 'Sam');
+    await userEvent.type(middleField(), 'Q');
+    await userEvent.type(lastField(), 'Vimes');
     await userEvent.clear(handleField());
     await userEvent.type(handleField(), 'semion');
     await userEvent.click(saveButton());
 
-    expect(save).toHaveBeenCalledWith({ display_name: 'Sam Vimes', handle: 'semion' });
+    expect(save).toHaveBeenCalledWith({
+      first_name: 'Sam',
+      middle_name: 'Q',
+      last_name: 'Vimes',
+      handle: 'semion',
+      is_private: false,
+    });
     expect(onToast).toHaveBeenCalledWith(expect.stringMatching(/saved/i));
+  });
+
+  it('switches the profile to private and saves it', async () => {
+    const save = vi.fn().mockResolvedValue({ ...profile, is_private: true });
+    render(<ProfileSection profile={profile} save={save} />);
+    const group = screen.getByRole('group', { name: /profile visibility/i });
+    expect(within(group).getByRole('button', { name: 'Public' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
+    // What private MEANS is on screen, not left to the word.
+    expect(screen.getByText(/hides you from find people/i)).toBeInTheDocument();
+
+    await userEvent.click(within(group).getByRole('button', { name: 'Private' }));
+    expect(saveButton()).toBeEnabled();
+    await userEvent.click(saveButton());
+
+    expect(save).toHaveBeenCalledWith(expect.objectContaining({ is_private: true }));
+    expect(within(group).getByRole('button', { name: 'Private' })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
   });
 
   // The server owns handle uniqueness, so what it stored — not what was typed —

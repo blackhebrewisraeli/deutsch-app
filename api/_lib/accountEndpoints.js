@@ -39,18 +39,27 @@ import { REAUTH_MAX_AGE_SEC } from './authTime.js';
 // table: an old client that still sends it is ignored, never an error.
 
 /** Only these columns are writable. Anything else in the body is ignored. */
-// display_name rejoined this list for Social Profile v1 (spec §7). It had been
-// removed when the column went unused; the profile header and the account
-// sheet both render a display name now, so the client must be able to set one.
-// The column already existed — no migration.
+// display_name left this list for good in 20260924120000: it is now GENERATED
+// from the three name parts, and the database refuses a write to it. Keeping it
+// off the list is what turns a stale client's display_name into "ignored"
+// rather than a 500.
 //
 // handle stays first: it is the unique social identifier and the only field
 // here that is denormalised elsewhere (league_members).
-export const EDITABLE_FIELDS = ['handle', 'avatar_path', 'display_name'];
+export const EDITABLE_FIELDS = [
+  'handle',
+  'avatar_path',
+  'first_name',
+  'middle_name',
+  'last_name',
+  'is_private',
+];
 
-// 40 matches the spec's "1-40 visible characters or null". It is a guard on
-// the write path, not a column constraint: profiles.display_name is plain text.
-const MAX_LEN = { handle: 24, avatar_path: 200, display_name: 40 };
+const NAME_FIELDS = ['first_name', 'middle_name', 'last_name'];
+
+// Guards on the write path, not column constraints: the name parts are plain
+// text. 40 each keeps the old display_name's per-field limit.
+const MAX_LEN = { handle: 24, avatar_path: 200, first_name: 40, middle_name: 40, last_name: 40 };
 
 /**
  * `avatar_path` is the one editable field that names something OUTSIDE this
@@ -83,6 +92,11 @@ export function buildPatch(body) {
     // = clear it. Those are different questions and the code has to ask both.
     if (!Object.hasOwn(Object(source), field)) continue;
     const value = source[field];
+    // The one non-text field, and NOT NULL: only a real boolean is a request.
+    if (field === 'is_private') {
+      if (typeof value === 'boolean') patch.is_private = value;
+      continue;
+    }
     if (value === null) {
       patch[field] = null;
       continue;
@@ -125,6 +139,13 @@ export const profileHandler = createAccountHandler({
     if ('handle' in patch && patch.handle === null) {
       return sendError(res, 'bad_request', 'A handle is required.');
     }
+    // First + last are required where a name is WRITTEN, not on the columns:
+    // sign-up creates the row without one (handle_new_user), so a nameless
+    // learner can still change their handle or go private. Any edit that does
+    // touch a name part must leave both halves filled.
+    if (NAME_FIELDS.some((f) => f in patch) && (!patch.first_name || !patch.last_name)) {
+      return sendError(res, 'bad_request', 'First and last name are required.');
+    }
     const over = tooLong(patch);
     if (over) {
       return sendError(res, 'bad_request', `That ${over.replace('_', ' ')} is too long.`);
@@ -149,7 +170,9 @@ export const profileHandler = createAccountHandler({
     // optimistic value survived, because a handle can be rejected as taken.
     const { data } = await db
       .from('profiles')
-      .select('handle, avatar_path, created_at, display_name')
+      .select(
+        'handle, avatar_path, created_at, display_name, first_name, middle_name, last_name, is_private'
+      )
       .eq('user_id', auth.userId)
       .maybeSingle();
 
