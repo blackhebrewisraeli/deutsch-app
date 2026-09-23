@@ -100,6 +100,8 @@ import {
   pullAndMerge,
   loadRemoteDaily,
   start,
+  stop,
+  getSyncStatus,
   __setClientForTest,
   __reconcileNowForTest,
   __resetSyncState,
@@ -766,6 +768,19 @@ describe('offline edges', () => {
     expect(await loadRemoteDaily()).toBeNull();
   });
 
+  // A network failure can also THROW (a fetch rejection the client does not
+  // wrap). That is the same unknown, and must answer the same null.
+  it('loadRemoteDaily answers null when the read throws', async () => {
+    __setClientForTest({
+      from: () => ({
+        select: async () => {
+          throw new TypeError('Failed to fetch');
+        },
+      }),
+    });
+    expect(await loadRemoteDaily()).toBeNull();
+  });
+
   it('loadRemoteDaily answers the rows when the read succeeds', async () => {
     __setClientForTest(makeFakeClient({ stats_daily: [{ day: DAY, counters: counters(2) }] }));
     expect((await loadRemoteDaily())[DAY].total).toBe(2);
@@ -782,5 +797,35 @@ describe('offline edges', () => {
     window.dispatchEvent(new Event('online'));
 
     await vi.waitFor(() => expect(seeded._calls.upserts.length).toBeGreaterThan(0));
+  });
+
+  // start() runs on every sign-in and stop() on every sign-out. A listener that
+  // start() stacked would reconcile twice per reconnect. After stop(), nothing
+  // may reconcile a signed-out session — held twice over: stop() detaches the
+  // listener AND clears activeUserId, which the handler checks, so this
+  // asserts the outcome rather than either mechanism alone.
+  it('reconciles once per reconnect across restarts, and never after stop()', async () => {
+    __resetSyncState({ enabled: true });
+    const seeded = makeFakeClient();
+    __setClientForTest(seeded);
+    const from = vi.spyOn(seeded, 'from');
+    const reconciles = () => from.mock.calls.filter(([t]) => t === 'srs_state').length;
+    const settled = () => vi.waitFor(() => expect(getSyncStatus().pending).toBe(false));
+
+    start('user-1');
+    start('user-1');
+    await settled();
+    from.mockClear();
+
+    window.dispatchEvent(new Event('online'));
+    await vi.waitFor(() => expect(reconciles()).toBeGreaterThan(0));
+    await settled();
+    expect(reconciles()).toBe(1);
+
+    stop();
+    from.mockClear();
+    window.dispatchEvent(new Event('online'));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(reconciles()).toBe(0);
   });
 });
