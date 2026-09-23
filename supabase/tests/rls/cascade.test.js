@@ -54,7 +54,10 @@ beforeAll(async () => {
   // Populate every user-owned table. `profiles` already exists via the
   // on_auth_user_created trigger, so it is updated rather than inserted.
   const seed = [
-    admin.from('profiles').update({ display_name: 'Cascade Probe' }).eq('user_id', userId),
+    admin
+      .from('profiles')
+      .update({ first_name: 'Cascade', last_name: 'Probe' })
+      .eq('user_id', userId),
     admin.from('srs_state').insert({ user_id: userId, srs_key: 'greetings:Hallo', box: 2 }),
     admin
       .from('stats_daily')

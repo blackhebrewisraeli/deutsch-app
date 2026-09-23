@@ -86,45 +86,49 @@ describe('buildPatch', () => {
     expect(buildPatch('not json')).toEqual({});
   });
 
-  // display_name is writable again, DELIBERATELY. This assertion used to read
-  // "and display_name is not one", recording a decision to leave the column
-  // unused. The Social Profile v1 spec (§7,
-  // docs/superpowers/specs/2026-09-21-social-profile-v1-design.md) supersedes
-  // it in as many words: the profile header and the account sheet both render
-  // a display name, so the client has to be able to set one. The column
-  // already existed; nothing was migrated.
+  // display_name is GENERATED from the name parts since
+  // 20260924120000_profile_name_parts_private.sql, so it is not writable at
+  // all: the database answers "can only be updated to DEFAULT". It must be off
+  // the allowlist, or a stale PWA build that still sends it would turn a save
+  // into a 500 instead of having the field ignored.
   //
-  // The other four names stay out, and for a different reason — they are not
-  // "not needed yet", they are privilege. avatar_emoji is a dead column, and
-  // blocked_at / role / isAdmin are the admin lane. A learner PATCHing their
-  // own profile must never reach them, so the negative half of this test is
-  // the half that still guards something.
-  it('covers exactly the columns Settings edits, now including display_name', () => {
-    expect(EDITABLE_FIELDS).toEqual(['handle', 'avatar_path', 'display_name']);
-    expect(EDITABLE_FIELDS).toContain('display_name');
-    expect(EDITABLE_FIELDS).not.toContain('avatar_emoji');
-    expect(EDITABLE_FIELDS).not.toContain('blocked_at');
-    expect(EDITABLE_FIELDS).not.toContain('role');
-    expect(EDITABLE_FIELDS).not.toContain('isAdmin');
-    expect(buildPatch({ display_name: 'Sam', handle: 'sam' })).toEqual({
-      handle: 'sam',
-      display_name: 'Sam',
-    });
-    // An old client that still sends one of the forbidden names is IGNORED by
-    // the allowlist, never an error.
+  // The other forbidden names are privilege, not staleness: avatar_emoji is a
+  // dead column, and blocked_at / role / isAdmin are the admin lane. A learner
+  // PATCHing their own profile must never reach them.
+  it('covers exactly the columns Settings edits — the name parts, never display_name', () => {
+    expect(EDITABLE_FIELDS).toEqual([
+      'handle',
+      'avatar_path',
+      'first_name',
+      'middle_name',
+      'last_name',
+      'is_private',
+    ]);
+    for (const forbidden of ['display_name', 'avatar_emoji', 'blocked_at', 'role', 'isAdmin']) {
+      expect(EDITABLE_FIELDS).not.toContain(forbidden);
+    }
+    // An old client that still sends a forbidden name is IGNORED, never an error.
+    expect(buildPatch({ display_name: 'Sam Vimes', handle: 'sam' })).toEqual({ handle: 'sam' });
     expect(buildPatch({ avatar_emoji: '🦊', handle: 'sam' })).toEqual({ handle: 'sam' });
     expect(buildPatch({ blocked_at: null, role: 'admin', isAdmin: true, handle: 'sam' })).toEqual({
       handle: 'sam',
     });
   });
 
-  it('gives display_name the same trim / clear / absent semantics as handle', () => {
-    expect(buildPatch({ display_name: '  Sam Vimes  ' }).display_name).toBe('Sam Vimes');
-    // Emptied or explicitly nulled = "I no longer want a display name", which
-    // falls the UI back to @handle rather than storing "".
-    expect(buildPatch({ display_name: '   ' }).display_name).toBeNull();
-    expect(buildPatch({ display_name: null })).toEqual({ display_name: null });
-    expect('display_name' in buildPatch({ handle: 'sam' })).toBe(false);
+  it('gives the name parts the same trim / clear / absent semantics as handle', () => {
+    expect(buildPatch({ first_name: '  Sam  ' }).first_name).toBe('Sam');
+    expect(buildPatch({ middle_name: '   ' }).middle_name).toBeNull();
+    expect(buildPatch({ last_name: null })).toEqual({ last_name: null });
+    expect('first_name' in buildPatch({ handle: 'sam' })).toBe(false);
+  });
+
+  // is_private is NOT NULL (default false). A null or a string would reach the
+  // column as a constraint violation — a 500 — so only a real boolean is taken.
+  it('takes is_private only as a boolean', () => {
+    expect(buildPatch({ is_private: true })).toEqual({ is_private: true });
+    expect(buildPatch({ is_private: false })).toEqual({ is_private: false });
+    expect(buildPatch({ is_private: null })).toEqual({});
+    expect(buildPatch({ is_private: 'true' })).toEqual({});
   });
 });
 
@@ -163,24 +167,48 @@ describe('PATCH /api/v1/account/profile', () => {
     expect(res.body.handle).toBe('stored');
   });
 
-  it('persists a display_name and reads it back in the stored row', async () => {
+  it('persists the name parts and answers with the generated display_name', async () => {
     profileRow = { handle: 'sam', avatar_path: null, created_at: 'x', display_name: 'Sam Vimes' };
     const res = createRes();
-    await handler(req({ display_name: 'Sam Vimes' }), res);
+    await handler(req({ first_name: 'Sam', middle_name: '', last_name: 'Vimes' }), res);
     expect(res.statusCode).toBe(200);
-    expect(updates).toContainEqual({ table: 'profiles', patch: { display_name: 'Sam Vimes' } });
+    expect(updates).toContainEqual({
+      table: 'profiles',
+      patch: { first_name: 'Sam', middle_name: null, last_name: 'Vimes' },
+    });
     expect(res.body.display_name).toBe('Sam Vimes');
-    // display_name is NOT denormalised onto league_members — the standings
-    // render @handle, which is the stable social identifier. Only a handle
-    // rename touches that table.
+    // Names are NOT denormalised onto league_members — the standings render
+    // @handle. Only a handle rename touches that table.
     expect(updates.some((u) => u.table === 'league_members')).toBe(false);
   });
 
-  it('rejects a display_name longer than the column allows', async () => {
+  it.each([
+    ['first', { last_name: 'Vimes' }],
+    ['last', { first_name: 'Sam' }],
+    ['a cleared last', { first_name: 'Sam', last_name: '  ' }],
+  ])('requires first and last together on any name write (%s missing)', async (_, body) => {
     const res = createRes();
-    await handler(req({ display_name: 'x'.repeat(41) }), res);
+    await handler(req(body), res);
     expect(res.statusCode).toBe(400);
-    expect(res.body?.error?.message).toMatch(/display name is too long/i);
+    expect(res.body?.error?.message).toMatch(/first and last name are required/i);
+    expect(updates).toHaveLength(0);
+  });
+
+  // The rule binds NAME writes only. A nameless learner (most rows: sign-up
+  // creates the profile without one) can still change their handle or go
+  // private without being made to invent a name first.
+  it('does not demand a name for an edit that touches no name field', async () => {
+    const res = createRes();
+    await handler(req({ is_private: true }), res);
+    expect(res.statusCode).toBe(200);
+    expect(updates).toContainEqual({ table: 'profiles', patch: { is_private: true } });
+  });
+
+  it('rejects a name part longer than the limit, naming the part', async () => {
+    const res = createRes();
+    await handler(req({ first_name: 'x'.repeat(41), last_name: 'Vimes' }), res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body?.error?.message).toMatch(/first name is too long/i);
     expect(updates).toHaveLength(0);
   });
 
@@ -192,10 +220,18 @@ describe('PATCH /api/v1/account/profile', () => {
     expect(updates).toHaveLength(0);
   });
 
-  it('accepts a display_name exactly at the limit', async () => {
+  it('accepts name parts exactly at the limit', async () => {
     const res = createRes();
-    await handler(req({ display_name: 'x'.repeat(40) }), res);
+    await handler(req({ first_name: 'x'.repeat(40), last_name: 'y'.repeat(40) }), res);
     expect(res.statusCode).toBe(200);
+  });
+
+  it('ignores a stale client sending only display_name rather than failing the write', async () => {
+    const res = createRes();
+    await handler(req({ display_name: 'Sam Vimes' }), res);
+    expect(res.statusCode).toBe(400);
+    expect(res.body?.error?.message).toMatch(/nothing to update/i);
+    expect(updates).toHaveLength(0);
   });
 
   it('rejects an empty patch instead of writing nothing', async () => {

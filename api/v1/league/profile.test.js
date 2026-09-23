@@ -259,6 +259,42 @@ describe('GET /api/v1/league/profile — the passport', () => {
     }
   });
 
+  // is_private (20260924120000) locks the passport for everyone but its owner:
+  // name, handle and avatar, and NOTHING else. Asserted as the exact key set —
+  // a lock that let one metric through would still read as locked to a test
+  // that only checked for the flag.
+  it('locks a private passport to name, handle and avatar for anyone else', async () => {
+    requireAuth.mockResolvedValue(USER);
+    serviceClient.mockReturnValue(
+      passportDb({ profile: { display_name: 'Sam Vimes', is_private: true } })
+    );
+    const res = createRes();
+    await handler(req('other'), res);
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({
+      display_name: 'Sam Vimes',
+      handle: 'Rival',
+      avatar_path: 'other/a.webp',
+      is_private: true,
+    });
+  });
+
+  it('still shows a private learner their own full passport', async () => {
+    requireAuth.mockResolvedValue(USER);
+    serviceClient.mockReturnValue(passportDb({ profile: { is_private: true } }));
+    const res = createRes();
+    await handler(req(USER.userId), res);
+    expect(res.body).toMatchObject({ is_private: true, total_xp: 200, league_wins: 2 });
+  });
+
+  it('marks a public passport as public and keeps every metric', async () => {
+    requireAuth.mockResolvedValue(USER);
+    serviceClient.mockReturnValue(passportDb());
+    const res = createRes();
+    await handler(req('other'), res);
+    expect(res.body).toMatchObject({ is_private: false, total_xp: 200 });
+  });
+
   it('lets a learner fetch their OWN passport without a league check', async () => {
     requireAuth.mockResolvedValue(USER);
     const db = passportDb();

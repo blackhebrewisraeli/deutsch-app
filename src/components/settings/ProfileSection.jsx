@@ -3,14 +3,20 @@ import { COLORS, FONTS, FONT_SIZE, LINE_HEIGHT, RADIUS, SPACE, TEXT } from '../.
 import { Stack } from '../ui/Layout';
 import Button from '../ui/Button';
 import StatusNote from '../ui/StatusNote';
+import SegmentedPicker from '../ui/SegmentedPicker';
 import { updateProfile } from '../../lib/profile';
 import AvatarPicker from './AvatarPicker';
 import { AlertTriangle } from 'lucide-react';
 
-// Personal details: a chosen display name, a unique social handle, and the
-// avatar picture picker. The two text fields are intentionally distinct:
-// display_name is how the app addresses the learner, while @handle is the
-// stable identifier other learners see on leaderboards.
+// Personal details: first / middle / last name, a unique social handle, the
+// avatar picture picker, and whether the profile is private. The name parts and
+// the handle are intentionally distinct: the name is how the app addresses the
+// learner (display_name is GENERATED from the parts, 20260924120000), while
+// @handle is the stable identifier other learners see on leaderboards.
+//
+// First and last are REQUIRED here rather than on the columns: sign-up creates
+// the row without a name, so this form is where one is supplied, and it will not
+// save without both. The API holds the same rule for any name write.
 //
 // Avatar is a picture or a generated identicon — one identity surface, the
 // picture picker. There is no emoji field.
@@ -23,9 +29,19 @@ import { AlertTriangle } from 'lucide-react';
 // value the form already shows. The stored row it returns is the source of
 // truth, and it is what the fields are reset to on success.
 const asForm = (profile) => ({
-  display_name: profile?.display_name ?? '',
+  first_name: profile?.first_name ?? '',
+  middle_name: profile?.middle_name ?? '',
+  last_name: profile?.last_name ?? '',
   handle: profile?.handle ?? '',
+  is_private: Boolean(profile?.is_private),
 });
+
+const FORM_FIELDS = ['first_name', 'middle_name', 'last_name', 'handle', 'is_private'];
+
+const VISIBILITY = [
+  { key: 'public', label: 'Public' },
+  { key: 'private', label: 'Private' },
+];
 
 const labelStyle = { ...TEXT.fieldLabel, marginBottom: SPACE[1] };
 
@@ -70,20 +86,26 @@ export default function ProfileSection({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // Dirty-tracking keeps a unique-column write off the wire until either
-  // identity field actually changed.
-  const dirty = form.display_name !== saved.display_name || form.handle !== saved.handle;
+  // Dirty-tracking keeps a unique-column write off the wire until a field
+  // actually changed.
+  const dirty = FORM_FIELDS.some((f) => form[f] !== saved[f]);
 
-  const onDisplayNameChange = (e) => setForm((prev) => ({ ...prev, display_name: e.target.value }));
-  const onHandleChange = (e) => setForm((prev) => ({ ...prev, handle: e.target.value }));
+  const onField = (field) => (e) => setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
   const onSave = async () => {
+    if (!form.first_name.trim() || !form.last_name.trim()) {
+      setError('First and last name are required.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
       const stored = await save({
-        display_name: form.display_name,
+        first_name: form.first_name,
+        middle_name: form.middle_name,
+        last_name: form.last_name,
         handle: form.handle,
+        is_private: form.is_private,
       });
       // Reset to what the SERVER stored, not to what was typed.
       const next = asForm(stored);
@@ -111,18 +133,31 @@ export default function ProfileSection({
         save={save}
       />
 
-      <label style={{ display: 'block' }}>
-        <span style={labelStyle}>Display name</span>
-        <div style={fieldBox}>
-          <input
-            value={form.display_name}
-            onChange={onDisplayNameChange}
-            placeholder="First and last name"
-            maxLength={40}
-            style={{ ...fieldInput, fontFamily: FONTS.body }}
-          />
-        </div>
-      </label>
+      {[
+        ['first_name', 'First name', true],
+        ['middle_name', 'Middle name (optional)', false],
+        ['last_name', 'Last name', true],
+      ].map(([field, label, required]) => (
+        <label key={field} style={{ display: 'block' }}>
+          <span style={labelStyle}>{label}</span>
+          <div style={fieldBox}>
+            <input
+              value={form[field]}
+              onChange={onField(field)}
+              required={required}
+              maxLength={40}
+              autoComplete={
+                {
+                  first_name: 'given-name',
+                  middle_name: 'additional-name',
+                  last_name: 'family-name',
+                }[field]
+              }
+              style={{ ...fieldInput, fontFamily: FONTS.body }}
+            />
+          </div>
+        </label>
+      ))}
 
       <label style={{ display: 'block' }}>
         <span style={labelStyle}>Handle</span>
@@ -140,13 +175,33 @@ export default function ProfileSection({
           </span>
           <input
             value={form.handle}
-            onChange={onHandleChange}
+            onChange={onField('handle')}
             placeholder="semion"
             maxLength={24}
             style={{ ...fieldInput, fontFamily: FONTS.mono }}
           />
         </div>
       </label>
+
+      <div>
+        <span style={labelStyle}>Profile visibility</span>
+        <SegmentedPicker
+          ariaLabel="Profile visibility"
+          options={VISIBILITY}
+          activeKey={form.is_private ? 'private' : 'public'}
+          onPick={(o) => setForm((prev) => ({ ...prev, is_private: o.key === 'private' }))}
+        />
+        <p
+          style={{
+            margin: `${SPACE[2]}px 0 0`,
+            fontFamily: FONTS.body,
+            fontSize: FONT_SIZE.sm,
+            color: COLORS.mute,
+          }}
+        >
+          Private hides you from Find People and shows others only your name, handle and picture.
+        </p>
+      </div>
 
       {error && (
         <StatusNote tone="error" icon={AlertTriangle}>

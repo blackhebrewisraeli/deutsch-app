@@ -12,8 +12,10 @@ import { authedFetch, errorMessage, SESSION_EXPIRED_MESSAGE } from './authedFetc
 
 // display_name leads: it is what the profile header and the account sheet
 // render, falling back to @handle and then the anonymous label. Social Profile
-// v1 §7.
-export const PROFILE_COLUMNS = 'display_name, handle, avatar_path, created_at';
+// v1 §7. It is GENERATED from the name parts (20260924120000); the parts and
+// is_private ride along because Settings edits them.
+export const PROFILE_COLUMNS =
+  'display_name, first_name, middle_name, last_name, is_private, handle, avatar_path, created_at';
 
 /**
  * @returns the caller's profile row, or null when there is no backend, no

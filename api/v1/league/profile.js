@@ -104,7 +104,7 @@ export default async function handler(req, res) {
     ] = await Promise.all([
       db
         .from('profiles')
-        .select('display_name, handle, avatar_path, created_at')
+        .select('display_name, handle, avatar_path, created_at, is_private')
         .eq('user_id', target)
         .maybeSingle(),
       db.from('stats_daily').select('day, counters').eq('user_id', target),
@@ -140,6 +140,19 @@ export default async function handler(req, res) {
         .eq('follower_id', target),
     ]);
 
+    // A private learner (profiles.is_private, 20260924120000) shows anyone but
+    // themselves only who they are — never what they have done. Decided before
+    // a single metric is derived, so nothing below can leak into this shape.
+    const isPrivate = Boolean(profile?.is_private);
+    if (isPrivate && target !== auth.userId) {
+      return res.status(200).json({
+        display_name: profile?.display_name ?? null,
+        handle: profile?.handle ?? null,
+        avatar_path: profile?.avatar_path ?? null,
+        is_private: true,
+      });
+    }
+
     const rows = stats ?? [];
     const total_xp = rows.reduce((s, r) => s + xpForDay(r.counters), 0);
     const longest_streak = longestStreak(rows.map((r) => r.day));
@@ -152,6 +165,7 @@ export default async function handler(req, res) {
       display_name: profile?.display_name ?? null,
       handle: profile?.handle ?? null,
       avatar_path: profile?.avatar_path ?? null,
+      is_private: isPrivate,
       join_year: joinYear(profile?.created_at),
       tier: member?.leagues?.tier ?? 0,
       total_xp,

@@ -265,3 +265,32 @@ describe('PassportBody identity', () => {
     expect(screen.getByRole('heading', { name: 'Anonym' })).toBeInTheDocument();
   });
 });
+
+// profiles.is_private (20260924120000). The API already withholds the metrics
+// from anyone but the owner — this is what the card does with that answer. A
+// locked passport must say so, not render the absent numbers as zeros: "0 XP"
+// would be a false statement about the person.
+describe('PassportBody — a private profile', () => {
+  const locked = {
+    display_name: 'Sam Vimes',
+    handle: 'sam',
+    avatar_path: null,
+    is_private: true,
+  };
+
+  it('shows who they are and that the rest is private — no stats, no badges', () => {
+    render(<PassportBody profile={locked} userId="u1" />);
+    expect(screen.getByRole('heading', { name: 'Sam Vimes' })).toBeInTheDocument();
+    expect(screen.getByText('@sam')).toBeInTheDocument();
+    expect(screen.getByText(/this profile is private/i)).toBeInTheDocument();
+    for (const absent of ['XP', 'Streak', 'Ligasiege', /Abzeichen/]) {
+      expect(screen.queryByText(absent)).toBeNull();
+    }
+  });
+
+  it('shows the owner their own full passport even while private', () => {
+    show({ is_private: true }, { isSelf: true });
+    expect(screen.getByText('XP')).toBeInTheDocument();
+    expect(screen.queryByText(/this profile is private/i)).toBeNull();
+  });
+});

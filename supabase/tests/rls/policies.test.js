@@ -132,7 +132,7 @@ describe('RLS: profiles', () => {
   it("A cannot update B's profile (zero rows affected)", async () => {
     const { data, error } = await A.client
       .from('profiles')
-      .update({ display_name: 'pwned' })
+      .update({ first_name: 'pwned' })
       .eq('user_id', B.id)
       .select();
     expect(error).toBeNull();
@@ -142,7 +142,7 @@ describe('RLS: profiles', () => {
   it('A can still update an allowed column on their own row', async () => {
     const { error } = await A.client
       .from('profiles')
-      .update({ display_name: 'Allowed' })
+      .update({ first_name: 'Allowed' })
       .eq('user_id', A.id);
     expect(error).toBeNull();
   });

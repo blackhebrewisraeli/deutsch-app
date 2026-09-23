@@ -117,6 +117,8 @@ export const searchHandler = createAccountHandler({
       .select(SEARCH_COLUMNS)
       .or(`handle.ilike.${pattern},display_name.ilike.${pattern}`)
       .is('blocked_at', null)
+      // Private learners are hidden from Find People (20260924120000).
+      .eq('is_private', false)
       .neq('user_id', auth.userId)
       .order('handle', { ascending: true })
       .limit(SEARCH_LIMIT);
