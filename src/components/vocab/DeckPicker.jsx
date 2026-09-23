@@ -1,4 +1,5 @@
 import { useEffect, useId, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import {
   BORDER,
   COLORS,
@@ -101,6 +102,7 @@ export default function DeckPicker({
   customDecks = {},
   level = getUserLevel(),
   interestDecks = [],
+  collapsible = false,
 }) {
   const interestIds = new Set(interestDecks.map((d) => d.id));
   const groups = interestDecks.length > 0 ? [INTERESTS_GROUP, ...AUTO_GROUPS] : AUTO_GROUPS;
@@ -121,7 +123,23 @@ export default function DeckPicker({
     current === INTERESTS_GROUP ? interestDecks : allowedAuto.filter((d) => d.group === current);
   const deckValue = activeDecks.some((d) => d.id === deckId) ? deckId : '';
 
-  return (
+  // Collapsed on phones: the full picker is ~270px of chrome above the card,
+  // which pushed the word being learned to the bottom edge of a 375px screen.
+  // A native <details> (as PracticeLane and ChatTab already use) is keyboard-
+  // and screen-reader-operable for free; picking a deck closes it again.
+  const [open, setOpen] = useState(false);
+  const select = (id) => {
+    setOpen(false);
+    onSelect(id);
+  };
+  const currentName =
+    PRESETS.find((d) => d.id === deckId)?.name ??
+    customDecks[deckId]?.name ??
+    interestDecks.find((d) => d.id === deckId)?.name ??
+    AUTO_DECKS.find((d) => d.id === deckId)?.name ??
+    'Choose a deck';
+
+  const body = (
     <div
       style={{
         width: '100%',
@@ -148,7 +166,7 @@ export default function DeckPicker({
             <button
               key={d.id}
               type="button"
-              onClick={() => onSelect(d.id)}
+              onClick={() => select(d.id)}
               aria-pressed={active}
               style={{
                 width: '100%',
@@ -202,7 +220,7 @@ export default function DeckPicker({
             <button
               key={id}
               type="button"
-              onClick={() => onSelect(id)}
+              onClick={() => select(id)}
               aria-pressed={selected}
               aria-label={`Your Deck: ${deck.name || 'unnamed'} — ${count} ${plural(count, 'card', 'cards')}`}
               style={{
@@ -271,7 +289,7 @@ export default function DeckPicker({
           value={deckValue}
           onChange={(e) => {
             const next = e.target.value;
-            if (next) onSelect(next);
+            if (next) select(next);
           }}
         >
           <option value="" disabled>
@@ -296,5 +314,59 @@ export default function DeckPicker({
         Vocabulary from Wiktionary (CC BY-SA), Tatoeba &amp; Leipzig (CC BY).
       </div>
     </div>
+  );
+
+  if (!collapsible) return body;
+
+  return (
+    <details
+      open={open}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+      style={{ width: '100%', minWidth: 0 }}
+    >
+      <summary
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: SPACE[2],
+          minWidth: 0,
+          padding: `${SPACE[2]}px ${SPACE[3]}px`,
+          background: COLORS.card,
+          border: BORDER.panel,
+          borderRadius: RADIUS.md,
+          cursor: 'pointer',
+          listStyle: 'none',
+        }}
+      >
+        <SectionLabel as="span" style={{ margin: 0, flexShrink: 0 }}>
+          Deck
+        </SectionLabel>
+        <span
+          style={{
+            flex: 1,
+            minWidth: 0,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            fontFamily: FONTS.display,
+            fontSize: FONT_SIZE.md,
+            fontWeight: FONT_WEIGHT.semibold,
+            color: COLORS.ink,
+          }}
+        >
+          {currentName}
+        </span>
+        <ChevronDown
+          size={FONT_SIZE.lg}
+          aria-hidden="true"
+          style={{
+            flexShrink: 0,
+            color: COLORS.mute,
+            transform: open ? 'rotate(180deg)' : 'none',
+          }}
+        />
+      </summary>
+      <div style={{ marginTop: SPACE[3] }}>{body}</div>
+    </details>
   );
 }

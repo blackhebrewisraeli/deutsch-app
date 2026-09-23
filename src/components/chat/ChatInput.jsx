@@ -1,4 +1,4 @@
-import { Mic, MicOff, ArrowRight } from 'lucide-react';
+import { Mic, MicOff, ArrowRight, LayoutGrid } from 'lucide-react';
 import { COLORS, FONT_BODY, RADIUS, SHADOW } from '../../lib/theme';
 
 // Bottom input bar: mic toggle, text field, send button.
@@ -12,6 +12,7 @@ export default function ChatInput({
   onSend,
   onStartListening,
   onStopListening,
+  onSwitchToWordBank,
 }) {
   const canSend = Boolean(input.trim()) && !thinking;
   return (
@@ -47,6 +48,28 @@ export default function ChatInput({
       >
         {listening ? <MicOff size={18} /> : <Mic size={18} />}
       </button>
+      {onSwitchToWordBank && (
+        <button
+          type="button"
+          data-ui="button"
+          onClick={onSwitchToWordBank}
+          aria-label="Use word bank"
+          style={{
+            width: 40,
+            height: 40,
+            flexShrink: 0,
+            background: 'none',
+            color: COLORS.inkSoft,
+            border: `1px solid ${COLORS.border}`,
+            borderRadius: RADIUS.md,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <LayoutGrid size={18} aria-hidden="true" />
+        </button>
+      )}
       <input
         aria-label="Chat message in German"
         value={input}

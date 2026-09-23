@@ -1,0 +1,162 @@
+import { useState } from 'react';
+import { ArrowRight, Keyboard } from 'lucide-react';
+import { BORDER, COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../../lib/theme';
+
+// Fisher–Yates. Tiles carry their ORIGINAL index as identity, so a sentence
+// with a repeated word ("die … die") still has two distinct tiles.
+function jumble(words) {
+  const tiles = words.map((word, id) => ({ id, word }));
+  for (let i = tiles.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [tiles[i], tiles[j]] = [tiles[j], tiles[i]];
+  }
+  return tiles;
+}
+
+const tileStyle = {
+  padding: `${SPACE[2]}px ${SPACE[3]}px`,
+  background: COLORS.card,
+  color: COLORS.ink,
+  border: BORDER.panel,
+  borderRadius: RADIUS.md,
+  boxShadow: SHADOW.press(COLORS.lip),
+  fontFamily: FONTS.body,
+  fontSize: FONT_SIZE.md,
+  cursor: 'pointer',
+};
+
+/**
+ * Word-bank input mode: tap jumbled words to build the sentence, tap a placed
+ * word to put it back, then send. Presentational — the words come from the
+ * parent (mocked today, AI-generated later) and sending goes through the same
+ * onSend the free-text input uses.
+ */
+export default function WordBank({ words, thinking, onSend, onSwitchToTyping }) {
+  const [bank] = useState(() => jumble(words));
+  const [placed, setPlaced] = useState([]);
+  const placedIds = new Set(placed.map((t) => t.id));
+  const sentence = placed.map((t) => t.word).join(' ');
+  const canSend = placed.length > 0 && !thinking;
+
+  const send = () => {
+    if (!canSend) return;
+    onSend(sentence);
+    setPlaced([]);
+  };
+
+  return (
+    <div
+      style={{
+        borderTop: `1px solid ${COLORS.border}`,
+        padding: SPACE[3],
+        background: COLORS.paperDeep,
+        display: 'grid',
+        gap: SPACE[3],
+        minWidth: 0,
+      }}
+    >
+      {/* The sentence being built. A live region so each placement is heard. */}
+      <div
+        aria-label="Your sentence"
+        aria-live="polite"
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: SPACE[2],
+          minHeight: SPACE[12],
+          padding: SPACE[2],
+          borderBottom: BORDER.panel,
+          alignItems: 'center',
+        }}
+      >
+        {placed.length === 0 ? (
+          <span style={{ fontFamily: FONTS.body, fontSize: FONT_SIZE.sm, color: COLORS.mute }}>
+            Tap the words below to build your answer.
+          </span>
+        ) : (
+          placed.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => setPlaced((p) => p.filter((x) => x.id !== t.id))}
+              aria-label={`Remove ${t.word}`}
+              style={tileStyle}
+            >
+              {t.word}
+            </button>
+          ))
+        )}
+      </div>
+
+      <div
+        role="group"
+        aria-label="Word bank"
+        style={{ display: 'flex', flexWrap: 'wrap', gap: SPACE[2], justifyContent: 'center' }}
+      >
+        {bank.map((t) => {
+          const used = placedIds.has(t.id);
+          return (
+            <button
+              key={t.id}
+              type="button"
+              disabled={used}
+              onClick={() => setPlaced((p) => [...p, t])}
+              style={{
+                ...tileStyle,
+                // A used tile keeps its slot so the bank does not reflow under
+                // the learner's thumb; it just empties.
+                visibility: used ? 'hidden' : 'visible',
+              }}
+            >
+              {t.word}
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: SPACE[2] }}>
+        <button
+          type="button"
+          data-ui="button"
+          onClick={onSwitchToTyping}
+          aria-label="Type instead"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: SPACE[1],
+            background: 'none',
+            border: 'none',
+            color: COLORS.inkSoft,
+            fontFamily: FONTS.mono,
+            fontSize: FONT_SIZE.sm,
+            cursor: 'pointer',
+          }}
+        >
+          <Keyboard size={FONT_SIZE.lg} aria-hidden="true" /> Type instead
+        </button>
+        <button
+          type="button"
+          data-ui="button"
+          data-focus-on-dark=""
+          onClick={send}
+          disabled={!canSend}
+          aria-label="Send chat message"
+          style={{
+            width: 40,
+            height: 40,
+            padding: 0,
+            background: canSend ? COLORS.green : COLORS.mute,
+            color: COLORS.paper,
+            border: 'none',
+            borderRadius: RADIUS.md,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}
+        >
+          <ArrowRight size={18} aria-hidden="true" />
+        </button>
+      </div>
+    </div>
+  );
+}
