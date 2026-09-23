@@ -134,7 +134,7 @@ export default function PersonalHub({
       }}
     >
       <div data-testid="home-identity-xp" aria-label={`${lvl.totalXp ?? 0} XP`} style={tile}>
-        <GoalRing pct={goalPct} met={goalMet} size={SPACE[10]} />
+        <GoalRing pct={goalPct} met={goalMet} size={SPACE[12]} />
         <span style={{ display: 'flex', alignItems: 'baseline', gap: SPACE[1], minWidth: 0 }}>
           <span data-testid="home-identity-xp-value" style={statValue}>
             {lvl.totalXp ?? 0}
