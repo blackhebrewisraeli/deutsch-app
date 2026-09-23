@@ -23,7 +23,7 @@ export function createPublicHandler({
   allowedOrigins,
   store = defaultStore(),
 }) {
-  const checkIpRate = createRateLimiter({ ...ipRate, store });
+  const checkIpRate = createRateLimiter({ ...ipRate, scope: name, store });
 
   return async function handler(req, res) {
     if (req.method !== method) {

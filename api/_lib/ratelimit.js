@@ -61,12 +61,24 @@ export function clientKey(req) {
 // lane passes `user:<id>` after authenticating, which is the per-identity
 // control origin.js calls the real abuse guard — an IP-only limit is trivially
 // sidestepped by moving IPs, and punishes everyone behind one NAT.
-export function createRateLimiter({ windowMs, max, store = new MemoryStore(), now = Date.now }) {
+// `scope` names the endpoint, and it goes into the stored key together with
+// the window length. Without both, every endpoint shared one counter per caller
+// (43 progress POSTs 429'd the same user's first follow-list request), and a
+// short window rolling forward deleted a long window's count — the store drops
+// a key's older windows, so the long cap never held.
+export function createRateLimiter({
+  scope,
+  windowMs,
+  max,
+  store = new MemoryStore(),
+  now = Date.now,
+}) {
+  if (!scope) throw new Error('createRateLimiter: scope is required');
   return async function check(req, key = clientKey(req)) {
     const windowStart = Math.floor(now() / windowMs) * windowMs;
     let count;
     try {
-      count = await store.increment(key, windowStart);
+      count = await store.increment(`${scope}:${windowMs}:${key}`, windowStart);
     } catch (err) {
       // Fail open: AI-lane availability outranks limiter strictness (B1 spec).
       console.error('rate-limit store failure (failing open):', err.message);

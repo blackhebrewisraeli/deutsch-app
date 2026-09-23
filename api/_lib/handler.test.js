@@ -34,7 +34,7 @@ const postReq = (overrides = {}) => ({
   ...overrides,
 });
 
-const wideOpen = { rate: { windowMs: 60000, max: 100 } };
+const wideOpen = { name: 'ai.test', rate: { windowMs: 60000, max: 100 } };
 
 describe('createAiHandler', () => {
   beforeEach(() => {
@@ -83,7 +83,7 @@ describe('createAiHandler', () => {
   });
 
   it('enforces the per-endpoint quota with Retry-After', async () => {
-    const handler = createAiHandler({ rate: { windowMs: 60000, max: 2 } });
+    const handler = createAiHandler({ name: 'ai.test', rate: { windowMs: 60000, max: 2 } });
     const r1 = createRes();
     const r2 = createRes();
     const r3 = createRes();

@@ -64,6 +64,23 @@ describe('FollowListModal — followers', () => {
     expect(listFollows).toHaveBeenCalledTimes(2);
   });
 
+  // The 2026-09-23 "Folgt → 429" report read as a render loop. It was not
+  // (see api/_lib/ratelimit.js), but this pins the property it suspected:
+  // state the list itself sets — rows, pending, a parent re-render — must
+  // never re-run the load.
+  it('fetches exactly once per open, however often the list re-renders', async () => {
+    listFollows.mockResolvedValue({ results: [SAM], hasMore: false });
+    followUser.mockResolvedValue({ is_following: true });
+    const onClose = () => {};
+    const { rerender } = render(<FollowListModal kind="followers" onClose={onClose} />);
+
+    fireEvent.click(await screen.findByRole('button', { name: /^Follow Sam Weber$/ }));
+    await screen.findByRole('button', { name: /^Unfollow Sam Weber$/ });
+    rerender(<FollowListModal kind="followers" onClose={() => {}} />);
+
+    expect(listFollows).toHaveBeenCalledTimes(1);
+  });
+
   it('follows back from the list, optimistically', async () => {
     listFollows.mockResolvedValue({ results: [SAM], hasMore: false });
     followUser.mockResolvedValue({ is_following: true });

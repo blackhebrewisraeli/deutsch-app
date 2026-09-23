@@ -15,12 +15,19 @@ import { applyChatConstraints } from './chatConstraint.js';
 
 // Anna conversation turns.
 export const chatHandler = createAiHandler({
+  name: 'ai.chat',
   rate: { windowMs: 5 * 60 * 1000, max: 20 },
   afterValidate: applyChatConstraints,
 });
 
 // Custom deck generation.
-export const deckHandler = createAiHandler({ rate: { windowMs: 60 * 60 * 1000, max: 5 } });
+export const deckHandler = createAiHandler({
+  name: 'ai.deck',
+  rate: { windowMs: 60 * 60 * 1000, max: 5 },
+});
 
 // Exercise lane: answer/translation grading and exercise-sentence generation.
-export const gradeHandler = createAiHandler({ rate: { windowMs: 5 * 60 * 1000, max: 60 } });
+export const gradeHandler = createAiHandler({
+  name: 'ai.grade',
+  rate: { windowMs: 5 * 60 * 1000, max: 60 },
+});

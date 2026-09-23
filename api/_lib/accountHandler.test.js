@@ -101,6 +101,31 @@ describe('createAccountHandler', () => {
     expect(requireAuth).toHaveBeenCalledTimes(1);
   });
 
+  it("does not let one endpoint's burst rate-limit another for the same user", async () => {
+    const store = new MemoryStore();
+    const endpoint = (name) =>
+      createAccountHandler({
+        method: 'DELETE',
+        name,
+        ipRate: { windowMs: 60_000, max: 100 },
+        userRate: { windowMs: 60_000, max: 1 },
+        run: vi.fn().mockResolvedValue(undefined),
+        store,
+        readBlockedAt: notBlocked,
+      });
+    const progress = endpoint('progress events');
+    const list = endpoint('social.list');
+
+    await progress(req(), createRes());
+    const burst = createRes();
+    await progress(req(), burst);
+    const res = createRes();
+    await list(req(), res);
+
+    expect(burst.statusCode).toBe(429);
+    expect(res.statusCode).not.toBe(429);
+  });
+
   it('rate limits per identity, so one user cannot burn the lane from many IPs', async () => {
     const run = vi.fn().mockResolvedValue(undefined);
     const handler = createAccountHandler({
