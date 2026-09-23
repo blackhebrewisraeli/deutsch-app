@@ -314,6 +314,19 @@ describe('AccountChip — set status', () => {
     expect(localStorage.getItem('deutsch-account-status')).toBe('LernePerfekt');
   });
 
+  it('strips angle brackets so a status can never carry a well-formed tag', async () => {
+    await open();
+    await userEvent.click(screen.getByRole('button', { name: /set status/i }));
+    fireEvent.change(screen.getByRole('textbox', { name: /status/i }), {
+      target: { value: '<img src=x onerror=alert(1)>Lerne Perfekt' },
+    });
+    await userEvent.click(screen.getByRole('button', { name: /save/i }));
+
+    expect(localStorage.getItem('deutsch-account-status')).toBe(
+      'img src=x onerror=alert(1)Lerne Perfekt'
+    );
+  });
+
   it('truncates a status to the hard limit before storing it', async () => {
     await open();
     await userEvent.click(screen.getByRole('button', { name: /set status/i }));

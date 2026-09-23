@@ -16,10 +16,19 @@ const STATUS_MAX_LENGTH = 80;
 function sanitizeStatus(raw) {
   if (typeof raw !== 'string') return '';
 
-  return raw
-    .replace(/[^\p{L}\p{M}\p{N}\p{P}\p{S} ]/gu, '')
-    .trim()
-    .slice(0, STATUS_MAX_LENGTH);
+  return (
+    raw
+      .replace(/[^\p{L}\p{M}\p{N}\p{P}\p{S} ]/gu, '')
+      // `<` and `>` are Unicode Math Symbols (`\p{S}`), so the filter above
+      // leaves them untouched — a status could otherwise carry a well-formed
+      // HTML tag. Nothing today renders this value except `{status}` as plain
+      // JSX text (React escapes it), so this is not fixing a live exploit; it
+      // is removing the only two characters that could ever form one, in case
+      // a future consumer renders it less carefully.
+      .replace(/[<>]/g, '')
+      .trim()
+      .slice(0, STATUS_MAX_LENGTH)
+  );
 }
 
 function readStatus() {
