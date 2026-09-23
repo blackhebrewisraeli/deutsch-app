@@ -226,6 +226,12 @@ jobs:
   rls-policy-tests:
     name: RLS Policy Tests
     runs-on: ubuntu-latest
+    # A job-level block REPLACES the defaults: every scope not listed becomes
+    # `none`. So contents:read has to be stated alongside packages:read, or
+    # actions/checkout below loses its token's read access.
+    permissions:
+      contents: read
+      packages: read
     env:
       HUSKY: 0
     steps:
@@ -253,6 +259,20 @@ jobs:
         uses: supabase/setup-cli@v1
         with:
           version: 2.114.0
+
+      # `supabase start` pulls ~10 images from ghcr.io/supabase. Anonymous
+      # pulls share a quota across runners and PR #333 hit `toomanyrequests`
+      # on every image before Supabase started; an authenticated pull gets
+      # its own. GITHUB_TOKEN via env + --password-stdin keeps it out of argv
+      # and logs.
+      - name: Log in to GHCR
+        run: |
+          printf '%s' "$GITHUB_TOKEN" |
+            docker login ghcr.io \
+              --username "$GITHUB_ACTOR" \
+              --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Start local Supabase (applies migrations)
         run: supabase start
