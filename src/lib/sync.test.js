@@ -95,7 +95,15 @@ vi.mock('./auth.js', () => ({
   isAuthConfigured: () => true,
 }));
 
-import { pushAll, pullAndMerge, __setClientForTest, __reconcileNowForTest } from './sync.js';
+import {
+  pushAll,
+  pullAndMerge,
+  loadRemoteDaily,
+  start,
+  __setClientForTest,
+  __reconcileNowForTest,
+  __resetSyncState,
+} from './sync.js';
 
 describe('sync engine', () => {
   beforeEach(() => {
@@ -739,5 +747,40 @@ describe('deck-scoped mastery syncs in its own column', () => {
     await pullAndMerge('user-1');
 
     expect(JSON.stringify(seeded._tables.settings[0].learned_by_deck)).toBe(first);
+  });
+});
+
+describe('offline edges', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    __resetSyncState();
+  });
+
+  // supabase-js does not throw offline: it resolves { data: null, error }.
+  // `data ?? []` turned that into "the server has nothing", and the progress
+  // flush re-queued the whole local history on top of it.
+  it('loadRemoteDaily answers null, not {}, when the read fails', async () => {
+    __setClientForTest({
+      from: () => ({ select: async () => ({ data: null, error: { message: 'Failed to fetch' } }) }),
+    });
+    expect(await loadRemoteDaily()).toBeNull();
+  });
+
+  it('loadRemoteDaily answers the rows when the read succeeds', async () => {
+    __setClientForTest(makeFakeClient({ stats_daily: [{ day: DAY, counters: counters(2) }] }));
+    expect((await loadRemoteDaily())[DAY].total).toBe(2);
+  });
+
+  it('reconciles when the connection comes back', async () => {
+    __resetSyncState({ enabled: true });
+    const seeded = makeFakeClient();
+    __setClientForTest(seeded);
+    start('user-1');
+    await vi.waitFor(() => expect(seeded._calls.upserts.length).toBeGreaterThan(0));
+    seeded._calls.upserts = [];
+
+    window.dispatchEvent(new Event('online'));
+
+    await vi.waitFor(() => expect(seeded._calls.upserts.length).toBeGreaterThan(0));
   });
 });
