@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { COLORS, FONTS, FONT_SIZE, RADIUS, SPACE, TEXT } from '../../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, LINE_HEIGHT, RADIUS, SPACE, TEXT } from '../../lib/theme';
 import { Stack } from '../ui/Layout';
 import Button from '../ui/Button';
 import StatusNote from '../ui/StatusNote';
@@ -29,16 +29,33 @@ const asForm = (profile) => ({
 
 const labelStyle = { ...TEXT.fieldLabel, marginBottom: SPACE[1] };
 
-const inputStyle = {
-  fontFamily: FONTS.mono,
-  fontSize: FONT_SIZE.base,
+// Both fields are the SAME box: a bordered wrapper holding a borderless input.
+// They used to differ — display name was a bare bordered input, handle a
+// bordered wrapper around a second, borderless one — so the two rendered at
+// different heights with the handle's text inset behind its "@". For a learner
+// whose name and handle match, that read as one name field drawn twice, out of
+// line. One recipe for both keeps them identical except for the prefix.
+const fieldBox = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: SPACE[1],
   padding: `${SPACE[1]}px ${SPACE[2]}px`,
   borderRadius: RADIUS.sm,
   border: `1px solid ${COLORS.mute}`,
-  background: 'transparent',
-  color: COLORS.ink,
   width: '100%',
   boxSizing: 'border-box',
+};
+
+const fieldInput = {
+  flex: 1,
+  minWidth: 0,
+  padding: 0,
+  border: 'none',
+  background: 'transparent',
+  color: COLORS.ink,
+  fontSize: FONT_SIZE.base,
+  // Pinned so the body-font and mono-font fields come out the same height.
+  lineHeight: LINE_HEIGHT.normal,
 };
 
 export default function ProfileSection({
@@ -96,28 +113,29 @@ export default function ProfileSection({
 
       <label style={{ display: 'block' }}>
         <span style={labelStyle}>Display name</span>
-        <input
-          value={form.display_name}
-          onChange={onDisplayNameChange}
-          placeholder="First and last name"
-          maxLength={40}
-          style={{ ...inputStyle, fontFamily: FONTS.body }}
-        />
+        <div style={fieldBox}>
+          <input
+            value={form.display_name}
+            onChange={onDisplayNameChange}
+            placeholder="First and last name"
+            maxLength={40}
+            style={{ ...fieldInput, fontFamily: FONTS.body }}
+          />
+        </div>
       </label>
 
       <label style={{ display: 'block' }}>
         <span style={labelStyle}>Handle</span>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            borderRadius: RADIUS.sm,
-            border: `1px solid ${COLORS.mute}`,
-            color: COLORS.mute,
-            paddingLeft: SPACE[2],
-          }}
-        >
-          <span aria-hidden="true" style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.base }}>
+        <div style={fieldBox}>
+          <span
+            aria-hidden="true"
+            style={{
+              fontFamily: FONTS.mono,
+              fontSize: FONT_SIZE.base,
+              lineHeight: LINE_HEIGHT.normal,
+              color: COLORS.mute,
+            }}
+          >
             @
           </span>
           <input
@@ -125,7 +143,7 @@ export default function ProfileSection({
             onChange={onHandleChange}
             placeholder="semion"
             maxLength={24}
-            style={{ ...inputStyle, border: 'none', paddingLeft: SPACE[1] }}
+            style={{ ...fieldInput, fontFamily: FONTS.mono }}
           />
         </div>
       </label>
