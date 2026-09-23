@@ -65,3 +65,17 @@ export async function unfollowUser(userId) {
   if (!res.ok) throw new Error(await errorMessage(res, 'Could not unfollow.'));
   return res.json();
 }
+
+/** One page of the caller's own followers or following list. */
+export async function listFollows(kind, { offset = 0, signal } = {}) {
+  const res = await authedFetch(`${ENDPOINT}?list=${kind}&offset=${offset}`, {
+    method: 'GET',
+    signal,
+  });
+  if (!res.ok) throw new Error(await errorMessage(res, 'Could not load that list.'));
+  const body = await res.json();
+  return {
+    results: Array.isArray(body?.results) ? body.results : [],
+    hasMore: Boolean(body?.hasMore),
+  };
+}

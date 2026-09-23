@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { User, BookOpen, MessageSquare, Type, Languages, Home, Shield } from 'lucide-react';
+import { User, BookOpen, MessageSquare, Type, Languages, Home, Shield, Search } from 'lucide-react';
 import { COLORS, FONT_DISPLAY, FONT_MONO, FONT_BODY, RADIUS, SHADOW } from './lib/theme';
 import { loadState, saveState } from './lib/storage';
 import { stampSettings } from './lib/settingsStamp';
@@ -74,6 +74,7 @@ import AuthSheet from './components/auth/AuthSheet';
 import AuthCallbackLanding from './components/auth/AuthCallbackLanding';
 import AccountChip from './components/AccountChip';
 import ThemeChip from './components/ThemeChip';
+import SearchModal from './components/social/SearchModal';
 import {
   useAuth,
   getAccessToken,
@@ -91,6 +92,7 @@ import { setLevelBoostEnabled } from './lib/xpEntitlement';
 import { useSyncStatus } from './lib/useSyncStatus';
 import { useLeagueRewards } from './lib/useLeagueRewards';
 import Confetti from './components/ui/Confetti';
+import Button from './components/ui/Button';
 import ToastStack from './components/ui/Toast';
 import { PageFrame } from './components/ui/Layout';
 import StatusChip from './components/StatusChip';
@@ -440,6 +442,7 @@ export default function App() {
   // there a session", so it comes back on the next load for anyone without one.
   const [gateDismissed, setGateDismissed] = useState(false);
   const [authModal, setAuthModal] = useState(null); // 'create' | 'signin' | null
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const handleGuest = () => {
     setGateDismissed(true);
@@ -1278,6 +1281,20 @@ export default function App() {
                 ❄️{game.freezes}
               </span>
             )}
+            {/* Both social endpoints require auth (see socialEndpoints.js), so
+                a signed-out box could only ever produce an error — same gate
+                UserSearch used when it lived inline in the Profile tab. */}
+            {user && (
+              <Button
+                variant="icon"
+                aria-label="Search people"
+                aria-haspopup="dialog"
+                aria-expanded={searchOpen}
+                onClick={() => setSearchOpen(true)}
+              >
+                <Search size={16} aria-hidden="true" />
+              </Button>
+            )}
             <ThemeChip />
             <AccountChip
               user={user}
@@ -1554,6 +1571,7 @@ export default function App() {
 
         <Analytics />
         {authOverlay}
+        {searchOpen && <SearchModal onClose={() => setSearchOpen(false)} mobile={mobile} />}
       </div>
     </SessionGuardContext.Provider>
   );

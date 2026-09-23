@@ -5,7 +5,14 @@ vi.mock('./authedFetch.js', async (importOriginal) => ({
   authedFetch: vi.fn(),
 }));
 
-import { searchUsers, followUser, unfollowUser, isSearchable, MIN_QUERY_LEN } from './social';
+import {
+  searchUsers,
+  followUser,
+  unfollowUser,
+  listFollows,
+  isSearchable,
+  MIN_QUERY_LEN,
+} from './social';
 import { authedFetch } from './authedFetch.js';
 
 const ok = (body) => ({ ok: true, status: 200, json: () => Promise.resolve(body) });
@@ -95,5 +102,45 @@ describe('unfollowUser', () => {
   it('throws the server’s wording on failure', async () => {
     authedFetch.mockResolvedValue(failure('Could not unfollow.'));
     await expect(unfollowUser(ID)).rejects.toThrow('Could not unfollow.');
+  });
+});
+
+describe('listFollows', () => {
+  it('asks for the named list at offset 0 by default', async () => {
+    authedFetch.mockResolvedValue(ok({ results: [], hasMore: false }));
+    await listFollows('followers');
+
+    expect(authedFetch).toHaveBeenCalledWith(
+      '/api/v1/social?list=followers&offset=0',
+      expect.objectContaining({ method: 'GET' })
+    );
+  });
+
+  it('carries the offset for the next page', async () => {
+    authedFetch.mockResolvedValue(ok({ results: [], hasMore: false }));
+    await listFollows('following', { offset: 20 });
+
+    expect(authedFetch).toHaveBeenCalledWith(
+      '/api/v1/social?list=following&offset=20',
+      expect.objectContaining({ method: 'GET' })
+    );
+  });
+
+  it('returns results and hasMore', async () => {
+    authedFetch.mockResolvedValue(ok({ results: [{ user_id: ID, handle: 'sam' }], hasMore: true }));
+    expect(await listFollows('followers')).toEqual({
+      results: [{ user_id: ID, handle: 'sam' }],
+      hasMore: true,
+    });
+  });
+
+  it('defaults to an empty page when the body is malformed', async () => {
+    authedFetch.mockResolvedValue(ok({}));
+    expect(await listFollows('followers')).toEqual({ results: [], hasMore: false });
+  });
+
+  it('throws the server’s wording on failure', async () => {
+    authedFetch.mockResolvedValue(failure('Could not load that list.'));
+    await expect(listFollows('followers')).rejects.toThrow('Could not load that list.');
   });
 });

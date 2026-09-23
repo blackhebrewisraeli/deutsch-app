@@ -544,7 +544,13 @@ function collectFindings(tabName) {
   return out;
 }
 
-const SHEET_SELECTOR = '[role="dialog"]';
+// Matches both shapes a header sheet ships as: a div with an explicit
+// role="dialog" (ThemeChip, StatusChip, AccountChip) and a native <dialog
+// open> — implicit role="dialog", so nothing else here has to know the
+// difference — which is what the shared Modal primitive renders (SearchModal,
+// the first header-triggered sheet to use it). See MODALS' `sign-in` entry
+// for the same accommodation on the full-screen-modal side.
+const SHEET_SELECTOR = '[role="dialog"], dialog[open]';
 
 /**
  * How many header sheets each pass expects to find. A floor, not an exact
@@ -594,7 +600,11 @@ function clickSheetTrigger(label) {
  * it, and deliberately free of clicking — see auditThemeSheet below.
  */
 function measureOpenSheet() {
-  const sheet = document.querySelector('[role="dialog"]');
+  // Kept as a literal, not the outer SHEET_SELECTOR const: this function is
+  // stringified and run inside the page by Playwright, so it cannot close
+  // over Node-side module state — see the same constraint on MODALS' own
+  // per-modal selectors.
+  const sheet = document.querySelector('[role="dialog"], dialog[open]');
   if (!sheet) return [{ reason: 'sheet vanished before measurement' }];
   const vw = document.documentElement.clientWidth;
   const out = [];

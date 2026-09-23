@@ -634,6 +634,47 @@ describe('header and daily-goal surfaces', () => {
     );
     expect(screen.queryByText(/^Appearance$/i)).not.toBeInTheDocument();
   });
+
+  // The header cluster's width was measured tight enough that BUTTON.icon's
+  // own comment records "the spare width at 320px is ~10px" for three chips —
+  // this is the fourth. Signed-out omits it (both social endpoints require
+  // auth), so the widest real case is signed in + populated + the freeze chip
+  // + this button, all four at once.
+  it.each([320, 375, 390, 1280])(
+    'adds the header search icon for a signed-in learner without overflowing at %ipx',
+    (width) => {
+      setViewportWidth(width);
+      seedPopulatedAccount();
+      authMock.status = 'authenticated';
+      authMock.mayHaveSession = true;
+      renderPastEntry(<App />);
+      const header = screen.getByRole('banner');
+      expect(within(header).getByRole('button', { name: 'Search people' })).toBeInTheDocument();
+      expect(header.scrollWidth).toBeLessThanOrEqual(width + 1);
+      expect(document.documentElement.scrollWidth).toBeLessThanOrEqual(window.innerWidth + 1);
+    }
+  );
+
+  it('hides the header search icon when signed out — both social endpoints require auth', () => {
+    setViewportWidth(1280);
+    renderPastEntry(<App />);
+    expect(
+      within(screen.getByRole('banner')).queryByRole('button', { name: 'Search people' })
+    ).toBeNull();
+  });
+
+  it('opens the search modal from the header icon', async () => {
+    setViewportWidth(1280);
+    authMock.status = 'authenticated';
+    authMock.mayHaveSession = true;
+    const user = userEvent.setup();
+    renderPastEntry(<App />);
+
+    await user.click(
+      within(screen.getByRole('banner')).getByRole('button', { name: 'Search people' })
+    );
+    expect(screen.getByRole('dialog', { name: 'Search people' })).toBeInTheDocument();
+  });
 });
 
 // Mid-app sign-in used to re-open WelcomeGate (the gate was the only auth-modal

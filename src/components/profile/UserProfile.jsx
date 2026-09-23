@@ -66,21 +66,17 @@ const labelStyle = {
  * name above them and belong inside the identity card; giving each one a
  * bordered tile of its own is what made "Follower" look like a peer of "XP"
  * rather than part of who this is.
+ *
+ * A plain `<button>`, not a styled one: the numbers and the border-free layout
+ * ARE the affordance already, so a visible button chrome here would fight the
+ * "part of who this is, not a peer of XP" reasoning above it. `onClick` is
+ * optional because this shell is reused by the non-clickable metrics tiles
+ * nowhere else — but keeping the prop optional means a caller with no list to
+ * open (there is none today) still gets a `<div>`, not a dead button.
  */
-function SocialCount({ label, value }) {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        // Centred within its own half of the pair in BOTH layouts: the two
-        // counts are a unit, and left-aligning them inside a 320px cap under a
-        // much wider name leaves them floating rather than reading as a row.
-        alignItems: 'center',
-        gap: 2,
-        minWidth: 0,
-      }}
-    >
+function SocialCount({ label, value, onClick }) {
+  const content = (
+    <>
       <span
         style={{
           fontFamily: FONTS.display,
@@ -94,7 +90,41 @@ function SocialCount({ label, value }) {
         {value}
       </span>
       <span style={{ ...labelStyle, textAlign: 'center', overflowWrap: 'anywhere' }}>{label}</span>
-    </div>
+    </>
+  );
+
+  const shared = {
+    display: 'flex',
+    flexDirection: 'column',
+    // Centred within its own half of the pair in BOTH layouts: the two
+    // counts are a unit, and left-aligning them inside a 320px cap under a
+    // much wider name leaves them floating rather than reading as a row.
+    alignItems: 'center',
+    gap: 2,
+    minWidth: 0,
+  };
+
+  if (!onClick) return <div style={shared}>{content}</div>;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      data-ui="button"
+      data-focus-inset=""
+      aria-label={`${value} ${label}`}
+      style={{
+        ...shared,
+        background: 'none',
+        border: 'none',
+        padding: 0,
+        cursor: 'pointer',
+        color: 'inherit',
+        font: 'inherit',
+      }}
+    >
+      {content}
+    </button>
   );
 }
 
@@ -139,6 +169,7 @@ export default function UserProfile({
   onSignIn,
   onSelectUser,
   onOpenSettings,
+  onOpenFollowList,
   mobile = false,
   children = null,
 }) {
@@ -410,8 +441,16 @@ export default function UserProfile({
               minWidth: 0,
             }}
           >
-            <SocialCount label="Follower" value={profile?.followers_count ?? 0} />
-            <SocialCount label="Folgt" value={profile?.following_count ?? 0} />
+            <SocialCount
+              label="Follower"
+              value={profile?.followers_count ?? 0}
+              onClick={onOpenFollowList ? () => onOpenFollowList('followers') : undefined}
+            />
+            <SocialCount
+              label="Folgt"
+              value={profile?.following_count ?? 0}
+              onClick={onOpenFollowList ? () => onOpenFollowList('following') : undefined}
+            />
           </div>
 
           {/* On desktop, the portrait creates a 200px-tall column. Keeping the

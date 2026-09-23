@@ -38,6 +38,11 @@ export const MAX_QUERY_LEN = 24;
 /** One screenful of people. Also the ceiling on what one query can enumerate. */
 export const SEARCH_LIMIT = 20;
 
+/** A page of a follow list — smaller than SEARCH_LIMIT because a row here
+ * carries a Follow/Unfollow button, not just a search hit, and the caller can
+ * always ask for the next page. */
+export const LIST_LIMIT = 20;
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** PostgREST errors on a malformed uuid (22P02); that is a 400, not a 500. */
@@ -211,5 +216,86 @@ export const unfollowHandler = createAccountHandler({
     if (error) throw error;
 
     return res.status(200).json({ user_id: target, is_following: false });
+  },
+});
+
+/**
+ * Followers or following, for the CALLER only.
+ *
+ * `api/v1/league/profile.js` deliberately ships counts only, never the edges —
+ * shipping the LIST there would publish who follows whom for everyone in a
+ * shared league. That reasoning does not apply here: this endpoint only ever
+ * answers "who follows me" / "who do I follow", the same self-only shape
+ * `fetchMyProfile` already uses elsewhere, so there is no third party's graph
+ * to protect.
+ */
+export const listHandler = createAccountHandler({
+  method: 'GET',
+  ipRate: { windowMs: 60 * 1000, max: 60 },
+  userRate: { windowMs: 60 * 1000, max: 40 },
+  name: 'social.list',
+  failureMessage: 'Could not load that list.',
+  run: async ({ req, res, auth, db }) => {
+    const list = req.query?.list;
+    if (list !== 'followers' && list !== 'following') {
+      return sendError(res, 'bad_request', 'Invalid list.');
+    }
+    const offset = Math.max(0, Number.parseInt(req.query?.offset, 10) || 0);
+
+    // followers = people whose edge POINTS AT me (followed_id = me); the other
+    // side of that edge (follower_id) is who to show. following is the mirror.
+    const anchorColumn = list === 'followers' ? 'followed_id' : 'follower_id';
+    const otherColumn = list === 'followers' ? 'follower_id' : 'followed_id';
+
+    const { data: edges, error: edgeError } = await db
+      .from('profile_follows')
+      .select(otherColumn)
+      .eq(anchorColumn, auth.userId)
+      .order('created_at', { ascending: false })
+      .range(offset, offset + LIST_LIMIT - 1);
+    if (edgeError) throw edgeError;
+
+    const rows = edges ?? [];
+    const orderedIds = rows.map((row) => row[otherColumn]);
+    if (orderedIds.length === 0) {
+      return res.status(200).json({ list, results: [], hasMore: false });
+    }
+
+    const { data: profiles, error: profileError } = await db
+      .from('profiles')
+      .select(SEARCH_COLUMNS)
+      .in('user_id', orderedIds)
+      .is('blocked_at', null);
+    if (profileError) throw profileError;
+
+    const byId = new Map((profiles ?? []).map((p) => [p.user_id, p]));
+
+    // On the followers list, "do I follow them back" is a genuine unknown and
+    // needs its own query — the edge that put them on THIS list points the
+    // other way. On the following list every row is, by construction, someone
+    // the caller follows, so it needs no second query at all.
+    let followingBack = new Set();
+    if (list === 'followers') {
+      const { data: mine, error: mineError } = await db
+        .from('profile_follows')
+        .select('followed_id')
+        .eq('follower_id', auth.userId)
+        .in('followed_id', orderedIds);
+      if (mineError) throw mineError;
+      followingBack = new Set((mine ?? []).map((edge) => edge.followed_id));
+    }
+
+    const results = orderedIds
+      .map((id) => byId.get(id))
+      .filter(Boolean)
+      .map((profile) => ({
+        user_id: profile.user_id,
+        handle: profile.handle,
+        display_name: profile.display_name,
+        avatar_path: profile.avatar_path,
+        is_following: list === 'following' ? true : followingBack.has(profile.user_id),
+      }));
+
+    return res.status(200).json({ list, results, hasMore: rows.length === LIST_LIMIT });
   },
 });
