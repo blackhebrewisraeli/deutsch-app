@@ -183,6 +183,9 @@ export const EXPORTED_TABLES = {
   stats_daily: 'daily',
   decks: 'decks',
   settings: 'settings',
+  // The learner's own token movements. Unlike progress_events_seen these are
+  // not recoverable from anything else in the payload.
+  token_ledger: 'tokenLedger',
 };
 
 /**

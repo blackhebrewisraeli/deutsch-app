@@ -226,6 +226,12 @@ jobs:
   rls-policy-tests:
     name: RLS Policy Tests
     runs-on: ubuntu-latest
+    # A job-level block REPLACES the defaults: every scope not listed becomes
+    # `none`. So contents:read has to be stated alongside packages:read, or
+    # actions/checkout below loses its token's read access.
+    permissions:
+      contents: read
+      packages: read
     env:
       HUSKY: 0
     steps:
@@ -254,8 +260,32 @@ jobs:
         with:
           version: 2.114.0
 
+      # Authenticates any pull that lands on ghcr.io. The CLI reads Docker's
+      # config file for registry credentials, so this login does reach it.
+      # On its own it did NOT stop the `toomanyrequests` on #333 — the pulls
+      # were authenticated and still throttled — which is why the start step
+      # below also lets the CLI fall back to other registries. GITHUB_TOKEN via
+      # env + --password-stdin keeps it out of argv and logs.
+      - name: Log in to GHCR
+        run: |
+          printf '%s' "$GITHUB_TOKEN" |
+            docker login ghcr.io \
+              --username "$GITHUB_ACTOR" \
+              --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # setup-cli exports SUPABASE_INTERNAL_IMAGE_REGISTRY=ghcr.io for every
+      # CLI >= 1.28 (no input turns it off). With that override set, the CLI
+      # pulls from ghcr.io ONLY. Unset, it tries public.ecr.aws, then ghcr.io,
+      # then Docker Hub (GetRegistryImageUrls in the CLI's docker.go). On #333
+      # GHCR throttled every pull even after the login above succeeded, so the
+      # fallback chain is what actually keeps a registry outage from failing
+      # the RLS suite. The login still authenticates the ghcr.io tier.
       - name: Start local Supabase (applies migrations)
-        run: supabase start
+        run: |
+          unset SUPABASE_INTERNAL_IMAGE_REGISTRY
+          supabase start
 
       - name: Run RLS adversarial suite
         run: |

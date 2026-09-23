@@ -54,6 +54,7 @@ export default function StatsTab({
   onReview,
   user,
   profile,
+  tokens = null,
   onSignIn,
   view,
   onViewChange,
@@ -135,6 +136,7 @@ export default function StatsTab({
         <UserProfile
           user={user}
           profile={profile}
+          tokens={tokens}
           onSignIn={onSignIn}
           onSelectUser={setSelectedUser}
           onOpenSettings={openSettings}
