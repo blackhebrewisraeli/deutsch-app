@@ -483,10 +483,11 @@ export default function VocabTab({
             // wide). minmax(0, …) lets the track shrink and the content reflow.
             gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : 'minmax(0, 448px) minmax(0, 1fr)',
             gap: mobile ? SPACE[4] : SPACE[8],
-            marginTop: SPACE[8],
+            marginTop: mobile ? SPACE[4] : SPACE[8],
           }}
         >
           <DeckPicker
+            collapsible={mobile}
             deckId={deckId}
             onSelect={selectDeck}
             customDecks={customDecks}

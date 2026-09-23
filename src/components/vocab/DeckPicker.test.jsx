@@ -341,3 +341,25 @@ describe('DeckPicker — interest decks', () => {
     expect(screen.getByRole('option', { name: /Sport/ })).toHaveValue('interest-sport');
   });
 });
+
+describe('DeckPicker — collapsible (mobile)', () => {
+  it('starts closed showing only the current deck, and closes again after a pick', async () => {
+    const onSelect = vi.fn();
+    const { container } = render(<DeckPicker {...props} onSelect={onSelect} collapsible />);
+    const details = container.querySelector('details');
+    expect(details.open).toBe(false);
+    expect(container.querySelector('summary')).toHaveTextContent('Greetings');
+
+    await userEvent.click(container.querySelector('summary'));
+    expect(details.open).toBe(true);
+
+    await userEvent.click(screen.getByRole('button', { name: /Travel/ }));
+    expect(onSelect).toHaveBeenCalledWith('travel');
+    expect(details.open).toBe(false);
+  });
+
+  it('renders no disclosure on wide layouts', () => {
+    const { container } = render(<DeckPicker {...props} />);
+    expect(container.querySelector('details')).toBeNull();
+  });
+});
