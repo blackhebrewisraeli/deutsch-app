@@ -47,7 +47,7 @@ const visuallyHidden = {
  * narrowest supported viewport, so "prominently inside Social/Profile" is the
  * placement the budget actually allows.
  */
-export default function UserSearch({ mobile = false, num = '✱' }) {
+export default function UserSearch({ mobile = false, num = '✱', onOpenProfile }) {
   const [term, setTerm] = useState('');
   const [results, setResults] = useState([]);
   const [status, setStatus] = useState('idle');
@@ -198,6 +198,7 @@ export default function UserSearch({ mobile = false, num = '✱' }) {
                 row={row}
                 busy={Boolean(pending[row.user_id])}
                 onToggle={toggleFollow}
+                onOpen={onOpenProfile}
               />
             ))}
           </ul>
@@ -223,27 +224,12 @@ export default function UserSearch({ mobile = false, num = '✱' }) {
   );
 }
 
-export function UserSearchRow({ row, busy, onToggle }) {
+export function UserSearchRow({ row, busy, onToggle, onOpen }) {
   const name = profileName(row);
   const following = Boolean(row.is_following);
 
-  return (
-    <li
-      style={{
-        display: 'grid',
-        // minmax(0, 1fr) and never a bare 1fr: a bare track keeps
-        // min-width:auto, so a long display name would push the row — and the
-        // page — wider than a 320px viewport instead of ellipsing.
-        gridTemplateColumns: `${AVATAR_SIZE}px minmax(0, 1fr) auto`,
-        alignItems: 'center',
-        gap: SPACE[3],
-        minWidth: 0,
-        padding: SPACE[3],
-        background: COLORS.card,
-        border: BORDER.panel,
-        borderRadius: RADIUS.md,
-      }}
-    >
+  const identity = (
+    <>
       <Avatar profile={row} userId={row.user_id} size={AVATAR_SIZE} />
 
       <div style={{ minWidth: 0 }}>
@@ -278,6 +264,59 @@ export function UserSearchRow({ row, busy, onToggle }) {
           </div>
         )}
       </div>
+    </>
+  );
+
+  // Avatar + name share one grid; when the row can open a profile that grid IS
+  // the button, so the whole identity is the tap target and the Follow button
+  // beside it stays a separate control (never a button inside a button).
+  const identityGrid = {
+    display: 'grid',
+    gridTemplateColumns: `${AVATAR_SIZE}px minmax(0, 1fr)`,
+    alignItems: 'center',
+    gap: SPACE[3],
+    minWidth: 0,
+  };
+
+  return (
+    <li
+      style={{
+        display: 'grid',
+        // minmax(0, 1fr) and never a bare 1fr: a bare track keeps
+        // min-width:auto, so a long display name would push the row — and the
+        // page — wider than a 320px viewport instead of ellipsing.
+        gridTemplateColumns: 'minmax(0, 1fr) auto',
+        alignItems: 'center',
+        gap: SPACE[3],
+        minWidth: 0,
+        padding: SPACE[3],
+        background: COLORS.card,
+        border: BORDER.panel,
+        borderRadius: RADIUS.md,
+      }}
+    >
+      {onOpen ? (
+        <button
+          type="button"
+          onClick={() => onOpen(row)}
+          aria-label={`View ${name}'s profile`}
+          style={{
+            ...identityGrid,
+            width: '100%',
+            padding: 0,
+            border: 'none',
+            background: 'none',
+            font: 'inherit',
+            color: 'inherit',
+            textAlign: 'left',
+            cursor: 'pointer',
+          }}
+        >
+          {identity}
+        </button>
+      ) : (
+        <div style={identityGrid}>{identity}</div>
+      )}
 
       <Button
         variant={following ? 'secondary' : 'primary'}

@@ -6,6 +6,7 @@ import { useFollowToggle } from '../../lib/useFollowToggle.js';
 import Modal from '../ui/Modal';
 import StatusNote from '../ui/StatusNote';
 import Button from '../ui/Button';
+import ProfileCard from '../stats/ProfileCard';
 import { UserSearchRow } from './UserSearch';
 
 const TITLE = { followers: 'Follower', following: 'Folgt' };
@@ -34,6 +35,8 @@ export default function FollowListModal({ kind, onClose }) {
   const offsetRef = useRef(0);
 
   const { pending, toggle } = useFollowToggle(setRows);
+  // The person whose passport is open over this list, if any.
+  const [viewing, setViewing] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -81,88 +84,94 @@ export default function FollowListModal({ kind, onClose }) {
   };
 
   return (
-    <Modal label={TITLE[kind]} onClose={onClose} maxWidth={440}>
-      <h2
-        style={{
-          margin: `0 0 ${SPACE[4]}px`,
-          fontFamily: FONTS.body,
-          fontSize: FONT_SIZE.lg,
-          fontWeight: FONT_WEIGHT.bold,
-        }}
-      >
-        {TITLE[kind]}
-      </h2>
+    <>
+      {/* Disarmed while a passport is open over it, so Escape closes only the
+        top layer — see SearchModal for the same arrangement. */}
+      <Modal label={TITLE[kind]} onClose={viewing ? undefined : onClose} maxWidth={440}>
+        <h2
+          style={{
+            margin: `0 0 ${SPACE[4]}px`,
+            fontFamily: FONTS.body,
+            fontSize: FONT_SIZE.lg,
+            fontWeight: FONT_WEIGHT.bold,
+          }}
+        >
+          {TITLE[kind]}
+        </h2>
 
-      {/* One live region for the whole outcome — see UserSearch for the same
+        {/* One live region for the whole outcome — see UserSearch for the same
           reasoning: announcing each row separately reads the list twice. */}
-      <div aria-live="polite">
-        {status === 'loading' && (
+        <div aria-live="polite">
+          {status === 'loading' && (
+            <p
+              style={{
+                fontFamily: FONTS.mono,
+                fontSize: FONT_SIZE.tag,
+                textTransform: 'uppercase',
+              }}
+            >
+              Loading…
+            </p>
+          )}
+
+          {status === 'error' && (
+            <StatusNote
+              tone="error"
+              icon={AlertTriangle}
+              action={{ label: 'Retry', onClick: () => setNonce((n) => n + 1) }}
+            >
+              {error}
+            </StatusNote>
+          )}
+
+          {status === 'done' && rows.length === 0 && (
+            <StatusNote tone="empty" icon={Users}>
+              {EMPTY_TEXT[kind]}
+            </StatusNote>
+          )}
+
+          {rows.length > 0 && (
+            <ul
+              style={{
+                listStyle: 'none',
+                margin: 0,
+                padding: 0,
+                display: 'grid',
+                gap: SPACE[2],
+                minWidth: 0,
+              }}
+            >
+              {rows.map((row) => (
+                <UserSearchRow
+                  key={row.user_id}
+                  row={row}
+                  busy={Boolean(pending[row.user_id])}
+                  onToggle={handleToggle}
+                  onOpen={(r) => setViewing(r.user_id)}
+                />
+              ))}
+            </ul>
+          )}
+        </div>
+
+        {status !== 'error' && error && (
           <p
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              textTransform: 'uppercase',
-            }}
+            role="alert"
+            style={{ marginTop: SPACE[3], fontFamily: FONTS.body, fontSize: FONT_SIZE.sm }}
           >
-            Loading…
+            {error}
           </p>
         )}
 
-        {status === 'error' && (
-          <StatusNote
-            tone="error"
-            icon={AlertTriangle}
-            action={{ label: 'Retry', onClick: () => setNonce((n) => n + 1) }}
-          >
-            {error}
-          </StatusNote>
+        {hasMore && (
+          <div style={{ marginTop: SPACE[4], display: 'flex', justifyContent: 'center' }}>
+            <Button variant="secondary" busy={loadingMore} onClick={loadMore}>
+              Load more
+            </Button>
+          </div>
         )}
-
-        {status === 'done' && rows.length === 0 && (
-          <StatusNote tone="empty" icon={Users}>
-            {EMPTY_TEXT[kind]}
-          </StatusNote>
-        )}
-
-        {rows.length > 0 && (
-          <ul
-            style={{
-              listStyle: 'none',
-              margin: 0,
-              padding: 0,
-              display: 'grid',
-              gap: SPACE[2],
-              minWidth: 0,
-            }}
-          >
-            {rows.map((row) => (
-              <UserSearchRow
-                key={row.user_id}
-                row={row}
-                busy={Boolean(pending[row.user_id])}
-                onToggle={handleToggle}
-              />
-            ))}
-          </ul>
-        )}
-      </div>
-
-      {status !== 'error' && error && (
-        <p
-          role="alert"
-          style={{ marginTop: SPACE[3], fontFamily: FONTS.body, fontSize: FONT_SIZE.sm }}
-        >
-          {error}
-        </p>
-      )}
-
-      {hasMore && (
-        <div style={{ marginTop: SPACE[4], display: 'flex', justifyContent: 'center' }}>
-          <Button variant="secondary" busy={loadingMore} onClick={loadMore}>
-            Load more
-          </Button>
-        </div>
-      )}
-    </Modal>
+      </Modal>
+      {viewing && <ProfileCard userId={viewing} onClose={() => setViewing(null)} />}
+    </>
   );
 }
