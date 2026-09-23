@@ -8,8 +8,12 @@ import {
   classifyBands,
   scorePlacement,
   applyPlacement,
+  applyDefaultPlacement,
   readPlacement,
+  DEFAULT_PLACEMENT_LEVEL,
+  DEFAULT_PLACEMENT_STAMP,
 } from './placement';
+import { mergeSettings } from './sync/merge';
 import { LEVEL_CHANGE_EVENT, getUserLevel, hasStoredLevel } from './levelPref';
 import { loadState } from './storage';
 import { activePack } from '../packs';
@@ -218,5 +222,80 @@ describe('applyPlacement / readPlacement', () => {
     expect(applyPlacement({ correct: 0, total: 9, bands: {}, level: 'c2' })).toBeNull();
     expect(hasStoredLevel()).toBe(false);
     expect(readPlacement()).toBeNull();
+  });
+});
+
+// Skipping placement must still leave a level behind, or the gate — which
+// fires on "no level" — reopens on the next load. That was the forced-retest
+// loop: the test was the only writer a first-time learner had.
+describe('applyDefaultPlacement', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  it('classifies a learner with no level at A1 and announces it', () => {
+    const seen = [];
+    const onChange = (e) => seen.push(e.detail.level);
+    window.addEventListener(LEVEL_CHANGE_EVENT, onChange);
+    const level = applyDefaultPlacement({ now: 1_700_000_000_000 });
+    window.removeEventListener(LEVEL_CHANGE_EVENT, onChange);
+
+    expect(DEFAULT_PLACEMENT_LEVEL).toBe('a1');
+    expect(level).toBe('a1');
+    expect(hasStoredLevel()).toBe(true);
+    expect(localStorage.getItem('deutsch-level')).toBe('a1');
+    expect(seen).toEqual(['a1']);
+    expect(readPlacement()).toEqual({
+      takenAt: 1_700_000_000_000,
+      source: 'default',
+      level: 'a1',
+    });
+  });
+
+  it('stamps the weakest real clock, never now', () => {
+    applyDefaultPlacement({ now: 1_700_000_000_000 });
+    expect(stampLevel).toHaveBeenCalledTimes(1);
+    expect(stampLevel).toHaveBeenCalledWith(DEFAULT_PLACEMENT_STAMP);
+    expect(DEFAULT_PLACEMENT_STAMP).toBe(1);
+  });
+
+  it('never overwrites a level the learner already has', () => {
+    localStorage.setItem('deutsch-level', 'b1');
+    expect(applyDefaultPlacement()).toBeNull();
+    expect(localStorage.getItem('deutsch-level')).toBe('b1');
+    expect(stampLevel).not.toHaveBeenCalled();
+    expect(readPlacement()).toBeNull();
+  });
+
+  it('is idempotent — a second call is a no-op', () => {
+    applyDefaultPlacement({ now: 10 });
+    expect(applyDefaultPlacement({ now: 20 })).toBeNull();
+    expect(readPlacement().takenAt).toBe(10);
+  });
+
+  // The whole point of the weak stamp, proven against the real merge.
+  it('loses to any level a human chose on another device', () => {
+    const local = {
+      level: 'a1',
+      levelUpdatedAt: DEFAULT_PLACEMENT_STAMP,
+      placement: { source: 'default', level: 'a1' },
+      settingsUpdatedAt: 2_000_000_000_000,
+    };
+    const remote = {
+      level: 'b1',
+      levelUpdatedAt: 1_600_000_000_000,
+      placement: { source: 'placement', level: 'b1' },
+      settingsUpdatedAt: 1_600_000_000_000,
+    };
+    const merged = mergeSettings(local, remote);
+    expect(merged.level).toBe('b1');
+    expect(merged.placement.source).toBe('placement');
+  });
+
+  it('still wins over an account that has no level at all, so it syncs up', () => {
+    const local = { level: 'a1', levelUpdatedAt: DEFAULT_PLACEMENT_STAMP, settingsUpdatedAt: 5 };
+    const remote = { settingsUpdatedAt: 4 };
+    expect(mergeSettings(local, remote).level).toBe('a1');
   });
 });

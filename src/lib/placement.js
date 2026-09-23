@@ -8,12 +8,26 @@
 // already consumes. German-specific content lives in the pack.
 
 import { loadState, saveState } from './storage.js';
-import { setUserLevel } from './levelPref.js';
+import { setUserLevel, adoptLevel, hasStoredLevel } from './levelPref.js';
+import { stampLevel } from './settingsStamp.js';
 import { exactMatch } from './matching.js';
 
 export const ITEMS_PER_BAND = 3;
 export const PASS_THRESHOLD = 2;
 export const PLACEMENT_BANDS = Object.freeze(['a1', 'a2', 'b1']);
+
+/** Where a learner who skips placement (or never finishes it) starts. */
+export const DEFAULT_PLACEMENT_LEVEL = 'a1';
+
+/**
+ * The `levelUpdatedAt` a default classification carries. Deliberately the
+ * weakest real clock value there is: it beats "no level at all" (the merge
+ * reads a missing stamp as -Infinity), so a brand-new account's default does
+ * upload and follow the learner to their next device — but it loses to ANY
+ * level a human actually chose, on any device, at any time. A default is the
+ * engine filling a gap, not a choice, and must never win an argument with one.
+ */
+export const DEFAULT_PLACEMENT_STAMP = 1;
 
 function bankFor(pack, level) {
   const banks = pack?.content?.translateSentences ?? {};
@@ -168,6 +182,37 @@ export function applyPlacement(score, { now = Date.now() } = {}) {
       bands: score.bands,
     },
   });
+  return level;
+}
+
+/**
+ * Classify a learner who has no level at the lowest band, without asking.
+ *
+ * This is what makes placement OPTIONAL. The test used to be the only writer
+ * a first-time learner had, so every exit that was not "finish all nine
+ * questions" — Skip, a closed tab, a reload — left them unclassified, and the
+ * gate took the whole screen again on the next load. Writing the default the
+ * moment the test is first offered means every one of those exits already has
+ * a level behind it, and the gate (which only fires on "no level") can never
+ * fire for this learner again.
+ *
+ * Never overwrites: a stored level of any kind wins, so calling this for a
+ * learner who has one is a no-op. Stamped with DEFAULT_PLACEMENT_STAMP rather
+ * than now, via adoptLevel (announce, don't stamp) + an explicit stamp — see
+ * the constant for why.
+ *
+ * @param {{ now?: number }} [opts]
+ * @returns {'a1' | null} the written level, or null when one already existed
+ */
+export function applyDefaultPlacement({ now = Date.now() } = {}) {
+  if (hasStoredLevel()) return null;
+  const level = DEFAULT_PLACEMENT_LEVEL;
+  // Stamp BEFORE announcing: adoptLevel fires LEVEL_CHANGE_EVENT synchronously,
+  // and a listener that reads the blob in response should see the whole write.
+  stampLevel(DEFAULT_PLACEMENT_STAMP);
+  const s = loadState() ?? {};
+  saveState({ ...s, placement: { takenAt: now, source: 'default', level } });
+  adoptLevel(level);
   return level;
 }
 

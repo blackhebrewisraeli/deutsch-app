@@ -4,17 +4,17 @@ import userEvent from '@testing-library/user-event';
 import PlacementOfferBanner from './PlacementOfferBanner';
 
 describe('PlacementOfferBanner', () => {
-  it('invites a retake without blocking the rest of the page', async () => {
+  it('invites the test without blocking the rest of the page', async () => {
     const onRetake = vi.fn();
     const onDismiss = vi.fn();
     render(<PlacementOfferBanner onRetake={onRetake} onDismiss={onDismiss} />);
 
-    const region = screen.getByRole('region', { name: /ready to retake placement/i });
+    const region = screen.getByRole('region', { name: /ready to check your level/i });
     expect(region).toBeInTheDocument();
-    expect(screen.getByText(/3 vocab decks/i)).toBeInTheDocument();
+    expect(screen.getByText(/earned 500 XP/i)).toBeInTheDocument();
     expect(screen.getByText(/settings/i)).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /retake placement/i }));
+    await userEvent.click(screen.getByRole('button', { name: /take the test/i }));
     expect(onRetake).toHaveBeenCalledTimes(1);
 
     await userEvent.click(screen.getByRole('button', { name: /not now/i }));

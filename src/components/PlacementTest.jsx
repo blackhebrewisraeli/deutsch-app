@@ -12,7 +12,13 @@ import {
 } from '../lib/theme';
 import { shuffle } from '../lib/utils';
 import { LEVEL_NAMES, LEVEL_MODES } from '../lib/levelPref';
-import { buildPlacementItems, gradeItem, scorePlacement, applyPlacement } from '../lib/placement';
+import {
+  buildPlacementItems,
+  gradeItem,
+  scorePlacement,
+  applyPlacement,
+  DEFAULT_PLACEMENT_LEVEL,
+} from '../lib/placement';
 import { activePack } from '../packs';
 import Button from './ui/Button';
 import Heading from './ui/Heading';
@@ -230,8 +236,14 @@ function ChoiceItem({ options, onPick }) {
  * free level picker; returning learners reopen it from Settings / StatusChip.
  *
  * Does not record XP or SRS — it is an assessment, not a practice round.
+ *
+ * ALWAYS LEAVABLE. There is an exit on the intro and on every question, for
+ * everyone. Leaving never writes a level from here — `firstRun` only changes
+ * the words, because on a first run the caller has already classified the
+ * learner at the default band (applyDefaultPlacement) before this painted.
+ * Exiting keeps whatever level is stored; it does not un-classify anyone.
  */
-export default function PlacementTest({ onComplete, onCancel, allowCancel = false }) {
+export default function PlacementTest({ onComplete, onCancel, firstRun = false }) {
   const items = useMemo(() => buildPlacementItems(activePack), []);
   const [phase, setPhase] = useState('intro');
   const [index, setIndex] = useState(0);
@@ -354,11 +366,11 @@ export default function PlacementTest({ onComplete, onCancel, allowCancel = fals
             <Button data-entry="placement-start" onClick={start}>
               Start
             </Button>
-            {allowCancel && (
-              <Button variant="ghost" onClick={onCancel}>
-                Keep my current level
-              </Button>
-            )}
+            <Button variant="ghost" data-entry="placement-skip" onClick={onCancel}>
+              {firstRun
+                ? `Skip for now — start at ${DEFAULT_PLACEMENT_LEVEL.toUpperCase()}`
+                : 'Keep my current level'}
+            </Button>
           </Stack>
         )}
 
@@ -413,6 +425,9 @@ export default function PlacementTest({ onComplete, onCancel, allowCancel = fals
                 Check
               </Button>
             )}
+            <Button variant="ghost" onClick={onCancel}>
+              {firstRun ? 'Skip the test' : 'Stop and keep my level'}
+            </Button>
           </>
         )}
 

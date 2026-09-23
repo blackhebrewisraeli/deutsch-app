@@ -3,10 +3,11 @@ import Heading from './ui/Heading';
 import { Body } from './ui/Text';
 import Button from './ui/Button';
 import { Stack, Row } from './ui/Layout';
-import { PLACEMENT_OFFER_THRESHOLD } from '../lib/placementOffer';
+import { PLACEMENT_OFFER_XP } from '../lib/placementOffer';
 
 /**
- * One-shot Home invite to retake placement after N completed decks.
+ * One-shot Home invite to take placement once the learner has earned
+ * PLACEMENT_OFFER_XP.
  * Dismissible — never a hard block. Persistence is the parent's job.
  */
 export default function PlacementOfferBanner({ onRetake, onDismiss }) {
@@ -20,15 +21,15 @@ export default function PlacementOfferBanner({ onRetake, onDismiss }) {
     >
       <Stack gap={4}>
         <Heading id="placement-offer-heading" level={2} size="sm">
-          Ready to retake placement?
+          Ready to check your level?
         </Heading>
         <Body size="sm" tone="muted">
-          You've finished {PLACEMENT_OFFER_THRESHOLD} vocab decks. A short test can update your
-          practice level. You can also retake anytime from Settings.
+          You've earned {PLACEMENT_OFFER_XP} XP. Nine quick questions can move you to the practice
+          level that fits — or keep going where you are. It's always in Settings too.
         </Body>
         <Row gap={3}>
           <Button variant="primary" onClick={onRetake}>
-            Retake placement
+            Take the test
           </Button>
           <Button variant="secondary" onClick={onDismiss}>
             Not now

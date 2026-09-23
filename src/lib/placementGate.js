@@ -4,7 +4,11 @@
  * Placement is for a FIRST-TIME learner — someone with no classified CEFR code
  * anywhere. It is not a login wall, and it is not something a returning learner
  * should ever meet again unless they ask for it (Settings / StatusChip retake,
- * or the 3-deck Home invite, both of which bypass this predicate entirely).
+ * or the 500 XP Home suggestion, both of which bypass this predicate entirely).
+ *
+ * When this returns true the caller default-classifies the learner at A1 as
+ * the test paints (placement.js `applyDefaultPlacement`), so it returns true
+ * at most once per learner: after that they have a level.
  *
  * THE BUG THIS EXISTS FOR. `deutsch-level` lives in localStorage, but a
  * signed-in account's level also lives in `settings.data.level` on the server
