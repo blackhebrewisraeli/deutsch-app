@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import LevelCard from './LevelCard';
+import { FONT_SIZE, SPACE } from '../../lib/theme';
+
+const setViewportWidth = (width) => {
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: width,
+  });
+};
 
 const lvl = {
   level: 30,
@@ -24,5 +33,21 @@ describe('LevelCard', () => {
     render(<LevelCard lvl={lvl} totalXp={21900} learnedCount={0} />);
     expect(screen.getByText('30')).toBeInTheDocument();
     expect(screen.getByText('Muttersprachler')).toBeInTheDocument();
+  });
+
+  it.each([320, 375])('uses the compact stat scale at %spx', (width) => {
+    setViewportWidth(width);
+    render(<LevelCard lvl={lvl} totalXp={21900} learnedCount={1234} />);
+
+    expect(screen.getByTestId('level-card')).toHaveStyle({
+      padding: `${SPACE[4]}px`,
+      gap: `${SPACE[3]}px`,
+    });
+    expect(screen.getByText('30')).toHaveStyle({ fontSize: `${FONT_SIZE['5xl']}px` });
+    expect(screen.getByText('1234')).toHaveStyle({ fontSize: `${FONT_SIZE['3xl']}px` });
+    expect(screen.getByText('Muttersprachler')).toHaveStyle({
+      fontSize: `${FONT_SIZE.xl}px`,
+      overflowWrap: 'anywhere',
+    });
   });
 });

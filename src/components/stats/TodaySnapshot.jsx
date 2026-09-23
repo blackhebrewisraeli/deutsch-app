@@ -10,24 +10,28 @@ import {
   SHADOW,
 } from '../../lib/theme';
 import StatusNote from '../ui/StatusNote';
+import { bp, useWindowWidth } from '../../lib/useWindowWidth';
 
 // Section A — today's exercise count + three-way accuracy bar + streak.
 export default function TodaySnapshot({ snap }) {
+  const tiny = useWindowWidth() < bp.tiny;
   const { exercises, accuracy, streak } = snap;
   const totalGraded = accuracy.correct + accuracy.almost + accuracy.wrong;
   const pct = (n) => (totalGraded === 0 ? 0 : Math.round((n / totalGraded) * 100));
 
   return (
     <div
+      data-testid="today-snapshot"
       style={{
         borderRadius: RADIUS.lg,
         boxShadow: SHADOW.card,
         background: COLORS.card,
-        padding: SPACE[6],
+        padding: tiny ? SPACE[4] : SPACE[6],
         display: 'grid',
         gridTemplateColumns: 'auto minmax(0, 1fr)',
-        gap: SPACE[8],
+        gap: tiny ? SPACE[4] : SPACE[8],
         alignItems: 'center',
+        minWidth: 0,
       }}
     >
       <div>
@@ -45,7 +49,7 @@ export default function TodaySnapshot({ snap }) {
         <div
           style={{
             fontFamily: FONTS.display,
-            fontSize: FONT_SIZE['6xl'],
+            fontSize: tiny ? FONT_SIZE['5xl'] : FONT_SIZE['6xl'],
             fontWeight: FONT_WEIGHT.black,
             letterSpacing: LETTER_SPACING.tight,
             lineHeight: 1,
@@ -67,7 +71,7 @@ export default function TodaySnapshot({ snap }) {
         </div>
       </div>
 
-      <div>
+      <div style={{ minWidth: 0 }}>
         <div
           style={{
             fontFamily: FONTS.mono,
@@ -105,7 +109,8 @@ export default function TodaySnapshot({ snap }) {
             <div
               style={{
                 display: 'flex',
-                gap: SPACE[5],
+                gap: tiny ? SPACE[2] : SPACE[5],
+                flexWrap: 'wrap',
                 fontFamily: FONTS.mono,
                 fontSize: FONT_SIZE.sm,
                 color: COLORS.ink,

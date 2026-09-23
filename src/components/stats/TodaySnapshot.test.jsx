@@ -1,6 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import TodaySnapshot from './TodaySnapshot';
+import { FONT_SIZE, SPACE } from '../../lib/theme';
+
+const setViewportWidth = (width) => {
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: width,
+  });
+};
 
 const snap = (over) => ({
   exercises: 0,
@@ -40,5 +49,23 @@ describe('TodaySnapshot', () => {
   it('uses the singular "exercise" when the count is 1', () => {
     render(<TodaySnapshot snap={snap({ exercises: 1 })} />);
     expect(screen.getByText('exercise')).toBeInTheDocument();
+  });
+
+  it.each([320, 375])('uses compact spacing and type at %spx', (width) => {
+    setViewportWidth(width);
+    render(
+      <TodaySnapshot
+        snap={snap({ exercises: 12, streak: 5, accuracy: { correct: 8, almost: 2, wrong: 2 } })}
+      />
+    );
+    expect(screen.getByTestId('today-snapshot')).toHaveStyle({
+      padding: `${SPACE[4]}px`,
+      gap: `${SPACE[4]}px`,
+    });
+    expect(screen.getByText('12')).toHaveStyle({ fontSize: `${FONT_SIZE['5xl']}px` });
+    expect(screen.getByText(/✓ 8/).parentElement).toHaveStyle({
+      flexWrap: 'wrap',
+      gap: `${SPACE[2]}px`,
+    });
   });
 });

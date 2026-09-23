@@ -8,21 +8,26 @@ import {
   RADIUS,
   SHADOW,
 } from '../../lib/theme';
+import { bp, useWindowWidth } from '../../lib/useWindowWidth';
 
 // Stats "Fortschritt" header card: level number, rank, XP-to-next bar, total XP,
 // and the LEARNED figure (moved here from the app header).
 export default function LevelCard({ lvl, totalXp, learnedCount }) {
+  const tiny = useWindowWidth() < bp.tiny;
+
   return (
     <div
+      data-testid="level-card"
       style={{
         borderRadius: RADIUS.lg,
         boxShadow: SHADOW.card,
         background: COLORS.card,
-        padding: SPACE[6],
+        padding: tiny ? SPACE[4] : SPACE[6],
         display: 'grid',
         gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-        gap: SPACE[6],
+        gap: tiny ? SPACE[3] : SPACE[6],
         alignItems: 'center',
+        minWidth: 0,
       }}
     >
       <div style={{ textAlign: 'center' }}>
@@ -30,7 +35,7 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
           style={{
             fontFamily: FONTS.display,
             fontWeight: FONT_WEIGHT.black,
-            fontSize: FONT_SIZE['6xl'],
+            fontSize: tiny ? FONT_SIZE['5xl'] : FONT_SIZE['6xl'],
             color: COLORS.ink,
             lineHeight: 1,
           }}
@@ -48,13 +53,14 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
           LEVEL
         </div>
       </div>
-      <div>
+      <div style={{ minWidth: 0 }}>
         <div
           style={{
             fontFamily: FONTS.display,
-            fontSize: FONT_SIZE['2xl'],
+            fontSize: tiny ? FONT_SIZE.xl : FONT_SIZE['2xl'],
             fontWeight: FONT_WEIGHT.bold,
             color: COLORS.ink,
+            overflowWrap: 'anywhere',
           }}
         >
           {lvl.rankName}
@@ -77,7 +83,14 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
             }}
           />
         </div>
-        <div style={{ fontFamily: FONTS.mono, fontSize: FONT_SIZE.sm, color: COLORS.mute }}>
+        <div
+          style={{
+            fontFamily: FONTS.mono,
+            fontSize: FONT_SIZE.sm,
+            color: COLORS.mute,
+            overflowWrap: 'anywhere',
+          }}
+        >
           {lvl.xpIntoLevel} / {lvl.xpToNext} XP to next · {totalXp} XP total
         </div>
       </div>
@@ -86,7 +99,7 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
           style={{
             fontFamily: FONTS.display,
             fontWeight: FONT_WEIGHT.bold,
-            fontSize: FONT_SIZE['4xl'],
+            fontSize: tiny ? FONT_SIZE['3xl'] : FONT_SIZE['4xl'],
             color: COLORS.ink,
           }}
         >
