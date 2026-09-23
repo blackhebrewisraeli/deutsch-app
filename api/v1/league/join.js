@@ -1,26 +1,14 @@
 import { sendError } from '../../_lib/respond.js';
 import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
-import { currentPeriodStart, LEAGUE_SIZE, TIERS } from '../../_lib/leagueLogic.js';
-import { generateHandle } from '../../_lib/handle.js';
+import { currentPeriodStart } from '../../_lib/leagueLogic.js';
 
-// The caller's membership for a period, formatted for the response (or null).
-async function findMembership(db, userId, period) {
-  const { data } = await db
-    .from('league_members')
-    .select('league_id, handle, leagues!inner(tier, period_start)')
-    .eq('user_id', userId)
-    .eq('leagues.period_start', period)
-    .maybeSingle();
-  if (!data) return null;
-  return {
-    league_id: data.league_id,
-    tier: data.leagues.tier,
-    period_start: period,
-    handle: data.handle,
-  };
-}
-
+// Placement lives in one Postgres function, assign_user_to_bucket
+// (20260923200000): it is idempotent, derives the tier from the last settled
+// result, and serializes cohort filling per (tier, period) so concurrent joins
+// can neither overfill a cohort nor open duplicate half-empty ones.
+// apply_progress_event calls the same function on a learner's first XP of the
+// week, so this endpoint is usually just reading back an existing placement.
 export default async function handler(req, res) {
   if (req.method !== 'POST') return sendError(res, 'method_not_allowed', 'Method not allowed');
 
@@ -34,82 +22,11 @@ export default async function handler(req, res) {
   const db = serviceClient();
   if (!db) return sendError(res, 'server_error', 'Server is not configured.');
 
-  const period = currentPeriodStart();
+  const { data, error } = await db.rpc('assign_user_to_bucket', {
+    p_user_id: auth.userId,
+    p_period: currentPeriodStart(),
+  });
+  if (error || !data) return sendError(res, 'server_error', 'Failed to join league.');
 
-  try {
-    // 1. Idempotency: already a member this period?
-    const existing = await findMembership(db, auth.userId, period);
-    if (existing) return res.status(200).json(existing);
-
-    // 2. Ensure a handle on the profile.
-    const { data: profile } = await db
-      .from('profiles')
-      .select('handle')
-      .eq('user_id', auth.userId)
-      .maybeSingle();
-    let handle = profile?.handle;
-    if (!handle) {
-      handle = generateHandle();
-      await db.from('profiles').update({ handle }).eq('user_id', auth.userId);
-    }
-
-    // 3. Determine tier from last settled result.
-    const { data: last } = await db
-      .from('league_members')
-      .select('result, leagues!inner(tier, period_start)')
-      .eq('user_id', auth.userId)
-      .not('result', 'is', null)
-      .order('period_start', { ascending: false, foreignTable: 'leagues' })
-      .limit(1)
-      .maybeSingle();
-    let tier = TIERS.MIN;
-    if (last) {
-      const step = last.result === 'promoted' ? 1 : last.result === 'demoted' ? -1 : 0;
-      tier = Math.max(TIERS.MIN, Math.min(TIERS.MAX, last.leagues.tier + step));
-    }
-
-    // 4. Find an open league at this tier+period, else create one.
-    const { data: open } = await db
-      .from('leagues')
-      .select('id, league_members(count)')
-      .eq('tier', tier)
-      .eq('period_start', period);
-    let leagueId = (open ?? []).find(
-      (l) => Number(l.league_members?.[0]?.count ?? 0) < LEAGUE_SIZE
-    )?.id;
-    if (!leagueId) {
-      const { data: created, error: cErr } = await db
-        .from('leagues')
-        .insert({ tier, period_start: period })
-        .select('id')
-        .single();
-      if (cErr) throw cErr;
-      leagueId = created.id;
-    }
-
-    // 5. Insert membership. period_start is denormalized and carries a unique
-    //    (user_id, period_start) constraint: if a concurrent join already created
-    //    the membership, the insert fails with 23505 — recover idempotently by
-    //    returning the membership that won the race instead of 500'ing.
-    const { error: mErr } = await db
-      .from('league_members')
-      .insert({
-        league_id: leagueId,
-        user_id: auth.userId,
-        handle,
-        weekly_xp: 0,
-        period_start: period,
-      });
-    if (mErr) {
-      if (mErr.code === '23505') {
-        const raced = await findMembership(db, auth.userId, period);
-        if (raced) return res.status(200).json(raced);
-      }
-      throw mErr;
-    }
-
-    return res.status(200).json({ league_id: leagueId, tier, period_start: period, handle });
-  } catch {
-    return sendError(res, 'server_error', 'Failed to join league.');
-  }
+  return res.status(200).json(data);
 }

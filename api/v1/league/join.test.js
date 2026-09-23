@@ -7,9 +7,15 @@ import handler from './join.js';
 import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
 import { createRes } from '../../_lib/test-helpers.js';
+import { currentPeriodStart } from '../../_lib/leagueLogic.js';
+
+// Placement itself (tier derivation, cohort filling, the concurrency lock) is
+// SQL and is exercised against a real Postgres in
+// supabase/tests/rls/league-bucket.test.js. This file covers the HTTP shell.
 
 const USER = { userId: 'uid-1', email: 'a@b.com' };
 const req = (method = 'POST') => ({ method, headers: { authorization: 'Bearer t' } });
+const MEMBERSHIP = { league_id: 'L1', tier: 1, period_start: '2026-09-21', handle: 'learner_1' };
 
 afterEach(() => vi.clearAllMocks());
 
@@ -26,163 +32,30 @@ it('returns 401 when auth fails', async () => {
   expect(res.statusCode).toBe(401);
 });
 
-it('creates a new league when no open league exists (create path)', async () => {
+it('places the authenticated user for the current week and returns the membership', async () => {
   requireAuth.mockResolvedValue(USER);
-
-  const leaguesInsertSpy = vi.fn().mockReturnValue({
-    select: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: { id: 'L-new' }, error: null }),
-  });
-  const membersInsertSpy = vi.fn().mockResolvedValue({ error: null });
-
-  // Build a mock chain that returns null for all lookups then delegates to spies
-  const db = {
-    from: vi.fn((table) => {
-      if (table === 'leagues') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          // open-league search returns empty array
-          // (the chain ends with just .eq().eq() — resolve via Proxy or explicit)
-          insert: leaguesInsertSpy,
-          // We need this object to be "thenable" for the .eq().eq() open-league query
-          then: undefined, // not a promise itself
-        };
-      }
-      // league_members table
-      const base = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        not: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-        insert: membersInsertSpy,
-      };
-      return base;
-    }),
-    // profiles table
-  };
-
-  // Override: profiles and open-league query need special handling
-  db.from = vi.fn((table) => {
-    if (table === 'profiles') {
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-        update: vi.fn().mockReturnThis(),
-      };
-    }
-    if (table === 'leagues') {
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnValue({
-          eq: vi.fn().mockResolvedValue({ data: [], error: null }),
-        }),
-        insert: leaguesInsertSpy,
-      };
-    }
-    // league_members
-    return {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      not: vi.fn().mockReturnThis(),
-      order: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-      insert: membersInsertSpy,
-    };
-  });
-
-  serviceClient.mockReturnValue(db);
+  const rpc = vi.fn().mockResolvedValue({ data: MEMBERSHIP, error: null });
+  serviceClient.mockReturnValue({ rpc });
 
   const res = createRes();
   await handler(req(), res);
 
-  expect(leaguesInsertSpy).toHaveBeenCalled();
-  expect(membersInsertSpy).toHaveBeenCalled();
+  // The user id comes from the token, never the body; the period from the
+  // shared league-week definition.
+  expect(rpc).toHaveBeenCalledWith('assign_user_to_bucket', {
+    p_user_id: 'uid-1',
+    p_period: currentPeriodStart(),
+  });
   expect(res.statusCode).toBe(200);
-  expect(res.body.league_id).toBe('L-new');
+  expect(res.body).toEqual(MEMBERSHIP);
 });
 
-it('returns existing membership without creating a new one (idempotent)', async () => {
+it('returns 500 when the placement RPC fails', async () => {
   requireAuth.mockResolvedValue(USER);
-  const existing = {
-    league_id: 'L1',
-    handle: 'BlueFuchs01',
-    leagues: { tier: 1, period_start: '2026-06-22' },
-  };
-  // membership lookup returns a row → short-circuit
-  const memberSelect = {
-    select: vi.fn().mockReturnThis(),
-    eq: vi.fn().mockReturnThis(),
-    gte: vi.fn().mockReturnThis(),
-    maybeSingle: vi.fn().mockResolvedValue({ data: existing, error: null }),
-  };
-  const insertSpy = vi.fn();
   serviceClient.mockReturnValue({
-    from: vi.fn((table) => {
-      if (table === 'league_members') return { ...memberSelect, insert: insertSpy };
-      return memberSelect;
-    }),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: { message: 'boom' } }),
   });
   const res = createRes();
   await handler(req(), res);
-  expect(res.statusCode).toBe(200);
-  expect(res.body.league_id).toBe('L1');
-  expect(insertSpy).not.toHaveBeenCalled();
-});
-
-it('recovers idempotently when the membership insert races (23505 → returns existing)', async () => {
-  requireAuth.mockResolvedValue(USER);
-  const raced = {
-    league_id: 'L-raced',
-    handle: 'Me',
-    leagues: { tier: 0, period_start: '2026-06-22' },
-  };
-  // step 1 (no existing) → step 3 (no last result) → recovery (raced row won)
-  const lmMaybeSingle = vi
-    .fn()
-    .mockResolvedValueOnce({ data: null, error: null })
-    .mockResolvedValueOnce({ data: null, error: null })
-    .mockResolvedValue({ data: raced, error: null });
-  const membersInsert = vi.fn().mockResolvedValue({ error: { code: '23505' } });
-  const db = {
-    from: vi.fn((table) => {
-      if (table === 'profiles') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnThis(),
-          maybeSingle: vi.fn().mockResolvedValue({ data: { handle: 'Me' }, error: null }),
-          update: vi.fn().mockReturnThis(),
-        };
-      }
-      if (table === 'leagues') {
-        return {
-          select: vi.fn().mockReturnThis(),
-          eq: vi.fn().mockReturnValue({ eq: vi.fn().mockResolvedValue({ data: [], error: null }) }),
-          insert: vi.fn().mockReturnValue({
-            select: vi.fn().mockReturnThis(),
-            single: vi.fn().mockResolvedValue({ data: { id: 'L-new' }, error: null }),
-          }),
-        };
-      }
-      return {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        not: vi.fn().mockReturnThis(),
-        order: vi.fn().mockReturnThis(),
-        limit: vi.fn().mockReturnThis(),
-        maybeSingle: lmMaybeSingle,
-        insert: membersInsert,
-      };
-    }),
-  };
-  serviceClient.mockReturnValue(db);
-  const res = createRes();
-  await handler(req(), res);
-  expect(membersInsert).toHaveBeenCalled();
-  expect(res.statusCode).toBe(200);
-  expect(res.body.league_id).toBe('L-raced');
+  expect(res.statusCode).toBe(500);
 });

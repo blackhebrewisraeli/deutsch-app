@@ -3,7 +3,7 @@ import { sendError } from './respond.js';
 // Explicit .js extensions throughout: these modules are bundled into a Vercel
 // serverless function running native Node ESM, where an extensionless relative
 // import is a 500 that Vite and vitest both hide (see src/lib/xpCore.js).
-import { currentPeriodStart, LEAGUE_SIZE, TIERS } from './leagueLogic.js';
+import { currentPeriodStart, TIERS } from './leagueLogic.js';
 import { weeklyXpFromRows } from './weeklyXp.js';
 import { xpForDay } from '../../src/lib/xpCore.js';
 import { emptyCounters } from './progressHandlers.js';
@@ -301,46 +301,9 @@ export const leagueHandler = createAccountHandler({
       return res.status(200).json({ ...snapshot, email: user.email ?? null, moved: false });
     }
 
-    const { data: profile, error: pErr } = await db
-      .from('profiles')
-      .select('handle')
-      .eq('user_id', userId)
-      .maybeSingle();
-    if (pErr) throw pErr;
-    const handle = existing?.handle ?? profile?.handle ?? null;
-    if (!handle) {
-      // league_members.handle is NOT NULL, and generating one here would be a
-      // second, silent handle writer racing join.js. Let the user's own join
-      // mint it.
-      return sendError(res, 'bad_request', 'That user has no handle yet — they must join first.');
-    }
-
-    // Same placement rule as api/v1/league/join.js step 4: fill an open cohort
-    // at this tier and period before opening a new one, so God Mode does not
-    // scatter one-person leagues across the ladder.
-    const { data: open, error: oErr } = await db
-      .from('leagues')
-      .select('id, league_members(count)')
-      .eq('tier', tier)
-      .eq('period_start', period);
-    if (oErr) throw oErr;
-
-    let leagueId = (open ?? []).find(
-      (l) => l.id !== existing?.league_id && Number(l.league_members?.[0]?.count ?? 0) < LEAGUE_SIZE
-    )?.id;
-    if (!leagueId) {
-      const { data: created, error: cErr } = await db
-        .from('leagues')
-        .insert({ tier, period_start: period })
-        .select('id')
-        .single();
-      if (cErr) throw cErr;
-      leagueId = created.id;
-    }
-
-    // Delete-then-insert, not an update: league_id is half the primary key, so
-    // there is no in-place move. The unique (user_id, period_start) constraint
-    // is why the delete has to land first.
+    // Delete-then-place, not an update: league_id is half the primary key, so
+    // there is no in-place move, and the unique (user_id, period_start) index
+    // means the old row has to go first.
     if (existing) {
       const { error: dErr } = await db
         .from('league_members')
@@ -350,20 +313,18 @@ export const leagueHandler = createAccountHandler({
       if (dErr) throw dErr;
     }
 
-    const { error: iErr } = await db.from('league_members').insert({
-      league_id: leagueId,
-      user_id: userId,
-      handle,
-      // Carried, not reset. The XP is the user's earned week; the tier is the
-      // only thing the admin asked to change.
-      weekly_xp: existing?.weekly_xp ?? 0,
-      period_start: period,
+    // The same placement join.js and apply_progress_event use, with the tier
+    // pinned: fills an open cohort before opening one, and recomputes the
+    // week's XP from stats_daily, so the earned week carries over.
+    const { error: aErr } = await db.rpc('assign_user_to_bucket', {
+      p_user_id: userId,
+      p_period: period,
+      p_tier: tier,
     });
-    if (iErr) throw iErr;
+    if (aErr) throw aErr;
 
     console.error(`admin.league: ${auth.userId} moved ${userId} to tier ${tier} for ${period}`);
 
-    await recomputeWeeklyXp(db, userId, period);
     const snapshot = await readGodModeSnapshot(db, userId, day);
     return res.status(200).json({ ...snapshot, email: user.email ?? null, moved: true });
   },
