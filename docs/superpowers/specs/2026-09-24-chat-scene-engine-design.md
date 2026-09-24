@@ -1,6 +1,6 @@
 # Chat scene engine — scene personas, level-scaled prompts, scaffolded input
 
-**Status:** approved design, not yet implemented
+**Status:** implemented (`feat/chat-scene-engine`)
 **Date:** 2026-09-24
 **Branch:** `feat/chat-scene-engine`
 **Builds on:**
