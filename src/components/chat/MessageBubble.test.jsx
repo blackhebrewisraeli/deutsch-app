@@ -33,6 +33,12 @@ describe('MessageBubble', () => {
     expect(screen.getByRole('button', { name: 'Play Anna response audio' })).toBeInTheDocument();
   });
 
+  it('labels the bubble and its audio with the given speaker', () => {
+    render(<MessageBubble msg={annaMsg} speaker="Barista" />);
+    expect(screen.getByText('— BARISTA')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play Barista response audio' })).toBeInTheDocument();
+  });
+
   it('reveals the translation and IPA from their toggles', async () => {
     render(<MessageBubble msg={annaMsg} />);
     await userEvent.click(screen.getByRole('button', { name: 'EN' }));
