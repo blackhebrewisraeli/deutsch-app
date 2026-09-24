@@ -74,19 +74,45 @@ export function chatInterestBias({ hints } = {}) {
 }
 
 /**
- * Anna's system prompt. `task` is optional — when absent the task sentence is
- * omitted entirely rather than left as an empty clause, which a model reads as
- * a task with no content.
+ * How freely the scene character improvises, keyed on the routed model
+ * profile (src/lib/ai-routing/catalog.js). Engine-owned and language-blind:
+ * a cheap model gets a tight brief, a capable one room to let the scene move.
+ */
+export const CHAT_IMPROV = Object.freeze({
+  fast: 'Keep each reply short and focused on the task: one idea per turn.',
+  balanced:
+    'React to the specific things the learner says, and add small realistic touches to the scene.',
+  capable:
+    'Let the scene develop the way it would in real life: an item might be sold out, you might ask a follow-up question or add a small complication. Remember details the learner mentioned earlier and bring them back.',
+});
+
+/**
+ * The hidden first user turn that lets the AI open the scene. The Messages API
+ * needs a user message first; this one is stage direction, not learner speech.
+ * @returns {string}
+ */
+export function chatKickoffMessage() {
+  return '[The learner has just arrived. Open the scene in character with your first line. This bracketed note is stage direction, not something the learner said — do not correct it.]';
+}
+
+/**
+ * The scene prompt. The AI plays the scenario's `role` in the reply line and,
+ * separately, is the pack persona coaching out of character. `task` is
+ * optional — when absent the sentence is omitted rather than left as an empty
+ * clause, which a model reads as a task with no content.
  *
- * `level` is the classified CEFR code. Unknown keys fall back to a1 pedagogy
- * rather than interpolating the string "undefined".
+ * `level` is the classified CEFR code; unknown keys fall back to a1 pedagogy
+ * rather than interpolating "undefined". `profile` is the routed model's
+ * profile; unknown values get the balanced register.
  *
- * @param {{ prompts: Prompts, scenarioDesc: string, task?: string, level: string, vocab?: string[], sparse?: boolean, interestHints?: string[] }} args
+ * @param {{ prompts: Prompts, scenarioDesc: string, role?: { name: string, brief: string }, profile?: string, task?: string, level: string, vocab?: string[], sparse?: boolean, interestHints?: string[] }} args
  * @returns {string}
  */
 export function chatSystemPrompt({
   prompts,
   scenarioDesc,
+  role,
+  profile,
   task,
   level,
   vocab,
@@ -95,30 +121,45 @@ export function chatSystemPrompt({
 } = {}) {
   const { persona, targetLanguage, levels } = prompts ?? {};
 
+  // Pack scenarios always carry a role (validate.js); the fallback keeps a
+  // caller without one on a sensible partner instead of "You are undefined".
+  const character = role?.brief || `${persona}, a friendly conversation partner.`;
+
   const taskLine = task
     ? `The learner's current task is: "${task}". Stay in this scenario and guide them toward completing this task. When the task is naturally complete, include "taskComplete": true in your JSON response; otherwise omit it or set it to false.`
     : '';
 
   const pedagogy = levels?.[level] || levels?.a1 || '';
+  const improv = CHAT_IMPROV[profile] ?? CHAT_IMPROV.balanced;
   const vocabBlock = chatVocabConstraint({ vocab, sparse });
   const interestBlock = chatInterestBias({ hints: interestHints });
 
-  return `You are a friendly ${targetLanguage} tutor named ${persona} for a language learner. The current scenario is: ${scenarioDesc}. ${taskLine}
+  return `You are ${character} This is a ${targetLanguage} conversation-practice scene: ${scenarioDesc}. Stay in character in the "de" line and carry the scene the way this character really would. Respond to what the learner actually says — never use stock phrases or follow a script.
+
+Separately, you are also ${persona}, the learner's warm and encouraging coach. Coaching goes only in "correction" and "next" — never break character in "de". ${taskLine}
 
 ${pedagogy}
+
+${improv}
 
 ${vocabBlock}
 ${interestBlock ? `\n${interestBlock}\n` : ''}
 You MUST always respond with strict JSON only (no markdown, no extra text):
 {
-  "de": "your reply in ${targetLanguage} (1-2 sentences)",
+  "de": "your in-character reply in ${targetLanguage}",
   "ipa": "IPA pronunciation of the ${targetLanguage}",
   "en": "English translation",
   "correction": null OR { "original": "what they said", "fixed": "corrected ${targetLanguage}", "explain": "brief friendly explanation in English" },
-  "taskComplete": false
+  "taskComplete": false,
+  "next": {
+    "de": "a short, natural line the learner could say next in ${targetLanguage}, at their level, moving toward the task",
+    "en": "its English meaning",
+    "blank": "exactly one word copied from next.de that is worth practising (not a name)",
+    "distractors": ["two plausible wrong alternatives for blank, same word class"]
+  }
 }
 
-Stay in the scenario. Only provide 'correction' if the user made a real grammar/vocabulary mistake.`;
+Only provide "correction" if the learner made a real grammar/vocabulary mistake; it is always null for your opening line.`;
 }
 
 /**
