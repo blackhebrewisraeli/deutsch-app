@@ -150,12 +150,16 @@ export const STAGES = Object.freeze(['word_bank', 'choice_blank', 'typed_blank',
   - clamped at both ends (a clamped move reports `moved: null`, streak resets).
   - only graded replies count; failed calls never reach `advance`.
 - `parseScaffold(next)` → `null` or
-  `{ en, tokens, blankIndex, options }`:
+  `{ en, tokens, blankIndex, answer, distractors }`:
   - `tokens` = `next.de` split on whitespace.
   - `blankIndex` = first token whose core (leading/trailing Unicode
     punctuation `\p{P}` trimmed) equals `next.blank`, case-insensitively.
     The gap keeps the token's punctuation: `Kaffee,` → gap + `,`.
-  - `options` = the blank's core plus the distractors, de-duplicated.
+  - `answer` = the blank token's core in the sentence's casing; `distractors`
+    trimmed and de-duplicated. The dropdown offers `answer` + `distractors`.
+- `gapParts(scaffold)` → `{ before, after }`: the sentence either side of the
+  gap, so a composer renders `before [gap] after` and sends
+  `before + word + after`.
   - `null` when: `next` not an object, `de`/`blank` not non-empty strings,
     blank not found, distractors not an array of non-empty strings, fewer
     than 1 distractor, or a distractor equal to the blank (case-insensitive).
@@ -245,7 +249,8 @@ TDD; stage the red so each test fails for its own reason.
 | `src/components/ChatTab.jsx` (+test) | Opener lifecycle, progression + scaffold state, full history, Retry. |
 | `src/components/chat/Composer.jsx` (+test) | **New** — stage switch, step label, live note. |
 | `src/components/chat/FillBlank.jsx` (+test) | **New** — choice/typed gap. |
-| `src/components/chat/WordBank.jsx` (+test) | Takes scaffold tokens + distractors; "Say:" line. |
+| `src/components/chat/ScaffoldActions.jsx` | **New** — the "Type instead" + send row WordBank and FillBlank share (keeps Sonar's duplication gate quiet). |
+| `src/components/chat/WordBank.jsx` | Unchanged API (`words`); Composer feeds it tokens + distractors; footer moves to `ScaffoldActions`. |
 | `src/components/chat/MessageList.jsx`, `MessageBubble.jsx` (+tests) | Skip hidden messages; speaker = role name. |
 | `src/packs/de/scenarios.js` (+test) | `greeting` → `role`. |
 | `src/packs/de/index.js` | Level specs with concrete limits. |
