@@ -3,7 +3,7 @@
 // sibling modules in this folder.
 import { ALPHABET, ALPHABET_QUIZ_GROUPS } from './alphabet.js';
 import { SCENARIOS } from './scenarios.js';
-import { CHAT_TASKS, CHAT_WORD_BANK_MOCK } from './chatTasks.js';
+import { CHAT_TASKS } from './chatTasks.js';
 import {
   TRANSLATE_SENTENCES_A1,
   TRANSLATE_SENTENCES_A2,
@@ -55,7 +55,6 @@ export const dePack = {
     interestDecks: resolveDecks(INTEREST_DECK_DEFS, INTEREST_LEXICON, grammar),
     scenarios: SCENARIOS,
     chatTasks: CHAT_TASKS,
-    chatWordBankMock: CHAT_WORD_BANK_MOCK,
     translateSentences: {
       A1: TRANSLATE_SENTENCES_A1,
       A2: TRANSLATE_SENTENCES_A2,

@@ -29,18 +29,6 @@ describe('SCENARIOS', () => {
   });
 });
 
-describe('scenario greetings', () => {
-  it('gives every scenario a greeting with all three fields', () => {
-    for (const s of SCENARIOS) {
-      expect(s.greeting, `${s.id} has no greeting`).toBeTruthy();
-      for (const field of ['de', 'ipa', 'en']) {
-        expect(typeof s.greeting[field], `${s.id}.greeting.${field}`).toBe('string');
-        expect(s.greeting[field].length, `${s.id}.greeting.${field} is empty`).toBeGreaterThan(0);
-      }
-    }
-  });
-});
-
 describe('scenario roles', () => {
   it('gives every scenario a role with a name and a brief', () => {
     for (const s of SCENARIOS) {
@@ -50,6 +38,10 @@ describe('scenario roles', () => {
         expect(s.role[field].trim().length, `${s.id}.role.${field} is empty`).toBeGreaterThan(0);
       }
     }
+  });
+
+  it('carries no canned opener — the AI writes it in character', () => {
+    for (const s of SCENARIOS) expect(s).not.toHaveProperty('greeting');
   });
 
   it('casts Order Coffee as a barista, not the tutor', () => {

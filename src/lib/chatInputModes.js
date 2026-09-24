@@ -28,12 +28,6 @@ const START_BY_BAND = Object.freeze({
   b1: INPUT_MODES.TYPED_BLANK,
 });
 
-/** MOCK: kept until ChatTab moves to startingStage (removed in the same PR). */
-export function defaultInputMode(level) {
-  const band = String(level ?? '').toLowerCase();
-  return band === 'a1' || band === 'a2' ? INPUT_MODES.WORD_BANK : INPUT_MODES.FREE_TEXT;
-}
-
 /** Where a learner at this CEFR band starts a conversation. */
 export function startingStage(level) {
   return START_BY_BAND[String(level ?? '').toLowerCase()] ?? INPUT_MODES.WORD_BANK;

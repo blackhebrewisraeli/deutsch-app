@@ -2,7 +2,6 @@ import { describe, it, expect } from 'vitest';
 import {
   INPUT_MODES,
   STAGES,
-  defaultInputMode,
   startingStage,
   advance,
   parseScaffold,
@@ -17,15 +16,6 @@ const next = {
   blank: 'Kaffee',
   distractors: ['Tee', 'Wasser'],
 };
-
-describe('defaultInputMode (mock)', () => {
-  it.each([
-    ['A1', WORD_BANK],
-    ['B1', FREE_TEXT],
-  ])('%s starts in %s', (level, mode) => {
-    expect(defaultInputMode(level)).toBe(mode);
-  });
-});
 
 describe('STAGES', () => {
   it('orders the ladder from most to least support', () => {

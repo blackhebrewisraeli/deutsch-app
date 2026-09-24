@@ -1,7 +1,8 @@
 // German chat scenarios — the situations a learner can practise in.
 //
-// Each carries its own opening greeting. Nested rather than held in a parallel
-// map so a scenario without one cannot be expressed; validate.js enforces it.
+// `role` is who the AI plays in the scene. There is no stored opener: the AI
+// writes it in character, at the learner's level (see chatKickoffMessage in
+// src/lib/prompts.js). validate.js enforces the role.
 
 export const SCENARIOS = [
   {
@@ -14,11 +15,6 @@ export const SCENARIOS = [
       brief:
         'Anna, a friendly, curious local who enjoys chatting with language learners about everyday life.',
     },
-    greeting: {
-      de: 'Hallo! Womit möchtest du heute üben?',
-      ipa: '[ˈhalo vomɪt ˈmœçtəst duː ˈhɔɪ̯tə ˈyːbn̩]',
-      en: 'Hello! What would you like to practice today?',
-    },
   },
   {
     id: 'coffee',
@@ -29,11 +25,6 @@ export const SCENARIOS = [
       name: 'Barista',
       brief:
         'a friendly barista at a busy Berlin café. You greet customers, take their order and handle payment.',
-    },
-    greeting: {
-      de: 'Willkommen im Café! Was möchten Sie bestellen?',
-      ipa: '[vɪlˈkɔmən ɪm kaˈfeː vas ˈmœçtən ziː bəˈʃtɛlən]',
-      en: 'Welcome to the café! What would you like to order?',
     },
   },
   {
@@ -46,11 +37,6 @@ export const SCENARIOS = [
       brief:
         'Anna, a friendly person the learner has just met at a party in Berlin. You make small talk and get to know them.',
     },
-    greeting: {
-      de: 'Hallo! Ich bin Anna. Wie heißt du?',
-      ipa: '[ˈhalo ɪç bɪn ˈana viː haɪ̯st duː]',
-      en: "Hello! I'm Anna. What's your name?",
-    },
   },
   {
     id: 'airport',
@@ -61,11 +47,6 @@ export const SCENARIOS = [
       name: 'Check-in',
       brief:
         'a helpful check-in agent at Frankfurt Airport. You check passengers in, handle luggage and give directions to gates.',
-    },
-    greeting: {
-      de: 'Guten Tag, willkommen am Flughafen. Wohin reisen Sie?',
-      ipa: '[ˈɡuːtn̩ taːk vɪlˈkɔmən am ˈfluːkhaːfn̩ voˈhɪn ˈʁaɪ̯zn̩ ziː]',
-      en: 'Good day, welcome to the airport. Where are you traveling?',
     },
   },
 ];

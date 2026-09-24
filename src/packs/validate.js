@@ -31,18 +31,6 @@ export function validateLanguagePack(pack) {
     }
   }
 
-  // A missing greeting is otherwise a TypeError inside ChatTab's scenario
-  // effect — far from the data omission that caused it.
-  c.scenarios.forEach((s, i) => {
-    const gr = s.greeting;
-    if (!gr || typeof gr !== 'object') fail(`content.scenarios[${i}].greeting must be an object`);
-    for (const k of ['de', 'ipa', 'en']) {
-      if (typeof gr[k] !== 'string' || gr[k].trim().length === 0) {
-        fail(`content.scenarios[${i}].greeting.${k} must be a non-empty string`);
-      }
-    }
-  });
-
   // Every scenario names who the AI plays. Without it the prompt would cast
   // the model as "undefined", far from the data omission that caused it.
   c.scenarios.forEach((s, i) => {

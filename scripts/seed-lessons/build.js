@@ -149,7 +149,9 @@ function chatUnits() {
         'chat',
         scenarioIndex + 1,
         tasks.map((task, index) => {
-          const parts = [scenario.greeting.de, task.task];
+          // No canned greeting: the live Chat has the AI open each scene, and
+          // this no-AI stub shows the instruction, not a scripted line.
+          const parts = [task.task];
           if (task.hint) parts.push(task.hint);
           return {
             id: `chat-${scenario.id}-${level}-${index + 1}`,
