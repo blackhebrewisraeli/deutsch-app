@@ -124,7 +124,7 @@ describe('ChatTab classified CEFR and vocab', () => {
     await sendHallo();
     const system = callClaude.mock.calls[0][0];
     expect(system).toContain(activePack.prompts.levels.b1);
-    expect(system).not.toContain('A1 BEGINNER');
+    expect(system).not.toContain(activePack.prompts.levels.a1);
     expect(callClaude.mock.calls[0][3].level).toBe('b1');
   });
 

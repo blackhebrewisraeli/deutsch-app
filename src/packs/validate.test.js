@@ -42,6 +42,7 @@ const validPack = {
         icon: '◆',
         desc: 'open',
         greeting: { de: 'Hola', ipa: '[ˈola]', en: 'Hello' },
+        role: { name: 'Ana', brief: 'a friendly local.' },
       },
     ],
     chatTasks: {},
@@ -206,6 +207,18 @@ describe('validateLanguagePack', () => {
       },
     };
     expect(() => validateLanguagePack(bad)).toThrow(/greeting\.ipa/);
+  });
+
+  it('throws when a scenario has no role', () => {
+    const roleless = { ...validPack.content.scenarios[0], role: undefined };
+    const bad = { ...validPack, content: { ...validPack.content, scenarios: [roleless] } };
+    expect(() => validateLanguagePack(bad)).toThrow(/scenarios\[0\]\.role/);
+  });
+
+  it('throws when a role is missing its brief', () => {
+    const scenario = { ...validPack.content.scenarios[0], role: { name: 'Ana' } };
+    const bad = { ...validPack, content: { ...validPack.content, scenarios: [scenario] } };
+    expect(() => validateLanguagePack(bad)).toThrow(/role\.brief/);
   });
 
   it('throws when grammar is missing', () => {

@@ -40,3 +40,21 @@ describe('scenario greetings', () => {
     }
   });
 });
+
+describe('scenario roles', () => {
+  it('gives every scenario a role with a name and a brief', () => {
+    for (const s of SCENARIOS) {
+      expect(s.role, `${s.id} has no role`).toBeTruthy();
+      for (const field of ['name', 'brief']) {
+        expect(typeof s.role[field], `${s.id}.role.${field}`).toBe('string');
+        expect(s.role[field].trim().length, `${s.id}.role.${field} is empty`).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  it('casts Order Coffee as a barista, not the tutor', () => {
+    const coffee = SCENARIOS.find((s) => s.id === 'coffee');
+    expect(coffee.role.name).toBe('Barista');
+    expect(coffee.role.brief).toMatch(/barista/i);
+  });
+});

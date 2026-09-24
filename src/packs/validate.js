@@ -43,6 +43,18 @@ export function validateLanguagePack(pack) {
     }
   });
 
+  // Every scenario names who the AI plays. Without it the prompt would cast
+  // the model as "undefined", far from the data omission that caused it.
+  c.scenarios.forEach((s, i) => {
+    const r = s.role;
+    if (!r || typeof r !== 'object') fail(`content.scenarios[${i}].role must be an object`);
+    for (const k of ['name', 'brief']) {
+      if (typeof r[k] !== 'string' || r[k].trim().length === 0) {
+        fail(`content.scenarios[${i}].role.${k} must be a non-empty string`);
+      }
+    }
+  });
+
   const v = pack.validation;
   if (!v || typeof v !== 'object') fail('validation is required');
   const t = v.target;
