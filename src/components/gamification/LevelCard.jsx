@@ -8,13 +8,10 @@ import {
   RADIUS,
   SHADOW,
 } from '../../lib/theme';
-import { bp, useWindowWidth } from '../../lib/useWindowWidth';
 
 // Stats "Fortschritt" header card: level number, rank, XP-to-next bar, total XP,
 // and the LEARNED figure (moved here from the app header).
 export default function LevelCard({ lvl, totalXp, learnedCount }) {
-  const tiny = useWindowWidth() < bp.tiny;
-
   return (
     <div
       data-testid="level-card"
@@ -22,10 +19,10 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
         borderRadius: RADIUS.lg,
         boxShadow: SHADOW.card,
         background: COLORS.card,
-        padding: tiny ? SPACE[4] : SPACE[6],
+        padding: SPACE[3],
         display: 'grid',
         gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-        gap: tiny ? SPACE[3] : SPACE[6],
+        gap: SPACE[3],
         alignItems: 'center',
         minWidth: 0,
       }}
@@ -35,7 +32,7 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
           style={{
             fontFamily: FONTS.display,
             fontWeight: FONT_WEIGHT.black,
-            fontSize: tiny ? FONT_SIZE['5xl'] : FONT_SIZE['6xl'],
+            fontSize: FONT_SIZE['4xl'],
             color: COLORS.ink,
             lineHeight: 1,
           }}
@@ -57,7 +54,7 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
         <div
           style={{
             fontFamily: FONTS.display,
-            fontSize: tiny ? FONT_SIZE.xl : FONT_SIZE['2xl'],
+            fontSize: FONT_SIZE.lg,
             fontWeight: FONT_WEIGHT.bold,
             color: COLORS.ink,
             overflowWrap: 'anywhere',
@@ -66,8 +63,9 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
           {lvl.rankName}
         </div>
         <div
+          data-testid="level-progress-track"
           style={{
-            height: 12,
+            height: 6,
             borderRadius: RADIUS.pill,
             background: COLORS.paperDeep,
             overflow: 'hidden',
@@ -99,7 +97,7 @@ export default function LevelCard({ lvl, totalXp, learnedCount }) {
           style={{
             fontFamily: FONTS.display,
             fontWeight: FONT_WEIGHT.bold,
-            fontSize: tiny ? FONT_SIZE['3xl'] : FONT_SIZE['4xl'],
+            fontSize: FONT_SIZE['3xl'],
             color: COLORS.ink,
           }}
         >

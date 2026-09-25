@@ -1,14 +1,5 @@
 import { Shield } from 'lucide-react';
-import {
-  BORDER,
-  COLORS,
-  FONTS,
-  FONT_SIZE,
-  FONT_WEIGHT,
-  LETTER_SPACING,
-  RADIUS,
-  SPACE,
-} from '../../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, RADIUS, SPACE } from '../../lib/theme';
 import { tierName } from '../../lib/leagueTier.js';
 import Surface from '../ui/Surface';
 
@@ -27,8 +18,13 @@ import Surface from '../ui/Surface';
 // callers now pass a tier in rather than each indexing TIER_NAMES their own way.
 //
 // Two variants, one visual language:
-//   full    — the Profile page card: shield, tier, and what it has been worth.
+//   full    — the Profile page card.
 //   compact — Home's at-a-glance pill, inline beside XP / level / streak.
+//
+// Both deliberately say ONE thing: the learner's league. Rank and cohort size
+// belong to the leaderboard, where the surrounding roster gives those numbers
+// meaning. Repeating "#2/2" in an identity badge made a short name overflow and
+// turned a stable identity marker into a second, noisier standings display.
 //
 // The chrome is deliberately NOT tier-coloured. A five-step colour ramp would
 // need five tokens this palette does not have, and inventing them means either
@@ -51,21 +47,11 @@ const ICON = {
 /**
  * @param {object} props
  * @param {unknown} props.tier          tier index; anything unusable reads Bronze
- * @param {number} [props.wins]         settled leagues topped, `full` only
- * @param {number|null} [props.rank]    live position in the cohort
- * @param {number|null} [props.cohortSize]
  * @param {'full'|'compact'} [props.variant]
  */
-export default function LeagueBadge({
-  tier,
-  wins = 0,
-  rank = null,
-  cohortSize = null,
-  variant = 'full',
-}) {
+export default function LeagueBadge({ tier, variant = 'full' }) {
   const name = tierName(tier);
   const compact = variant === 'compact';
-  const hasRank = Number.isFinite(rank) && rank > 0;
 
   const shield = (
     <div
@@ -90,11 +76,7 @@ export default function LeagueBadge({
     return (
       <span
         data-testid="league-badge-compact"
-        // The accessible name carries the rank too. Sighted readers get it from
-        // the "#3/25" beside the tier; a screen reader arriving at a pill that
-        // announced only "Bronze" would be told the league and not the standing,
-        // which is the half that changes.
-        aria-label={hasRank ? `${name} League, Platz ${rank} von ${cohortSize}` : `${name} League`}
+        aria-label={`${name} League`}
         style={{
           display: 'flex',
           alignItems: 'center',
@@ -106,60 +88,21 @@ export default function LeagueBadge({
       >
         {shield}
         <span
+          data-testid="league-badge-tier"
           aria-hidden="true"
-          style={{ display: 'flex', flexDirection: 'column', minWidth: 0, gap: 2 }}
+          style={{
+            minWidth: 0,
+            fontFamily: FONTS.display,
+            fontWeight: FONT_WEIGHT.bold,
+            fontSize: FONT_SIZE.lg,
+            lineHeight: 1,
+            color: COLORS.ink,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+          }}
         >
-          <span
-            style={{
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.tag,
-              letterSpacing: LETTER_SPACING.caps,
-              textTransform: 'uppercase',
-              color: COLORS.mute,
-              lineHeight: 1,
-            }}
-          >
-            Liga
-          </span>
-          <span
-            style={{
-              display: 'flex',
-              alignItems: 'baseline',
-              gap: SPACE[1],
-              minWidth: 0,
-              lineHeight: 1,
-            }}
-          >
-            <span
-              data-testid="league-badge-tier"
-              style={{
-                fontFamily: FONTS.display,
-                fontWeight: FONT_WEIGHT.bold,
-                fontSize: FONT_SIZE.lg,
-                color: COLORS.ink,
-                // A tier name is one short word, but the column it sits in can
-                // be 77px at 320px — it truncates rather than widening Home.
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {name}
-            </span>
-            {hasRank && (
-              <span
-                style={{
-                  fontFamily: FONTS.mono,
-                  fontSize: FONT_SIZE.sm,
-                  color: COLORS.inkSoft,
-                  flexShrink: 0,
-                }}
-              >
-                #{rank}
-                {Number.isFinite(cohortSize) ? `/${cohortSize}` : ''}
-              </span>
-            )}
-          </span>
+          {name}
         </span>
       </span>
     );
@@ -171,69 +114,28 @@ export default function LeagueBadge({
       padding={4}
       radius="xl"
       data-testid="profile-league"
+      aria-label={`${name} League`}
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: SPACE[4],
+        gap: SPACE[3],
         minWidth: 0,
       }}
     >
       {shield}
-      <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: SPACE[1] }}>
-        <div
-          style={{
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            letterSpacing: LETTER_SPACING.caps,
-            textTransform: 'uppercase',
-            color: COLORS.mute,
-          }}
-        >
-          Liga
-        </div>
-        <div
-          data-testid="league-badge-tier"
-          style={{
-            fontFamily: FONTS.display,
-            fontSize: FONT_SIZE['2xl'],
-            fontWeight: FONT_WEIGHT.bold,
-            lineHeight: 1.05,
-            color: COLORS.ink,
-            overflowWrap: 'anywhere',
-          }}
-        >
-          {name}
-        </div>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: SPACE[2],
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.sm,
-            color: COLORS.inkSoft,
-            minWidth: 0,
-          }}
-        >
-          {hasRank && (
-            <span
-              style={{
-                borderRadius: RADIUS.pill,
-                border: BORDER.panel,
-                background: COLORS.surface2,
-                padding: `2px ${SPACE[2]}px`,
-                flexShrink: 0,
-              }}
-            >
-              Platz {rank}
-              {Number.isFinite(cohortSize) ? ` / ${cohortSize}` : ''}
-            </span>
-          )}
-          <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-            {wins > 0 ? `${wins} Ligasiege` : 'Noch kein Ligasieg'}
-          </span>
-        </div>
+      <div
+        data-testid="league-badge-tier"
+        style={{
+          minWidth: 0,
+          fontFamily: FONTS.display,
+          fontSize: FONT_SIZE['2xl'],
+          fontWeight: FONT_WEIGHT.bold,
+          lineHeight: 1.05,
+          color: COLORS.ink,
+          overflowWrap: 'anywhere',
+        }}
+      >
+        {name}
       </div>
     </Surface>
   );

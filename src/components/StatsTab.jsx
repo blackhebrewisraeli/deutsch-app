@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { SPACE } from '../lib/theme';
+import { bp, useWindowWidth } from '../lib/useWindowWidth';
 import { loadState } from '../lib/storage';
 import {
   todayKey,
@@ -26,12 +27,41 @@ import UserProfile from './profile/UserProfile';
 import FollowListModal from './social/FollowListModal';
 import { readLevel } from '../lib/levelPref.js';
 import { isAuthConfigured } from '../lib/auth.js';
+import Surface from './ui/Surface';
 
 const VIEWS = {
   stats: 'stats',
   leagues: 'leagues',
   settings: 'settings',
 };
+
+const CARD_BOUNDARY = {
+  width: '100%',
+  maxWidth: '100%',
+  minWidth: 0,
+  boxSizing: 'border-box',
+  alignSelf: 'start',
+};
+
+function DashboardCard({ num, title, children, full = false, style }) {
+  return (
+    <Surface
+      as="section"
+      elevation={1}
+      padding={3}
+      radius="lg"
+      aria-label={title}
+      style={{
+        ...CARD_BOUNDARY,
+        gridColumn: full ? '1 / -1' : undefined,
+        ...style,
+      }}
+    >
+      <SectionLabel num={num} text={title} />
+      {children}
+    </Surface>
+  );
+}
 
 // Section 06 — the Profile tab.
 //
@@ -68,6 +98,7 @@ export default function StatsTab({
   // 'followers' | 'following' | null — which of the caller's own lists is
   // open, opened from the Follower/Folgt counts on the identity card.
   const [followListKind, setFollowListKind] = useState(null);
+  const dashboardWide = useWindowWidth() >= bp.wide;
 
   // `view` is owned by App when the settings route is in play, and by this
   // component otherwise. Nothing in here CHANGES it any more — the segmented
@@ -144,7 +175,7 @@ export default function StatsTab({
           mobile={mobile}
           local={{ xp: sc.totalXp, level: readLevel(), streak: stats.streak ?? 0 }}
         >
-          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[8] }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[5] }}>
             <section>
               <SectionLabel num="0" text="Fortschritt" />
               <LevelCard lvl={sc} totalXp={sc.totalXp} learnedCount={stats.learnedCount ?? 0} />
@@ -165,39 +196,45 @@ export default function StatsTab({
               <TodaySnapshot snap={snap} />
             </section>
 
-            <section>
-              <SectionLabel num="B" text="Last 12 months" />
-              <Heatmap data={heatmap} mobile={mobile} />
-              <HeatmapLegend />
-            </section>
-
             <div
+              data-testid="profile-analytics-grid"
               style={{
                 display: 'grid',
-                gridTemplateColumns: mobile ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))',
-                gap: SPACE[8],
+                gridTemplateColumns: dashboardWide ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)',
+                alignItems: 'start',
+                gap: SPACE[3],
+                minWidth: 0,
               }}
             >
-              <section>
-                <SectionLabel num="C" text="By section" />
+              <DashboardCard num="B" title="Last 12 months" full>
+                <Heatmap data={heatmap} mobile={mobile} />
+                <HeatmapLegend />
+              </DashboardCard>
+
+              <DashboardCard num="C" title="By section">
                 <PerTabBars breakdown={perTab} />
-              </section>
+              </DashboardCard>
 
-              <section>
-                <SectionLabel num="D" text="Accuracy by level" />
+              <DashboardCard num="D" title="Accuracy by level">
                 <AccuracyByLevel byLevel={accByLevel} />
-              </section>
+              </DashboardCard>
+
+              <DashboardCard
+                num="E"
+                title="Vocab stats"
+                style={dashboardWide ? { gridColumn: '3', gridRow: '2 / span 2' } : undefined}
+              >
+                <VocabSrsWidget srs={srs} now={nowMs} />
+              </DashboardCard>
+
+              <DashboardCard
+                num="F"
+                title="Review — tap to re-attempt"
+                style={dashboardWide ? { gridColumn: '1 / span 2' } : undefined}
+              >
+                <ReviewFeed items={review} onReview={onReview ?? (() => {})} />
+              </DashboardCard>
             </div>
-
-            <section>
-              <SectionLabel num="E" text="Review — tap to re-attempt" />
-              <ReviewFeed items={review} onReview={onReview ?? (() => {})} />
-            </section>
-
-            <section>
-              <SectionLabel num="F" text="Vocab review queue" />
-              <VocabSrsWidget srs={srs} now={nowMs} />
-            </section>
           </div>
         </UserProfile>
       )}

@@ -6,7 +6,10 @@ const LEVEL_LABELS = { a1: 'A1', a2: 'A2', b1: 'B1' };
 // Section D — three-way stacked accuracy bar (correct / almost / wrong) per CEFR level.
 export default function AccuracyByLevel({ byLevel }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[4] }}>
+    <div
+      data-testid="accuracy-by-level"
+      style={{ display: 'flex', flexDirection: 'column', gap: SPACE[2] }}
+    >
       {LEVELS.map((level) => {
         const { correct, almost, wrong } = byLevel[level];
         const total = correct + almost + wrong;
@@ -19,7 +22,7 @@ export default function AccuracyByLevel({ byLevel }) {
                 justifyContent: 'space-between',
                 marginBottom: SPACE[1],
                 fontFamily: FONTS.mono,
-                fontSize: FONT_SIZE.sm,
+                fontSize: FONT_SIZE.tag,
                 color: COLORS.ink,
               }}
             >
@@ -31,9 +34,10 @@ export default function AccuracyByLevel({ byLevel }) {
               </span>
             </div>
             <div
+              data-testid="accuracy-track"
               style={{
                 display: 'flex',
-                height: 14,
+                height: 6,
                 borderRadius: RADIUS.pill,
                 background: COLORS.paperDeep,
                 overflow: 'hidden',

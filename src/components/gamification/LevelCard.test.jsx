@@ -3,14 +3,6 @@ import { render, screen } from '@testing-library/react';
 import LevelCard from './LevelCard';
 import { FONT_SIZE, SPACE } from '../../lib/theme';
 
-const setViewportWidth = (width) => {
-  Object.defineProperty(window, 'innerWidth', {
-    writable: true,
-    configurable: true,
-    value: width,
-  });
-};
-
 const lvl = {
   level: 30,
   rankName: 'Muttersprachler',
@@ -35,19 +27,19 @@ describe('LevelCard', () => {
     expect(screen.getByText('Muttersprachler')).toBeInTheDocument();
   });
 
-  it.each([320, 375])('uses the compact stat scale at %spx', (width) => {
-    setViewportWidth(width);
+  it('uses one compact dashboard scale', () => {
     render(<LevelCard lvl={lvl} totalXp={21900} learnedCount={1234} />);
 
     expect(screen.getByTestId('level-card')).toHaveStyle({
-      padding: `${SPACE[4]}px`,
+      padding: `${SPACE[3]}px`,
       gap: `${SPACE[3]}px`,
     });
-    expect(screen.getByText('30')).toHaveStyle({ fontSize: `${FONT_SIZE['5xl']}px` });
+    expect(screen.getByText('30')).toHaveStyle({ fontSize: `${FONT_SIZE['4xl']}px` });
     expect(screen.getByText('1234')).toHaveStyle({ fontSize: `${FONT_SIZE['3xl']}px` });
     expect(screen.getByText('Muttersprachler')).toHaveStyle({
-      fontSize: `${FONT_SIZE.xl}px`,
+      fontSize: `${FONT_SIZE.lg}px`,
       overflowWrap: 'anywhere',
     });
+    expect(screen.getByTestId('level-progress-track')).toHaveStyle({ height: '6px' });
   });
 });

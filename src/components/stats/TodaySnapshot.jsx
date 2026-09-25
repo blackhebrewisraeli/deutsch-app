@@ -10,11 +10,9 @@ import {
   SHADOW,
 } from '../../lib/theme';
 import StatusNote from '../ui/StatusNote';
-import { bp, useWindowWidth } from '../../lib/useWindowWidth';
 
 // Section A — today's exercise count + three-way accuracy bar + streak.
 export default function TodaySnapshot({ snap }) {
-  const tiny = useWindowWidth() < bp.tiny;
   const { exercises, accuracy, streak } = snap;
   const totalGraded = accuracy.correct + accuracy.almost + accuracy.wrong;
   const pct = (n) => (totalGraded === 0 ? 0 : Math.round((n / totalGraded) * 100));
@@ -26,10 +24,10 @@ export default function TodaySnapshot({ snap }) {
         borderRadius: RADIUS.lg,
         boxShadow: SHADOW.card,
         background: COLORS.card,
-        padding: tiny ? SPACE[4] : SPACE[6],
+        padding: SPACE[3],
         display: 'grid',
         gridTemplateColumns: 'auto minmax(0, 1fr)',
-        gap: tiny ? SPACE[4] : SPACE[8],
+        gap: SPACE[3],
         alignItems: 'center',
         minWidth: 0,
       }}
@@ -49,7 +47,7 @@ export default function TodaySnapshot({ snap }) {
         <div
           style={{
             fontFamily: FONTS.display,
-            fontSize: tiny ? FONT_SIZE['5xl'] : FONT_SIZE['6xl'],
+            fontSize: FONT_SIZE['4xl'],
             fontWeight: FONT_WEIGHT.black,
             letterSpacing: LETTER_SPACING.tight,
             lineHeight: 1,
@@ -84,13 +82,16 @@ export default function TodaySnapshot({ snap }) {
           ACCURACY · STREAK {streak}
         </div>
         {totalGraded === 0 ? (
-          <StatusNote icon={CalendarDays}>No exercises graded yet today.</StatusNote>
+          <StatusNote icon={CalendarDays} style={{ padding: SPACE[2], gap: SPACE[2] }}>
+            No exercises graded yet today.
+          </StatusNote>
         ) : (
           <>
             <div
+              data-testid="today-accuracy-track"
               style={{
                 display: 'flex',
-                height: 24,
+                height: 6,
                 borderRadius: RADIUS.pill,
                 overflow: 'hidden',
                 marginBottom: SPACE[2],
@@ -109,7 +110,7 @@ export default function TodaySnapshot({ snap }) {
             <div
               style={{
                 display: 'flex',
-                gap: tiny ? SPACE[2] : SPACE[5],
+                gap: SPACE[2],
                 flexWrap: 'wrap',
                 fontFamily: FONTS.mono,
                 fontSize: FONT_SIZE.sm,

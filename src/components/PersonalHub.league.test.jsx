@@ -39,7 +39,7 @@ describe('PersonalHub — league at a glance', () => {
     );
     const badge = screen.getByTestId('league-badge-compact');
     expect(badge).toHaveTextContent('Gold');
-    expect(badge).toHaveTextContent('#4/25');
+    expect(badge).not.toHaveTextContent(/#|4|25/);
   });
 
   it('defaults to Bronze when the learner has no membership yet', () => {

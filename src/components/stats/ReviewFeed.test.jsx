@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import ReviewFeed from './ReviewFeed';
+import { FONT_SIZE, SPACE } from '../../lib/theme';
 
 const item = {
   key: 'vocab:greetings:Hallo',
@@ -20,6 +21,12 @@ describe('ReviewFeed', () => {
     expect(screen.getByText('Hello')).toBeInTheDocument();
     expect(screen.getByText(/VOCAB · GREETINGS/)).toBeInTheDocument();
     expect(screen.getByText(/✗ 2×/)).toBeInTheDocument();
+    expect(screen.getByRole('button')).toHaveStyle({
+      gap: `${SPACE[2]}px`,
+      padding: `${SPACE[2]}px ${SPACE[3]}px`,
+    });
+    expect(screen.getByText('Hallo')).toHaveStyle({ fontSize: `${FONT_SIZE.base}px` });
+    expect(screen.getByText('Hello')).toHaveStyle({ fontSize: `${FONT_SIZE.sm}px` });
   });
 
   it('calls onReview with the clicked item', async () => {
