@@ -96,6 +96,28 @@ describe('parseScaffold', () => {
     expect(s.answer).toBe('Ich');
   });
 
+  it('strips Unicode punctuation at both edges without touching internal punctuation', () => {
+    const s = parseScaffold({
+      ...next,
+      de: '„E-Mail!“',
+      blank: 'E-Mail',
+    });
+    expect(s.blankIndex).toBe(0);
+    expect(s.answer).toBe('E-Mail');
+  });
+
+  it('handles a pathological punctuation run in linear time', () => {
+    const punctuation = '!'.repeat(50000);
+    const started = Date.now();
+    const s = parseScaffold({
+      ...next,
+      de: `${punctuation}Kaffee${punctuation}`,
+      blank: 'Kaffee',
+    });
+    expect(s.answer).toBe('Kaffee');
+    expect(Date.now() - started).toBeLessThan(1000);
+  });
+
   it('de-duplicates and trims distractors', () => {
     expect(parseScaffold({ ...next, distractors: [' Tee', 'Tee', 'Wasser'] }).distractors).toEqual([
       'Tee',

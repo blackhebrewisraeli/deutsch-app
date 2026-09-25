@@ -51,8 +51,17 @@ export function advance({ stage, streak }, corrected) {
   return { stage: target, streak: 0, moved: corrected ? 'down' : 'up' };
 }
 
-const EDGE_PUNCT = /^\p{P}+|\p{P}+$/gu;
-const core = (token) => token.replace(EDGE_PUNCT, '');
+const PUNCTUATION = /^\p{P}$/u;
+
+/** Strip punctuation at either edge with one pass over Unicode code points. */
+function core(token) {
+  const characters = [...token];
+  let start = 0;
+  let end = characters.length;
+  while (start < end && PUNCTUATION.test(characters[start])) start += 1;
+  while (end > start && PUNCTUATION.test(characters[end - 1])) end -= 1;
+  return characters.slice(start, end).join('');
+}
 const nonEmpty = (v) => typeof v === 'string' && v.trim().length > 0;
 
 /**

@@ -84,91 +84,153 @@ const BOUNDED_COLUMN = {
 
 const IDENTITY_HEADING_ID = 'home-identity-heading';
 
-// Who you are, what is open today, and what to do next — one card at the top
-// of Home.
-//
-// Identity is the visual anchor: a large avatar plus a compact greeting column
-// that also holds today's Missionen / Tagesaufgaben (`today`) on wide viewports
-// and, below the top row, the emphasized recommended actions (`recommended`).
-// On a narrow viewport the avatar column is half the identity band, so `today`
-// drops under that band instead of squeezing into the remaining half. HomeTab
-// composes those boards into these slots so they are not three competing page
-// sections.
-//
-// Standing is quiet on purpose. The daily-goal ring, total XP, level, and a
-// live streak stay visible; dense Learned / XP-to-next counters do not compete
-// with the actions. Arithmetic is unchanged; this file only decides what to
-// print.
-//
-// Spacing is denser than the first identity-card pass: #270 grew the avatar
-// and type, which left Missionen / Tagesaufgaben / Recommended sitting in
-// empty vertical air. Tokens step down one SPACE stop; the avatar column is
-// untouched.
-//
-// Read-only on purpose, and now read-only completely. Decision E5 keeps account
-// MANAGEMENT — email, sign out, export, danger zone — exclusive to Settings; the
-// hub used to own one control, a "Settings →" link beside the avatar, and that is
-// gone. It made the landing screen carry two Settings doors while the header
-// account bubble — the affordance a learner actually reaches for — was the less
-// obvious of the two. The bubble is now the single door to Profile and Settings,
-// so this card renders nothing interactive at all.
-export default function PersonalHub({
-  user,
-  profile,
-  cefrLevel,
-  score = EMPTY_SCORE,
-  streak = 0,
-  goalPct = 0,
-  goalMet = false,
-  league = null,
-  today = null,
-  recommended = null,
-}) {
-  const copy = activePack.content.identity ?? {};
-  const lvl = score ?? EMPTY_SCORE;
-  const viewportWidth = useWindowWidth();
-  const wide = viewportWidth >= bp.wide;
-  const tiny = viewportWidth < bp.tiny;
-  const fit = tiny ? FIT_TINY : FIT_REGULAR;
+// Standing as a grid of equal tiles, not one wrapping flex row. The row put
+// ring, XP, level, streak and league into the text column's leftover width,
+// and at a narrow viewport — where that column is half the band — the five
+// items wrapped at different points and collided. Tiles have fixed tracks, so
+// each fact gets its own cell whatever the width. It lives under the avatar
+// on wide (that column is otherwise empty below the circle) and full-width
+// under the identity band on narrow.
+const TILE = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: SPACE[2],
+  minWidth: 0,
+  padding: SPACE[2],
+  border: BORDER.panel,
+  borderRadius: RADIUS.md,
+  boxSizing: 'border-box',
+};
+const STAT_VALUE = {
+  fontFamily: FONTS.display,
+  fontWeight: FONT_WEIGHT.bold,
+  fontSize: FONT_SIZE['3xl'],
+  lineHeight: 1,
+  color: COLORS.ink,
+  minWidth: 0,
+  maxWidth: '100%',
+  overflowWrap: 'anywhere',
+};
 
-  // A chosen display name is how the app addresses the learner. The handle is
-  // the unique social identifier and stays visible on its own line; it is only
-  // a greeting fallback when no display name has been chosen yet.
+// A chosen display name is how the app addresses the learner. The handle is
+// the unique social identifier and stays visible on its own line; it is only
+// a greeting fallback when no display name has been chosen yet.
+function greetingName(user, profile) {
+  if (!user) return null;
   const displayName = typeof profile?.display_name === 'string' ? profile.display_name.trim() : '';
-  const name = user ? displayName || profile?.handle || user.email?.split('@')[0] || null : null;
-  const greeting = copy.greeting?.(name);
+  return displayName || profile?.handle || user.email?.split('@')[0] || null;
+}
 
+function accountLine(profile, copy) {
   const createdAt = profile?.created_at ? new Date(profile.created_at) : null;
-  const showsAccountLine = Boolean(user);
+  return [
+    profile?.handle ? `@${profile.handle}` : null,
+    createdAt ? copy.memberSince?.(createdAt) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+}
 
-  // Standing as a grid of equal tiles, not one wrapping flex row. The row put
-  // ring, XP, level, streak and league into the text column's leftover width,
-  // and at a narrow viewport — where that column is half the band — the five
-  // items wrapped at different points and collided. Tiles have fixed tracks, so
-  // each fact gets its own cell whatever the width. It lives under the avatar
-  // on wide (that column is otherwise empty below the circle) and full-width
-  // under the identity band on narrow.
-  const tile = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: SPACE[2],
-    minWidth: 0,
-    padding: SPACE[2],
-    border: BORDER.panel,
-    borderRadius: RADIUS.md,
-    boxSizing: 'border-box',
-  };
-  const statValue = {
-    fontFamily: FONTS.display,
-    fontWeight: FONT_WEIGHT.bold,
-    fontSize: FONT_SIZE['3xl'],
-    lineHeight: 1,
-    color: COLORS.ink,
-    minWidth: 0,
-    maxWidth: '100%',
-    overflowWrap: 'anywhere',
-  };
-  const standing = (
+function XpTile({ totalXp, goalPct, goalMet, tileSpan }) {
+  return (
+    <div
+      data-testid="home-identity-xp"
+      aria-label={`${totalXp} XP`}
+      style={{
+        ...TILE,
+        gridColumn: tileSpan,
+        flexWrap: 'wrap',
+      }}
+    >
+      <GoalRing pct={goalPct} met={goalMet} size={SPACE[12]} />
+      <span
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          flex: '1 1 0',
+          flexWrap: 'wrap',
+          gap: SPACE[1],
+          minWidth: 0,
+          overflowWrap: 'anywhere',
+        }}
+      >
+        <span data-testid="home-identity-xp-value" style={STAT_VALUE}>
+          {totalXp}
+        </span>{' '}
+        <Meta tone="soft" style={{ letterSpacing: LETTER_SPACING.wider }}>
+          XP
+        </Meta>
+      </span>
+    </div>
+  );
+}
+
+function LevelTile({ level, rankName, tileSpan }) {
+  return (
+    <div
+      data-testid="home-identity-level-group"
+      style={{
+        ...TILE,
+        alignItems: 'baseline',
+        gridColumn: tileSpan,
+        flexWrap: 'wrap',
+        columnGap: SPACE[1],
+      }}
+    >
+      <Meta>Level</Meta>{' '}
+      <span data-testid="home-identity-level" style={STAT_VALUE}>
+        {level}
+      </span>
+      {rankName ? (
+        <>
+          {' · '}
+          <Body size="sm" tone="soft" as="span" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+            {rankName}
+          </Body>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function StreakTile({ streak }) {
+  if (!(streak > 0)) return null;
+  return (
+    <div aria-label={`Streak ${streak}`} style={{ ...TILE, color: COLORS.gold }}>
+      <Flame size={FONT_SIZE.lg} aria-hidden="true" />
+      <span
+        data-testid="home-identity-streak"
+        style={{
+          fontFamily: FONTS.mono,
+          fontWeight: FONT_WEIGHT.bold,
+          fontSize: FONT_SIZE.sm,
+          lineHeight: 1,
+          color: COLORS.inkSoft,
+        }}
+      >
+        {streak}
+      </span>
+    </div>
+  );
+}
+
+// League at a glance. A READ-ONLY badge: `league` comes from
+// useLeagueStanding, which deliberately never joins or refreshes — see that
+// hook's header for why Home must not write on open. A signed-in learner with
+// no membership yet still sees Bronze, because Bronze is the floor everyone
+// starts on rather than an unknown. Rank and cohort numbers stay in the
+// Profile leaderboard, where their context lives.
+function LeagueTile({ user, league }) {
+  if (!LEAGUES_ENABLED || !user) return null;
+  return (
+    <div style={TILE}>
+      <LeagueBadge variant="compact" tier={league?.tier} />
+    </div>
+  );
+}
+
+function StandingTiles({ lvl, streak, goalPct, goalMet, user, league, tileSpan }) {
+  return (
     <div
       data-testid="home-identity-standing"
       style={{
@@ -178,90 +240,17 @@ export default function PersonalHub({
         minWidth: 0,
       }}
     >
-      <div
-        data-testid="home-identity-xp"
-        aria-label={`${lvl.totalXp ?? 0} XP`}
-        style={{
-          ...tile,
-          gridColumn: fit.tileSpan,
-          flexWrap: 'wrap',
-        }}
-      >
-        <GoalRing pct={goalPct} met={goalMet} size={SPACE[12]} />
-        <span
-          style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            flex: '1 1 0',
-            flexWrap: 'wrap',
-            gap: SPACE[1],
-            minWidth: 0,
-            overflowWrap: 'anywhere',
-          }}
-        >
-          <span data-testid="home-identity-xp-value" style={statValue}>
-            {lvl.totalXp ?? 0}
-          </span>{' '}
-          <Meta tone="soft" style={{ letterSpacing: LETTER_SPACING.wider }}>
-            XP
-          </Meta>
-        </span>
-      </div>
-      <div
-        data-testid="home-identity-level-group"
-        style={{
-          ...tile,
-          alignItems: 'baseline',
-          gridColumn: fit.tileSpan,
-          flexWrap: 'wrap',
-          columnGap: SPACE[1],
-        }}
-      >
-        <Meta>Level</Meta>{' '}
-        <span data-testid="home-identity-level" style={statValue}>
-          {lvl.level}
-        </span>
-        {lvl.rankName ? (
-          <>
-            {' · '}
-            <Body size="sm" tone="soft" as="span" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-              {lvl.rankName}
-            </Body>
-          </>
-        ) : null}
-      </div>
-      {streak > 0 ? (
-        <div aria-label={`Streak ${streak}`} style={{ ...tile, color: COLORS.gold }}>
-          <Flame size={FONT_SIZE.lg} aria-hidden="true" />
-          <span
-            data-testid="home-identity-streak"
-            style={{
-              fontFamily: FONTS.mono,
-              fontWeight: FONT_WEIGHT.bold,
-              fontSize: FONT_SIZE.sm,
-              lineHeight: 1,
-              color: COLORS.inkSoft,
-            }}
-          >
-            {streak}
-          </span>
-        </div>
-      ) : null}
-      {/* League at a glance. A READ-ONLY badge: `league` comes from
-          useLeagueStanding, which deliberately never joins or refreshes — see
-          that hook's header for why Home must not write on open. A signed-in
-          learner with no membership yet still sees Bronze, because Bronze is
-          the floor everyone starts on rather than an unknown. Rank and cohort
-          numbers stay in the Profile leaderboard, where their context lives. */}
-      {LEAGUES_ENABLED && user ? (
-        <div style={tile}>
-          <LeagueBadge variant="compact" tier={league?.tier} />
-        </div>
-      ) : null}
+      <XpTile totalXp={lvl.totalXp ?? 0} goalPct={goalPct} goalMet={goalMet} tileSpan={tileSpan} />
+      <LevelTile level={lvl.level} rankName={lvl.rankName} tileSpan={tileSpan} />
+      <StreakTile streak={streak} />
+      <LeagueTile user={user} league={league} />
     </div>
   );
+}
 
-  const identityFacts = (
+function IdentityFacts({ greeting, cefrLevel, copy, fit, wide, user, profile }) {
+  const band = String(cefrLevel ?? '').toUpperCase();
+  return (
     <Stack gap={1} style={BOUNDED_COLUMN}>
       <Row
         wrap={false}
@@ -311,7 +300,7 @@ export default function PersonalHub({
               trailing caps tracking is dropped so the glyphs are not pushed
               off-centre inside their own border. */}
         <span
-          aria-label={copy.levelLabel?.(String(cefrLevel ?? '').toUpperCase())}
+          aria-label={copy.levelLabel?.(band)}
           style={{
             flexShrink: 0,
             fontFamily: FONTS.mono,
@@ -324,44 +313,171 @@ export default function PersonalHub({
             padding: `${SPACE[1]}px ${SPACE[2]}px`,
           }}
         >
-          {String(cefrLevel ?? '').toUpperCase()}
+          {band}
         </span>
       </Row>
       {/* `soft`, not `muted`. Supporting prose across the app is inkSoft and
             labels are mute; these two lines had it backwards, so the handle
             and the level — the two facts this card exists to state — were set
             in the quietest ink on the page. */}
-      {showsAccountLine && (
+      {user ? (
         <Body size="sm" tone="soft" as="div" style={TRUNCATE}>
-          {[
-            profile?.handle ? `@${profile.handle}` : null,
-            createdAt ? copy.memberSince?.(createdAt) : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
+          {accountLine(profile, copy)}
         </Body>
-      )}
+      ) : null}
     </Stack>
   );
+}
 
-  const leaderboard = league?.leaders?.length ? (
-    <LeaderboardWidget leaders={league.leaders} />
-  ) : null;
+function IdentityAvatar({ profile, userId }) {
+  return (
+    <div
+      data-testid="home-identity-avatar"
+      style={{
+        width: '100%',
+        aspectRatio: '1 / 1',
+        maxWidth: '100%',
+        minWidth: 0,
+        borderRadius: '50%',
+        background: COLORS.paperDeep,
+        border: `1px solid ${COLORS.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+      }}
+    >
+      <Avatar
+        profile={profile}
+        userId={userId}
+        size={AVATAR_DESKTOP}
+        style={{ width: '100%', height: '100%' }}
+      />
+    </div>
+  );
+}
 
-  // A dedicated, bounded right column: identity, today's work, then Top 3.
-  // Each module is a sibling, so another dashboard widget can be appended
-  // without changing the outer grid or nesting it inside a task board.
-  const rightColumn = (
+// A dedicated, bounded right column: identity, today's work, then Top 3.
+// Each module is a sibling, so another dashboard widget can be appended
+// without changing the outer grid or nesting it inside a task board.
+function RightColumn({ identityFacts, today, leaderboard }) {
+  return (
     <Stack data-testid="home-identity-content" gap={2} style={BOUNDED_COLUMN}>
       {identityFacts}
-      {wide && today ? (
+      {today ? (
         <div data-testid="home-today-column" style={BOUNDED_COLUMN}>
           {today}
         </div>
       ) : null}
-      {wide ? leaderboard : null}
+      {leaderboard}
     </Stack>
   );
+}
+
+// Below bp.wide the standing tiles, today's boards and Top 3 drop under the
+// identity band instead of squeezing into the half-width text column.
+function NarrowSections({ standing, today, leaderboard }) {
+  return (
+    <>
+      <div style={{ marginTop: SPACE[3], minWidth: 0 }}>{standing}</div>
+      {today ? <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{today}</div> : null}
+      {leaderboard ? (
+        <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{leaderboard}</div>
+      ) : null}
+    </>
+  );
+}
+
+function RecommendedWell({ recommended }) {
+  if (!recommended) return null;
+  return (
+    <div
+      data-testid="home-recommended-well"
+      style={{
+        marginTop: SPACE[4],
+        paddingTop: SPACE[3],
+        borderTop: BORDER.panel,
+        minWidth: 0,
+      }}
+    >
+      {recommended}
+    </div>
+  );
+}
+
+// Who you are, what is open today, and what to do next — one card at the top
+// of Home.
+//
+// Identity is the visual anchor: a large avatar plus a compact greeting column
+// that also holds today's Missionen / Tagesaufgaben (`today`) on wide viewports
+// and, below the top row, the emphasized recommended actions (`recommended`).
+// On a narrow viewport the avatar column is half the identity band, so `today`
+// drops under that band instead of squeezing into the remaining half. HomeTab
+// composes those boards into these slots so they are not three competing page
+// sections.
+//
+// Standing is quiet on purpose. The daily-goal ring, total XP, level, and a
+// live streak stay visible; dense Learned / XP-to-next counters do not compete
+// with the actions. Arithmetic is unchanged; this file only decides what to
+// print.
+//
+// Spacing is denser than the first identity-card pass: #270 grew the avatar
+// and type, which left Missionen / Tagesaufgaben / Recommended sitting in
+// empty vertical air. Tokens step down one SPACE stop; the avatar column is
+// untouched.
+//
+// Read-only on purpose, and now read-only completely. Decision E5 keeps account
+// MANAGEMENT — email, sign out, export, danger zone — exclusive to Settings; the
+// hub used to own one control, a "Settings →" link beside the avatar, and that is
+// gone. It made the landing screen carry two Settings doors while the header
+// account bubble — the affordance a learner actually reaches for — was the less
+// obvious of the two. The bubble is now the single door to Profile and Settings,
+// so this card renders nothing interactive at all.
+export default function PersonalHub({
+  user,
+  profile,
+  cefrLevel,
+  score = EMPTY_SCORE,
+  streak = 0,
+  goalPct = 0,
+  goalMet = false,
+  league = null,
+  today = null,
+  recommended = null,
+}) {
+  const copy = activePack.content.identity ?? {};
+  const lvl = score ?? EMPTY_SCORE;
+  const viewportWidth = useWindowWidth();
+  const wide = viewportWidth >= bp.wide;
+  const fit = viewportWidth < bp.tiny ? FIT_TINY : FIT_REGULAR;
+  const greeting = copy.greeting?.(greetingName(user, profile));
+
+  const standing = (
+    <StandingTiles
+      lvl={lvl}
+      streak={streak}
+      goalPct={goalPct}
+      goalMet={goalMet}
+      user={user}
+      league={league}
+      tileSpan={fit.tileSpan}
+    />
+  );
+  const identityFacts = (
+    <IdentityFacts
+      greeting={greeting}
+      cefrLevel={cefrLevel}
+      copy={copy}
+      fit={fit}
+      wide={wide}
+      user={user}
+      profile={profile}
+    />
+  );
+  const leaderboard = league?.leaders?.length ? (
+    <LeaderboardWidget leaders={league.leaders} />
+  ) : null;
 
   return (
     <Surface as="section" elevation={1} padding={4} aria-labelledby={IDENTITY_HEADING_ID}>
@@ -379,30 +495,7 @@ export default function PersonalHub({
         }}
       >
         <Stack gap={3} style={{ minWidth: 0 }}>
-          <div
-            data-testid="home-identity-avatar"
-            style={{
-              width: '100%',
-              aspectRatio: '1 / 1',
-              maxWidth: '100%',
-              minWidth: 0,
-              borderRadius: '50%',
-              background: COLORS.paperDeep,
-              border: `1px solid ${COLORS.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-              boxSizing: 'border-box',
-            }}
-          >
-            <Avatar
-              profile={profile}
-              userId={user?.id}
-              size={AVATAR_DESKTOP}
-              style={{ width: '100%', height: '100%' }}
-            />
-          </div>
+          <IdentityAvatar profile={profile} userId={user?.id} />
           {wide ? standing : null}
         </Stack>
 
@@ -411,28 +504,15 @@ export default function PersonalHub({
             greeting (rather than nowrap) is the overflow behaviour — a handle
             is the name, and ellipsizing it would hide the one fact the hub
             exists to show. */}
-        {rightColumn}
+        <RightColumn
+          identityFacts={identityFacts}
+          today={wide ? today : null}
+          leaderboard={wide ? leaderboard : null}
+        />
       </div>
 
-      {!wide && <div style={{ marginTop: SPACE[3], minWidth: 0 }}>{standing}</div>}
-      {!wide && today && <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{today}</div>}
-      {!wide && leaderboard ? (
-        <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{leaderboard}</div>
-      ) : null}
-
-      {recommended && (
-        <div
-          data-testid="home-recommended-well"
-          style={{
-            marginTop: SPACE[4],
-            paddingTop: SPACE[3],
-            borderTop: BORDER.panel,
-            minWidth: 0,
-          }}
-        >
-          {recommended}
-        </div>
-      )}
+      {wide ? null : <NarrowSections standing={standing} today={today} leaderboard={leaderboard} />}
+      <RecommendedWell recommended={recommended} />
     </Surface>
   );
 }
