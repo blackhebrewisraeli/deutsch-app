@@ -486,6 +486,110 @@ describe('isGoogleAuthConfigured', () => {
   });
 });
 
+// GitHub is gated exactly like Google, on its own flag: the two providers are
+// set up — and rolled back — independently, so neither flag may switch the
+// other one on.
+describe('signInWithGitHub', () => {
+  beforeEach(() => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://x.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
+    vi.stubEnv('VITE_GITHUB_AUTH_ENABLED', 'true');
+    vi.resetModules();
+    Object.values(mockAuth).forEach((fn) => fn.mockClear?.());
+  });
+  afterEach(() => vi.unstubAllEnvs());
+
+  // No `scopes`: Supabase already requests user:email, and signing in needs
+  // nothing wider.
+  it('starts the OAuth round trip with the app origin as redirectTo and no extra scopes', async () => {
+    const { signInWithGitHub } = await import('./auth.js');
+    const { error } = await signInWithGitHub();
+    expect(error).toBeNull();
+    expect(mockAuth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'github',
+      options: { redirectTo: window.location.origin },
+    });
+  });
+
+  // Still one allow-list entry per environment, not three.
+  it('uses the same redirect target as the magic link and Google', async () => {
+    vi.stubEnv('VITE_GOOGLE_AUTH_ENABLED', 'true');
+    vi.resetModules();
+    const { signInWithGitHub, signInWithGoogle, signInWithMagicLink } = await import('./auth.js');
+    await signInWithGitHub();
+    await signInWithGoogle();
+    await signInWithMagicLink('a@b.com');
+    const [github, google] = mockAuth.signInWithOAuth.mock.calls.map(([arg]) => arg);
+    expect(github.options.redirectTo).toBe(google.options.redirectTo);
+    expect(github.options.redirectTo).toBe(
+      mockAuth.signInWithOtp.mock.calls[0][0].options.emailRedirectTo
+    );
+  });
+
+  it('refuses when auth is unconfigured, even with the flag on', async () => {
+    vi.stubEnv('VITE_SUPABASE_URL', '');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', '');
+    vi.resetModules();
+    const { signInWithGitHub } = await import('./auth.js');
+    const { error } = await signInWithGitHub();
+    expect(error).toBeTruthy();
+    expect(mockAuth.signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  // The stale-tab guard: a tab left open across a deploy that switched GitHub
+  // off must not start a flow into a provider that is no longer configured.
+  it('refuses when the flag is off, even though auth is configured', async () => {
+    vi.stubEnv('VITE_GITHUB_AUTH_ENABLED', 'false');
+    vi.resetModules();
+    const { signInWithGitHub } = await import('./auth.js');
+    const { error } = await signInWithGitHub();
+    expect(error).toBeTruthy();
+    expect(mockAuth.signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  it('is not switched on by the Google flag', async () => {
+    vi.stubEnv('VITE_GITHUB_AUTH_ENABLED', undefined);
+    vi.stubEnv('VITE_GOOGLE_AUTH_ENABLED', 'true');
+    vi.resetModules();
+    const { signInWithGitHub } = await import('./auth.js');
+    expect((await signInWithGitHub()).error).toBeTruthy();
+    expect(mockAuth.signInWithOAuth).not.toHaveBeenCalled();
+  });
+
+  it('does not switch Google on either', async () => {
+    vi.stubEnv('VITE_GOOGLE_AUTH_ENABLED', undefined);
+    vi.resetModules();
+    const { signInWithGoogle } = await import('./auth.js');
+    expect((await signInWithGoogle()).error).toBeTruthy();
+    expect(mockAuth.signInWithOAuth).not.toHaveBeenCalled();
+  });
+});
+
+describe('isGitHubAuthConfigured', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  const load = async (url, key, flag) => {
+    vi.stubEnv('VITE_SUPABASE_URL', url);
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', key);
+    vi.stubEnv('VITE_GITHUB_AUTH_ENABLED', flag);
+    vi.resetModules();
+    return (await import('./auth.js')).isGitHubAuthConfigured();
+  };
+
+  it('is true only when auth is configured AND the flag is exactly "true"', async () => {
+    expect(await load('https://x.supabase.co', 'anon-key', 'true')).toBe(true);
+    expect(await load('https://x.supabase.co', 'anon-key', 'false')).toBe(false);
+    expect(await load('https://x.supabase.co', 'anon-key', undefined)).toBe(false);
+    expect(await load('', '', 'true')).toBe(false);
+  });
+
+  it('does not accept truthy near-misses', async () => {
+    expect(await load('https://x.supabase.co', 'anon-key', '1')).toBe(false);
+    expect(await load('https://x.supabase.co', 'anon-key', 'TRUE')).toBe(false);
+    expect(await load('https://x.supabase.co', 'anon-key', 'yes')).toBe(false);
+  });
+});
+
 // Phase C rendered one story for every failure — "That link expired" — which
 // is false after a user backs out of Google's consent screen. The patterns
 // live here beside authCallbackKind so the component never re-derives them.
@@ -503,6 +607,12 @@ describe('authCallbackReason', () => {
     ['cancelled', 'a Google cancel hash', '/#error=access_denied&error_description=User+denied'],
     ['cancelled', 'a user_denied error_code', '/#error=server_error&error_code=user_denied'],
     ['cancelled', 'an access_denied query', '/?error=access_denied'],
+    // GitHub's authorize page → Cancel, as Supabase forwards it.
+    [
+      'cancelled',
+      'a GitHub cancel query',
+      '/?error=access_denied&error_description=The+user+has+denied+your+application+access.',
+    ],
     // THE TRAP: Supabase reports an expired magic link with access_denied AND
     // otp_expired in the same URL. Expired has to win, or every expired link
     // is mislabelled a cancellation.
@@ -514,6 +624,13 @@ describe('authCallbackReason', () => {
     ['expired', 'an otp_expired query', '/?error=access_denied&error_code=otp_expired'],
     ['failed', 'an unrecognised server error', '/?error=server_error&error_description=boom'],
     ['failed', 'a bare error_description', '/#error_description=something+broke'],
+    // A GitHub account with no verified address: Supabase refuses it, and that
+    // is a failure to explain — not a cancellation, not an expired link.
+    [
+      'failed',
+      'a GitHub account with no verified email',
+      '/?error=server_error&error_description=Error+getting+user+email+from+external+provider',
+    ],
     // Not an error callback at all.
     [null, 'a clean URL', '/'],
     [null, 'a pending PKCE code', '/?code=abc123'],
@@ -691,6 +808,27 @@ describe('native app (Capacitor)', () => {
       expect(nativePlugins.browserOpen).not.toHaveBeenCalled();
       mockAuth.signInWithOAuth.mockImplementation(() => Promise.resolve({ data: {}, error: null }));
     });
+  });
+
+  // GitHub shares startOAuth with Google, so it must take the same native path:
+  // system browser, app scheme, never the webview.
+  it('sends GitHub through the system browser too', async () => {
+    vi.stubEnv('VITE_GITHUB_AUTH_ENABLED', 'true');
+    vi.resetModules();
+    const url = 'https://x.supabase.co/auth/v1/authorize?provider=github';
+    mockAuth.signInWithOAuth.mockResolvedValueOnce({
+      data: { provider: 'github', url },
+      error: null,
+    });
+    const { signInWithGitHub } = await import('./auth.js');
+    const pending = signInWithGitHub();
+    await vi.waitFor(() => expect(nativePlugins.browserOpen).toHaveBeenCalledWith({ url }));
+    expect(mockAuth.signInWithOAuth).toHaveBeenCalledWith({
+      provider: 'github',
+      options: { redirectTo: CALLBACK, skipBrowserRedirect: true },
+    });
+    nativePlugins.browserFinished();
+    expect((await pending).error).toBeNull();
   });
 
   describe('handleNativeAuthCallback', () => {

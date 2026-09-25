@@ -82,6 +82,7 @@ vi.mock('./lib/auth', async (importOriginal) => ({
   ...(await importOriginal()),
   isAuthConfigured: () => authMock.configured,
   isGoogleAuthConfigured: () => false,
+  isGitHubAuthConfigured: () => false,
   mayHaveSession: () => authMock.mayHaveSession,
   signOut: authSignOutMock,
   getAccessToken: () => Promise.resolve(authMock.token),
@@ -690,7 +691,9 @@ describe('in-app AuthSheet', () => {
     vi.doMock('./lib/auth.js', () => ({
       isAuthConfigured: () => true,
       isGoogleAuthConfigured: () => false,
+      isGitHubAuthConfigured: () => false,
       signInWithGoogle: vi.fn(() => Promise.resolve({ error: null })),
+      signInWithGitHub: vi.fn(() => Promise.resolve({ error: null })),
       humanAuthError: () => 'Something went wrong — try again.',
       useAuth: () => ({ user: null, session: null, status: 'anonymous' }),
       signOut: vi.fn(() => Promise.resolve({ error: null })),
@@ -763,19 +766,24 @@ describe('guest trial wall', () => {
   });
 
   let signInWithGoogle;
+  let signInWithGitHub;
 
   async function renderApp({
     configured = true,
     status = 'anonymous',
     state = EXHAUSTED,
     googleOn = false,
+    gitHubOn = false,
   } = {}) {
     localStorage.setItem('deutsch-app-state-v1', JSON.stringify(state));
     signInWithGoogle = vi.fn(() => Promise.resolve({ error: null }));
+    signInWithGitHub = vi.fn(() => Promise.resolve({ error: null }));
     vi.doMock('./lib/auth.js', () => ({
       isAuthConfigured: () => configured,
       isGoogleAuthConfigured: () => googleOn,
+      isGitHubAuthConfigured: () => gitHubOn,
       signInWithGoogle,
+      signInWithGitHub,
       humanAuthError: () => 'Something went wrong — try again.',
       useAuth: () => ({
         user: status === 'authenticated' ? { id: 'u1', email: 'a@b.co' } : null,
@@ -988,6 +996,39 @@ describe('guest trial wall', () => {
     } finally {
       delete window.Capacitor;
     }
+  });
+
+  // Google off, GitHub on: GitHub holds the wall's provider slot and reaches the
+  // real signInWithGitHub through App's handler.
+  it('starts the GitHub flow from the wall when only GitHub is on', async () => {
+    const user = userEvent.setup();
+    await renderApp({ gitHubOn: true });
+    await user.click(screen.getByRole('button', { name: 'Continue with GitHub' }));
+    expect(signInWithGitHub).toHaveBeenCalledTimes(1);
+    expect(signInWithGoogle).not.toHaveBeenCalled();
+  });
+
+  // The in-flight guard is shared across providers: once Google is on its way
+  // out, a tap on GitHub must not start a second round trip racing it.
+  it('does not start GitHub while a Google redirect is already in flight', async () => {
+    const user = userEvent.setup();
+    await renderApp({ googleOn: true, gitHubOn: true });
+    // Both on, the wall shows Google only; the sheet behind "I already have an
+    // account" lists both.
+    await user.click(screen.getByRole('button', { name: 'I already have an account' }));
+    const sheet = screen.getByRole('dialog', { name: 'Sign in' });
+    await user.click(within(sheet).getByRole('button', { name: 'Continue with Google' }));
+    await user.click(within(sheet).getByRole('button', { name: 'Continue with GitHub' }));
+    expect(signInWithGoogle).toHaveBeenCalledTimes(1);
+    expect(signInWithGitHub).not.toHaveBeenCalled();
+    // Only the provider actually in flight shows the spinner.
+    expect(within(sheet).getByRole('button', { name: 'Continue with Google' })).toHaveAttribute(
+      'aria-busy',
+      'true'
+    );
+    expect(within(sheet).getByRole('button', { name: 'Continue with GitHub' })).not.toHaveAttribute(
+      'aria-busy'
+    );
   });
 });
 

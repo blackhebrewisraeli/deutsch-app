@@ -56,8 +56,9 @@ After the change, the Redirect URLs list should read:
 - **Google Cloud Console.** Google redirects to Supabase's own callback
   (`https://xcnnlczvxmuwcqwychox.supabase.co/auth/v1/callback`), not to the
   app. That URI is already registered (`docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md` §4).
-- **GitHub OAuth app** (PR #347, if it merges): same reason. Its callback is
-  Supabase's, and the GitHub button uses the same `redirectTo` as Google.
+- **GitHub OAuth app** (`docs/AUTH_GITHUB_OAUTH_RUNBOOK.md`): same reason. Its
+  callback is Supabase's, and the GitHub button goes through the same
+  `redirectTo` and the same system-browser flow as Google.
 - **Email templates.** `supabase/templates/magic_link.html` links through
   `{{ .ConfirmationURL }}`, which carries the `redirectTo` above. The copy
   "tap this link to sign in in your browser" reads a little oddly now that the

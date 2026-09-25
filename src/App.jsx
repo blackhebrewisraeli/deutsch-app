@@ -83,6 +83,7 @@ import {
   isAuthConfigured,
   mayHaveSession,
   signInWithGoogle,
+  signInWithGitHub,
   humanAuthError,
 } from './lib/auth';
 import { signOutAndReset } from './lib/clearUserState';
@@ -472,21 +473,30 @@ export default function App() {
     setAuthModal('signin');
   };
 
-  // One Google entry point for all three surfaces — the sheet, the gate and
-  // the trial wall each render the same button and call this. On the web a
-  // successful start sends the tab to Google, so `busy` is deliberately never
-  // cleared there: the page is going away, and clearing it would re-enable the
-  // button for the moment before it does. The native app never leaves. Google
-  // opens in the system browser and signInWithGoogle settles once that browser
-  // closes, signed in or backed out, so the button must come back.
-  const [googleBusy, setGoogleBusy] = useState(false);
-  const handleGoogle = async () => {
-    if (googleBusy) return;
-    setGoogleBusy(true);
-    const { error } = await signInWithGoogle();
-    if (error || isNativeApp()) setGoogleBusy(false);
+  // One entry point per provider for all three surfaces — the sheet, the gate
+  // and the trial wall each render the same buttons and call these. On the web
+  // a successful start sends the tab to the provider, so `busy` is deliberately
+  // never cleared there: the page is going away, and clearing it would
+  // re-enable the button for the moment before it does. The native app never
+  // leaves. The provider opens in the system browser and the sign-in call
+  // settles once that browser closes, signed in or backed out, so the button
+  // must come back.
+  //
+  // ONE in-flight value across providers, not a flag each: a tap on Google and
+  // then on GitHub must not start two round trips racing to redirect the tab.
+  // It holds which provider is in flight so only that button shows the spinner.
+  const [oauthBusy, setOAuthBusy] = useState(null); // 'google' | 'github' | null
+  const startOAuth = async (provider, signIn) => {
+    if (oauthBusy) return;
+    setOAuthBusy(provider);
+    const { error } = await signIn();
+    if (error || isNativeApp()) setOAuthBusy(null);
     if (error) showToast(humanAuthError(error));
   };
+  const handleGoogle = () => startOAuth('google', signInWithGoogle);
+  const handleGitHub = () => startOAuth('github', signInWithGitHub);
+  const googleBusy = oauthBusy === 'google';
+  const gitHubBusy = oauthBusy === 'github';
 
   // Preferences write LOCAL state and let the existing reconcile push them.
   // Writing Supabase directly here would bypass the LWW merge that PR #151
@@ -550,6 +560,8 @@ export default function App() {
         onSuccess={handleAuthDone}
         onGoogle={handleGoogle}
         googleBusy={googleBusy}
+        onGitHub={handleGitHub}
+        gitHubBusy={gitHubBusy}
       />
     </>
   );
@@ -1147,6 +1159,8 @@ export default function App() {
           onAuth={(intent) => setAuthModal(intent)}
           onGoogle={handleGoogle}
           googleBusy={googleBusy}
+          onGitHub={handleGitHub}
+          gitHubBusy={gitHubBusy}
         />
         {authOverlay}
       </>
@@ -1561,6 +1575,8 @@ export default function App() {
                   onSignIn={requestSignIn}
                   onGoogle={handleGoogle}
                   googleBusy={googleBusy}
+                  onGitHub={handleGitHub}
+                  gitHubBusy={gitHubBusy}
                 />
               )}
             </div>

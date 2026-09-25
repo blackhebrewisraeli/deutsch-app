@@ -2,17 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const { isGoogleAuthConfigured } = vi.hoisted(() => ({
+const { isGoogleAuthConfigured, isGitHubAuthConfigured } = vi.hoisted(() => ({
   isGoogleAuthConfigured: vi.fn(() => false),
+  isGitHubAuthConfigured: vi.fn(() => false),
 }));
 // Auth is configured in this test so the auth buttons render.
-vi.mock('../lib/auth.js', () => ({ isAuthConfigured: () => true, isGoogleAuthConfigured }));
+vi.mock('../lib/auth.js', () => ({
+  isAuthConfigured: () => true,
+  isGoogleAuthConfigured,
+  isGitHubAuthConfigured,
+}));
 import WelcomeGate from './WelcomeGate';
 
 describe('WelcomeGate', () => {
   beforeEach(() => {
-    // Flag off is the merge state and the one CI runs.
+    // Flags off is the merge state and the one CI runs.
     isGoogleAuthConfigured.mockReturnValue(false);
+    isGitHubAuthConfigured.mockReturnValue(false);
   });
 
   // The guest path is now a bounded trial, so the gate says so up front — a
@@ -34,9 +40,10 @@ describe('WelcomeGate', () => {
     expect(onAuth).toHaveBeenCalledWith('signin');
   });
 
-  it('offers no Google button while the flag is off', () => {
+  it('offers no provider button while the flags are off', () => {
     render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} />);
     expect(screen.queryByRole('button', { name: /continue with google/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /continue with github/i })).toBeNull();
     // Today's exact rendering: create, sign in, guest link — nothing else.
     expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^sign in$/i })).toBeInTheDocument();
@@ -76,6 +83,43 @@ describe('WelcomeGate', () => {
     it('marks the button busy during a redirect without dropping it from the tab order', () => {
       render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} googleBusy />);
       const button = screen.getByRole('button', { name: /continue with google/i });
+      expect(button).toHaveAttribute('aria-busy', 'true');
+      expect(button).not.toBeDisabled();
+    });
+  });
+
+  describe('with GitHub on', () => {
+    beforeEach(() => isGitHubAuthConfigured.mockReturnValue(true));
+
+    // The gate is a full screen with room for both, so it lists both — Google
+    // first, GitHub straight under it, both above create / sign in.
+    it('puts GitHub under Google and above create and sign in', () => {
+      isGoogleAuthConfigured.mockReturnValue(true);
+      render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} />);
+      const google = screen.getByRole('button', { name: /continue with google/i });
+      const github = screen.getByRole('button', { name: /continue with github/i });
+      const create = screen.getByRole('button', { name: /create account/i });
+      expect(google.compareDocumentPosition(github)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(github.compareDocumentPosition(create)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it('leaves the guest trial link last', () => {
+      render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} />);
+      const github = screen.getByRole('button', { name: /continue with github/i });
+      const guest = screen.getByRole('button', { name: 'Try it first — free →' });
+      expect(github.compareDocumentPosition(guest)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it('routes to the handler App passes', async () => {
+      const onGitHub = vi.fn();
+      render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} onGitHub={onGitHub} />);
+      await userEvent.click(screen.getByRole('button', { name: /continue with github/i }));
+      expect(onGitHub).toHaveBeenCalledTimes(1);
+    });
+
+    it('marks the button busy during a redirect without dropping it from the tab order', () => {
+      render(<WelcomeGate onGuest={() => {}} onAuth={() => {}} gitHubBusy />);
+      const button = screen.getByRole('button', { name: /continue with github/i });
       expect(button).toHaveAttribute('aria-busy', 'true');
       expect(button).not.toBeDisabled();
     });
