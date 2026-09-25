@@ -84,21 +84,172 @@ const BOUNDED_COLUMN = {
 
 const IDENTITY_HEADING_ID = 'home-identity-heading';
 
-function learnerName(user, profile) {
+// Standing as a grid of equal tiles, not one wrapping flex row. The row put
+// ring, XP, level, streak and league into the text column's leftover width,
+// and at a narrow viewport — where that column is half the band — the five
+// items wrapped at different points and collided. Tiles have fixed tracks, so
+// each fact gets its own cell whatever the width. It lives under the avatar
+// on wide (that column is otherwise empty below the circle) and full-width
+// under the identity band on narrow.
+const TILE = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: SPACE[2],
+  minWidth: 0,
+  padding: SPACE[2],
+  border: BORDER.panel,
+  borderRadius: RADIUS.md,
+  boxSizing: 'border-box',
+};
+const STAT_VALUE = {
+  fontFamily: FONTS.display,
+  fontWeight: FONT_WEIGHT.bold,
+  fontSize: FONT_SIZE['3xl'],
+  lineHeight: 1,
+  color: COLORS.ink,
+  minWidth: 0,
+  maxWidth: '100%',
+  overflowWrap: 'anywhere',
+};
+
+// A chosen display name is how the app addresses the learner. The handle is
+// the unique social identifier and stays visible on its own line; it is only
+// a greeting fallback when no display name has been chosen yet.
+function greetingName(user, profile) {
   if (!user) return null;
   const displayName = typeof profile?.display_name === 'string' ? profile.display_name.trim() : '';
   return displayName || profile?.handle || user.email?.split('@')[0] || null;
 }
 
-function IdentityFacts({ user, profile, cefrLevel, copy, greeting, wide, fit }) {
+function accountLine(profile, copy) {
   const createdAt = profile?.created_at ? new Date(profile.created_at) : null;
-  const accountLine = [
+  return [
     profile?.handle ? `@${profile.handle}` : null,
     createdAt ? copy.memberSince?.(createdAt) : null,
   ]
     .filter(Boolean)
     .join(' · ');
+}
 
+function XpTile({ totalXp, goalPct, goalMet, tileSpan }) {
+  return (
+    <div
+      data-testid="home-identity-xp"
+      aria-label={`${totalXp} XP`}
+      style={{
+        ...TILE,
+        gridColumn: tileSpan,
+        flexWrap: 'wrap',
+      }}
+    >
+      <GoalRing pct={goalPct} met={goalMet} size={SPACE[12]} />
+      <span
+        style={{
+          display: 'flex',
+          alignItems: 'baseline',
+          flex: '1 1 0',
+          flexWrap: 'wrap',
+          gap: SPACE[1],
+          minWidth: 0,
+          overflowWrap: 'anywhere',
+        }}
+      >
+        <span data-testid="home-identity-xp-value" style={STAT_VALUE}>
+          {totalXp}
+        </span>{' '}
+        <Meta tone="soft" style={{ letterSpacing: LETTER_SPACING.wider }}>
+          XP
+        </Meta>
+      </span>
+    </div>
+  );
+}
+
+function LevelTile({ level, rankName, tileSpan }) {
+  return (
+    <div
+      data-testid="home-identity-level-group"
+      style={{
+        ...TILE,
+        alignItems: 'baseline',
+        gridColumn: tileSpan,
+        flexWrap: 'wrap',
+        columnGap: SPACE[1],
+      }}
+    >
+      <Meta>Level</Meta>{' '}
+      <span data-testid="home-identity-level" style={STAT_VALUE}>
+        {level}
+      </span>
+      {rankName ? (
+        <>
+          {' · '}
+          <Body size="sm" tone="soft" as="span" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
+            {rankName}
+          </Body>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+function StreakTile({ streak }) {
+  if (!(streak > 0)) return null;
+  return (
+    <div aria-label={`Streak ${streak}`} style={{ ...TILE, color: COLORS.gold }}>
+      <Flame size={FONT_SIZE.lg} aria-hidden="true" />
+      <span
+        data-testid="home-identity-streak"
+        style={{
+          fontFamily: FONTS.mono,
+          fontWeight: FONT_WEIGHT.bold,
+          fontSize: FONT_SIZE.sm,
+          lineHeight: 1,
+          color: COLORS.inkSoft,
+        }}
+      >
+        {streak}
+      </span>
+    </div>
+  );
+}
+
+// League at a glance. A READ-ONLY badge: `league` comes from
+// useLeagueStanding, which deliberately never joins or refreshes — see that
+// hook's header for why Home must not write on open. A signed-in learner with
+// no membership yet still sees Bronze, because Bronze is the floor everyone
+// starts on rather than an unknown. Rank and cohort numbers stay in the
+// Profile leaderboard, where their context lives.
+function LeagueTile({ user, league }) {
+  if (!LEAGUES_ENABLED || !user) return null;
+  return (
+    <div style={TILE}>
+      <LeagueBadge variant="compact" tier={league?.tier} />
+    </div>
+  );
+}
+
+function StandingTiles({ lvl, streak, goalPct, goalMet, user, league, tileSpan }) {
+  return (
+    <div
+      data-testid="home-identity-standing"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+        gap: SPACE[2],
+        minWidth: 0,
+      }}
+    >
+      <XpTile totalXp={lvl.totalXp ?? 0} goalPct={goalPct} goalMet={goalMet} tileSpan={tileSpan} />
+      <LevelTile level={lvl.level} rankName={lvl.rankName} tileSpan={tileSpan} />
+      <StreakTile streak={streak} />
+      <LeagueTile user={user} league={league} />
+    </div>
+  );
+}
+
+function IdentityFacts({ greeting, cefrLevel, copy, fit, wide, user, profile }) {
+  const band = String(cefrLevel ?? '').toUpperCase();
   return (
     <Stack gap={1} style={BOUNDED_COLUMN}>
       <Row
@@ -144,12 +295,12 @@ function IdentityFacts({ user, profile, cefrLevel, copy, greeting, wide, fit }) 
           {greeting}
         </Heading>
         {/* The band chip beside a 36px greeting. It sat at 10px with the
-            widest tracking, which is the recipe for a label you SCAN past —
-            this is a fact about the learner and reads as one at 11px. The
-            trailing caps tracking is dropped so the glyphs are not pushed
-            off-centre inside their own border. */}
+              widest tracking, which is the recipe for a label you SCAN past —
+              this is a fact about the learner and reads as one at 11px. The
+              trailing caps tracking is dropped so the glyphs are not pushed
+              off-centre inside their own border. */}
         <span
-          aria-label={copy.levelLabel?.(String(cefrLevel ?? '').toUpperCase())}
+          aria-label={copy.levelLabel?.(band)}
           style={{
             flexShrink: 0,
             fontFamily: FONTS.mono,
@@ -162,24 +313,84 @@ function IdentityFacts({ user, profile, cefrLevel, copy, greeting, wide, fit }) 
             padding: `${SPACE[1]}px ${SPACE[2]}px`,
           }}
         >
-          {String(cefrLevel ?? '').toUpperCase()}
+          {band}
         </span>
       </Row>
       {/* `soft`, not `muted`. Supporting prose across the app is inkSoft and
-          labels are mute; these two lines had it backwards, so the handle
-          and the level — the two facts this card exists to state — were set
-          in the quietest ink on the page. */}
+            labels are mute; these two lines had it backwards, so the handle
+            and the level — the two facts this card exists to state — were set
+            in the quietest ink on the page. */}
       {user ? (
         <Body size="sm" tone="soft" as="div" style={TRUNCATE}>
-          {accountLine}
+          {accountLine(profile, copy)}
         </Body>
       ) : null}
     </Stack>
   );
 }
 
-function RecommendedWell({ children }) {
-  if (!children) return null;
+function IdentityAvatar({ profile, userId }) {
+  return (
+    <div
+      data-testid="home-identity-avatar"
+      style={{
+        width: '100%',
+        aspectRatio: '1 / 1',
+        maxWidth: '100%',
+        minWidth: 0,
+        borderRadius: '50%',
+        background: COLORS.paperDeep,
+        border: `1px solid ${COLORS.border}`,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        overflow: 'hidden',
+        boxSizing: 'border-box',
+      }}
+    >
+      <Avatar
+        profile={profile}
+        userId={userId}
+        size={AVATAR_DESKTOP}
+        style={{ width: '100%', height: '100%' }}
+      />
+    </div>
+  );
+}
+
+// A dedicated, bounded right column: identity, today's work, then Top 3.
+// Each module is a sibling, so another dashboard widget can be appended
+// without changing the outer grid or nesting it inside a task board.
+function RightColumn({ identityFacts, today, leaderboard }) {
+  return (
+    <Stack data-testid="home-identity-content" gap={2} style={BOUNDED_COLUMN}>
+      {identityFacts}
+      {today ? (
+        <div data-testid="home-today-column" style={BOUNDED_COLUMN}>
+          {today}
+        </div>
+      ) : null}
+      {leaderboard}
+    </Stack>
+  );
+}
+
+// Below bp.wide the standing tiles, today's boards and Top 3 drop under the
+// identity band instead of squeezing into the half-width text column.
+function NarrowSections({ standing, today, leaderboard }) {
+  return (
+    <>
+      <div style={{ marginTop: SPACE[3], minWidth: 0 }}>{standing}</div>
+      {today ? <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{today}</div> : null}
+      {leaderboard ? (
+        <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{leaderboard}</div>
+      ) : null}
+    </>
+  );
+}
+
+function RecommendedWell({ recommended }) {
+  if (!recommended) return null;
   return (
     <div
       data-testid="home-recommended-well"
@@ -190,7 +401,7 @@ function RecommendedWell({ children }) {
         minWidth: 0,
       }}
     >
-      {children}
+      {recommended}
     </div>
   );
 }
@@ -239,160 +450,34 @@ export default function PersonalHub({
   const lvl = score ?? EMPTY_SCORE;
   const viewportWidth = useWindowWidth();
   const wide = viewportWidth >= bp.wide;
-  const tiny = viewportWidth < bp.tiny;
-  const fit = tiny ? FIT_TINY : FIT_REGULAR;
+  const fit = viewportWidth < bp.tiny ? FIT_TINY : FIT_REGULAR;
+  const greeting = copy.greeting?.(greetingName(user, profile));
 
-  // A chosen display name is how the app addresses the learner. The handle is
-  // the unique social identifier and stays visible on its own line; it is only
-  // a greeting fallback when no display name has been chosen yet.
-  const greeting = copy.greeting?.(learnerName(user, profile));
-
-  // Standing as a grid of equal tiles, not one wrapping flex row. The row put
-  // ring, XP, level, streak and league into the text column's leftover width,
-  // and at a narrow viewport — where that column is half the band — the five
-  // items wrapped at different points and collided. Tiles have fixed tracks, so
-  // each fact gets its own cell whatever the width. It lives under the avatar
-  // on wide (that column is otherwise empty below the circle) and full-width
-  // under the identity band on narrow.
-  const tile = {
-    display: 'flex',
-    alignItems: 'center',
-    gap: SPACE[2],
-    minWidth: 0,
-    padding: SPACE[2],
-    border: BORDER.panel,
-    borderRadius: RADIUS.md,
-    boxSizing: 'border-box',
-  };
-  const statValue = {
-    fontFamily: FONTS.display,
-    fontWeight: FONT_WEIGHT.bold,
-    fontSize: FONT_SIZE['3xl'],
-    lineHeight: 1,
-    color: COLORS.ink,
-    minWidth: 0,
-    maxWidth: '100%',
-    overflowWrap: 'anywhere',
-  };
   const standing = (
-    <div
-      data-testid="home-identity-standing"
-      style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-        gap: SPACE[2],
-        minWidth: 0,
-      }}
-    >
-      <div
-        data-testid="home-identity-xp"
-        aria-label={`${lvl.totalXp ?? 0} XP`}
-        style={{
-          ...tile,
-          gridColumn: fit.tileSpan,
-          flexWrap: 'wrap',
-        }}
-      >
-        <GoalRing pct={goalPct} met={goalMet} size={SPACE[12]} />
-        <span
-          style={{
-            display: 'flex',
-            alignItems: 'baseline',
-            flex: '1 1 0',
-            flexWrap: 'wrap',
-            gap: SPACE[1],
-            minWidth: 0,
-            overflowWrap: 'anywhere',
-          }}
-        >
-          <span data-testid="home-identity-xp-value" style={statValue}>
-            {lvl.totalXp ?? 0}
-          </span>{' '}
-          <Meta tone="soft" style={{ letterSpacing: LETTER_SPACING.wider }}>
-            XP
-          </Meta>
-        </span>
-      </div>
-      <div
-        data-testid="home-identity-level-group"
-        style={{
-          ...tile,
-          alignItems: 'baseline',
-          gridColumn: fit.tileSpan,
-          flexWrap: 'wrap',
-          columnGap: SPACE[1],
-        }}
-      >
-        <Meta>Level</Meta>{' '}
-        <span data-testid="home-identity-level" style={statValue}>
-          {lvl.level}
-        </span>
-        {lvl.rankName ? (
-          <>
-            {' · '}
-            <Body size="sm" tone="soft" as="span" style={{ minWidth: 0, overflowWrap: 'anywhere' }}>
-              {lvl.rankName}
-            </Body>
-          </>
-        ) : null}
-      </div>
-      {streak > 0 ? (
-        <div aria-label={`Streak ${streak}`} style={{ ...tile, color: COLORS.gold }}>
-          <Flame size={FONT_SIZE.lg} aria-hidden="true" />
-          <span
-            data-testid="home-identity-streak"
-            style={{
-              fontFamily: FONTS.mono,
-              fontWeight: FONT_WEIGHT.bold,
-              fontSize: FONT_SIZE.sm,
-              lineHeight: 1,
-              color: COLORS.inkSoft,
-            }}
-          >
-            {streak}
-          </span>
-        </div>
-      ) : null}
-      {/* League at a glance. A READ-ONLY badge: `league` comes from
-          useLeagueStanding, which deliberately never joins or refreshes — see
-          that hook's header for why Home must not write on open. A signed-in
-          learner with no membership yet still sees Bronze, because Bronze is
-          the floor everyone starts on rather than an unknown. Rank and cohort
-          numbers stay in the Profile leaderboard, where their context lives. */}
-      {LEAGUES_ENABLED && user ? (
-        <div style={tile}>
-          <LeagueBadge variant="compact" tier={league?.tier} />
-        </div>
-      ) : null}
-    </div>
+    <StandingTiles
+      lvl={lvl}
+      streak={streak}
+      goalPct={goalPct}
+      goalMet={goalMet}
+      user={user}
+      league={league}
+      tileSpan={fit.tileSpan}
+    />
   );
-
+  const identityFacts = (
+    <IdentityFacts
+      greeting={greeting}
+      cefrLevel={cefrLevel}
+      copy={copy}
+      fit={fit}
+      wide={wide}
+      user={user}
+      profile={profile}
+    />
+  );
   const leaderboard = league?.leaders?.length ? (
     <LeaderboardWidget leaders={league.leaders} />
   ) : null;
-
-  // A dedicated, bounded right column: identity, today's work, then Top 3.
-  // Each module is a sibling, so another dashboard widget can be appended
-  // without changing the outer grid or nesting it inside a task board.
-  const rightColumn = (
-    <Stack data-testid="home-identity-content" gap={2} style={BOUNDED_COLUMN}>
-      <IdentityFacts
-        user={user}
-        profile={profile}
-        cefrLevel={cefrLevel}
-        copy={copy}
-        greeting={greeting}
-        wide={wide}
-        fit={fit}
-      />
-      {wide && today ? (
-        <div data-testid="home-today-column" style={BOUNDED_COLUMN}>
-          {today}
-        </div>
-      ) : null}
-      {wide ? leaderboard : null}
-    </Stack>
-  );
 
   return (
     <Surface as="section" elevation={1} padding={4} aria-labelledby={IDENTITY_HEADING_ID}>
@@ -410,30 +495,7 @@ export default function PersonalHub({
         }}
       >
         <Stack gap={3} style={{ minWidth: 0 }}>
-          <div
-            data-testid="home-identity-avatar"
-            style={{
-              width: '100%',
-              aspectRatio: '1 / 1',
-              maxWidth: '100%',
-              minWidth: 0,
-              borderRadius: '50%',
-              background: COLORS.paperDeep,
-              border: `1px solid ${COLORS.border}`,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              overflow: 'hidden',
-              boxSizing: 'border-box',
-            }}
-          >
-            <Avatar
-              profile={profile}
-              userId={user?.id}
-              size={AVATAR_DESKTOP}
-              style={{ width: '100%', height: '100%' }}
-            />
-          </div>
+          <IdentityAvatar profile={profile} userId={user?.id} />
           {wide ? standing : null}
         </Stack>
 
@@ -442,16 +504,15 @@ export default function PersonalHub({
             greeting (rather than nowrap) is the overflow behaviour — a handle
             is the name, and ellipsizing it would hide the one fact the hub
             exists to show. */}
-        {rightColumn}
+        <RightColumn
+          identityFacts={identityFacts}
+          today={wide ? today : null}
+          leaderboard={wide ? leaderboard : null}
+        />
       </div>
 
-      {!wide && <div style={{ marginTop: SPACE[3], minWidth: 0 }}>{standing}</div>}
-      {!wide && today && <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{today}</div>}
-      {!wide && leaderboard ? (
-        <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{leaderboard}</div>
-      ) : null}
-
-      <RecommendedWell>{recommended}</RecommendedWell>
+      {wide ? null : <NarrowSections standing={standing} today={today} leaderboard={leaderboard} />}
+      <RecommendedWell recommended={recommended} />
     </Surface>
   );
 }
