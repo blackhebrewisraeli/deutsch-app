@@ -84,6 +84,117 @@ const BOUNDED_COLUMN = {
 
 const IDENTITY_HEADING_ID = 'home-identity-heading';
 
+function learnerName(user, profile) {
+  if (!user) return null;
+  const displayName = typeof profile?.display_name === 'string' ? profile.display_name.trim() : '';
+  return displayName || profile?.handle || user.email?.split('@')[0] || null;
+}
+
+function IdentityFacts({ user, profile, cefrLevel, copy, greeting, wide, fit }) {
+  const createdAt = profile?.created_at ? new Date(profile.created_at) : null;
+  const accountLine = [
+    profile?.handle ? `@${profile.handle}` : null,
+    createdAt ? copy.memberSince?.(createdAt) : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <Stack gap={1} style={BOUNDED_COLUMN}>
+      <Row
+        wrap={false}
+        align="flex-start"
+        gap={fit.headingRowGap}
+        style={{
+          minWidth: 0,
+          // On the narrowest phones the level chip must not take width away
+          // from the learner's name. It sits under the greeting instead of
+          // turning the heading into a 70px-wide newspaper column.
+          flexDirection: fit.headingRowDirection,
+        }}
+      >
+        <Heading
+          id={IDENTITY_HEADING_ID}
+          level={2}
+          title={greeting}
+          style={{
+            margin: 0,
+            overflowWrap: 'anywhere',
+            maxWidth: '100%',
+            lineHeight: 1.15,
+            flex: 1,
+            minWidth: 0,
+            // Heading level 2 is 24px — same as a section title, smaller
+            // than the wordmark. This card's greeting is the identity
+            // display line; 4xl matches the masthead without touching
+            // Heading's global scale.
+            //
+            // Narrow steps down to 2xl, and that is not taste. At 320px the
+            // half-band avatar plus level chip left the greeting 77px —
+            // "Guten Tag" broke as "Gut / en / Tag". Stacking the chip and
+            // clamping the smaller display face lets the avatar keep its
+            // natural share without letting a long name grow the header.
+            fontSize: wide ? FONT_SIZE['4xl'] : FONT_SIZE['2xl'],
+            // Two lines preserve the welcome and as much of a long display
+            // name as the phone can carry. The full greeting remains the
+            // heading's accessible text and is also exposed by `title`.
+            ...fit.greetingClamp,
+          }}
+        >
+          {greeting}
+        </Heading>
+        {/* The band chip beside a 36px greeting. It sat at 10px with the
+            widest tracking, which is the recipe for a label you SCAN past —
+            this is a fact about the learner and reads as one at 11px. The
+            trailing caps tracking is dropped so the glyphs are not pushed
+            off-centre inside their own border. */}
+        <span
+          aria-label={copy.levelLabel?.(String(cefrLevel ?? '').toUpperCase())}
+          style={{
+            flexShrink: 0,
+            fontFamily: FONTS.mono,
+            fontSize: FONT_SIZE.ipa,
+            fontWeight: FONT_WEIGHT.bold,
+            letterSpacing: LETTER_SPACING.wider,
+            color: COLORS.ink,
+            border: `1px solid ${COLORS.mute}`,
+            borderRadius: RADIUS.sm,
+            padding: `${SPACE[1]}px ${SPACE[2]}px`,
+          }}
+        >
+          {String(cefrLevel ?? '').toUpperCase()}
+        </span>
+      </Row>
+      {/* `soft`, not `muted`. Supporting prose across the app is inkSoft and
+          labels are mute; these two lines had it backwards, so the handle
+          and the level — the two facts this card exists to state — were set
+          in the quietest ink on the page. */}
+      {user ? (
+        <Body size="sm" tone="soft" as="div" style={TRUNCATE}>
+          {accountLine}
+        </Body>
+      ) : null}
+    </Stack>
+  );
+}
+
+function RecommendedWell({ children }) {
+  if (!children) return null;
+  return (
+    <div
+      data-testid="home-recommended-well"
+      style={{
+        marginTop: SPACE[4],
+        paddingTop: SPACE[3],
+        borderTop: BORDER.panel,
+        minWidth: 0,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // Who you are, what is open today, and what to do next — one card at the top
 // of Home.
 //
@@ -134,12 +245,7 @@ export default function PersonalHub({
   // A chosen display name is how the app addresses the learner. The handle is
   // the unique social identifier and stays visible on its own line; it is only
   // a greeting fallback when no display name has been chosen yet.
-  const displayName = typeof profile?.display_name === 'string' ? profile.display_name.trim() : '';
-  const name = user ? displayName || profile?.handle || user.email?.split('@')[0] || null : null;
-  const greeting = copy.greeting?.(name);
-
-  const createdAt = profile?.created_at ? new Date(profile.created_at) : null;
-  const showsAccountLine = Boolean(user);
+  const greeting = copy.greeting?.(learnerName(user, profile));
 
   // Standing as a grid of equal tiles, not one wrapping flex row. The row put
   // ring, XP, level, streak and league into the text column's leftover width,
@@ -261,89 +367,6 @@ export default function PersonalHub({
     </div>
   );
 
-  const identityFacts = (
-    <Stack gap={1} style={BOUNDED_COLUMN}>
-      <Row
-        wrap={false}
-        align="flex-start"
-        gap={fit.headingRowGap}
-        style={{
-          minWidth: 0,
-          // On the narrowest phones the level chip must not take width away
-          // from the learner's name. It sits under the greeting instead of
-          // turning the heading into a 70px-wide newspaper column.
-          flexDirection: fit.headingRowDirection,
-        }}
-      >
-        <Heading
-          id={IDENTITY_HEADING_ID}
-          level={2}
-          title={greeting}
-          style={{
-            margin: 0,
-            overflowWrap: 'anywhere',
-            maxWidth: '100%',
-            lineHeight: 1.15,
-            flex: 1,
-            minWidth: 0,
-            // Heading level 2 is 24px — same as a section title, smaller
-            // than the wordmark. This card's greeting is the identity
-            // display line; 4xl matches the masthead without touching
-            // Heading's global scale.
-            //
-            // Narrow steps down to 2xl, and that is not taste. At 320px the
-            // half-band avatar plus level chip left the greeting 77px —
-            // "Guten Tag" broke as "Gut / en / Tag". Stacking the chip and
-            // clamping the smaller display face lets the avatar keep its
-            // natural share without letting a long name grow the header.
-            fontSize: wide ? FONT_SIZE['4xl'] : FONT_SIZE['2xl'],
-            // Two lines preserve the welcome and as much of a long display
-            // name as the phone can carry. The full greeting remains the
-            // heading's accessible text and is also exposed by `title`.
-            ...fit.greetingClamp,
-          }}
-        >
-          {greeting}
-        </Heading>
-        {/* The band chip beside a 36px greeting. It sat at 10px with the
-              widest tracking, which is the recipe for a label you SCAN past —
-              this is a fact about the learner and reads as one at 11px. The
-              trailing caps tracking is dropped so the glyphs are not pushed
-              off-centre inside their own border. */}
-        <span
-          aria-label={copy.levelLabel?.(String(cefrLevel ?? '').toUpperCase())}
-          style={{
-            flexShrink: 0,
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.ipa,
-            fontWeight: FONT_WEIGHT.bold,
-            letterSpacing: LETTER_SPACING.wider,
-            color: COLORS.ink,
-            border: `1px solid ${COLORS.mute}`,
-            borderRadius: RADIUS.sm,
-            padding: `${SPACE[1]}px ${SPACE[2]}px`,
-          }}
-        >
-          {String(cefrLevel ?? '').toUpperCase()}
-        </span>
-      </Row>
-      {/* `soft`, not `muted`. Supporting prose across the app is inkSoft and
-            labels are mute; these two lines had it backwards, so the handle
-            and the level — the two facts this card exists to state — were set
-            in the quietest ink on the page. */}
-      {showsAccountLine && (
-        <Body size="sm" tone="soft" as="div" style={TRUNCATE}>
-          {[
-            profile?.handle ? `@${profile.handle}` : null,
-            createdAt ? copy.memberSince?.(createdAt) : null,
-          ]
-            .filter(Boolean)
-            .join(' · ')}
-        </Body>
-      )}
-    </Stack>
-  );
-
   const leaderboard = league?.leaders?.length ? (
     <LeaderboardWidget leaders={league.leaders} />
   ) : null;
@@ -353,7 +376,15 @@ export default function PersonalHub({
   // without changing the outer grid or nesting it inside a task board.
   const rightColumn = (
     <Stack data-testid="home-identity-content" gap={2} style={BOUNDED_COLUMN}>
-      {identityFacts}
+      <IdentityFacts
+        user={user}
+        profile={profile}
+        cefrLevel={cefrLevel}
+        copy={copy}
+        greeting={greeting}
+        wide={wide}
+        fit={fit}
+      />
       {wide && today ? (
         <div data-testid="home-today-column" style={BOUNDED_COLUMN}>
           {today}
@@ -420,19 +451,7 @@ export default function PersonalHub({
         <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{leaderboard}</div>
       ) : null}
 
-      {recommended && (
-        <div
-          data-testid="home-recommended-well"
-          style={{
-            marginTop: SPACE[4],
-            paddingTop: SPACE[3],
-            borderTop: BORDER.panel,
-            minWidth: 0,
-          }}
-        >
-          {recommended}
-        </div>
-      )}
+      <RecommendedWell>{recommended}</RecommendedWell>
     </Surface>
   );
 }
