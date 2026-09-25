@@ -32,6 +32,15 @@ export function isGoogleAuthConfigured() {
   return isAuthConfigured() && import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
 }
 
+/**
+ * GitHub sign-in: the same two facts as Google, with its own flag, because the
+ * two providers are set up (and can be rolled back) independently —
+ * docs/AUTH_GITHUB_OAUTH_RUNBOOK.md. Same build-time caveat as above.
+ */
+export function isGitHubAuthConfigured() {
+  return isAuthConfigured() && import.meta.env.VITE_GITHUB_AUTH_ENABLED === 'true';
+}
+
 // @supabase/supabase-js pulls in ~816KB of source (auth, postgrest, storage,
 // realtime, functions) and none of it is needed to paint the app — a guest can
 // use every tab without it. It is loaded on demand instead, so it lands in its
@@ -201,10 +210,25 @@ export async function signInWithMagicLink(email) {
  */
 export async function signInWithGoogle() {
   if (!isGoogleAuthConfigured()) return NOT_CONFIGURED;
+  return startOAuth('google');
+}
+
+/**
+ * Start the GitHub OAuth round trip. Same redirect target and the same
+ * stale-tab guard as Google. No `scopes`: Supabase already asks GitHub for
+ * `user:email`, which is all it needs to find a verified address — anything
+ * more would be a wider grant than signing in requires.
+ */
+export async function signInWithGitHub() {
+  if (!isGitHubAuthConfigured()) return NOT_CONFIGURED;
+  return startOAuth('github');
+}
+
+async function startOAuth(provider) {
   const c = await getClient();
   if (!c) return NOT_CONFIGURED;
   return c.auth.signInWithOAuth({
-    provider: 'google',
+    provider,
     options: { redirectTo: window.location.origin },
   });
 }

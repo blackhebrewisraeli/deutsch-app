@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-const { isGoogleAuthConfigured } = vi.hoisted(() => ({
+const { isGoogleAuthConfigured, isGitHubAuthConfigured } = vi.hoisted(() => ({
   isGoogleAuthConfigured: vi.fn(() => false),
+  isGitHubAuthConfigured: vi.fn(() => false),
 }));
-vi.mock('../lib/auth.js', () => ({ isGoogleAuthConfigured }));
+vi.mock('../lib/auth.js', () => ({ isGoogleAuthConfigured, isGitHubAuthConfigured }));
 
 import TrialWall from './TrialWall';
 
@@ -19,8 +20,9 @@ function setup(props = {}) {
 
 describe('TrialWall', () => {
   beforeEach(() => {
-    // Flag off is the merge state and the one CI runs.
+    // Flags off is the merge state and the one CI runs.
     isGoogleAuthConfigured.mockReturnValue(false);
+    isGitHubAuthConfigured.mockReturnValue(false);
   });
 
   it('renders the spec copy', () => {
@@ -159,6 +161,42 @@ describe('TrialWall', () => {
       expect(onCreateAccount).not.toHaveBeenCalled();
       expect(onSignIn).not.toHaveBeenCalled();
       expect(screen.getByRole('dialog', { name: 'Save your progress' })).toBeInTheDocument();
+    });
+  });
+
+  // The wall has ONE provider slot: a fourth action at 320px turns it into a
+  // menu. GitHub takes the slot only when Google is off.
+  describe('with GitHub on', () => {
+    beforeEach(() => isGitHubAuthConfigured.mockReturnValue(true));
+
+    it('takes the provider slot when Google is off, and stays at three', () => {
+      setup();
+      const buttons = screen.getAllByRole('button');
+      expect(buttons).toHaveLength(3);
+      expect(buttons[0]).toHaveAccessibleName('Continue with GitHub');
+      expect(buttons[1]).toHaveAccessibleName('Create a free account');
+      expect(buttons[2]).toHaveAccessibleName('I already have an account');
+      expect(buttons[0]).toHaveFocus();
+    });
+
+    it('routes GitHub to the handler App passes', async () => {
+      const user = userEvent.setup();
+      const onGitHub = vi.fn();
+      setup({ onGitHub });
+      await user.click(screen.getByRole('button', { name: 'Continue with GitHub' }));
+      expect(onGitHub).toHaveBeenCalledTimes(1);
+    });
+
+    // Both on: Google keeps the slot and the wall does NOT grow a fourth
+    // action. GitHub is one tap away behind "Create a free account".
+    it('yields the slot to Google when both are on, still at three', () => {
+      isGoogleAuthConfigured.mockReturnValue(true);
+      setup();
+      const buttons = screen.getAllByRole('button');
+      expect(buttons).toHaveLength(3);
+      expect(buttons[0]).toHaveAccessibleName('Continue with Google');
+      expect(screen.queryByRole('button', { name: /continue with github/i })).toBeNull();
+      expect(buttons[0]).toHaveFocus();
     });
   });
 });

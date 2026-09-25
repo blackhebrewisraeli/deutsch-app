@@ -11,6 +11,7 @@ import * as stats from '../lib/stats';
 vi.mock('../lib/auth.js', () => ({
   isAuthConfigured: () => true,
   isGoogleAuthConfigured: () => false,
+  isGitHubAuthConfigured: () => false,
 }));
 
 const items = buildPlacementItems(activePack);

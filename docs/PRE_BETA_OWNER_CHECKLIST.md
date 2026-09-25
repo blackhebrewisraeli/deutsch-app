@@ -9,6 +9,7 @@ Companion runbooks:
 
 - Magic Link template + redirect URLs → `docs/AUTH_EMAIL_TEMPLATE_RUNBOOK.md`
 - Google OAuth provider → `docs/AUTH_GOOGLE_OAUTH_RUNBOOK.md`
+- GitHub OAuth provider (not yet enabled) → `docs/AUTH_GITHUB_OAUTH_RUNBOOK.md`
 - Recurring owner actions that stay queued → `docs/BACKLOG.md`
 
 Do **not** paste secret values into chat, tickets, or commit messages. Confirm
