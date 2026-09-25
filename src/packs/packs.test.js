@@ -65,3 +65,13 @@ describe('cardId + tagged decks', () => {
     expect(card.id).toBe(card.de);
   });
 });
+
+describe('chat level specs', () => {
+  const cap = (lvl) =>
+    Number(activePack.prompts.levels[lvl].match(/learner line to (\d+) words/)?.[1]);
+
+  it('caps the suggested learner line more tightly at lower levels', () => {
+    expect(cap('a1')).toBeLessThan(cap('a2'));
+    expect(cap('a2')).toBeLessThan(cap('b1'));
+  });
+});

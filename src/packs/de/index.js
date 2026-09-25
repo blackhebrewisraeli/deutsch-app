@@ -3,7 +3,7 @@
 // sibling modules in this folder.
 import { ALPHABET, ALPHABET_QUIZ_GROUPS } from './alphabet.js';
 import { SCENARIOS } from './scenarios.js';
-import { CHAT_TASKS, CHAT_WORD_BANK_MOCK } from './chatTasks.js';
+import { CHAT_TASKS } from './chatTasks.js';
 import {
   TRANSLATE_SENTENCES_A1,
   TRANSLATE_SENTENCES_A2,
@@ -55,7 +55,6 @@ export const dePack = {
     interestDecks: resolveDecks(INTEREST_DECK_DEFS, INTEREST_LEXICON, grammar),
     scenarios: SCENARIOS,
     chatTasks: CHAT_TASKS,
-    chatWordBankMock: CHAT_WORD_BANK_MOCK,
     translateSentences: {
       A1: TRANSLATE_SENTENCES_A1,
       A2: TRANSLATE_SENTENCES_A2,
@@ -100,12 +99,12 @@ export const dePack = {
     persona: 'Anna',
     targetLanguage: 'German',
 
-    // How the tutor speaks at each level. Lifted verbatim from the prompt that
-    // lived in ChatTab. Keys are lowercase — that is what components hold.
+    // How the scene character speaks at each level, with concrete length caps
+    // so complexity scales. Keys are lowercase — that is what components hold.
     levels: {
-      a1: 'The learner is A1 BEGINNER. Use very simple German, short sentences, common vocabulary only. Always provide English translation. Use lots of encouragement.',
-      a2: 'The learner is A2 ELEMENTARY. Use natural but simple German. Provide English translation. Gently push them.',
-      b1: 'The learner is B1 INTERMEDIATE. Use natural German, moderate complexity. Provide English translation but challenge them.',
+      a1: 'The learner is A1 (beginner). Reply in ONE short sentence of about 8 words at most, present tense only, using the most common everyday words. Keep the suggested learner line to 6 words at most.',
+      a2: 'The learner is A2 (elementary). Reply in 1–2 sentences of about 12 words each. Present tense and Perfekt are fine; use simple connectors (und, aber, weil). Keep the suggested learner line to 10 words at most.',
+      b1: 'The learner is B1 (intermediate). Reply in 2–3 natural sentences. Any common tense and subordinate clauses are fine; use idiomatic but not rare vocabulary. Keep the suggested learner line to 15 words at most.',
     },
 
     // What a generated exercise should drill. A different question from

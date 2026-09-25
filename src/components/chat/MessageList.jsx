@@ -5,7 +5,13 @@ import { activePack } from '../../packs';
 // Scrollable conversation column: message bubbles + the tutor's typing indicator.
 // `endRef` is the parent's scroll anchor (kept in the parent so the scroll
 // effect stays with the conversation state).
-export default function MessageList({ messages, thinking, endRef, compact = false }) {
+export default function MessageList({
+  messages,
+  thinking,
+  endRef,
+  compact = false,
+  speaker = activePack.prompts.persona,
+}) {
   return (
     <div
       style={{
@@ -22,9 +28,11 @@ export default function MessageList({ messages, thinking, endRef, compact = fals
         minWidth: 0,
       }}
     >
-      {messages.map((m, i) => (
-        <MessageBubble key={i} msg={m} />
-      ))}
+      {/* A hidden turn is stage direction for the model (the scene kickoff);
+          it stays in history but never in the thread. */}
+      {messages.map((m, i) =>
+        m.hidden ? null : <MessageBubble key={i} msg={m} speaker={speaker} />
+      )}
       {thinking && (
         <div
           style={{
@@ -36,10 +44,10 @@ export default function MessageList({ messages, thinking, endRef, compact = fals
             fontSize: 12,
           }}
         >
-          {/* KNOWN GAP: the persona name is pack-owned but "tippt" stays
+          {/* KNOWN GAP: the speaker name is pack-owned but "tippt" stays
               German. That is UI-chrome localisation, a separate problem this
               phase has no answer for. */}
-          <span>{activePack.prompts.persona} tippt</span>
+          <span>{speaker} tippt</span>
           <span style={{ animation: 'blink 1.4s infinite' }}>●</span>
           <span style={{ animation: 'blink 1.4s infinite 0.2s' }}>●</span>
           <span style={{ animation: 'blink 1.4s infinite 0.4s' }}>●</span>

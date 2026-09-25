@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import {
+  CHAT_IMPROV,
+  chatKickoffMessage,
   chatSystemPrompt,
   chatVocabConstraint,
   chatServerConstraint,
@@ -25,18 +27,37 @@ const prompts = {
   deck: { cardExample: 'der Hund', ipaExample: '[deːɐ̯ hʊnt]' },
 };
 
-// ChatTab has no test file of its own, so these assertions are the only
-// coverage the largest prompt gets. Check every part, not a sample.
+// The prompt's direct coverage. Check every part, not a sample.
 describe('chatSystemPrompt', () => {
-  const base = { prompts, scenarioDesc: 'ordering coffee', level: 'a1' };
+  const role = { name: 'Barista', brief: 'a friendly barista at a busy Berlin café.' };
+  const base = { prompts, scenarioDesc: 'at a Berlin café', role, level: 'a1' };
 
-  it('names the pack persona and target language', () => {
+  it('casts the AI as the scene role, not a tutor', () => {
     const out = chatSystemPrompt(base);
-    expect(out).toContain('friendly German tutor named Anna');
+    expect(out).toContain('You are a friendly barista at a busy Berlin café.');
+    expect(out).not.toContain('tutor named');
   });
 
-  it('includes the scenario description', () => {
-    expect(chatSystemPrompt(base)).toContain('The current scenario is: ordering coffee.');
+  it('keeps the pack persona as the out-of-character coach', () => {
+    expect(chatSystemPrompt(base)).toContain(
+      "you are also Anna, the learner's warm and encouraging coach"
+    );
+  });
+
+  it('falls back to the persona as a conversation partner without a role', () => {
+    const out = chatSystemPrompt({ ...base, role: undefined });
+    expect(out).toContain('You are Anna, a friendly conversation partner.');
+    expect(out).not.toContain('undefined');
+  });
+
+  it('names the scene and the target language', () => {
+    expect(chatSystemPrompt(base)).toContain(
+      'This is a German conversation-practice scene: at a Berlin café.'
+    );
+  });
+
+  it('forbids scripted replies', () => {
+    expect(chatSystemPrompt(base)).toContain('never use stock phrases or follow a script');
   });
 
   it('includes the level pedagogy for the level given', () => {
@@ -45,12 +66,30 @@ describe('chatSystemPrompt', () => {
     expect(chatSystemPrompt({ ...base, level: 'b1' })).not.toContain('A1 BEGINNER');
   });
 
-  it('carries the engine JSON contract with all five keys', () => {
+  it.each(['fast', 'balanced', 'capable'])('carries only the %s improv register', (profile) => {
+    const out = chatSystemPrompt({ ...base, profile });
+    expect(out).toContain(CHAT_IMPROV[profile]);
+    for (const other of Object.keys(CHAT_IMPROV).filter((p) => p !== profile)) {
+      expect(out).not.toContain(CHAT_IMPROV[other]);
+    }
+  });
+
+  it('uses the balanced register for a missing or unknown profile', () => {
+    expect(chatSystemPrompt(base)).toContain(CHAT_IMPROV.balanced);
+    expect(chatSystemPrompt({ ...base, profile: 'turbo' })).toContain(CHAT_IMPROV.balanced);
+  });
+
+  it('carries the engine JSON contract including the next suggestion', () => {
     const out = chatSystemPrompt(base);
     expect(out).toContain('You MUST always respond with strict JSON only');
-    for (const key of ['"de"', '"ipa"', '"en"', '"correction"', '"taskComplete"']) {
+    const keys = ['"de"', '"ipa"', '"en"', '"correction"', '"taskComplete"', '"next"'];
+    for (const key of [...keys, '"blank"', '"distractors"']) {
       expect(out).toContain(key);
     }
+  });
+
+  it('never grades the opening line', () => {
+    expect(chatSystemPrompt(base)).toContain('always null for your opening line');
   });
 
   it('adds the task sentence only when a task is given', () => {
@@ -100,6 +139,15 @@ describe('chatSystemPrompt', () => {
     expect(biased).toContain('interest topics: sports and athletic activities');
     expect(biased).toContain('Do not force a topic');
     expect(chatSystemPrompt(base)).not.toContain('interest topics');
+  });
+});
+
+describe('chatKickoffMessage', () => {
+  it('is bracketed stage direction the model is told not to correct', () => {
+    const kickoff = chatKickoffMessage();
+    expect(kickoff.startsWith('[')).toBe(true);
+    expect(kickoff).toContain('Open the scene in character');
+    expect(kickoff).toContain('do not correct it');
   });
 });
 

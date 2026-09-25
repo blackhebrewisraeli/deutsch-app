@@ -1,13 +1,16 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { COLORS, FONT_BODY, FONT_SIZE, SPACE, RADIUS } from '../lib/theme';
 import { callClaude } from '../lib/claude';
-import { chatSystemPrompt } from '../lib/prompts';
+import { chatSystemPrompt, chatKickoffMessage } from '../lib/prompts';
 import { classifiedLevel } from '../lib/levelGate';
 import { getUserLevel } from '../lib/levelPref';
 import { buildChatAllowlist, scenariosForLevel } from '../lib/chatVocab';
 import { interestPromptHints } from '../lib/interests';
 import { sanitizePreferredModel, userTierOf } from '../lib/ai-routing/preference.js';
+import { routeAiRequest } from '../lib/ai-routing/router.js';
+import { advance, parseScaffold, startingStage } from '../lib/chatInputModes';
 import ModelPopover from './ModelPopover';
+import Button from './ui/Button';
 import { activePack } from '../packs';
 const {
   scenarios: SCENARIOS,
@@ -21,15 +24,40 @@ import WelcomeBanner from './chat/WelcomeBanner';
 import ScenarioPicker from './chat/ScenarioPicker';
 import TaskPanel from './chat/TaskPanel';
 import MessageList from './chat/MessageList';
-import ChatInput from './chat/ChatInput';
-import WordBank from './chat/WordBank';
-import { INPUT_MODES, defaultInputMode } from '../lib/chatInputModes';
+import Composer from './chat/Composer';
 
 const WELCOME_KEY = 'deutsch-welcome-dismissed';
 
 // Pack field `de` is the surface form (recorded AGENTS.md exception). The
 // engine never reads it; this callback is how Chat resolves card ids.
 const termOf = (card) => card.de;
+
+// The reply as the JSON object the prompt contracts for, fenced or not.
+const parseReply = (raw) => JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+const errorReply = (err) => ({
+  role: 'assistant',
+  de: 'Entschuldigung, ein Fehler.',
+  ipa: '[ɛntˈʃʊldɪɡʊŋ aɪ̯n ˈfeːlɐ]',
+  en: 'Sorry — ' + err.message,
+});
+
+const assistantTurn = (parsed) => ({
+  role: 'assistant',
+  de: parsed.de,
+  ipa: parsed.ipa,
+  en: parsed.en,
+  next: parsed.next,
+});
+
+// What the model sees of a turn. Its own replies go back as the JSON it wrote,
+// `next` included, so every example in its context keeps the full contract
+// and it does not learn to drop the suggestion.
+const toHistory = (m) => ({
+  role: m.role,
+  content:
+    m.role === 'user' ? m.de : JSON.stringify({ de: m.de, ipa: m.ipa, en: m.en, next: m.next }),
+});
 
 export default function ChatTab({
   mobile = false,
@@ -70,8 +98,13 @@ export default function ChatTab({
   const [thinking, setThinking] = useState(false);
   const [taskIdx, setTaskIdx] = useState(0);
   const [hintVisible, setHintVisible] = useState(false);
-  // MOCK: the starting mode is band-based until the AI turn payload decides it.
-  const [inputMode, setInputMode] = useState(() => defaultInputMode(chatLevel));
+  const [progression, setProgression] = useState(() => ({
+    stage: startingStage(chatLevel),
+    streak: 0,
+    moved: null,
+  }));
+  const [scaffold, setScaffold] = useState(null);
+  const [openerFailed, setOpenerFailed] = useState(false);
   const [tasksCompleted, setTasksCompleted] = useState(false);
   const [welcomeVisible, setWelcomeVisible] = useState(() => {
     try {
@@ -90,6 +123,9 @@ export default function ChatTab({
   };
   const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
+  // Bumped whenever a scene (re)opens. A reply that comes back carrying an
+  // older value belongs to a scene the learner already left, and is dropped.
+  const sceneRef = useRef(0);
 
   const tasks = CHAT_TASKS[scenario]?.[chatLevel] ?? [];
   const currentTask = tasks[taskIdx % Math.max(tasks.length, 1)] ?? null;
@@ -110,10 +146,62 @@ export default function ChatTab({
     setTasksCompleted(false);
   }, [scenario, chatLevel]);
 
+  const scene = SCENARIOS.find((s) => s.id === scenario);
+  const routingContext = {
+    taskType: 'chat',
+    userTier: userTierOf(user),
+    preferredModel: sanitizePreferredModel(preferredModel),
+  };
+  // The profile of the model that will actually answer — a saved pick above
+  // the plan falls back — so the prompt's improv register matches it.
+  const { profile } = routeAiRequest(routingContext);
+  const callOptions = { routingContext, level: chatLevel, vocab };
+
+  const systemPromptFor = (task) =>
+    chatSystemPrompt({
+      prompts: activePack.prompts,
+      scenarioDesc: scene?.desc || 'open conversation',
+      role: scene?.role,
+      profile,
+      task: task?.task,
+      level: chatLevel,
+      vocab,
+      sparse,
+      interestHints,
+    });
+
+  // The AI speaks first, in character. The hidden kickoff gives it a user turn
+  // to answer and stays in history, so the model always sees its own opener.
+  const openScene = async () => {
+    const id = ++sceneRef.current;
+    const kickoff = { role: 'user', de: chatKickoffMessage(), hidden: true };
+    setMessages([kickoff]);
+    setScaffold(null);
+    setProgression({ stage: startingStage(chatLevel), streak: 0, moved: null });
+    setOpenerFailed(false);
+    setThinking(true);
+    try {
+      // tasks[0]: a scene opens on its first task. taskIdx can still hold the
+      // previous scenario's index until the reset effect's update lands.
+      const raw = await callClaude(systemPromptFor(tasks[0]), kickoff.de, [], callOptions);
+      if (id !== sceneRef.current) return;
+      const parsed = parseReply(raw);
+      setMessages([kickoff, assistantTurn(parsed)]);
+      setScaffold(parseScaffold(parsed.next));
+    } catch (err) {
+      if (id !== sceneRef.current) return;
+      setMessages([kickoff, errorReply(err)]);
+      setOpenerFailed(true);
+    } finally {
+      if (id === sceneRef.current) setThinking(false);
+    }
+  };
+
   useEffect(() => {
-    const greeting = SCENARIOS.find((s) => s.id === scenario)?.greeting;
-    if (!greeting) return;
-    setMessages([{ role: 'assistant', ...greeting }]);
+    openScene();
+    // Only a new scene (scenario or level) re-opens. Vocab, model and task
+    // changes apply from the next turn; re-opening would wipe the thread.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [scenario, chatLevel]);
 
   const startListening = () => {
@@ -147,56 +235,34 @@ export default function ChatTab({
   const sendMessage = async (overrideText) => {
     const text = overrideText ?? input;
     if (!text.trim() || thinking) return;
-    const userMsg = { role: 'user', de: text };
-    setMessages((m) => [...m, userMsg]);
+    const id = sceneRef.current;
+    const history = messages.map(toHistory);
+    setMessages((m) => [...m, { role: 'user', de: text }]);
     setInput('');
+    setOpenerFailed(false);
     setThinking(true);
 
-    const scenarioDesc = SCENARIOS.find((s) => s.id === scenario)?.desc || 'open conversation';
-
-    const systemPrompt = chatSystemPrompt({
-      prompts: activePack.prompts,
-      scenarioDesc,
-      task: currentTask?.task,
-      level: chatLevel,
-      vocab,
-      sparse,
-      interestHints,
-    });
-
-    const history = messages.slice(1).map((m) => ({
-      role: m.role,
-      content: m.role === 'user' ? m.de : JSON.stringify({ de: m.de, ipa: m.ipa, en: m.en }),
-    }));
-
     try {
-      const raw = await callClaude(systemPrompt, text, history, {
-        routingContext: {
-          taskType: 'chat',
-          userTier: userTierOf(user),
-          preferredModel: sanitizePreferredModel(preferredModel),
-        },
-        level: chatLevel,
-        vocab,
-      });
-      const cleaned = raw.replace(/```json|```/g, '').trim();
-      const parsed = JSON.parse(cleaned);
-      const reply = { role: 'assistant', de: parsed.de, ipa: parsed.ipa, en: parsed.en };
+      const raw = await callClaude(systemPromptFor(currentTask), text, history, callOptions);
+      if (id !== sceneRef.current) return;
+      const parsed = parseReply(raw);
       setMessages((m) => {
-        const next = [...m];
-        for (let i = next.length - 1; i >= 0; i--) {
-          if (next[i].role === 'user') {
-            next[i] = {
-              ...next[i],
+        const thread = [...m];
+        for (let i = thread.length - 1; i >= 0; i--) {
+          if (thread[i].role === 'user') {
+            thread[i] = {
+              ...thread[i],
               graded: true,
               correction: parsed.correction || null,
             };
             break;
           }
         }
-        next.push(reply);
-        return next;
+        thread.push(assistantTurn(parsed));
+        return thread;
       });
+      setScaffold(parseScaffold(parsed.next));
+      setProgression((p) => advance(p, Boolean(parsed.correction)));
       recordEvent('chat', chatLevel, parsed.correction ? 'wrong' : 'correct');
       if (parsed.taskComplete) {
         const nextIdx = (taskIdx + 1) % Math.max(tasks.length, 1);
@@ -205,17 +271,10 @@ export default function ChatTab({
         setHintVisible(false);
       }
     } catch (err) {
-      setMessages((m) => [
-        ...m,
-        {
-          role: 'assistant',
-          de: 'Entschuldigung, ein Fehler.',
-          ipa: '[ɛntˈʃʊldɪɡʊŋ aɪ̯n ˈfeːlɐ]',
-          en: 'Sorry — ' + err.message,
-        },
-      ]);
+      if (id !== sceneRef.current) return;
+      setMessages((m) => [...m, errorReply(err)]);
     } finally {
-      setThinking(false);
+      if (id === sceneRef.current) setThinking(false);
     }
   };
 
@@ -293,29 +352,32 @@ export default function ChatTab({
             thinking={thinking}
             endRef={messagesEndRef}
             compact={mobile}
+            speaker={scene?.role?.name}
           />
 
-          {inputMode === INPUT_MODES.WORD_BANK ? (
-            <WordBank
-              // Keyed like MessageList: a new scenario starts a fresh bank.
-              key={`word-bank-${scenario}`}
-              words={activePack.content.chatWordBankMock}
-              thinking={thinking}
-              onSend={sendMessage}
-              onSwitchToTyping={() => setInputMode(INPUT_MODES.FREE_TEXT)}
-            />
-          ) : (
-            <ChatInput
-              input={input}
-              setInput={setInput}
-              listening={listening}
-              thinking={thinking}
-              onSend={sendMessage}
-              onStartListening={startListening}
-              onStopListening={stopListening}
-              onSwitchToWordBank={() => setInputMode(INPUT_MODES.WORD_BANK)}
-            />
+          {openerFailed && !thinking && (
+            <div style={{ padding: `0 ${SPACE[4]}px ${SPACE[3]}px`, background: COLORS.surface }}>
+              <Button variant="secondary" size="sm" onClick={openScene}>
+                Try again
+              </Button>
+            </div>
           )}
+          <Composer
+            stage={progression.stage}
+            moved={progression.moved}
+            scaffold={scaffold}
+            turnKey={messages.length}
+            thinking={thinking}
+            onSend={sendMessage}
+            onChooseStage={(stage) => setProgression({ stage, streak: 0, moved: null })}
+            freeText={{
+              input,
+              setInput,
+              listening,
+              onStartListening: startListening,
+              onStopListening: stopListening,
+            }}
+          />
           <div
             style={{
               padding: `0 ${SPACE[4]}px ${SPACE[3]}px`,

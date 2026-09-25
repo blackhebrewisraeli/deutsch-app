@@ -5,9 +5,11 @@ import { speak } from '../../lib/speech';
 import { activePack } from '../../packs';
 import InlineCorrection from './InlineCorrection';
 
-// A single chat message — the tutor's (gold, left, with avatar) or the learner's
-// (ink, right). German is the default line; EN and IPA wait behind toggles.
-export default function MessageBubble({ msg }) {
+// A single chat message — the scene character's (gold, left, with avatar) or the
+// learner's (ink, right). German is the default line; EN and IPA wait behind
+// toggles. `speaker` names who is talking: the scene role, defaulting to the
+// pack persona.
+export default function MessageBubble({ msg, speaker = activePack.prompts.persona }) {
   const isUser = msg.role === 'user';
   const ipaId = useId();
   const enId = useId();
@@ -55,8 +57,8 @@ export default function MessageBubble({ msg }) {
           }}
         >
           {/* 'DU' stays German — UI-chrome localisation is a separate problem
-              from persona, same as MessageList's "tippt". */}
-          {isUser ? 'DU' : `— ${activePack.prompts.persona.toUpperCase()}`}
+              from the speaker name, same as MessageList's "tippt". */}
+          {isUser ? 'DU' : `— ${speaker.toUpperCase()}`}
         </div>
         <div
           style={{
@@ -83,7 +85,7 @@ export default function MessageBubble({ msg }) {
                 type="button"
                 data-ui="button"
                 onClick={() => speak(msg.de)}
-                aria-label={`Play ${activePack.prompts.persona} response audio`}
+                aria-label={`Play ${speaker} response audio`}
                 style={{
                   marginLeft: 10,
                   background: 'transparent',

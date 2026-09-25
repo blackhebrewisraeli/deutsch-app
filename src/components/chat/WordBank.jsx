@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { ArrowRight, Keyboard } from 'lucide-react';
 import { BORDER, COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../../lib/theme';
+import ScaffoldActions from './ScaffoldActions';
 
 // Fisher–Yates. Tiles carry their ORIGINAL index as identity, so a sentence
 // with a repeated word ("die … die") still has two distinct tiles.
@@ -132,49 +132,7 @@ export default function WordBank({ words, thinking, onSend, onSwitchToTyping }) 
         })}
       </fieldset>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: SPACE[2] }}>
-        <button
-          type="button"
-          data-ui="button"
-          onClick={onSwitchToTyping}
-          aria-label="Type instead"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: SPACE[1],
-            background: 'none',
-            border: 'none',
-            color: COLORS.inkSoft,
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.sm,
-            cursor: 'pointer',
-          }}
-        >
-          <Keyboard size={FONT_SIZE.lg} aria-hidden="true" /> Type instead
-        </button>
-        <button
-          type="button"
-          data-ui="button"
-          data-focus-on-dark=""
-          onClick={send}
-          disabled={!canSend}
-          aria-label="Send chat message"
-          style={{
-            width: 40,
-            height: 40,
-            padding: 0,
-            background: canSend ? COLORS.green : COLORS.mute,
-            color: COLORS.paper,
-            border: 'none',
-            borderRadius: RADIUS.md,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ArrowRight size={18} aria-hidden="true" />
-        </button>
-      </div>
+      <ScaffoldActions canSend={canSend} onSend={send} onSwitchToTyping={onSwitchToTyping} />
     </div>
   );
 }

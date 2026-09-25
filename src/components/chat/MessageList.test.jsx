@@ -25,6 +25,19 @@ describe('MessageList', () => {
     expect(screen.queryByText('Anna tippt')).not.toBeInTheDocument();
   });
 
+  it('never renders a hidden message', () => {
+    const hidden = { role: 'user', de: '[stage direction]', hidden: true };
+    render(<MessageList messages={[hidden, ...messages]} thinking={false} endRef={createRef()} />);
+    expect(screen.queryByText('[stage direction]')).not.toBeInTheDocument();
+    expect(screen.getByText('Mir geht es gut.')).toBeInTheDocument();
+  });
+
+  it('names the scene speaker in the typing indicator and the bubbles', () => {
+    render(<MessageList messages={messages} thinking speaker="Barista" endRef={createRef()} />);
+    expect(screen.getByText('Barista tippt')).toBeInTheDocument();
+    expect(screen.getByText('— BARISTA')).toBeInTheDocument();
+  });
+
   it('renders an empty conversation without crashing and attaches the scroll anchor', () => {
     const endRef = createRef();
     render(<MessageList messages={[]} thinking={false} endRef={endRef} />);

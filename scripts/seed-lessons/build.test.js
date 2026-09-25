@@ -141,7 +141,7 @@ describe('buildLessons — payload shapes the shipped renderers read', () => {
     expect(b1.exercises[0].payload.direction).toBe('en-de');
   });
 
-  it('maps each chat task to { initialMessage, persona } using the scenario greeting', () => {
+  it('maps each chat task to { initialMessage, persona } from the task and its hint', () => {
     const freeA1 = buildLessons().find(
       (l) => l.tab === 'chat' && l.level === 'a1' && l.unit_number === 1
     );
@@ -152,11 +152,8 @@ describe('buildLessons — payload shapes the shipped renderers read', () => {
         persona: 'Free Chat',
       },
     });
-    expect(freeA1.exercises[0].payload.initialMessage).toContain(
-      'Hallo! Womit möchtest du heute üben?'
-    );
-    expect(freeA1.exercises[0].payload.initialMessage).toContain(
-      'Say hello and tell Anna your name.'
+    expect(freeA1.exercises[0].payload.initialMessage).toBe(
+      'Say hello and tell Anna your name.\n\nHallo! Ich heiße [dein Name].'
     );
   });
 });
