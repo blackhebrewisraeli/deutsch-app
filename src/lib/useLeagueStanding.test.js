@@ -256,7 +256,11 @@ describe('useLeagueStanding', () => {
     const useLeagueStanding = await loadHook();
     const { result } = renderHook(() => useLeagueStanding('me'));
 
-    await waitFor(() => expect(result.current?.leaders[2]?.profile).not.toBeNull());
+    await waitFor(() => {
+      expect(result.current).not.toBeNull();
+      expect(result.current.leaders).toHaveLength(3);
+      expect(result.current.leaders[2].profile).not.toBeNull();
+    });
     expect(result.current.leaders).toHaveLength(3);
     expect(result.current.leaders.map((row) => row.user_id)).toEqual(['u1', 'u2', 'u3']);
     expect(result.current.leaders[1].profile).toMatchObject({
