@@ -381,6 +381,44 @@ describe('PersonalHub', () => {
     }
   );
 
+  it.each([320, 375])('keeps the Top 3 widget in the full-width mobile stack at %spx', (width) => {
+    setViewportWidth(width);
+    render(
+      <PersonalHub
+        user={user}
+        profile={profile}
+        cefrLevel="a2"
+        score={score}
+        today={<div>today-slot</div>}
+        league={{
+          tier: 0,
+          leaders: [
+            {
+              user_id: 'u-leader',
+              handle: 'very-long-fallback-handle-that-must-truncate',
+              weekly_xp: 1234567,
+              profile: {
+                display_name: 'A very long public display name that must truncate',
+                handle: 'very-long-fallback-handle-that-must-truncate',
+                is_private: false,
+              },
+            },
+          ],
+        }}
+      />
+    );
+
+    const widget = screen.getByTestId('home-leaderboard-widget');
+    expect(screen.getByTestId('home-identity-row')).not.toContainElement(widget);
+    expect(widget.parentElement).toHaveStyle({
+      width: '100%',
+      maxWidth: '100%',
+      minWidth: '0',
+      boxSizing: 'border-box',
+      marginTop: `${SPACE[3]}px`,
+    });
+  });
+
   // Decision E5 keeps account MANAGEMENT off Home. The hub is identity +
   // standing, so it must never grow an email, a sign-out or a delete control.
   //

@@ -17,6 +17,7 @@ import { activePack } from '../packs';
 import Avatar from './ui/Avatar';
 import GoalRing from './gamification/GoalRing';
 import LeagueBadge from './league/LeagueBadge';
+import LeaderboardWidget from './league/LeaderboardWidget';
 import { LEAGUES_ENABLED } from '../lib/leagues.js';
 import { useWindowWidth, bp } from '../lib/useWindowWidth';
 
@@ -343,9 +344,13 @@ export default function PersonalHub({
     </Stack>
   );
 
-  // A dedicated, bounded right column: identity first, today's work second.
-  // A future Top 3 Leaderboard can be appended here as a third sibling without
-  // changing the outer two-column grid or nesting it inside either task board.
+  const leaderboard = league?.leaders?.length ? (
+    <LeaderboardWidget leaders={league.leaders} />
+  ) : null;
+
+  // A dedicated, bounded right column: identity, today's work, then Top 3.
+  // Each module is a sibling, so another dashboard widget can be appended
+  // without changing the outer grid or nesting it inside a task board.
   const rightColumn = (
     <Stack data-testid="home-identity-content" gap={2} style={BOUNDED_COLUMN}>
       {identityFacts}
@@ -354,6 +359,7 @@ export default function PersonalHub({
           {today}
         </div>
       ) : null}
+      {wide ? leaderboard : null}
     </Stack>
   );
 
@@ -410,6 +416,9 @@ export default function PersonalHub({
 
       {!wide && <div style={{ marginTop: SPACE[3], minWidth: 0 }}>{standing}</div>}
       {!wide && today && <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{today}</div>}
+      {!wide && leaderboard ? (
+        <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{leaderboard}</div>
+      ) : null}
 
       {recommended && (
         <div

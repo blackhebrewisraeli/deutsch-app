@@ -79,7 +79,13 @@ describe('useLeagueStanding', () => {
     const { result } = renderHook(() => useLeagueStanding('me'));
 
     await waitFor(() => expect(result.current).not.toBeNull());
-    expect(result.current).toEqual({ tier: 2, rank: 25, cohortSize: 25, inDemotionZone: true });
+    expect(result.current).toMatchObject({
+      tier: 2,
+      rank: 25,
+      cohortSize: 25,
+      inDemotionZone: true,
+    });
+    expect(result.current.leaders).toHaveLength(3);
   });
 
   it('does not report the demotion zone for a mid-table member', async () => {
@@ -93,7 +99,12 @@ describe('useLeagueStanding', () => {
     const { result } = renderHook(() => useLeagueStanding('me'));
 
     await waitFor(() => expect(result.current).not.toBeNull());
-    expect(result.current).toEqual({ tier: 2, rank: 10, cohortSize: 25, inDemotionZone: false });
+    expect(result.current).toMatchObject({
+      tier: 2,
+      rank: 10,
+      cohortSize: 25,
+      inDemotionZone: false,
+    });
   });
 
   it('treats the first at-risk rank as in the zone and the one above it as safe', async () => {
@@ -125,7 +136,13 @@ describe('useLeagueStanding', () => {
     const { result } = renderHook(() => useLeagueStanding('me'));
 
     await waitFor(() => expect(result.current).not.toBeNull());
-    expect(result.current).toEqual({ tier: 2, rank: 1, cohortSize: 1, inDemotionZone: false });
+    expect(result.current).toMatchObject({
+      tier: 2,
+      rank: 1,
+      cohortSize: 1,
+      inDemotionZone: false,
+      leaders: [expect.objectContaining({ user_id: 'me', rank: 1 })],
+    });
   });
 
   it('returns null when there is no membership for the current period', async () => {
@@ -209,8 +226,44 @@ describe('useLeagueStanding', () => {
     const { result } = renderHook(() => useLeagueStanding('me'));
     await waitFor(() => expect(result.current).not.toBeNull());
 
-    expect(fetchSpy).not.toHaveBeenCalled();
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalledTimes(3));
+    expect(fetchSpy.mock.calls.every(([, init]) => !init?.method || init.method === 'GET')).toBe(
+      true
+    );
     expect(seen.tables).toEqual(['league_members', 'league_members']);
+  });
+
+  it('enriches only the top three rows and keeps private-profile metadata', async () => {
+    const standings = cohort(5, 5);
+    const { client } = fakeSupabase({
+      membership: { league_id: 'L1', weekly_xp: 10, leagues: { tier: 2 } },
+      standings,
+    });
+    getSupabase.mockResolvedValue(client);
+    fetchSpy.mockImplementation(async (url) => {
+      const userId = new URL(url, 'https://example.test').searchParams.get('userId');
+      return {
+        ok: true,
+        json: async () => ({
+          display_name: `Name ${userId}`,
+          handle: `profile-${userId}`,
+          avatar_path: `${userId}.webp`,
+          is_private: userId === 'u2',
+        }),
+      };
+    });
+
+    const useLeagueStanding = await loadHook();
+    const { result } = renderHook(() => useLeagueStanding('me'));
+
+    await waitFor(() => expect(result.current?.leaders[2]?.profile).not.toBeNull());
+    expect(result.current.leaders).toHaveLength(3);
+    expect(result.current.leaders.map((row) => row.user_id)).toEqual(['u1', 'u2', 'u3']);
+    expect(result.current.leaders[1].profile).toMatchObject({
+      display_name: 'Name u2',
+      is_private: true,
+    });
+    expect(fetchSpy).toHaveBeenCalledTimes(3);
   });
 
   it('reads only the caller row for the current league week, then the cohort', async () => {

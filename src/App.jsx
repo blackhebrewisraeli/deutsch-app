@@ -433,8 +433,9 @@ export default function App() {
       ]),
     { syncEnabled: SYNC_ENABLED, syncSettled: syncStatus.settled }
   );
-  // The caller's live league standing, for the league-position mission. Two
-  // reads and no writes — deliberately NOT the leaderboard's join+refresh path,
+  // The caller's live league standing, for the league-position mission and
+  // Home's Top 3 preview. Two cohort reads plus three best-effort profile GETs,
+  // and no writes — deliberately NOT the full leaderboard's join+refresh path,
   // which would write to the database on every app open. Null when leagues are
   // off, when signed out, or when this week has no membership.
   const leagueStanding = useLeagueStanding(user?.id);

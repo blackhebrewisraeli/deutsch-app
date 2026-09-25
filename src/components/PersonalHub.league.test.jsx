@@ -78,18 +78,31 @@ describe('PersonalHub — league at a glance', () => {
     expect(screen.queryByTestId('league-badge-compact')).toBeNull();
   });
 
-  it('brings no leaderboard with it', () => {
-    // HomeTab's E5 exclusion: the learner's own STANDING is identity and
-    // belongs here; the 25-name roster stays on the Profile tab.
+  it('appends a Top 3 preview without bringing the full roster to Home', () => {
     render(
       <PersonalHub
         user={USER}
         profile={{ handle: 'sam' }}
         cefrLevel="b1"
-        league={{ tier: 2, rank: 4, cohortSize: 25 }}
+        league={{
+          tier: 2,
+          rank: 4,
+          cohortSize: 25,
+          leaders: [
+            {
+              user_id: 'leader',
+              handle: 'winner',
+              weekly_xp: 500,
+              profile: { display_name: 'Winner', handle: 'winner', is_private: false },
+            },
+          ],
+        }}
       />
     );
-    expect(screen.queryByRole('list')).toBeNull();
-    expect(screen.queryByRole('heading', { name: /Rangliste/ })).toBeNull();
+    expect(screen.getByTestId('home-identity-content')).toContainElement(
+      screen.getByTestId('home-leaderboard-widget')
+    );
+    expect(screen.getByRole('list', { name: /top 3 leaderboard/i })).toBeInTheDocument();
+    expect(screen.queryByText('Rangliste')).not.toBeInTheDocument();
   });
 });
