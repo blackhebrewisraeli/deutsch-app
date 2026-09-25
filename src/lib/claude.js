@@ -11,6 +11,7 @@
 // a vendor key.
 
 import { routeAiRequest } from './ai-routing/router.js';
+import { apiUrl } from './apiUrl.js';
 
 const ENDPOINTS = {
   chat: '/api/v1/ai/chat',
@@ -50,7 +51,7 @@ export const callClaude = async (
     if (Array.isArray(vocab)) body.vocab = vocab;
   }
 
-  const response = await fetch(ENDPOINTS[endpoint], {
+  const response = await fetch(apiUrl(ENDPOINTS[endpoint]), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),

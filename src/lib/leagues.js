@@ -1,4 +1,5 @@
 import { getAccessToken } from './auth.js';
+import { apiUrl } from './apiUrl.js';
 
 export const LEAGUES_ENABLED = import.meta.env.VITE_LEAGUES_ENABLED === 'true';
 // Re-exported, not redefined: TIER_NAMES lives in the pure leagueTier module
@@ -9,7 +10,7 @@ export { TIER_NAMES, tierName } from './leagueTier.js';
 
 async function post(path) {
   const token = await getAccessToken();
-  const res = await fetch(path, {
+  const res = await fetch(apiUrl(path), {
     method: 'POST',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
   });
@@ -27,7 +28,7 @@ export function refreshLeague() {
 
 export async function fetchProfile(userId) {
   const token = await getAccessToken();
-  const res = await fetch(`/api/v1/league/profile?userId=${encodeURIComponent(userId)}`, {
+  const res = await fetch(apiUrl(`/api/v1/league/profile?userId=${encodeURIComponent(userId)}`), {
     headers: { authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new Error(`profile failed: ${res.status}`);
@@ -36,7 +37,7 @@ export async function fetchProfile(userId) {
 
 export async function updateHandle(body) {
   const token = await getAccessToken();
-  const res = await fetch('/api/v1/league/handle', {
+  const res = await fetch(apiUrl('/api/v1/league/handle'), {
     method: 'PATCH',
     headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
     body: JSON.stringify(body),

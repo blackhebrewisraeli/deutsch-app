@@ -42,6 +42,13 @@ describe('authedFetch', () => {
     expect(init.headers['content-type']).toBe('application/json');
   });
 
+  it('never sends the token outside our API', async () => {
+    for (const url of ['https://evil.example/api/x', '//evil.example/api/x', '/auth/v1/user']) {
+      await expect(authedFetch(url)).rejects.toThrow(TypeError);
+    }
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('refuses to call at all without a token', async () => {
     authMock.token = null;
     await expect(authedFetch('/api/x')).rejects.toThrow(/sign in/i);

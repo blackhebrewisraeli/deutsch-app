@@ -8,6 +8,7 @@ import {
   blockHandler,
 } from '../_lib/adminEndpoints.js';
 import { progressHandler, xpHandler, leagueHandler } from '../_lib/adminGodMode.js';
+import { withCors } from '../_lib/origin.js';
 
 // One deployed function for the admin lane. Hobby caps a deployment at 12
 // Serverless Functions; this is the 11th. Dispatch is on req.query.op (and
@@ -18,7 +19,7 @@ import { progressHandler, xpHandler, leagueHandler } from '../_lib/adminGodMode.
 // files for exactly that cap: three more endpoints would be three more
 // functions and would push the deployment over.
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   const op = req.query?.op;
   if (op === 'me') return meHandler(req, res);
   if (op === 'feedback') {
@@ -34,3 +35,5 @@ export default async function handler(req, res) {
   if (op === 'league') return leagueHandler(req, res);
   return sendError(res, 'bad_request', 'Unknown admin operation.');
 }
+
+export default withCors(handler);

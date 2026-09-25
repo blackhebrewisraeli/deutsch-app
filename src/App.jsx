@@ -103,6 +103,7 @@ import PrivacyPolicy from './components/legal/PrivacyPolicy';
 import TermsOfService from './components/legal/TermsOfService';
 import { currentLegalRoute } from './lib/legalRoute';
 import { useWindowWidth, isMobile, isTiny, isTablet, bp } from './lib/useWindowWidth';
+import { apiUrl } from './lib/apiUrl';
 
 export default function App() {
   const [tab, setTab] = useState(() =>
@@ -568,7 +569,7 @@ export default function App() {
       return;
     }
     try {
-      const res = await fetch('/api/v1/account/export', {
+      const res = await fetch(apiUrl('/api/v1/account/export'), {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error();
@@ -594,7 +595,7 @@ export default function App() {
       throw new Error('no_token');
     }
 
-    const res = await fetch('/api/v1/account/delete', {
+    const res = await fetch(apiUrl('/api/v1/account/delete'), {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}`, 'content-type': 'application/json' },
       body: JSON.stringify({ confirm }),

@@ -9,6 +9,8 @@
 // calls"), and because a workbox rule has no assertable form in jsdom — a
 // config no test can reach is a config that rots.
 
+import { apiUrl } from './apiUrl.js';
+
 /** One localStorage key holding a map of combination → units. */
 export const LESSONS_CACHE_KEY = 'deutsch-app-lessons-v1';
 
@@ -112,7 +114,7 @@ function contentError(code, message) {
  */
 export async function fetchLessons({ courseCode, level, tab, packId = 'de' }) {
   const query = new URLSearchParams({ courseCode, level, tab, packId });
-  const res = await fetch(`/api/v1/content/lessons?${query}`, {
+  const res = await fetch(apiUrl(`/api/v1/content/lessons?${query}`), {
     headers: { accept: 'application/json' },
   });
 

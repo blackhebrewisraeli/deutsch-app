@@ -200,10 +200,9 @@ scripts" sections and `package.json`; this section only records the non-obvious
 caveats for running in the cloud VM. Dependencies are refreshed automatically
 by the startup update script (`npm install --legacy-peer-deps`).
 
-- **Node version:** `.nvmrc` pins Node 20, but the VM's default `node`
-  (`/exec-daemon/node`, currently v22) takes PATH priority over nvm and works
-  fine for the whole toolchain (install, `npm test`, `npm run build`, `vite`).
-  No need to fight the PATH to force Node 20.
+- **Node version:** `.nvmrc` pins Node 22, the Capacitor 8 CLI's minimum, and
+  the VM's default `node` (`/exec-daemon/node`) is already v22. Vercel
+  ignores `.nvmrc`: functions and builds run on the project setting (24.x).
 - **Which dev server:** use `npm run dev` (Vite only, port 5173) for UI and any
   offline-first feature. `npm run dev:full` (`vercel dev`) is only needed for
   the AI lane and requires `npx vercel link` **plus** `ANTHROPIC_API_KEY` — not

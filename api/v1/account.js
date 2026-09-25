@@ -1,5 +1,6 @@
 import { profileHandler, exportHandler, deleteHandler } from '../_lib/accountEndpoints.js';
 import { sendError } from '../_lib/respond.js';
+import { withCors } from '../_lib/origin.js';
 
 // One deployed function for the whole account lane, dispatching on
 // req.method — PATCH edits the profile, GET exports the caller's data, DELETE
@@ -13,9 +14,11 @@ import { sendError } from '../_lib/respond.js';
 // api/_lib/accountEndpoints.js, which the underscore prefix excludes from
 // deployment). The public URLs /api/v1/account/profile, /api/v1/account/export
 // and /api/v1/account/delete are preserved by rewrites in vercel.json.
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method === 'PATCH') return profileHandler(req, res);
   if (req.method === 'GET') return exportHandler(req, res);
   if (req.method === 'DELETE') return deleteHandler(req, res);
   return sendError(res, 'method_not_allowed', 'Method not allowed');
 }
+
+export default withCors(handler);

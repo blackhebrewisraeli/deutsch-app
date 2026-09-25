@@ -1,5 +1,6 @@
 import { getAccessToken } from './auth.js';
 import { todayKey } from './stats.js';
+import { apiUrl } from './apiUrl.js';
 
 async function adminFetch(op, { method = 'GET', query = {}, body } = {}) {
   const token = await getAccessToken();
@@ -14,7 +15,7 @@ async function adminFetch(op, { method = 'GET', query = {}, body } = {}) {
     if (value != null && value !== '') params.set(key, String(value));
   }
 
-  const res = await fetch(`/api/v1/admin?${params}`, {
+  const res = await fetch(apiUrl(`/api/v1/admin?${params}`), {
     method,
     headers: {
       authorization: `Bearer ${token}`,

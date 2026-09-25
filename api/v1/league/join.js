@@ -2,6 +2,7 @@ import { sendError } from '../../_lib/respond.js';
 import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
 import { currentPeriodStart } from '../../_lib/leagueLogic.js';
+import { withCors } from '../../_lib/origin.js';
 
 // Placement lives in one Postgres function, assign_user_to_bucket
 // (20260923200000): it is idempotent, derives the tier from the last settled
@@ -9,7 +10,7 @@ import { currentPeriodStart } from '../../_lib/leagueLogic.js';
 // can neither overfill a cohort nor open duplicate half-empty ones.
 // apply_progress_event calls the same function on a learner's first XP of the
 // week, so this endpoint is usually just reading back an existing placement.
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return sendError(res, 'method_not_allowed', 'Method not allowed');
 
   let auth;
@@ -30,3 +31,5 @@ export default async function handler(req, res) {
 
   return res.status(200).json(data);
 }
+
+export default withCors(handler);

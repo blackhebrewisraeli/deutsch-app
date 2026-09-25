@@ -5,6 +5,7 @@ import {
   listHandler,
 } from '../_lib/socialEndpoints.js';
 import { sendError } from '../_lib/respond.js';
+import { withCors } from '../_lib/origin.js';
 
 // One deployed function for the whole social lane, dispatching on req.method —
 // GET searches people (or lists the caller's own followers/following, see
@@ -26,10 +27,12 @@ import { sendError } from '../_lib/respond.js';
 // project cannot be a new file — it has to join an existing lane the way
 // these did. The logic lives in api/_lib/socialEndpoints.js, which the
 // underscore prefix excludes from deployment.
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method === 'GET')
     return req.query?.list ? listHandler(req, res) : searchHandler(req, res);
   if (req.method === 'POST') return followHandler(req, res);
   if (req.method === 'DELETE') return unfollowHandler(req, res);
   return sendError(res, 'method_not_allowed', 'Method not allowed');
 }
+
+export default withCors(handler);

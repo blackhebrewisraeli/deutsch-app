@@ -1,4 +1,5 @@
 import { getAccessToken, refreshAccessToken } from './auth.js';
+import { apiUrl } from './apiUrl.js';
 
 export const SESSION_EXPIRED_MESSAGE = 'Your session expired. Please sign in again and retry.';
 
@@ -25,11 +26,17 @@ export const SESSION_EXPIRED_MESSAGE = 'Your session expired. Please sign in aga
  *   their endpoints' words, not this helper's.
  */
 export async function authedFetch(url, init = {}) {
+  // Resolved first: apiUrl throws on anything that is not one of our /api
+  // paths, so a bad target never gets as far as reading the token.
+  const target = apiUrl(url);
   const token = await getAccessToken();
   if (!token) throw new Error('Please sign in again.');
 
   const send = (bearer) =>
-    fetch(url, { ...init, headers: { ...init.headers, authorization: `Bearer ${bearer}` } });
+    fetch(target, {
+      ...init,
+      headers: { ...init.headers, authorization: `Bearer ${bearer}` },
+    });
 
   let res = await send(token);
   if (res.status === 401) {
