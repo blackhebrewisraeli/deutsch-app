@@ -1,7 +1,8 @@
 import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, RADIUS, SHADOW, SPACE } from '../lib/theme';
-import { isGoogleAuthConfigured } from '../lib/auth.js';
+import { isGitHubAuthConfigured, isGoogleAuthConfigured } from '../lib/auth.js';
 import Button from './ui/Button';
 import GoogleButton from './auth/GoogleButton';
+import GitHubButton from './auth/GitHubButton';
 
 // The mono caption treatment used twice below — small uppercase mute label,
 // the same voice as WelcomeGate's tagline.
@@ -34,6 +35,8 @@ export default function TrialWall({
   onSignIn,
   onGoogle,
   googleBusy = false,
+  onGitHub,
+  gitHubBusy = false,
 }) {
   // Clearance under App's sticky header + nav, which stack to ~113px on mobile
   // and ~132px on desktop. The masthead now grows by inset-top, so this offset
@@ -41,12 +44,19 @@ export default function TrialWall({
   // phone. A gap, not an alignment: the card must simply never sit under the nav.
   const stickyTop = mobile ? 121 : 140;
 
-  // When Google is on, every existing action demotes one step: Google takes
-  // primary, "Create a free account" drops to secondary, and "I already have
-  // an account" becomes the bare-text tertiary — the same third-action
-  // treatment WelcomeGate already uses for its guest link. Flag off, this is
-  // byte-for-byte the wall that shipped in #95.
+  // When a provider is on, every existing action demotes one step: the
+  // provider takes primary, "Create a free account" drops to secondary, and "I
+  // already have an account" becomes the bare-text tertiary — the same
+  // third-action treatment WelcomeGate already uses for its guest link. Both
+  // flags off, this is byte-for-byte the wall that shipped in #95.
+  //
+  // ONE provider slot, never two: at 320px a fourth action turns the wall into
+  // a menu. Google keeps it when both are on; GitHub takes it only when Google
+  // is off. With both on, GitHub is still one tap away — "Create a free
+  // account" opens the sheet, which lists every configured provider.
   const googleOn = isGoogleAuthConfigured();
+  const gitHubOn = !googleOn && isGitHubAuthConfigured();
+  const providerOn = googleOn || gitHubOn;
 
   return (
     <div
@@ -112,14 +122,15 @@ export default function TrialWall({
             to follow the wall, which interrupts the practice flow. It belongs
             on whichever action is currently primary. */}
         {googleOn && <GoogleButton onClick={onGoogle} busy={googleBusy} autoFocus />}
+        {gitHubOn && <GitHubButton onClick={onGitHub} busy={gitHubBusy} autoFocus />}
         <Button
-          variant={googleOn ? 'secondary' : 'primary'}
-          autoFocus={!googleOn}
+          variant={providerOn ? 'secondary' : 'primary'}
+          autoFocus={!providerOn}
           onClick={onCreateAccount}
         >
           Create a free account
         </Button>
-        {googleOn ? (
+        {providerOn ? (
           <>
             <button
               // Opts into the app's one focus ring, defined in injectGlobalStyles.

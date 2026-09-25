@@ -138,13 +138,13 @@ function log and [AI endpoint contract](api/ai.md), then verify the server-side
 Use the existing beta test account; do not create or delete a real user just
 for a smoke test.
 
-| Action                                                   | Expected                                                                                                               |
-| -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Sign in with Google or Magic Link, whichever is enabled  | Return to the app with the account chip visible; no silent failure or loop.                                            |
-| Complete one practice answer, then reload                | XP and learned progress persist. Profile → Settings → Account shows a recent sync when sync is enabled.                |
-| Open Profile → Leagues, when the feature flag is enabled | Standings load for a signed-in member; selecting a row opens the learner profile.                                      |
-| Open Profile → Settings                                  | Profile, placement retake, interests, model preference, appearance, offline cache, and account controls are reachable. |
-| Open the account chip                                    | Its Profile and Settings actions reach the correct view.                                                               |
+| Action                                                          | Expected                                                                                                               |
+| --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Sign in with Google, GitHub or Magic Link, whichever is enabled | Return to the app with the account chip visible; no silent failure or loop.                                            |
+| Complete one practice answer, then reload                       | XP and learned progress persist. Profile → Settings → Account shows a recent sync when sync is enabled.                |
+| Open Profile → Leagues, when the feature flag is enabled        | Standings load for a signed-in member; selecting a row opens the learner profile.                                      |
+| Open Profile → Settings                                         | Profile, placement retake, interests, model preference, appearance, offline cache, and account controls are reachable. |
+| Open the account chip                                           | Its Profile and Settings actions reach the correct view.                                                               |
 
 If account or league controls are absent, check the deployed feature flags and
 the [auth runbooks](AUTH_GOOGLE_OAUTH_RUNBOOK.md). A visible control alone does

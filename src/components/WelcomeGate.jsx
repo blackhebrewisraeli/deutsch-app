@@ -2,6 +2,7 @@ import { COLORS, FONTS, FONT_SIZE, FONT_WEIGHT, LETTER_SPACING, SPACE } from '..
 import { isAuthConfigured } from '../lib/auth.js';
 import Button from './ui/Button';
 import GoogleButton from './auth/GoogleButton';
+import GitHubButton from './auth/GitHubButton';
 import ThemeChip from './ThemeChip';
 
 /** Minimum comfortable touch target, px — the iOS Human Interface guideline. */
@@ -9,9 +10,16 @@ const TAP_TARGET_MIN = 44;
 
 // Entry screen. The guest path is always available (anonymous-first);
 // the account actions render only when auth is configured, so no environment
-// ever shows a dead button. GoogleButton self-guards on its own flag, so it
-// simply is not there until an owner turns Google on.
-export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = false }) {
+// ever shows a dead button. GoogleButton and GitHubButton each self-guard on
+// their own flag, so a provider simply is not there until an owner turns it on.
+export default function WelcomeGate({
+  onGuest,
+  onAuth,
+  onGoogle,
+  googleBusy = false,
+  onGitHub,
+  gitHubBusy = false,
+}) {
   const authOn = isAuthConfigured();
   return (
     <div
@@ -64,6 +72,7 @@ export default function WelcomeGate({ onGuest, onAuth, onGoogle, googleBusy = fa
         {authOn && (
           <>
             <GoogleButton onClick={onGoogle} busy={googleBusy} />
+            <GitHubButton onClick={onGitHub} busy={gitHubBusy} />
             <Button onClick={() => onAuth('create')}>Create account</Button>
             <Button variant="secondary" onClick={() => onAuth('signin')}>
               Sign in

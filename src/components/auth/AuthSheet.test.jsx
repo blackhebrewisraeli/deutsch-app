@@ -4,15 +4,18 @@ import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { COLORS } from '../../lib/theme';
 
-const { isAuthConfigured, isGoogleAuthConfigured, signInWithGoogle } = vi.hoisted(() => ({
-  isAuthConfigured: vi.fn(() => true),
-  isGoogleAuthConfigured: vi.fn(() => false),
-  signInWithGoogle: vi.fn(() => Promise.resolve({ error: null })),
-}));
+const { isAuthConfigured, isGoogleAuthConfigured, isGitHubAuthConfigured, signInWithGoogle } =
+  vi.hoisted(() => ({
+    isAuthConfigured: vi.fn(() => true),
+    isGoogleAuthConfigured: vi.fn(() => false),
+    isGitHubAuthConfigured: vi.fn(() => false),
+    signInWithGoogle: vi.fn(() => Promise.resolve({ error: null })),
+  }));
 
 vi.mock('../../lib/auth.js', () => ({
   isAuthConfigured,
   isGoogleAuthConfigured,
+  isGitHubAuthConfigured,
   signInWithGoogle,
   signInWithMagicLink: vi.fn(() => Promise.resolve({ error: null })),
   verifyCode: vi.fn(() => Promise.resolve({ error: null })),
@@ -29,8 +32,9 @@ import AuthSheet from './AuthSheet';
 describe('AuthSheet', () => {
   beforeEach(() => {
     isAuthConfigured.mockReturnValue(true);
-    // Flag off is the merge state and the one CI runs.
+    // Flags off is the merge state and the one CI runs.
     isGoogleAuthConfigured.mockReturnValue(false);
+    isGitHubAuthConfigured.mockReturnValue(false);
     signInWithGoogle.mockClear();
   });
 
@@ -143,6 +147,62 @@ describe('AuthSheet', () => {
     });
   });
 
+  describe('with GitHub on', () => {
+    beforeEach(() => isGitHubAuthConfigured.mockReturnValue(true));
+
+    // Alone, GitHub gets everything Google would: the divider, the top slot.
+    it('stands in for Google when Google is off — above the form, with the divider', () => {
+      render(<AuthSheet open intent="signin" onClose={() => {}} onSuccess={() => {}} />);
+      const github = screen.getByRole('button', { name: /continue with github/i });
+      expect(screen.queryByRole('button', { name: /continue with google/i })).toBeNull();
+      expect(screen.getByText(/^or$/i)).toBeInTheDocument();
+      expect(github.compareDocumentPosition(screen.getByTestId('magic-link-form'))).toBe(
+        Node.DOCUMENT_POSITION_FOLLOWING
+      );
+    });
+
+    it('routes the button to the handler App passes', async () => {
+      const onGitHub = vi.fn();
+      const onGoogle = vi.fn();
+      render(
+        <AuthSheet
+          open
+          intent="signin"
+          onClose={() => {}}
+          onSuccess={() => {}}
+          onGoogle={onGoogle}
+          onGitHub={onGitHub}
+        />
+      );
+      await userEvent.click(screen.getByRole('button', { name: /continue with github/i }));
+      expect(onGitHub).toHaveBeenCalledTimes(1);
+      expect(onGoogle).not.toHaveBeenCalled();
+    });
+
+    it('marks only its own button busy', () => {
+      isGoogleAuthConfigured.mockReturnValue(true);
+      render(<AuthSheet open intent="signin" onClose={() => {}} onSuccess={() => {}} gitHubBusy />);
+      const github = screen.getByRole('button', { name: /continue with github/i });
+      expect(github).toHaveAttribute('aria-busy', 'true');
+      expect(github).not.toBeDisabled();
+      expect(screen.getByRole('button', { name: /continue with google/i })).not.toHaveAttribute(
+        'aria-busy'
+      );
+    });
+
+    // Both on: Google, then GitHub, then ONE divider, then the form.
+    it('sits under Google when both are on, sharing a single divider', () => {
+      isGoogleAuthConfigured.mockReturnValue(true);
+      render(<AuthSheet open intent="signin" onClose={() => {}} onSuccess={() => {}} />);
+      const google = screen.getByRole('button', { name: /continue with google/i });
+      const github = screen.getByRole('button', { name: /continue with github/i });
+      const form = screen.getByTestId('magic-link-form');
+      expect(google.compareDocumentPosition(github)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(github.compareDocumentPosition(form)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(screen.getAllByText(/^or$/i)).toHaveLength(1);
+    });
+  });
+
   // ── Keyboard loop ──────────────────────────────────────────
   // The sheet claims `aria-modal="true"` and lays a scrim over the page, so it
   // asserts to assistive tech that nothing behind it is reachable. It was not
@@ -157,10 +217,15 @@ describe('AuthSheet', () => {
   // exactly what broke focus-restore in production while every test was green.
   // Testing focus-in under one flag and focus-return under the other left the
   // combination that ships completely uncovered.
+  //
+  // GitHub adds two more shipping states — alone, and under Google — and each
+  // moves the autoFocus target, which is the thing this block exists to cover.
   describe.each([
-    ['Google off', false],
-    ['Google on', true],
-  ])('keyboard loop — %s', (_label, googleOn) => {
+    ['no providers', false, false],
+    ['Google on', true, false],
+    ['GitHub on', false, true],
+    ['Google and GitHub on', true, true],
+  ])('keyboard loop — %s', (_label, googleOn, gitHubOn) => {
     function Harness() {
       const [open, setOpen] = useState(false);
       return (
@@ -180,6 +245,7 @@ describe('AuthSheet', () => {
 
     beforeEach(() => {
       isGoogleAuthConfigured.mockReturnValue(googleOn);
+      isGitHubAuthConfigured.mockReturnValue(gitHubOn);
     });
 
     const openSheet = async (user) => {
@@ -259,28 +325,48 @@ describe('AuthSheet', () => {
   // primary action. Moving focus to the sheet unconditionally would take it
   // away and bury the main affordance.
   describe('autoFocus', () => {
+    function Harness() {
+      const [open, setOpen] = useState(false);
+      return (
+        <>
+          <button type="button" onClick={() => setOpen(true)}>
+            Sign in trigger
+          </button>
+          <AuthSheet
+            open={open}
+            intent="signin"
+            onClose={() => setOpen(false)}
+            onSuccess={() => {}}
+          />
+        </>
+      );
+    }
+
     it('leaves the primary action focused when Google is configured', async () => {
       isGoogleAuthConfigured.mockReturnValue(true);
       const user = userEvent.setup();
-      function Harness() {
-        const [open, setOpen] = useState(false);
-        return (
-          <>
-            <button type="button" onClick={() => setOpen(true)}>
-              Sign in trigger
-            </button>
-            <AuthSheet
-              open={open}
-              intent="signin"
-              onClose={() => setOpen(false)}
-              onSuccess={() => {}}
-            />
-          </>
-        );
-      }
       render(<Harness />);
       await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
       expect(screen.getByRole('button', { name: /continue with google/i })).toHaveFocus();
+    });
+
+    // Two buttons each carrying autoFocus would leave focus on whichever
+    // commits last — GitHub — and bury Google. Exactly one may carry it.
+    it('keeps focus on Google, the first provider, when GitHub is on too', async () => {
+      isGoogleAuthConfigured.mockReturnValue(true);
+      isGitHubAuthConfigured.mockReturnValue(true);
+      const user = userEvent.setup();
+      render(<Harness />);
+      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
+      expect(screen.getByRole('button', { name: /continue with google/i })).toHaveFocus();
+    });
+
+    it('focuses GitHub when it is the only provider', async () => {
+      isGitHubAuthConfigured.mockReturnValue(true);
+      const user = userEvent.setup();
+      render(<Harness />);
+      await user.click(screen.getByRole('button', { name: 'Sign in trigger' }));
+      expect(screen.getByRole('button', { name: /continue with github/i })).toHaveFocus();
     });
   });
 });

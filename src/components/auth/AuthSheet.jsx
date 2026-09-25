@@ -1,9 +1,14 @@
 import { useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, RADIUS, SHADOW, SPACE } from '../../lib/theme';
-import { isAuthConfigured, isGoogleAuthConfigured } from '../../lib/auth.js';
+import {
+  isAuthConfigured,
+  isGitHubAuthConfigured,
+  isGoogleAuthConfigured,
+} from '../../lib/auth.js';
 import MagicLinkForm from './MagicLinkForm';
 import GoogleButton from './GoogleButton';
+import GitHubButton from './GitHubButton';
 import useFocusTrap from '../../lib/useFocusTrap.js';
 
 /**
@@ -12,8 +17,8 @@ import useFocusTrap from '../../lib/useFocusTrap.js';
  * unconfigured (PR #79 class of bug) or when `open` is false.
  *
  * Does not touch Supabase directly — MagicLinkForm awaits the code-split
- * client via signInWithMagicLink / verifyCode, and Google goes through the
- * single handler App passes as onGoogle.
+ * client via signInWithMagicLink / verifyCode, and Google and GitHub go
+ * through the single handlers App passes as onGoogle / onGitHub.
  *
  * Keyboard loop: because a single instance in App serves five different
  * triggers, the opener is captured from `document.activeElement` rather than
@@ -27,6 +32,8 @@ export default function AuthSheet({
   onSuccess,
   onGoogle,
   googleBusy = false,
+  onGitHub,
+  gitHubBusy = false,
 }) {
   const sheetRef = useRef(null);
   const openerRef = useRef(null);
@@ -35,8 +42,9 @@ export default function AuthSheet({
   // Captured during RENDER, on the pass where `open` first turns true — NOT in
   // the effect below. React applies a child's `autoFocus` during the commit,
   // which runs before effects, so by effect time `document.activeElement` is
-  // already GoogleButton and the real opener is lost. Reading it here, before
-  // the commit, is the only point at which the trigger is still focused.
+  // already the first provider button and the real opener is lost. Reading it
+  // here, before the commit, is the only point at which the trigger is still
+  // focused.
   //
   // This shipped broken and was caught by driving production: every test in the
   // suite runs with Google OFF, where nothing autofocuses and the effect-time
@@ -49,8 +57,8 @@ export default function AuthSheet({
   // `open` flips false just as it would on unmount.
   useEffect(() => {
     if (!open || !isAuthConfigured()) return undefined;
-    // Only if focus is not already inside: with Google configured,
-    // GoogleButton's autoFocus has already landed on the primary action during
+    // Only if focus is not already inside: with a provider configured, its
+    // button's autoFocus has already landed on the primary action during
     // commit, and stealing it back would bury the main affordance.
     if (!sheetRef.current?.contains(document.activeElement)) sheetRef.current?.focus();
     return () => {
@@ -79,10 +87,11 @@ export default function AuthSheet({
   if (!isAuthConfigured() || !open) return null;
 
   const heading = intent === 'create' ? 'Create your account' : 'Sign in';
-  // Gate the divider on the same fact as the button. GoogleButton self-guards,
-  // but a bare "or" left behind when the flag is off would change this sheet
-  // in exactly the state that must stay identical to today.
+  // Gate the divider on the same facts as the buttons. Each provider button
+  // self-guards, but a bare "or" left behind when both flags are off would
+  // change this sheet in exactly the state that must stay identical to today.
   const googleOn = isGoogleAuthConfigured();
+  const oauthOn = googleOn || isGitHubAuthConfigured();
 
   return (
     <div
@@ -167,9 +176,14 @@ export default function AuthSheet({
         >
           <X size={16} aria-hidden="true" />
         </button>
-        {googleOn && (
+        {oauthOn && (
           <div style={{ maxWidth: 360, margin: '0 auto' }}>
-            <GoogleButton onClick={onGoogle} busy={googleBusy} autoFocus />
+            {/* Focus lands on whichever provider is first, and only one of
+                them: two autoFocus props would leave it on the last. */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[3] }}>
+              <GoogleButton onClick={onGoogle} busy={googleBusy} autoFocus />
+              <GitHubButton onClick={onGitHub} busy={gitHubBusy} autoFocus={!googleOn} />
+            </div>
             <div
               aria-hidden="true"
               style={{
