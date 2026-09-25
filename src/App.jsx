@@ -87,6 +87,7 @@ import {
   humanAuthError,
 } from './lib/auth';
 import { signOutAndReset } from './lib/clearUserState';
+import { isNativeApp } from './lib/nativeApp';
 import { SYNC_ENABLED, start, stop, markDirty, loadRemoteDaily } from './lib/sync';
 import { startProgressFlush, stopProgressFlush, scheduleFlush } from './lib/progressQueue';
 import { setLevelBoostEnabled } from './lib/xpEntitlement';
@@ -473,10 +474,13 @@ export default function App() {
   };
 
   // One entry point per provider for all three surfaces — the sheet, the gate
-  // and the trial wall each render the same buttons and call these. On success
-  // the browser leaves for the provider, so `busy` is deliberately never
-  // cleared: the page is going away, and clearing it would re-enable the
-  // button for the moment before it does.
+  // and the trial wall each render the same buttons and call these. On the web
+  // a successful start sends the tab to the provider, so `busy` is deliberately
+  // never cleared there: the page is going away, and clearing it would
+  // re-enable the button for the moment before it does. The native app never
+  // leaves. The provider opens in the system browser and the sign-in call
+  // settles once that browser closes, signed in or backed out, so the button
+  // must come back.
   //
   // ONE in-flight value across providers, not a flag each: a tap on Google and
   // then on GitHub must not start two round trips racing to redirect the tab.
@@ -486,10 +490,8 @@ export default function App() {
     if (oauthBusy) return;
     setOAuthBusy(provider);
     const { error } = await signIn();
-    if (error) {
-      setOAuthBusy(null);
-      showToast(humanAuthError(error));
-    }
+    if (error || isNativeApp()) setOAuthBusy(null);
+    if (error) showToast(humanAuthError(error));
   };
   const handleGoogle = () => startOAuth('google', signInWithGoogle);
   const handleGitHub = () => startOAuth('github', signInWithGitHub);

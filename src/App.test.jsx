@@ -703,6 +703,7 @@ describe('in-app AuthSheet', () => {
       mayHaveSession: () => false,
       authCallbackKind: () => null,
       authCallbackReason: () => null,
+      onNativeAuthCallback: () => () => {},
       getSupabase: () => Promise.resolve(null),
     }));
 
@@ -796,6 +797,7 @@ describe('guest trial wall', () => {
       mayHaveSession: () => false,
       authCallbackKind: () => null,
       authCallbackReason: () => null,
+      onNativeAuthCallback: () => () => {},
       getSupabase: () => Promise.resolve(null),
     }));
     const { default: AppWithAuth } = await import('./App.jsx');
@@ -976,6 +978,24 @@ describe('guest trial wall', () => {
     await user.click(button);
     await user.click(button);
     expect(signInWithGoogle).toHaveBeenCalledTimes(1);
+  });
+
+  // The native app never navigates away. Google opens in the system browser,
+  // and signInWithGoogle settles only once that browser has closed, so the
+  // button must come back for a learner who backed out.
+  it('re-enables the Google button in the native app once the flow settles', async () => {
+    window.Capacitor = { isNativePlatform: () => true };
+    try {
+      const user = userEvent.setup();
+      await renderApp({ googleOn: true });
+      const button = screen.getByRole('button', { name: 'Continue with Google' });
+      await user.click(button);
+      await waitFor(() => expect(button).not.toHaveAttribute('aria-busy', 'true'));
+      await user.click(button);
+      expect(signInWithGoogle).toHaveBeenCalledTimes(2);
+    } finally {
+      delete window.Capacitor;
+    }
   });
 
   // Google off, GitHub on: GitHub holds the wall's provider slot and reaches the
