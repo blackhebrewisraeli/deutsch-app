@@ -15,6 +15,25 @@ describe('apiUrl', () => {
     vi.stubEnv('VITE_API_BASE_URL', 'https://deutsch-app-dusky.vercel.app/');
     expect(apiUrl('/api/v1/ai/chat')).toBe('https://deutsch-app-dusky.vercel.app/api/v1/ai/chat');
   });
+
+  it.each([
+    'https://evil.example/api/v1/social',
+    '//evil.example/api/v1/social',
+    '/auth/v1/token',
+    'api/v1/social',
+    '',
+    undefined,
+  ])('refuses %s — the bearer token must never leave our API', (path) => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://deutsch-app-dusky.vercel.app');
+    expect(() => apiUrl(path)).toThrow(TypeError);
+  });
+
+  it('keeps a hostile-looking path on our own host', () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'https://deutsch-app-dusky.vercel.app');
+    for (const path of ['/api/@evil.example', '/api/..//evil.example', '/api/v1/social?q=//evil']) {
+      expect(new URL(apiUrl(path)).host).toBe('deutsch-app-dusky.vercel.app');
+    }
+  });
 });
 
 // A relative /api fetch works on the web and fails only inside the native app,
@@ -27,18 +46,25 @@ describe('every fetch under src/ goes through apiUrl', () => {
   const root = 'src';
   const calls = readdirSync(root, { recursive: true })
     .filter((f) => /\.jsx?$/.test(f) && !/\.test\./.test(f) && !BUNDLED_ASSETS.includes(f))
-    .flatMap((f) =>
-      readFileSync(join(root, f), 'utf8')
+    .flatMap((f) => {
+      const src = readFileSync(join(root, f), 'utf8');
+      return src
         .split('\n')
         .filter((line) => /(^|[^\w.])fetch(Impl)?\(/.test(line) && !/^\s*(\/\/|\*)/.test(line))
-        .map((line) => `${f}: ${line.trim()}`)
-    );
+        .map((line) => ({ where: `${f}: ${line.trim()}`, line, src }));
+    });
+
+  // Inline, or through a variable this same file assigned from apiUrl().
+  const wrapped = ({ line, src }) => {
+    const arg = line.match(/fetch(?:Impl)?\(\s*(\w+)/)?.[1];
+    return arg === 'apiUrl' || (!!arg && new RegExp(`\\b${arg} = apiUrl\\(`).test(src));
+  };
 
   it('finds the known call sites — a scan that sees nothing proves nothing', () => {
     expect(calls.length).toBeGreaterThanOrEqual(10);
   });
 
   it('wraps each one in apiUrl()', () => {
-    expect(calls.filter((c) => !/fetch(Impl)?\(apiUrl\(/.test(c))).toEqual([]);
+    expect(calls.filter((c) => !wrapped(c)).map((c) => c.where)).toEqual([]);
   });
 });

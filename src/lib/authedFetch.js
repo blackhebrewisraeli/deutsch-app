@@ -26,11 +26,14 @@ export const SESSION_EXPIRED_MESSAGE = 'Your session expired. Please sign in aga
  *   their endpoints' words, not this helper's.
  */
 export async function authedFetch(url, init = {}) {
+  // Resolved first: apiUrl throws on anything that is not one of our /api
+  // paths, so a bad target never gets as far as reading the token.
+  const target = apiUrl(url);
   const token = await getAccessToken();
   if (!token) throw new Error('Please sign in again.');
 
   const send = (bearer) =>
-    fetch(apiUrl(url), {
+    fetch(target, {
       ...init,
       headers: { ...init.headers, authorization: `Bearer ${bearer}` },
     });
