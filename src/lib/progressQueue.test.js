@@ -116,6 +116,43 @@ describe('flushQueue', () => {
     expect(loadQueue()).toHaveLength(1);
   });
 
+  // An answer can land while a flush is mid-POST. The flush must not write its
+  // stale snapshot back over it: that event would never be sent at all.
+  it('keeps an event enqueued while an earlier POST is in flight', async () => {
+    const LATE = '22222222-2222-4222-8222-222222222222';
+    enqueue(event());
+    const sent = [];
+    const fetchImpl = vi.fn(async (_url, init) => {
+      const body = JSON.parse(init.body);
+      sent.push(body.id);
+      if (body.id === ID) enqueue(event({ id: LATE }));
+      return { ok: true, status: 200, headers: { get: () => null } };
+    });
+    await flushQueue({ fetchImpl, token: 'tok' });
+    const kept = loadQueue().map((e) => e.id);
+    expect([...sent, ...kept]).toContain(LATE);
+  });
+
+  // Storage can refuse writes (quota, private mode). The flush must still send
+  // each event once and stop, not re-POST an un-removable head forever.
+  it('sends each event once and stops when storage refuses writes', async () => {
+    enqueue(event());
+    enqueue(event({ id: '33333333-3333-4333-8333-333333333333' }));
+    const setItem = vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+      throw new Error('QuotaExceededError');
+    });
+    // A 500 after a few calls ends a runaway loop, so a regression fails on
+    // the count below instead of hanging the worker.
+    const fetchImpl = vi.fn(async () => ({
+      ok: fetchImpl.mock.calls.length <= 5,
+      status: fetchImpl.mock.calls.length <= 5 ? 200 : 500,
+      headers: { get: () => null },
+    }));
+    await flushQueue({ fetchImpl, token: 'tok' });
+    setItem.mockRestore();
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
   it('retries 429 then continues', async () => {
     enqueue(event());
     const fetchImpl = vi

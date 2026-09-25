@@ -132,9 +132,14 @@ export async function flushQueue({
 } = {}) {
   if (!token || typeof fetchImpl !== 'function') return;
   const MAX_RETRIES = 5;
-  let q = loadQueue();
-  while (q.length > 0) {
-    const current = q[0];
+  // Storage is re-read before every POST and only the acked id is removed:
+  // an answer enqueued (or backlog prepended) while a POST is in flight must
+  // survive. Writing back a snapshot taken at the start erased it. `acked`
+  // stops a write-refusing storage from re-POSTing the same head forever.
+  const acked = new Set();
+  for (;;) {
+    const current = loadQueue().find((e) => !acked.has(e.id));
+    if (!current) return;
     let retries = 0;
     let done = false;
     while (!done) {
@@ -152,8 +157,8 @@ export async function flushQueue({
         return;
       }
       if (res?.ok || res?.status === 200) {
-        q = q.slice(1);
-        saveQueue(q);
+        acked.add(current.id);
+        saveQueue(loadQueue().filter((e) => e.id !== current.id));
         done = true;
         continue;
       }

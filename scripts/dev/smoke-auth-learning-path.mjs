@@ -693,17 +693,25 @@ async function visibleCard(page, cards) {
 }
 
 /**
- * The id `recordEvent` just enqueued.
+ * Answer with `choice` and return the id that answer enqueued.
  *
- * `enqueue` APPENDS, so immediately after a verdict the tail of the queue is
- * that answer's event. Read straight after the click: the flush is debounced
- * 500ms behind `deutsch:progress`, so the row is still there.
+ * The answer click itself enqueues (VocabTab's chooseOption → recordEvent →
+ * `enqueue`, which APPENDS), so the queue tail right after that handler is
+ * this answer's event. The click and the read run in ONE browser task: a flush
+ * already in flight can only resume after the task ends, so it cannot send or
+ * shift the event in between. Reading after a later step (the old read came
+ * after GOOD) raced the flush and could find the queue already empty.
+ *
+ * The trial click keeps Playwright's actionability checks — visible, enabled,
+ * not covered by an overlay — that a bare `el.click()` would skip.
  *
  * This is what makes step 2 specific. Counting POSTs cannot work — see the
  * backlog note on `stepCompleteExerciseAndSync`.
  */
-async function queueTailId(page) {
-  return page.evaluate((key) => {
+async function answerAndCaptureId(choice) {
+  await choice.click({ trial: true });
+  return choice.evaluate((el, key) => {
+    el.click();
     try {
       const q = JSON.parse(localStorage.getItem(key) || '[]');
       return Array.isArray(q) && q.length ? (q[q.length - 1]?.id ?? null) : null;
@@ -745,13 +753,12 @@ async function practiceUntilComplete(page, seed) {
 
     const choice = page.getByRole('button', { name: card.en, exact: true });
     await choice.waitFor({ state: 'visible', timeout: 10000 });
-    await choice.click();
+    const id = await answerAndCaptureId(choice);
 
     const good = page.getByRole('button', { name: 'GOOD', exact: true });
     await good.waitFor({ state: 'visible', timeout: 10000 });
     await good.click();
 
-    const id = await queueTailId(page);
     if (!id) {
       throw new Error(
         `smoke-auth-learning-path: answering card ${i + 1} enqueued nothing — ` +
@@ -826,7 +833,8 @@ async function waitForQueueDrained(page, timeoutMs = 20000) {
  *
  * That assertion would therefore have passed with per-answer sync entirely
  * dead. The fix is to capture the id each answer actually enqueues (the
- * queue tail, see `queueTailId`) and require THOSE exact ids on the wire.
+ * queue tail at the answer click, see `answerAndCaptureId`) and require THOSE
+ * exact ids on the wire.
  * If `recordEvent` stops enqueuing, the capture fails; if the flush stops
  * POSTing, the ids never arrive. Backlog noise cannot satisfy either.
  *
