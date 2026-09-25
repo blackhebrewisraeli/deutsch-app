@@ -11,13 +11,14 @@ const INTENSITY_COLORS = [
 
 // Section B — GitHub-style 12-month activity grid (7 rows, columns = weeks).
 export default function Heatmap({ data, mobile }) {
-  const cellSize = mobile ? 9 : 12;
-  const gap = 2;
+  const cellSize = mobile ? 7 : 8;
+  const gap = 1;
   // grid-auto-flow: column means each column (week) fills top to bottom.
   const weeks = Math.ceil(data.length / 7);
 
   return (
     <div
+      data-testid="activity-heatmap"
       style={{
         display: 'grid',
         gridTemplateRows: `repeat(7, ${cellSize}px)`,
@@ -25,7 +26,7 @@ export default function Heatmap({ data, mobile }) {
         gridAutoColumns: `${cellSize}px`,
         gap,
         overflowX: 'auto',
-        paddingBottom: SPACE[2],
+        paddingBottom: SPACE[1],
         maxWidth: '100%',
       }}
     >
@@ -64,7 +65,7 @@ export function HeatmapLegend() {
         display: 'flex',
         alignItems: 'center',
         gap: SPACE[2],
-        marginTop: SPACE[3],
+        marginTop: SPACE[2],
         fontFamily: FONTS.mono,
         fontSize: FONT_SIZE.tag,
         letterSpacing: LETTER_SPACING.caps,
@@ -76,8 +77,8 @@ export function HeatmapLegend() {
         <span
           key={i}
           style={{
-            width: 10,
-            height: 10,
+            width: 7,
+            height: 7,
             background: c,
             border: `1px solid ${COLORS.inkA20}`,
           }}

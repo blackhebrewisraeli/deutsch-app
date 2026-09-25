@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { getSupabase } from './auth.js';
-import { LEAGUES_ENABLED, fetchMyMembership, fetchStandings } from './leagues.js';
+import { LEAGUES_ENABLED, fetchMyMembership, fetchProfile, fetchStandings } from './leagues.js';
 import { currentPeriodStart } from './leagueCountdown.js';
 import { zoneCounts } from './leagueZones.js';
 
-// The caller's live league standing for Home, as TWO READS and nothing else.
+// The caller's live league standing for Home, as two cohort reads plus three
+// best-effort profile GETs for the compact podium, and no writes.
 //
 // Why not reuse the leaderboard's fetch: LeaderboardSection calls joinLeague()
 // and refreshLeague() before reading, and both are WRITES — join can create a
@@ -27,7 +28,7 @@ import { zoneCounts } from './leagueZones.js';
 
 /**
  * @param {string|undefined} userId
- * @returns {{tier: number, rank: number, cohortSize: number, inDemotionZone: boolean}|null}
+ * @returns {{tier: number, rank: number, cohortSize: number, inDemotionZone: boolean, leaders: Array}|null}
  */
 export function useLeagueStanding(userId) {
   const [standing, setStanding] = useState(null);
@@ -60,7 +61,12 @@ export function useLeagueStanding(userId) {
         }
 
         const { demote } = zoneCounts(cohortSize);
-        setStanding({
+        const leaders = rows.slice(0, 3).map((row, index) => ({
+          ...row,
+          rank: index + 1,
+          profile: null,
+        }));
+        const nextStanding = {
           // The tier rides along with the membership read — it costs nothing
           // extra (it is an embedded to-one on the same row) and it is what
           // Home's league badge renders. Without it Home would have to call
@@ -70,7 +76,24 @@ export function useLeagueStanding(userId) {
           rank,
           cohortSize,
           inDemotionZone: demote > 0 && rank > cohortSize - demote,
-        });
+          leaders,
+        };
+
+        // Publish the standing immediately: missions and the league badge do
+        // not wait for avatar/name decoration. The three profile requests are
+        // independent best-effort reads; a missing passport leaves that row on
+        // its denormalised @handle instead of taking the whole Home hub down.
+        setStanding(nextStanding);
+        const enrichedLeaders = await Promise.all(
+          leaders.map(async (leader) => {
+            try {
+              return { ...leader, profile: await fetchProfile(leader.user_id) };
+            } catch {
+              return leader;
+            }
+          })
+        );
+        if (!cancelled) setStanding({ ...nextStanding, leaders: enrichedLeaders });
       } catch {
         // Best-effort: a failed league read must never break Home. The mission
         // just does not appear.

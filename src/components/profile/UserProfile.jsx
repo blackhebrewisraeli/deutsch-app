@@ -494,12 +494,7 @@ export default function UserProfile({
               rendering its own tier, and `profile.tier` is the fallback for
               the moment before that fetch lands. tierName() makes both ends
               Bronze when there is nothing at all. */}
-          <LeagueBadge
-            tier={liveLeague?.tier ?? profile?.tier}
-            wins={profile?.league_wins ?? 0}
-            rank={liveLeague?.rank ?? null}
-            cohortSize={liveLeague?.cohortSize ?? null}
-          />
+          <LeagueBadge tier={liveLeague?.tier ?? profile?.tier} />
 
           {/* The full standings, in the main column — not behind a sub-tab. */}
           <LeaderboardSection onSelectUser={onSelectUser} onLeague={setLiveLeague} />
@@ -507,19 +502,11 @@ export default function UserProfile({
       )}
 
       {/* ── Secondary: the detailed charts ───────────────────────
-          Last, deliberately. These are the dense analytics that used to BE
-          the Profile tab.
-
-          The extra margin is a measured correction, not decoration. This page
-          renders two rhythms: the identity blocks above sit SPACE[5] (20px)
-          apart because they are one group — portrait, metrics, league, all
-          answering "who am I" — while the sections inside `children` sit
-          SPACE[8] (32px) apart. That made the step INTO the analytics region
-          smaller than every step within it, so the charts read as one more
-          identity block instead of as a new region. SPACE[3] on top of the
-          grid's own SPACE[5] brings the boundary up to the same 32px the
-          sections below it use. */}
-      <div data-testid="profile-secondary" style={{ marginTop: SPACE[3], minWidth: 0 }}>
+          Last, deliberately. The child now owns one compact dashboard rhythm,
+          so the outer profile grid's normal SPACE[5] gap is the complete
+          boundary; adding a second margin would recreate the empty shelf this
+          redesign removes. */}
+      <div data-testid="profile-secondary" style={{ minWidth: 0 }}>
         {children}
       </div>
     </div>

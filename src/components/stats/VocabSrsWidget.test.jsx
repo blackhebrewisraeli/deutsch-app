@@ -8,14 +8,6 @@ import { FONT_SIZE, SPACE } from '../../lib/theme';
 const { decks } = activePack.content;
 const CARD_TOTAL = Object.values(decks).reduce((sum, d) => sum + d.length, 0); // 40
 
-const setViewportWidth = (width) => {
-  Object.defineProperty(window, 'innerWidth', {
-    writable: true,
-    configurable: true,
-    value: width,
-  });
-};
-
 describe('VocabSrsWidget', () => {
   it('counts every card as due when there is no SRS history', () => {
     render(<VocabSrsWidget srs={{}} now={Date.now()} />);
@@ -39,16 +31,20 @@ describe('VocabSrsWidget', () => {
     expect(screen.getByText(String(CARD_TOTAL - 1))).toBeInTheDocument(); // DUE NOW = 39
   });
 
-  it.each([320, 375])('uses the compact summary scale at %spx', (width) => {
-    setViewportWidth(width);
+  it('uses one compact scale inside the dashboard card', () => {
     render(<VocabSrsWidget srs={{}} now={Date.now()} />);
 
     expect(screen.getByTestId('vocab-srs-summary')).toHaveStyle({
-      padding: `${SPACE[4]}px`,
-      gap: `${SPACE[4]}px`,
+      paddingBottom: `${SPACE[2]}px`,
+      marginBottom: `${SPACE[2]}px`,
+      gap: `${SPACE[2]}px`,
     });
     expect(screen.getByText(String(CARD_TOTAL))).toHaveStyle({
-      fontSize: `${FONT_SIZE['5xl']}px`,
+      fontSize: `${FONT_SIZE['3xl']}px`,
     });
+    expect(screen.getByTestId('vocab-mastered-track')).toHaveStyle({ height: '6px' });
+    for (const track of screen.getAllByTestId('vocab-deck-track')) {
+      expect(track).toHaveStyle({ height: '5px' });
+    }
   });
 });

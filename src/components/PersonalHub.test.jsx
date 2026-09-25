@@ -4,7 +4,7 @@ import PersonalHub from './PersonalHub';
 import { FONT_SIZE, SPACE } from '../lib/theme';
 
 const AVATAR_DESKTOP = SPACE[16] * 4;
-const AVATAR_TINY = SPACE[12] * 2;
+const IDENTITY_COLUMNS_NARROW = 'minmax(0, 1fr) minmax(0, 1fr)';
 
 // isAuthConfigured() reads import.meta.env.VITE_SUPABASE_*, which Vitest loads
 // from .env — true on a developer's machine and false in CI. Unmocked, this
@@ -164,28 +164,28 @@ describe('PersonalHub', () => {
     });
   });
 
-  it('gives the greeting the flexible track beside a compact avatar at 375px', () => {
+  it('keeps a natural half-band avatar beside the clamped greeting at 375px', () => {
     setViewportWidth(375);
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.getByTestId('home-identity-row')).toHaveStyle({
-      gridTemplateColumns: `${AVATAR_TINY}px minmax(0, 1fr)`,
+      gridTemplateColumns: IDENTITY_COLUMNS_NARROW,
       gap: `${SPACE[3]}px`,
     });
   });
 
-  it('keeps the compact avatar and flexible greeting track at 320px', () => {
+  it('keeps the avatar balanced with the greeting track at 320px', () => {
     setViewportWidth(320);
     render(<PersonalHub user={user} profile={profile} cefrLevel="a2" score={score} />);
     expect(screen.getByTestId('home-identity-row')).toHaveStyle({
-      gridTemplateColumns: `${AVATAR_TINY}px minmax(0, 1fr)`,
+      gridTemplateColumns: IDENTITY_COLUMNS_NARROW,
       gap: `${SPACE[3]}px`,
     });
   });
 
   // At 320px the old half-band avatar plus level chip left the greeting a
   // measured 77px of track — 36px display type broke "Guten Tag" into three
-  // lines. The compact layout still steps the display face down with the space
-  // it has, the same way Heading size="display" does.
+  // lines. The compact layout stacks the chip and steps the display face down
+  // while the avatar keeps its natural half of the identity band.
   it.each([
     [1280, FONT_SIZE['4xl']],
     [375, FONT_SIZE['2xl']],
@@ -245,6 +245,19 @@ describe('PersonalHub', () => {
       />
     );
     expect(screen.getByTestId('home-identity-row')).toHaveTextContent('today-slot');
+    expect(screen.getByTestId('home-identity-content')).toHaveStyle({
+      width: '100%',
+      maxWidth: '100%',
+      minWidth: '0',
+      boxSizing: 'border-box',
+      flexDirection: 'column',
+    });
+    expect(screen.getByTestId('home-today-column')).toHaveStyle({
+      width: '100%',
+      maxWidth: '100%',
+      minWidth: '0',
+      boxSizing: 'border-box',
+    });
   });
 
   it('renders today and recommended slots inside the same surface', () => {
@@ -367,6 +380,44 @@ describe('PersonalHub', () => {
       });
     }
   );
+
+  it.each([320, 375])('keeps the Top 3 widget in the full-width mobile stack at %spx', (width) => {
+    setViewportWidth(width);
+    render(
+      <PersonalHub
+        user={user}
+        profile={profile}
+        cefrLevel="a2"
+        score={score}
+        today={<div>today-slot</div>}
+        league={{
+          tier: 0,
+          leaders: [
+            {
+              user_id: 'u-leader',
+              handle: 'very-long-fallback-handle-that-must-truncate',
+              weekly_xp: 1234567,
+              profile: {
+                display_name: 'A very long public display name that must truncate',
+                handle: 'very-long-fallback-handle-that-must-truncate',
+                is_private: false,
+              },
+            },
+          ],
+        }}
+      />
+    );
+
+    const widget = screen.getByTestId('home-leaderboard-widget');
+    expect(screen.getByTestId('home-identity-row')).not.toContainElement(widget);
+    expect(widget.parentElement).toHaveStyle({
+      width: '100%',
+      maxWidth: '100%',
+      minWidth: '0',
+      boxSizing: 'border-box',
+      marginTop: `${SPACE[3]}px`,
+    });
+  });
 
   // Decision E5 keeps account MANAGEMENT off Home. The hub is identity +
   // standing, so it must never grow an email, a sign-out or a delete control.

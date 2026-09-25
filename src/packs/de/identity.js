@@ -16,4 +16,10 @@ export const IDENTITY = {
 
   /** Names the level chip for a screen reader, which sees only "A2" otherwise. */
   levelLabel: (level) => `Level ${level}`,
+
+  /** Compact league preview below today's work on Home. */
+  leaderboardTitle: 'Top 3',
+  leaderboardLabel: 'Top 3 leaderboard',
+  leaderboardXp: (xp) => `${Number(xp ?? 0).toLocaleString('en-GB')} XP`,
+  anonymousHandle: '@anonym',
 };

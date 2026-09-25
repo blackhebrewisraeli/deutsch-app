@@ -6,11 +6,10 @@ import {
   LETTER_SPACING,
   SPACE,
   RADIUS,
-  SHADOW,
+  BORDER,
 } from '../../lib/theme';
 import { getDueCount, getMasteredCount, srsKey, MASTERED_BOX } from '../../lib/srs';
 import { activePack } from '../../packs';
-import { bp, useWindowWidth } from '../../lib/useWindowWidth';
 const { decks: PRESET_DECKS } = activePack.content;
 
 const DECK_LABELS = {
@@ -22,7 +21,6 @@ const DECK_LABELS = {
 
 // Section F — SRS overview: due-now count, mastered progress, per-deck bars.
 export default function VocabSrsWidget({ srs, now }) {
-  const tiny = useWindowWidth() < bp.tiny;
   const dueTotal = getDueCount(srs, PRESET_DECKS, now);
   const masteredTotal = getMasteredCount(srs);
   const cardTotal = Object.values(PRESET_DECKS).reduce((sum, deck) => sum + deck.length, 0);
@@ -32,15 +30,13 @@ export default function VocabSrsWidget({ srs, now }) {
       <div
         data-testid="vocab-srs-summary"
         style={{
-          borderRadius: RADIUS.lg,
-          boxShadow: SHADOW.card,
-          background: COLORS.card,
-          padding: tiny ? SPACE[4] : SPACE[6],
           display: 'grid',
-          gridTemplateColumns: 'auto minmax(0, 1fr)',
-          gap: tiny ? SPACE[4] : SPACE[8],
+          gridTemplateColumns: 'minmax(48px, auto) minmax(0, 1fr)',
+          gap: SPACE[2],
           alignItems: 'center',
-          marginBottom: SPACE[4],
+          paddingBottom: SPACE[2],
+          marginBottom: SPACE[2],
+          borderBottom: BORDER.panel,
           minWidth: 0,
         }}
       >
@@ -51,7 +47,7 @@ export default function VocabSrsWidget({ srs, now }) {
               fontSize: FONT_SIZE.tag,
               letterSpacing: LETTER_SPACING.caps,
               color: COLORS.mute,
-              marginBottom: SPACE[2],
+              marginBottom: SPACE[1],
             }}
           >
             DUE NOW
@@ -59,7 +55,7 @@ export default function VocabSrsWidget({ srs, now }) {
           <div
             style={{
               fontFamily: FONTS.display,
-              fontSize: tiny ? FONT_SIZE['5xl'] : FONT_SIZE['6xl'],
+              fontSize: FONT_SIZE['3xl'],
               fontWeight: FONT_WEIGHT.black,
               letterSpacing: LETTER_SPACING.tight,
               lineHeight: 1,
@@ -72,9 +68,9 @@ export default function VocabSrsWidget({ srs, now }) {
             style={{
               fontFamily: FONTS.body,
               fontStyle: 'italic',
-              fontSize: FONT_SIZE.base,
+              fontSize: FONT_SIZE.tag,
               color: COLORS.mute,
-              marginTop: SPACE[2],
+              marginTop: SPACE[1],
             }}
           >
             card{dueTotal === 1 ? '' : 's'}
@@ -88,14 +84,15 @@ export default function VocabSrsWidget({ srs, now }) {
               fontSize: FONT_SIZE.tag,
               letterSpacing: LETTER_SPACING.caps,
               color: COLORS.mute,
-              marginBottom: SPACE[3],
+              marginBottom: SPACE[1],
             }}
           >
             MASTERED · {masteredTotal} OF {cardTotal}
           </div>
           <div
+            data-testid="vocab-mastered-track"
             style={{
-              height: 24,
+              height: 6,
               borderRadius: RADIUS.pill,
               background: COLORS.paperDeep,
               overflow: 'hidden',
@@ -113,7 +110,7 @@ export default function VocabSrsWidget({ srs, now }) {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[3] }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[2] }}>
         {Object.keys(PRESET_DECKS).map((deckId) => {
           const deck = PRESET_DECKS[deckId];
           let mastered = 0;
@@ -132,7 +129,7 @@ export default function VocabSrsWidget({ srs, now }) {
                   justifyContent: 'space-between',
                   marginBottom: SPACE[1],
                   fontFamily: FONTS.mono,
-                  fontSize: FONT_SIZE.sm,
+                  fontSize: FONT_SIZE.tag,
                   color: COLORS.ink,
                 }}
               >
@@ -144,8 +141,9 @@ export default function VocabSrsWidget({ srs, now }) {
                 </span>
               </div>
               <div
+                data-testid="vocab-deck-track"
                 style={{
-                  height: 10,
+                  height: 5,
                   borderRadius: RADIUS.pill,
                   background: COLORS.paperDeep,
                   overflow: 'hidden',

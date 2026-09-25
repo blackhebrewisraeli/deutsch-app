@@ -16,11 +16,18 @@ export default function PerTabBars({ breakdown }) {
   const total = Object.values(breakdown).reduce((a, b) => a + b, 0);
 
   if (total === 0) {
-    return <StatusNote icon={BarChart3}>No exercises recorded yet.</StatusNote>;
+    return (
+      <StatusNote icon={BarChart3} style={{ padding: SPACE[3], gap: SPACE[2] }}>
+        No exercises recorded yet.
+      </StatusNote>
+    );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: SPACE[3] }}>
+    <div
+      data-testid="per-tab-bars"
+      style={{ display: 'flex', flexDirection: 'column', gap: SPACE[2] }}
+    >
       {TABS.map((tab) => {
         const count = breakdown[tab];
         const pct = Math.round((count / max) * 100);
@@ -32,7 +39,7 @@ export default function PerTabBars({ breakdown }) {
                 justifyContent: 'space-between',
                 marginBottom: SPACE[1],
                 fontFamily: FONTS.mono,
-                fontSize: FONT_SIZE.sm,
+                fontSize: FONT_SIZE.tag,
                 color: COLORS.ink,
               }}
             >
@@ -42,8 +49,9 @@ export default function PerTabBars({ breakdown }) {
               </span>
             </div>
             <div
+              data-testid="per-tab-track"
               style={{
-                height: 14,
+                height: 6,
                 borderRadius: RADIUS.pill,
                 background: COLORS.paperDeep,
                 overflow: 'hidden',

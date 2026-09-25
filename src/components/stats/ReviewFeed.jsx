@@ -22,7 +22,11 @@ const REVIEW_BADGE = {
 // (the parent navigates to the right tab + pre-loads the exercise).
 export default function ReviewFeed({ items, onReview }) {
   if (items.length === 0) {
-    return <StatusNote icon={BookOpen}>Nothing to review — keep practicing.</StatusNote>;
+    return (
+      <StatusNote icon={BookOpen} style={{ padding: SPACE[3], gap: SPACE[2] }}>
+        Nothing to review — keep practicing.
+      </StatusNote>
+    );
   }
 
   return (
@@ -48,10 +52,10 @@ export default function ReviewFeed({ items, onReview }) {
             style={{
               display: 'grid',
               gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-              gap: SPACE[4],
+              gap: SPACE[2],
               alignItems: 'center',
               textAlign: 'left',
-              padding: `${SPACE[3]}px ${SPACE[4]}px`,
+              padding: `${SPACE[2]}px ${SPACE[3]}px`,
               background: COLORS.paper,
               border: 'none',
               borderBottom: i < items.length - 1 ? `1px solid ${COLORS.inkA10}` : 'none',
@@ -79,7 +83,7 @@ export default function ReviewFeed({ items, onReview }) {
               <span
                 style={{
                   fontFamily: FONTS.display,
-                  fontSize: FONT_SIZE.lg,
+                  fontSize: FONT_SIZE.base,
                   fontWeight: FONT_WEIGHT.semibold,
                   color: COLORS.ink,
                   display: 'block',
@@ -94,7 +98,7 @@ export default function ReviewFeed({ items, onReview }) {
                 style={{
                   fontFamily: FONTS.body,
                   fontStyle: 'italic',
-                  fontSize: FONT_SIZE.base,
+                  fontSize: FONT_SIZE.sm,
                   color: COLORS.mute,
                   display: 'block',
                   overflow: 'hidden',

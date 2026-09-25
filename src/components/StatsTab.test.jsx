@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import StatsTab from './StatsTab';
 
@@ -68,6 +68,15 @@ vi.mock('../lib/leagues.js', () => ({
   fetchProfile: vi.fn().mockResolvedValue({ handle: 'sam', tier: 0 }),
 }));
 
+const setViewportWidth = (width) => {
+  Object.defineProperty(window, 'innerWidth', {
+    writable: true,
+    configurable: true,
+    value: width,
+  });
+};
+
+beforeEach(() => setViewportWidth(1280));
 afterEach(() => vi.unstubAllEnvs());
 
 describe('StatsTab — one consolidated page, no sub-tabs', () => {
@@ -123,6 +132,36 @@ describe('StatsTab — one consolidated page, no sub-tabs', () => {
     expect(
       standings.compareDocumentPosition(charts) & Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
+  });
+
+  it.each([720, 1280])(
+    'places the compact analytics cards in a desktop mosaic at %spx',
+    (width) => {
+      setViewportWidth(width);
+      render(<StatsTab user={USER} />);
+      expect(screen.getByTestId('profile-analytics-grid')).toHaveStyle({
+        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+      });
+      for (const name of ['By section', 'Accuracy by level', 'Vocab stats']) {
+        expect(screen.getByRole('region', { name })).toBeInTheDocument();
+      }
+      expect(screen.getByRole('region', { name: 'Vocab stats' })).toHaveStyle({
+        gridColumn: '3',
+        gridRow: '2 / span 2',
+      });
+      expect(screen.getByRole('region', { name: /Review/ })).toHaveStyle({
+        gridColumn: '1 / span 2',
+      });
+    }
+  );
+
+  it.each([320, 375, 719])('stacks analytics cards in one bounded column at %spx', (width) => {
+    setViewportWidth(width);
+    render(<StatsTab user={USER} mobile={width < 640} />);
+    expect(screen.getByTestId('profile-analytics-grid')).toHaveStyle({
+      gridTemplateColumns: 'minmax(0, 1fr)',
+      minWidth: '0',
+    });
   });
 
   it('still renders the settings panel on the settings route', () => {

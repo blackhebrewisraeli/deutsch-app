@@ -36,8 +36,21 @@ describe('QuestBoard', () => {
   it('packs each row with compact padding instead of a tile inset', () => {
     render(<QuestBoard quests={[quest()]} />);
     expect(screen.getByRole('button')).toHaveStyle({
-      padding: `${SPACE[2]}px ${SPACE[3]}px`,
+      padding: `${SPACE[1]}px ${SPACE[2]}px`,
     });
+  });
+
+  it('bounds the board and rows inside the parent column', () => {
+    render(<QuestBoard quests={[quest()]} />);
+    const boundary = {
+      width: '100%',
+      maxWidth: '100%',
+      minWidth: '0',
+      boxSizing: 'border-box',
+    };
+    expect(screen.getByRole('region', { name: 'Tagesaufgaben' })).toHaveStyle(boundary);
+    expect(screen.getByRole('button')).toHaveStyle(boundary);
+    expect(screen.getByRole('listitem')).toHaveStyle(boundary);
   });
 
   it('shows progress as a ratio', () => {
@@ -55,7 +68,11 @@ describe('QuestBoard', () => {
       minWidth: '0',
       overflowWrap: 'anywhere',
     });
-    expect(screen.getByTestId('quest-progress')).toHaveStyle({ marginTop: `${SPACE[1]}px` });
+    expect(screen.getByTestId('quest-copy')).toHaveStyle({ lineHeight: '1.3' });
+    expect(screen.getByTestId('quest-progress')).toHaveStyle({
+      marginTop: '0',
+      lineHeight: '1.2',
+    });
   });
 
   it('names the destination for a screen reader, since the ratio is aria-hidden', () => {

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
+import { SPACE } from '../../lib/theme';
 import Heatmap, { HeatmapLegend } from './Heatmap';
 
 const day = (date, total, intensity) => ({ date, total, intensity });
@@ -24,6 +25,19 @@ describe('Heatmap', () => {
     const data = Array.from({ length: 7 }, (_, i) => day(`2026-06-0${i + 1}`, 1, 1));
     const { container } = render(<Heatmap data={data} mobile={false} />);
     expect(container.firstChild.children).toHaveLength(7);
+  });
+
+  it.each([
+    [false, 8],
+    [true, 7],
+  ])('uses compact cells when mobile is %s', (mobile, size) => {
+    render(<Heatmap data={[day('2026-06-01', 1, 1)]} mobile={mobile} />);
+    expect(screen.getByTestId('activity-heatmap')).toHaveStyle({
+      gridTemplateRows: `repeat(7, ${size}px)`,
+      gridAutoColumns: `${size}px`,
+      gap: '1px',
+      paddingBottom: `${SPACE[1]}px`,
+    });
   });
 });
 

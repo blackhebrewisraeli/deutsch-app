@@ -26,44 +26,24 @@ describe('LeagueBadge — the one league display', () => {
     expect(screen.getByTestId('league-badge-tier')).toHaveTextContent('Bronze');
   });
 
-  it('states the standing when there is one, in both variants', () => {
+  it('shows only the league name even when callers have standing data', () => {
     const { rerender } = render(<LeagueBadge tier={1} rank={4} cohortSize={25} />);
-    expect(screen.getByTestId('profile-league')).toHaveTextContent('Platz 4 / 25');
+    expect(screen.getByTestId('profile-league')).toHaveTextContent('Silver');
+    expect(screen.getByTestId('profile-league')).not.toHaveTextContent(/4|25|Platz/);
 
     rerender(<LeagueBadge variant="compact" tier={1} rank={4} cohortSize={25} />);
-    expect(screen.getByTestId('league-badge-compact')).toHaveTextContent('#4/25');
+    expect(screen.getByTestId('league-badge-compact')).toHaveTextContent('Silver');
+    expect(screen.getByTestId('league-badge-compact')).not.toHaveTextContent(/4|25|#/);
   });
 
-  it('omits the standing rather than printing a zeroth place', () => {
-    // rank is DERIVED from a findIndex, so "not in the list" arrives as 0 —
-    // not as a missing prop. "Platz 0 / 25" is worse than no standing at all.
-    const { rerender } = render(<LeagueBadge tier={1} rank={0} cohortSize={25} />);
-    expect(screen.getByTestId('profile-league')).not.toHaveTextContent(/Platz/);
-
-    rerender(<LeagueBadge tier={1} rank={null} cohortSize={null} />);
-    expect(screen.getByTestId('profile-league')).not.toHaveTextContent(/Platz/);
-  });
-
-  it('carries the standing in the compact variant’s accessible name', () => {
-    // The pill's own text is aria-hidden: "#4/25" beside a shield is legible
-    // as a position on screen and meaningless read aloud. A screen reader
-    // announcing only the tier would be told the league and not the standing,
-    // which is the half that changes during the week.
+  it('names only the league in the compact variant’s accessible name', () => {
     render(<LeagueBadge variant="compact" tier={2} rank={4} cohortSize={25} />);
-    expect(screen.getByLabelText('Gold League, Platz 4 von 25')).toBeInTheDocument();
+    expect(screen.getByLabelText('Gold League')).toBeInTheDocument();
   });
 
   it('names the league alone when the compact badge has no standing', () => {
     render(<LeagueBadge variant="compact" tier={0} />);
     expect(screen.getByLabelText('Bronze League')).toBeInTheDocument();
-  });
-
-  it('phrases the win line for zero wins without printing a zero', () => {
-    const { rerender } = render(<LeagueBadge tier={0} wins={0} />);
-    expect(screen.getByTestId('profile-league')).toHaveTextContent('Noch kein Ligasieg');
-
-    rerender(<LeagueBadge tier={0} wins={3} />);
-    expect(screen.getByTestId('profile-league')).toHaveTextContent('3 Ligasiege');
   });
 
   it('gives the compact variant no card chrome of its own', () => {

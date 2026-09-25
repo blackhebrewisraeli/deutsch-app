@@ -78,12 +78,7 @@ describe('UserProfile — the consolidated profile page', () => {
     expect(metrics).toHaveTextContent(/B1/i);
   });
 
-  // Two rhythms meet on this page: the identity blocks sit SPACE[5] apart
-  // because they are one group, while the sections inside `children` sit
-  // SPACE[8] apart. Measured in a browser, the step INTO the analytics region
-  // was 20px — smaller than the 32px steps within it — so the charts read as
-  // one more identity block rather than as a new region.
-  it('steps into the secondary region by at least as much as that region steps internally', async () => {
+  it('uses the profile grid gap as the complete analytics boundary', async () => {
     render(
       <UserProfile user={USER} local={local}>
         <div data-testid="charts">charts</div>
@@ -93,9 +88,7 @@ describe('UserProfile — the consolidated profile page', () => {
 
     const secondary = screen.getByTestId('profile-secondary');
     expect(secondary).toContainElement(screen.getByTestId('charts'));
-    // The grid's own SPACE[5] plus this margin is the boundary a reader sees.
-    expect(secondary.style.marginTop).toBe(`${SPACE[3]}px`);
-    expect(SPACE[5] + SPACE[3]).toBe(SPACE[8]);
+    expect(secondary.style.marginTop).toBe('');
   });
 
   // The tallest thing on the page, and the one the tab is named after.
@@ -252,7 +245,7 @@ describe('UserProfile — the consolidated profile page', () => {
       board.onLeague({ tier: 1, leagueId: 'L1', rank: 4, cohortSize: 25 });
     });
     expect(screen.getByTestId('league-badge-tier')).toHaveTextContent('Silver');
-    expect(screen.getByTestId('profile-league')).toHaveTextContent('Platz 4 / 25');
+    expect(screen.getByTestId('profile-league')).not.toHaveTextContent(/Platz|4|25/);
   });
 
   it('falls back to Bronze when neither source has a tier', async () => {
@@ -336,9 +329,9 @@ describe('UserProfile — the consolidated profile page', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(ANONYMOUS_NAME);
     expect(container).not.toHaveTextContent('@sam');
     expect(container).not.toHaveTextContent(/Mitglied seit/);
-    // Tier falls back to 0 and the win line to its empty phrasing — the row
-    // is absent, so there is nothing to count.
-    expect(screen.getByTestId('profile-league')).toHaveTextContent('Noch kein Ligasieg');
+    // Tier falls back to 0; the badge carries no inferred rank or win count.
+    expect(screen.getByTestId('profile-league')).toHaveTextContent('Bronze');
+    expect(screen.getByTestId('profile-league')).not.toHaveTextContent(/Platz|Ligasieg|\d/);
     expect(screen.getByTestId('league-badge-tier')).toHaveTextContent('Bronze');
     // The local numbers are from localStorage and are still true.
     const metrics = screen.getByTestId('profile-metrics');
