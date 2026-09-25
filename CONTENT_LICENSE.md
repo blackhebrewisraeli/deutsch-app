@@ -18,3 +18,11 @@ Word-frequency ordering is derived from the Leipzig Corpora Collection
 (https://wortschatz.uni-leipzig.de), licensed **CC BY**.
 
 Attribution is also surfaced in-app in the vocabulary section.
+
+## Wikivoyage — CC BY-SA 4.0
+The German/English phrase pairs in `scripts/seed-data/apify_raw_sentences.json`
+are derived from the Wikivoyage "German phrasebook"
+(https://en.wikivoyage.org/wiki/German_phrasebook, revision 5347078; authors in
+the page history), licensed **CC BY-SA 4.0**
+(https://creativecommons.org/licenses/by-sa/4.0/). This is seed data and not yet
+shown in-app; give it in-app attribution like the lexicon's when it ships.
