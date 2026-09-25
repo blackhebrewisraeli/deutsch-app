@@ -1,0 +1,1310 @@
+[
+  {
+    "de": "Offen",
+    "en": "Open"
+  },
+  {
+    "de": "Geschlossen",
+    "en": "Closed"
+  },
+  {
+    "de": "Eingang",
+    "en": "Entrance"
+  },
+  {
+    "de": "Ausgang",
+    "en": "Exit"
+  },
+  {
+    "de": "Drücken",
+    "en": "Push"
+  },
+  {
+    "de": "Ziehen",
+    "en": "Pull"
+  },
+  {
+    "de": "WC",
+    "en": "Toilet"
+  },
+  {
+    "de": "Herren",
+    "en": "Men"
+  },
+  {
+    "de": "Damen",
+    "en": "Women"
+  },
+  {
+    "de": "Verboten",
+    "en": "Forbidden"
+  },
+  {
+    "de": "Behinderte",
+    "en": "Disabled"
+  },
+  {
+    "de": "Notausgang",
+    "en": "Emergency exit"
+  },
+  {
+    "de": "Vorfahrt gewähren!",
+    "en": "Yield / give way"
+  },
+  {
+    "de": "Essen Sie gern Wurst?",
+    "en": "Do you like eating sausages?"
+  },
+  {
+    "de": "Ja, ich esse gern Wurst.",
+    "en": "Yes, I like eating sausages."
+  },
+  {
+    "de": "Essen Sie nicht gern Wurst?",
+    "en": "Don't you like eating sausages?"
+  },
+  {
+    "de": "Doch, ich esse gern Wurst.",
+    "en": "Yes, I do like eating sausages. (contradicting a negative question)"
+  },
+  {
+    "de": "Guten Tag.",
+    "en": "Good day (formal)"
+  },
+  {
+    "de": "Hallo.",
+    "en": "Hello (informal)"
+  },
+  {
+    "de": "Wie geht's?",
+    "en": "How are you? (informal)"
+  },
+  {
+    "de": "Wie geht es Ihnen?",
+    "en": "How are you? (formal)"
+  },
+  {
+    "de": "Gut, danke.",
+    "en": "Fine, thank you."
+  },
+  {
+    "de": "Wie heißen Sie?",
+    "en": "What is your name? (formal)"
+  },
+  {
+    "de": "Wie heißt du?",
+    "en": "What is your name? (informal)"
+  },
+  {
+    "de": "Nett, Sie kennen zu lernen.",
+    "en": "Nice to meet you. (formal)"
+  },
+  {
+    "de": "Nett, dich kennen zu lernen.",
+    "en": "Nice to meet you. (informal)"
+  },
+  {
+    "de": "Bitte.",
+    "en": "Please."
+  },
+  {
+    "de": "Danke schön.",
+    "en": "Thank you."
+  },
+  {
+    "de": "Danke.",
+    "en": "Thanks."
+  },
+  {
+    "de": "Bitte schön!",
+    "en": "You're welcome."
+  },
+  {
+    "de": "Ja.",
+    "en": "Yes."
+  },
+  {
+    "de": "Nein.",
+    "en": "No."
+  },
+  {
+    "de": "Entschuldigen Sie.",
+    "en": "Excuse me. (getting attention)"
+  },
+  {
+    "de": "Entschuldigung.",
+    "en": "Excuse me. (begging pardon)"
+  },
+  {
+    "de": "Es tut mir leid.",
+    "en": "I'm sorry."
+  },
+  {
+    "de": "Auf Wiedersehen.",
+    "en": "Goodbye"
+  },
+  {
+    "de": "Tschüss",
+    "en": "Goodbye (informal)"
+  },
+  {
+    "de": "Ich habe dich lieb.",
+    "en": "I love you (familial/platonic)"
+  },
+  {
+    "de": "Ich liebe dich.",
+    "en": "I love you (romantic)"
+  },
+  {
+    "de": "Sprechen Sie Englisch?",
+    "en": "Do you speak English? (formal)"
+  },
+  {
+    "de": "Gibt es hier jemanden, der Englisch spricht?",
+    "en": "Is there someone here who speaks English?"
+  },
+  {
+    "de": "Hilfe!",
+    "en": "Help!"
+  },
+  {
+    "de": "Guten Morgen.",
+    "en": "Good morning."
+  },
+  {
+    "de": "Guten Abend.",
+    "en": "Good evening."
+  },
+  {
+    "de": "Gute Nacht.",
+    "en": "Good night (to sleep)"
+  },
+  {
+    "de": "Ich verstehe das nicht.",
+    "en": "I don't understand."
+  },
+  {
+    "de": "Wo ist die Toilette, bitte?",
+    "en": "Where is the toilet, please?"
+  },
+  {
+    "de": "Gerne",
+    "en": "With pleasure."
+  },
+  {
+    "de": "Ich rufe die Polizei.",
+    "en": "I'll call the police."
+  },
+  {
+    "de": "Polizei!",
+    "en": "Police!"
+  },
+  {
+    "de": "Halt! Ein Dieb!",
+    "en": "Stop! Thief!"
+  },
+  {
+    "de": "Das ist ein Notfall.",
+    "en": "It's an emergency."
+  },
+  {
+    "de": "Ich habe mich verirrt.",
+    "en": "I'm lost."
+  },
+  {
+    "de": "Ich habe meine Tasche verloren.",
+    "en": "I lost my bag."
+  },
+  {
+    "de": "Ich habe meinen Geldbeutel verloren.",
+    "en": "I lost my wallet."
+  },
+  {
+    "de": "Ich bin krank.",
+    "en": "I'm sick."
+  },
+  {
+    "de": "Ich bin verletzt.",
+    "en": "I've been injured."
+  },
+  {
+    "de": "Ich brauche einen Arzt.",
+    "en": "I need a doctor."
+  },
+  {
+    "de": "der Körper",
+    "en": "Body"
+  },
+  {
+    "de": "die Nase",
+    "en": "Nose"
+  },
+  {
+    "de": "das Gesicht",
+    "en": "Face"
+  },
+  {
+    "de": "der Kopf",
+    "en": "Head"
+  },
+  {
+    "de": "der Hals",
+    "en": "Neck or throat"
+  },
+  {
+    "de": "die Brust",
+    "en": "Chest"
+  },
+  {
+    "de": "der Bauch",
+    "en": "Abdomen"
+  },
+  {
+    "de": "die Taille",
+    "en": "Hip/Waist"
+  },
+  {
+    "de": "das Gesäß",
+    "en": "Buttocks or posterior"
+  },
+  {
+    "de": "der Rücken",
+    "en": "Back"
+  },
+  {
+    "de": "links",
+    "en": "left"
+  },
+  {
+    "de": "Krankenschwester",
+    "en": "Nurse"
+  },
+  {
+    "de": "Krankenhaus",
+    "en": "Hospital"
+  },
+  {
+    "de": "Medizin",
+    "en": "Medicine"
+  },
+  {
+    "de": "Notaufnahme",
+    "en": "Emergency room (ER)/Accident and Emergency (A&E)"
+  },
+  {
+    "de": "Apotheke",
+    "en": "Pharmacy/drugstore/chemists"
+  },
+  {
+    "de": "schmerzhaft",
+    "en": "Painful"
+  },
+  {
+    "de": "krank",
+    "en": "Sick/uncomfortable"
+  },
+  {
+    "de": "juckend",
+    "en": "Itchy/ticklish"
+  },
+  {
+    "de": "geschwollen",
+    "en": "Swollen"
+  },
+  {
+    "de": "wund",
+    "en": "Sore"
+  },
+  {
+    "de": "blutend",
+    "en": "Bleeding"
+  },
+  {
+    "de": "schwindelig",
+    "en": "Dizzy"
+  },
+  {
+    "de": "Fieber",
+    "en": "Fever"
+  },
+  {
+    "de": "husten",
+    "en": "Cough"
+  },
+  {
+    "de": "niesen",
+    "en": "Sneeze"
+  },
+  {
+    "de": "Durchfall",
+    "en": "Diarrhea"
+  },
+  {
+    "de": "Grippe",
+    "en": "Cold/flu"
+  },
+  {
+    "de": "Wunde",
+    "en": "Cut/wound"
+  },
+  {
+    "de": "Brandwunde",
+    "en": "Burn"
+  },
+  {
+    "de": "Knochenbruch",
+    "en": "Bone fracture"
+  },
+  {
+    "de": "null",
+    "en": "0"
+  },
+  {
+    "de": "eins",
+    "en": "1"
+  },
+  {
+    "de": "zwei",
+    "en": "2"
+  },
+  {
+    "de": "drei",
+    "en": "3"
+  },
+  {
+    "de": "vier",
+    "en": "4"
+  },
+  {
+    "de": "fünf",
+    "en": "5"
+  },
+  {
+    "de": "sechs",
+    "en": "6"
+  },
+  {
+    "de": "sieben",
+    "en": "7"
+  },
+  {
+    "de": "acht",
+    "en": "8"
+  },
+  {
+    "de": "neun",
+    "en": "9"
+  },
+  {
+    "de": "zehn",
+    "en": "10"
+  },
+  {
+    "de": "elf",
+    "en": "11"
+  },
+  {
+    "de": "zwölf",
+    "en": "12"
+  },
+  {
+    "de": "dreizehn",
+    "en": "13"
+  },
+  {
+    "de": "vierzehn",
+    "en": "14"
+  },
+  {
+    "de": "fünfzehn",
+    "en": "15"
+  },
+  {
+    "de": "sechzehn",
+    "en": "16"
+  },
+  {
+    "de": "siebzehn",
+    "en": "17"
+  },
+  {
+    "de": "achtzehn",
+    "en": "18"
+  },
+  {
+    "de": "neunzehn",
+    "en": "19"
+  },
+  {
+    "de": "zwanzig",
+    "en": "20"
+  },
+  {
+    "de": "einundzwanzig",
+    "en": "21"
+  },
+  {
+    "de": "zweiundzwanzig",
+    "en": "22"
+  },
+  {
+    "de": "dreiundzwanzig",
+    "en": "23"
+  },
+  {
+    "de": "dreißig",
+    "en": "30"
+  },
+  {
+    "de": "vierzig",
+    "en": "40"
+  },
+  {
+    "de": "fünfzig",
+    "en": "50"
+  },
+  {
+    "de": "sechzig",
+    "en": "60"
+  },
+  {
+    "de": "siebzig",
+    "en": "70"
+  },
+  {
+    "de": "achtzig",
+    "en": "80"
+  },
+  {
+    "de": "neunzig",
+    "en": "90"
+  },
+  {
+    "de": "zweihundert",
+    "en": "200"
+  },
+  {
+    "de": "dreihundert",
+    "en": "300"
+  },
+  {
+    "de": "zweitausend",
+    "en": "2000"
+  },
+  {
+    "de": "eine Million",
+    "en": "1,000,000"
+  },
+  {
+    "de": "eine Milliarde",
+    "en": "1,000,000,000"
+  },
+  {
+    "de": "eine Billion",
+    "en": "1,000,000,000,000"
+  },
+  {
+    "de": "halb",
+    "en": "half"
+  },
+  {
+    "de": "die Hälfte",
+    "en": "the half"
+  },
+  {
+    "de": "weniger",
+    "en": "less"
+  },
+  {
+    "de": "mehr",
+    "en": "more"
+  },
+  {
+    "de": "jetzt",
+    "en": "now"
+  },
+  {
+    "de": "später",
+    "en": "later"
+  },
+  {
+    "de": "vor",
+    "en": "before"
+  },
+  {
+    "de": "Morgen",
+    "en": "morning"
+  },
+  {
+    "de": "morgens",
+    "en": "in the morning"
+  },
+  {
+    "de": "morgen früh",
+    "en": "tomorrow morning"
+  },
+  {
+    "de": "Nachmittag",
+    "en": "afternoon"
+  },
+  {
+    "de": "nachmittags",
+    "en": "in the afternoon"
+  },
+  {
+    "de": "Abend",
+    "en": "evening"
+  },
+  {
+    "de": "abends",
+    "en": "in the evening"
+  },
+  {
+    "de": "Nacht",
+    "en": "night"
+  },
+  {
+    "de": "nachts",
+    "en": "in the night"
+  },
+  {
+    "de": "ein Uhr",
+    "en": "one o'clock AM (01:00)"
+  },
+  {
+    "de": "zwei Uhr",
+    "en": "two o'clock AM (02:00)"
+  },
+  {
+    "de": "dreizehn Uhr",
+    "en": "one o'clock PM (13:00)"
+  },
+  {
+    "de": "vierzehn Uhr",
+    "en": "two o'clock PM (14:00)"
+  },
+  {
+    "de": "Wie spät ist es?",
+    "en": "What time is it?"
+  },
+  {
+    "de": "heute",
+    "en": "today"
+  },
+  {
+    "de": "vorgestern",
+    "en": "the day before yesterday"
+  },
+  {
+    "de": "gestern",
+    "en": "yesterday"
+  },
+  {
+    "de": "übermorgen",
+    "en": "the day after tomorrow"
+  },
+  {
+    "de": "diese Woche",
+    "en": "this week"
+  },
+  {
+    "de": "letzte Woche",
+    "en": "last week"
+  },
+  {
+    "de": "vorletzte Woche",
+    "en": "the week before last week"
+  },
+  {
+    "de": "nächste Woche",
+    "en": "next week"
+  },
+  {
+    "de": "übernächste Woche",
+    "en": "the week after next week"
+  },
+  {
+    "de": "Montag",
+    "en": "Monday"
+  },
+  {
+    "de": "Dienstag",
+    "en": "Tuesday"
+  },
+  {
+    "de": "Mittwoch",
+    "en": "Wednesday"
+  },
+  {
+    "de": "Donnerstag",
+    "en": "Thursday"
+  },
+  {
+    "de": "Freitag",
+    "en": "Friday"
+  },
+  {
+    "de": "Samstag",
+    "en": "Saturday"
+  },
+  {
+    "de": "Sonntag",
+    "en": "Sunday"
+  },
+  {
+    "de": "Januar",
+    "en": "January"
+  },
+  {
+    "de": "Februar",
+    "en": "February"
+  },
+  {
+    "de": "März",
+    "en": "March"
+  },
+  {
+    "de": "April",
+    "en": "April"
+  },
+  {
+    "de": "Mai",
+    "en": "May"
+  },
+  {
+    "de": "Juni",
+    "en": "June"
+  },
+  {
+    "de": "Juli",
+    "en": "July"
+  },
+  {
+    "de": "August",
+    "en": "August"
+  },
+  {
+    "de": "September",
+    "en": "September"
+  },
+  {
+    "de": "Oktober",
+    "en": "October"
+  },
+  {
+    "de": "November",
+    "en": "November"
+  },
+  {
+    "de": "Dezember",
+    "en": "December"
+  },
+  {
+    "de": "schwarz",
+    "en": "black"
+  },
+  {
+    "de": "weiß",
+    "en": "white"
+  },
+  {
+    "de": "grau",
+    "en": "gray"
+  },
+  {
+    "de": "rot",
+    "en": "red"
+  },
+  {
+    "de": "blau",
+    "en": "blue"
+  },
+  {
+    "de": "gelb",
+    "en": "yellow"
+  },
+  {
+    "de": "grün",
+    "en": "green"
+  },
+  {
+    "de": "orange",
+    "en": "orange"
+  },
+  {
+    "de": "purpurrot",
+    "en": "purple"
+  },
+  {
+    "de": "rosa",
+    "en": "pink"
+  },
+  {
+    "de": "braun",
+    "en": "brown"
+  },
+  {
+    "de": "silber",
+    "en": "silver"
+  },
+  {
+    "de": "gold",
+    "en": "gold"
+  },
+  {
+    "de": "Bahnhof",
+    "en": "train station/bus terminal"
+  },
+  {
+    "de": "Hauptbahnhof",
+    "en": "main train station"
+  },
+  {
+    "de": "Haltestelle",
+    "en": "bus/tram stop"
+  },
+  {
+    "de": "Gleis",
+    "en": "platform"
+  },
+  {
+    "de": "Straße",
+    "en": "street, road"
+  },
+  {
+    "de": "rechts",
+    "en": "right"
+  },
+  {
+    "de": "Links abbiegen.",
+    "en": "Turn left."
+  },
+  {
+    "de": "Rechts abbiegen.",
+    "en": "Turn right."
+  },
+  {
+    "de": "geradeaus",
+    "en": "straight ahead"
+  },
+  {
+    "de": "Kreuzung",
+    "en": "intersection"
+  },
+  {
+    "de": "Kurve",
+    "en": "bend"
+  },
+  {
+    "de": "Steigung",
+    "en": "slope"
+  },
+  {
+    "de": "Ampel",
+    "en": "traffic lights"
+  },
+  {
+    "de": "Kreisverkehr",
+    "en": "roundabout"
+  },
+  {
+    "de": "Autobahn",
+    "en": "motorway"
+  },
+  {
+    "de": "Bahn",
+    "en": "railway"
+  },
+  {
+    "de": "Bahnübergang",
+    "en": "level crossing"
+  },
+  {
+    "de": "Brücke",
+    "en": "bridge"
+  },
+  {
+    "de": "Norden",
+    "en": "north"
+  },
+  {
+    "de": "Süden",
+    "en": "south"
+  },
+  {
+    "de": "Osten",
+    "en": "east"
+  },
+  {
+    "de": "Westen",
+    "en": "west"
+  },
+  {
+    "de": "bergauf",
+    "en": "uphill"
+  },
+  {
+    "de": "bergab",
+    "en": "downhill"
+  },
+  {
+    "de": "gegenüber",
+    "en": "opposite"
+  },
+  {
+    "de": "entlang",
+    "en": "along"
+  },
+  {
+    "de": "Bringen Sie mich bitte dahin.",
+    "en": "Take me there, please."
+  },
+  {
+    "de": "Sind noch Zimmer frei?",
+    "en": "Do you have any rooms available?"
+  },
+  {
+    "de": "Kann ich das Zimmer erstmal sehen?",
+    "en": "May I see the room first?"
+  },
+  {
+    "de": "OK, ich nehme es.",
+    "en": "OK, I'll take it."
+  },
+  {
+    "de": "Können Sie mir ein anderes Hotel empfehlen?",
+    "en": "Can you suggest another hotel?"
+  },
+  {
+    "de": "Haben Sie einen Safe?",
+    "en": "Do you have a safe?"
+  },
+  {
+    "de": "Würden Sie bitte mein Zimmer saubermachen?",
+    "en": "Please clean my room."
+  },
+  {
+    "de": "Ich möchte auschecken.",
+    "en": "I would like to check out."
+  },
+  {
+    "de": "Nehmen Sie britische Pfund an?",
+    "en": "Do you accept British pounds?"
+  },
+  {
+    "de": "Kann ich mit Kreditkarte zahlen?",
+    "en": "Do you accept credit cards?"
+  },
+  {
+    "de": "Können Sie mir Geld wechseln?",
+    "en": "Can you change money for me?"
+  },
+  {
+    "de": "Wo kann ich Geld wechseln?",
+    "en": "Where can I get money changed?"
+  },
+  {
+    "de": "Wie ist der Wechselkurs?",
+    "en": "What is the exchange rate?"
+  },
+  {
+    "de": "Wo ist ein Geldautomat?",
+    "en": "Where is an automatic teller machine (ATM)?"
+  },
+  {
+    "de": "salzig",
+    "en": "Salty"
+  },
+  {
+    "de": "sauer",
+    "en": "Sour"
+  },
+  {
+    "de": "süß",
+    "en": "Sweet"
+  },
+  {
+    "de": "scharf",
+    "en": "Spicy"
+  },
+  {
+    "de": "bitter",
+    "en": "Bitter"
+  },
+  {
+    "de": "lecker",
+    "en": "Delicious"
+  },
+  {
+    "de": "fade",
+    "en": "Tasteless"
+  },
+  {
+    "de": "kalt",
+    "en": "Cold"
+  },
+  {
+    "de": "kühl",
+    "en": "Cool"
+  },
+  {
+    "de": "warm",
+    "en": "Warm"
+  },
+  {
+    "de": "heiß",
+    "en": "Hot (temperature)"
+  },
+  {
+    "de": "Könnte ich das Essen mitnehmen?",
+    "en": "Can I have the meal as a takeaway?"
+  },
+  {
+    "de": "Ich hätte gerne die Speisekarte.",
+    "en": "Can I look at the menu, please?"
+  },
+  {
+    "de": "Gibt es eine Spezialität des Hauses?",
+    "en": "Is there a house specialty?"
+  },
+  {
+    "de": "Gibt es eine Spezialität aus dieser Gegend?",
+    "en": "Is there a local specialty?"
+  },
+  {
+    "de": "Ich esse kein Schweinefleisch.",
+    "en": "I don't eat pork."
+  },
+  {
+    "de": "Ich esse nur koscher.",
+    "en": "I only eat kosher food."
+  },
+  {
+    "de": "Könnten Sie es bitte nicht so fettig machen?",
+    "en": "Can you make it \"light\", please? (less oil/butter/lard)"
+  },
+  {
+    "de": "Tagesessen",
+    "en": "fixed-price meal"
+  },
+  {
+    "de": "a la carte",
+    "en": "à la carte"
+  },
+  {
+    "de": "Frühstück",
+    "en": "breakfast"
+  },
+  {
+    "de": "Mittagessen",
+    "en": "lunch"
+  },
+  {
+    "de": "Hähnchen",
+    "en": "chicken"
+  },
+  {
+    "de": "Rindfleisch",
+    "en": "beef"
+  },
+  {
+    "de": "Fisch",
+    "en": "fish"
+  },
+  {
+    "de": "Schinken",
+    "en": "ham"
+  },
+  {
+    "de": "Wurst",
+    "en": "sausage"
+  },
+  {
+    "de": "Sauerkraut",
+    "en": "pickled cabbage"
+  },
+  {
+    "de": "Käse",
+    "en": "cheese"
+  },
+  {
+    "de": "Eier",
+    "en": "eggs"
+  },
+  {
+    "de": "Salat",
+    "en": "salad"
+  },
+  {
+    "de": "Kartoffeln",
+    "en": "potatoes"
+  },
+  {
+    "de": "Spargel",
+    "en": "asparagus"
+  },
+  {
+    "de": "Tomate",
+    "en": "tomato"
+  },
+  {
+    "de": "Brot",
+    "en": "bread"
+  },
+  {
+    "de": "Toast",
+    "en": "toast"
+  },
+  {
+    "de": "Brötchen",
+    "en": "rolls"
+  },
+  {
+    "de": "Nudeln",
+    "en": "noodles"
+  },
+  {
+    "de": "Reis",
+    "en": "rice"
+  },
+  {
+    "de": "Bohnen",
+    "en": "beans"
+  },
+  {
+    "de": "Kuchen",
+    "en": "cake"
+  },
+  {
+    "de": "Kaffee",
+    "en": "coffee"
+  },
+  {
+    "de": "Tee",
+    "en": "tea (drink)"
+  },
+  {
+    "de": "Saft",
+    "en": "juice"
+  },
+  {
+    "de": "Leitungswasser",
+    "en": "water (tap)"
+  },
+  {
+    "de": "Bier",
+    "en": "beer"
+  },
+  {
+    "de": "Salz",
+    "en": "salt"
+  },
+  {
+    "de": "Pfeffer",
+    "en": "black pepper"
+  },
+  {
+    "de": "Butter",
+    "en": "butter"
+  },
+  {
+    "de": "Ich bin fertig.",
+    "en": "I'm finished."
+  },
+  {
+    "de": "Würden Sie bitte abräumen?",
+    "en": "Please clear the plates."
+  },
+  {
+    "de": "Zahlen, bitte.",
+    "en": "The check, please."
+  },
+  {
+    "de": "Stimmt so!",
+    "en": "Keep the change"
+  },
+  {
+    "de": "Haben Sie alkoholische Getränke?",
+    "en": "Do you serve alcohol?"
+  },
+  {
+    "de": "Kommt eine Bedienung zum Tisch?",
+    "en": "Is there table service?"
+  },
+  {
+    "de": "Eine Halbe, bitte.",
+    "en": "Half a liter, please. (of beer)"
+  },
+  {
+    "de": "Eine Flasche, bitte.",
+    "en": "A bottle, please."
+  },
+  {
+    "de": "Bitte eine Cola mit Rum.",
+    "en": "Rum and coke, please."
+  },
+  {
+    "de": "Whiskey",
+    "en": "whiskey"
+  },
+  {
+    "de": "Wodka",
+    "en": "vodka"
+  },
+  {
+    "de": "Rum",
+    "en": "rum"
+  },
+  {
+    "de": "Wasser",
+    "en": "water"
+  },
+  {
+    "de": "Cola",
+    "en": "Coke (soda)"
+  },
+  {
+    "de": "Noch eine Runde, bitte.",
+    "en": "Another round, please."
+  },
+  {
+    "de": "Wann schließen Sie?",
+    "en": "When is closing time?"
+  },
+  {
+    "de": "Haben Sie das in meiner Größe?",
+    "en": "Do you have this in my size?"
+  },
+  {
+    "de": "Was kostet das?",
+    "en": "How much is this?"
+  },
+  {
+    "de": "Das ist zu teuer.",
+    "en": "That's too expensive."
+  },
+  {
+    "de": "teuer",
+    "en": "expensive"
+  },
+  {
+    "de": "Ich kann es mir nicht leisten.",
+    "en": "I can't afford it."
+  },
+  {
+    "de": "Ich will es nicht.",
+    "en": "I don't want it."
+  },
+  {
+    "de": "Ich weiß, dass das nicht der normale Preis ist.",
+    "en": "I know that this is not the regular price."
+  },
+  {
+    "de": "Sie wollen mich abzocken.",
+    "en": "You're cheating me."
+  },
+  {
+    "de": "Ich habe kein Interesse.",
+    "en": "I'm not interested."
+  },
+  {
+    "de": "Kann ich eine Tüte haben?",
+    "en": "Can I have a bag?"
+  },
+  {
+    "de": "Ich möchte ein Auto mieten.",
+    "en": "I want to rent a car."
+  },
+  {
+    "de": "Kann ich es versichern lassen?",
+    "en": "Can I get insurance?"
+  },
+  {
+    "de": "stop",
+    "en": "stop (on a street sign)"
+  },
+  {
+    "de": "Einbahnstraße",
+    "en": "one way"
+  },
+  {
+    "de": "Ausfahrt",
+    "en": "exit (on highway)"
+  },
+  {
+    "de": "Parkverbot",
+    "en": "no parking"
+  },
+  {
+    "de": "Geschwindigkeitsbeschränkung",
+    "en": "speed limit"
+  },
+  {
+    "de": "Tankstelle",
+    "en": "gas (petrol) station"
+  },
+  {
+    "de": "Benzin",
+    "en": "petrol"
+  },
+  {
+    "de": "Benzin bleifrei",
+    "en": "unleaded petrol"
+  },
+  {
+    "de": "Diesel",
+    "en": "diesel"
+  },
+  {
+    "de": "Maut",
+    "en": "toll"
+  },
+  {
+    "de": "Regierung",
+    "en": "government"
+  },
+  {
+    "de": "Büro",
+    "en": "office"
+  },
+  {
+    "de": "Amt",
+    "en": "department"
+  },
+  {
+    "de": "Gesetz",
+    "en": "law"
+  },
+  {
+    "de": "Ich habe nichts getan.",
+    "en": "I haven't done anything."
+  },
+  {
+    "de": "Das war ein Missverständnis.",
+    "en": "It was a misunderstanding."
+  },
+  {
+    "de": "Wohin bringen Sie mich?",
+    "en": "Where are you taking me?"
+  },
+  {
+    "de": "Bin ich verhaftet?",
+    "en": "Am I under arrest?"
+  },
+  {
+    "de": "Ich brauche einen professionellen Übersetzer.",
+    "en": "I need a professional translator."
+  },
+  {
+    "de": "Ich will mit einem Anwalt sprechen.",
+    "en": "I want to talk to a lawyer."
+  },
+  {
+    "de": "Kann ich jetzt einfach eine Strafe zahlen?",
+    "en": "Can I just pay a fine now?"
+  },
+  {
+    "de": "Auf Grundlage welchen Gesetzes werde ich angeklagt?",
+    "en": "Based on which article of a law will I be prosecuted?"
+  }
+]
