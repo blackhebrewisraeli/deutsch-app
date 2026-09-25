@@ -26,10 +26,14 @@ const EVENT_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$
 /**
  * Per-event cap on the league-XP pipe (`counters.bonusXp` → `xpForDay` →
  * `weekly_xp`). It bounds ONE request, not the lane: at 60 requests per 5
- * minutes a caller can still push far more than any real week's XP. The real
- * limit on abuse is that a signed-in user can already write their own
- * `stats_daily` row directly through RLS, so this endpoint grants no capability
- * they did not have. Do not describe this as league protection.
+ * minutes a caller can still push far more than any real week's XP.
+ *
+ * Since 20260925120000 the browser can no longer write `stats_daily` directly,
+ * so this endpoint is the ONLY user-reachable writer and this cap is the whole
+ * per-event bound. A real answer's bonus is at most ~20 (10 XP × (3× − 1));
+ * 500 is sized for eventsFromCounters, which front-loads a replayed day's bonus
+ * in 500-XP chunks. Lowering it rejects those events with a 400, and a 400
+ * wedges the head of the client queue — clamp, don't reject, if you tighten it.
  */
 export const MAX_BONUS_XP = 500;
 

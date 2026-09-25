@@ -16,10 +16,6 @@ beforeAll(async () => {
 const TABLES = [
   { name: 'srs_state', row: (uid) => ({ user_id: uid, srs_key: 'greetings:Hallo', box: 2 }) },
   {
-    name: 'stats_daily',
-    row: (uid) => ({ user_id: uid, day: '2026-06-12', counters: { total: 1 } }),
-  },
-  {
     name: 'decks',
     row: (uid) => ({ user_id: uid, deck_id: 'custom', name: 'My deck', cards: [] }),
   },
@@ -112,6 +108,56 @@ describe('RLS: decks tombstones', () => {
       .select();
     expect(data ?? []).toEqual([]);
     if (error) expect(error).not.toBeNull();
+  });
+});
+
+// Every XP reader sums stats_daily, so a client write is free XP. Since
+// 20260925120000 the only writer is apply_progress_event behind the API
+// (progress-event.test.js); clients keep SELECT on their own rows for sync.
+describe('RLS: stats_daily (read-only for clients)', () => {
+  const row = (uid) => ({ user_id: uid, day: '2026-06-12', counters: { total: 1 } });
+
+  beforeAll(async () => {
+    const { error } = await adminClient()
+      .from('stats_daily')
+      .insert([row(A.id), row(B.id)]);
+    if (error) throw new Error(error.message);
+  });
+
+  it('A reads their own row', async () => {
+    const { data, error } = await A.client.from('stats_daily').select('user_id');
+    expect(error).toBeNull();
+    expect(data).toEqual([{ user_id: A.id }]);
+  });
+
+  it("A cannot see B's row", async () => {
+    const { data, error } = await A.client.from('stats_daily').select('*').eq('user_id', B.id);
+    expect(error).toBeNull();
+    expect(data).toEqual([]);
+  });
+
+  it('A cannot insert, update or delete even their OWN rows (no write grant)', async () => {
+    const insert = await A.client
+      .from('stats_daily')
+      .insert({ ...row(A.id), day: '2026-06-13', counters: { bonusXp: 1000000 } });
+    expect(insert.error?.code).toBe('42501');
+
+    const update = await A.client
+      .from('stats_daily')
+      .update({ counters: { bonusXp: 1000000 } })
+      .eq('user_id', A.id);
+    expect(update.error?.code).toBe('42501');
+
+    const del = await A.client.from('stats_daily').delete().eq('user_id', A.id);
+    expect(del.error?.code).toBe('42501');
+  });
+
+  it("A's row is unchanged after the attempts", async () => {
+    const { data } = await adminClient()
+      .from('stats_daily')
+      .select('day, counters')
+      .eq('user_id', A.id);
+    expect(data).toEqual([{ day: '2026-06-12', counters: { total: 1 } }]);
   });
 });
 
