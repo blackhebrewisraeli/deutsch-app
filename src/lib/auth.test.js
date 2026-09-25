@@ -8,8 +8,40 @@ const mockAuth = {
   signOut: vi.fn(() => Promise.resolve({ error: null })),
   getSession: vi.fn(() => Promise.resolve({ data: { session: null } })),
   onAuthStateChange: vi.fn(() => ({ data: { subscription: { unsubscribe: vi.fn() } } })),
+  updateUser: vi.fn(() => Promise.resolve({ data: {}, error: null })),
+  exchangeCodeForSession: vi.fn(() => Promise.resolve({ data: {}, error: null })),
+  setSession: vi.fn(() => Promise.resolve({ data: {}, error: null })),
 };
 vi.mock('@supabase/supabase-js', () => ({ createClient: vi.fn(() => ({ auth: mockAuth })) }));
+
+// Capacitor plugins, reached only in the native app. Each call is forwarded to
+// a hoisted stub so a test can drive what the OS would do: open the app with a
+// URL, or have the user close the browser.
+const nativePlugins = vi.hoisted(() => ({
+  urlListener: null,
+  launchUrl: null,
+  browserFinished: null,
+  browserOpen: null,
+  browserClose: null,
+  appAddListener: null,
+}));
+vi.mock('@capacitor/app', () => ({
+  App: {
+    addListener: (...args) => nativePlugins.appAddListener(...args),
+    getLaunchUrl: async () =>
+      nativePlugins.launchUrl ? { url: nativePlugins.launchUrl } : undefined,
+  },
+}));
+vi.mock('@capacitor/browser', () => ({
+  Browser: {
+    addListener: async (_event, fn) => {
+      nativePlugins.browserFinished = fn;
+      return { remove: async () => {} };
+    },
+    open: (...args) => nativePlugins.browserOpen(...args),
+    close: (...args) => nativePlugins.browserClose(...args),
+  },
+}));
 
 describe('auth actions', () => {
   beforeEach(() => {
@@ -507,5 +539,304 @@ describe('authCallbackReason', () => {
     const { authCallbackKind, mayHaveSession } = await import('./auth.js');
     expect(authCallbackKind()).toBe('error');
     expect(mayHaveSession()).toBe(true);
+  });
+});
+
+describe('native app (Capacitor)', () => {
+  const CALLBACK = 'com.sprachschule.deutsch://login-callback';
+  const AUTHORIZE = 'https://x.supabase.co/auth/v1/authorize?provider=google';
+
+  beforeEach(() => {
+    vi.stubEnv('VITE_SUPABASE_URL', 'https://x.supabase.co');
+    vi.stubEnv('VITE_SUPABASE_ANON_KEY', 'anon-key');
+    vi.stubEnv('VITE_GOOGLE_AUTH_ENABLED', 'true');
+    vi.resetModules();
+    Object.values(mockAuth).forEach((fn) => fn.mockClear?.());
+    // What Capacitor's native runtime injects before any page script runs.
+    window.Capacitor = { isNativePlatform: () => true };
+    nativePlugins.urlListener = null;
+    nativePlugins.launchUrl = null;
+    nativePlugins.browserFinished = null;
+    nativePlugins.appAddListener = vi.fn(async (_event, fn) => {
+      nativePlugins.urlListener = fn;
+      return { remove: vi.fn() };
+    });
+    nativePlugins.browserOpen = vi.fn(async () => {});
+    nativePlugins.browserClose = vi.fn(async () => {});
+  });
+  afterEach(() => {
+    delete window.Capacitor;
+    vi.unstubAllEnvs();
+  });
+
+  it('authRedirectUrl is the app scheme in the app and the origin on the web', async () => {
+    const { authRedirectUrl } = await import('./auth.js');
+    expect(authRedirectUrl()).toBe(CALLBACK);
+    delete window.Capacitor;
+    expect(authRedirectUrl()).toBe(window.location.origin);
+  });
+
+  it('sends a magic link that opens the app, not the website', async () => {
+    const { signInWithMagicLink } = await import('./auth.js');
+    await signInWithMagicLink('a@b.com');
+    expect(mockAuth.signInWithOtp).toHaveBeenCalledWith({
+      email: 'a@b.com',
+      options: { emailRedirectTo: CALLBACK },
+    });
+  });
+
+  it('sends email-change confirmations back to the app', async () => {
+    const { requestEmailChange } = await import('./auth.js');
+    await requestEmailChange('new@b.com');
+    expect(mockAuth.updateUser).toHaveBeenCalledWith(
+      { email: 'new@b.com' },
+      { emailRedirectTo: CALLBACK }
+    );
+  });
+
+  // RFC 8252 §8.1: a custom scheme can be claimed by another app, so what
+  // travels through it must be a code that is useless without this webview's
+  // verifier, never the session itself.
+  it('builds the client with PKCE and without URL detection', async () => {
+    const { signInWithMagicLink } = await import('./auth.js');
+    await signInWithMagicLink('a@b.com');
+    const { createClient } = await import('@supabase/supabase-js');
+    expect(createClient.mock.lastCall[2].auth).toEqual({
+      persistSession: true,
+      autoRefreshToken: true,
+      flowType: 'pkce',
+      detectSessionInUrl: false,
+    });
+  });
+
+  it('leaves the web client exactly as it was', async () => {
+    delete window.Capacitor;
+    const { signInWithMagicLink } = await import('./auth.js');
+    await signInWithMagicLink('a@b.com');
+    const { createClient } = await import('@supabase/supabase-js');
+    expect(createClient.mock.lastCall[2].auth).toEqual({
+      persistSession: true,
+      autoRefreshToken: true,
+    });
+  });
+
+  describe('Google', () => {
+    beforeEach(() => {
+      mockAuth.signInWithOAuth.mockResolvedValueOnce({
+        data: { provider: 'google', url: AUTHORIZE },
+        error: null,
+      });
+    });
+
+    it('opens consent in the system browser, with the app scheme as redirect', async () => {
+      const { signInWithGoogle } = await import('./auth.js');
+      const pending = signInWithGoogle();
+      await vi.waitFor(() => expect(nativePlugins.browserOpen).toHaveBeenCalled());
+      expect(mockAuth.signInWithOAuth).toHaveBeenCalledWith({
+        provider: 'google',
+        options: { redirectTo: CALLBACK, skipBrowserRedirect: true },
+      });
+      expect(nativePlugins.browserOpen).toHaveBeenCalledWith({ url: AUTHORIZE });
+      nativePlugins.browserFinished();
+      expect(await pending).toEqual({
+        data: { provider: 'google', url: AUTHORIZE },
+        error: null,
+      });
+    });
+
+    // Otherwise the button stays busy forever for someone who backed out.
+    it('settles once the learner closes the browser', async () => {
+      const { signInWithGoogle } = await import('./auth.js');
+      let settled = false;
+      const pending = signInWithGoogle().then(() => {
+        settled = true;
+      });
+      await vi.waitFor(() => expect(nativePlugins.browserOpen).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 0));
+      expect(settled).toBe(false);
+      nativePlugins.browserFinished();
+      await pending;
+      expect(settled).toBe(true);
+    });
+
+    it('closes the browser and settles when the callback comes back', async () => {
+      const { signInWithGoogle } = await import('./auth.js');
+      const pending = signInWithGoogle();
+      await vi.waitFor(() => expect(nativePlugins.urlListener).toBeTypeOf('function'));
+      await vi.waitFor(() => expect(nativePlugins.browserOpen).toHaveBeenCalled());
+      nativePlugins.urlListener({ url: `${CALLBACK}?code=abc` });
+      await pending;
+      expect(nativePlugins.browserClose).toHaveBeenCalledTimes(1);
+      await vi.waitFor(() => expect(mockAuth.exchangeCodeForSession).toHaveBeenCalledWith('abc'));
+    });
+
+    it('reports an error when the browser cannot open', async () => {
+      nativePlugins.browserOpen = vi.fn(async () => {
+        throw new Error('Unable to display URL');
+      });
+      const { signInWithGoogle } = await import('./auth.js');
+      const { error } = await signInWithGoogle();
+      expect(error).toBeTruthy();
+    });
+
+    it('does not open a browser when Supabase refuses to start', async () => {
+      mockAuth.signInWithOAuth.mockReset();
+      mockAuth.signInWithOAuth.mockResolvedValueOnce({
+        data: { provider: 'google', url: null },
+        error: { message: 'provider disabled' },
+      });
+      const { signInWithGoogle } = await import('./auth.js');
+      const { error } = await signInWithGoogle();
+      expect(error).toEqual({ message: 'provider disabled' });
+      expect(nativePlugins.browserOpen).not.toHaveBeenCalled();
+      mockAuth.signInWithOAuth.mockImplementation(() => Promise.resolve({ data: {}, error: null }));
+    });
+  });
+
+  describe('handleNativeAuthCallback', () => {
+    async function subscribe() {
+      const auth = await import('./auth.js');
+      const events = [];
+      auth.onNativeAuthCallback((e) => events.push(e));
+      return { auth, events };
+    }
+
+    it('exchanges the PKCE code and reports it as pending', async () => {
+      const { auth, events } = await subscribe();
+      await auth.handleNativeAuthCallback(`${CALLBACK}?code=abc`);
+      expect(mockAuth.exchangeCodeForSession).toHaveBeenCalledWith('abc');
+      expect(events).toEqual([{ kind: 'pending', reason: null }]);
+    });
+
+    it('reports a provider error without exchanging anything', async () => {
+      const { auth, events } = await subscribe();
+      await auth.handleNativeAuthCallback(
+        `${CALLBACK}?error=access_denied&error_description=The+user+denied`
+      );
+      expect(events).toEqual([{ kind: 'error', reason: 'cancelled' }]);
+      expect(mockAuth.exchangeCodeForSession).not.toHaveBeenCalled();
+    });
+
+    it('reports an expired link', async () => {
+      const { auth, events } = await subscribe();
+      await auth.handleNativeAuthCallback(
+        `${CALLBACK}#error=access_denied&error_code=otp_expired&error_description=Email+link+is+invalid+or+has+expired`
+      );
+      expect(events).toEqual([{ kind: 'error', reason: 'expired' }]);
+    });
+
+    it('turns a failed exchange into an error', async () => {
+      mockAuth.exchangeCodeForSession.mockResolvedValueOnce({
+        data: {},
+        error: { message: 'invalid request: both auth code and code verifier should be non-empty' },
+      });
+      const { auth, events } = await subscribe();
+      await auth.handleNativeAuthCallback(`${CALLBACK}?code=abc`);
+      expect(events).toEqual([
+        { kind: 'pending', reason: null },
+        { kind: 'error', reason: 'failed' },
+      ]);
+    });
+
+    it('calls a failed exchange of an expired code expired', async () => {
+      mockAuth.exchangeCodeForSession.mockResolvedValueOnce({
+        data: {},
+        error: { code: 'flow_state_expired', message: 'Flow state has expired' },
+      });
+      const { auth, events } = await subscribe();
+      await auth.handleNativeAuthCallback(`${CALLBACK}?code=abc`);
+      expect(events.at(-1)).toEqual({ kind: 'error', reason: 'expired' });
+    });
+
+    it('reports a failure, not an endless spinner, when the client cannot load', async () => {
+      const { createClient } = await import('@supabase/supabase-js');
+      createClient.mockImplementationOnce(() => {
+        throw new Error('Failed to fetch dynamically imported module');
+      });
+      const { auth, events } = await subscribe();
+      await auth.handleNativeAuthCallback(`${CALLBACK}?code=abc`);
+      expect(events.at(-1)).toEqual({ kind: 'error', reason: 'failed' });
+    });
+
+    it('treats a thrown exchange like a failed one', async () => {
+      mockAuth.exchangeCodeForSession.mockRejectedValueOnce(new Error('offline'));
+      const { auth, events } = await subscribe();
+      await auth.handleNativeAuthCallback(`${CALLBACK}?code=abc`);
+      expect(events.at(-1)).toEqual({ kind: 'error', reason: 'failed' });
+    });
+
+    // Anyone can build a link that carries tokens. Accepting it would sign the
+    // learner into whichever account the link's author chose.
+    it('ignores a link that carries tokens instead of a code', async () => {
+      const { auth, events } = await subscribe();
+      await auth.handleNativeAuthCallback(
+        `${CALLBACK}#access_token=planted&refresh_token=planted&type=magiclink`
+      );
+      expect(mockAuth.setSession).not.toHaveBeenCalled();
+      expect(mockAuth.exchangeCodeForSession).not.toHaveBeenCalled();
+      expect(events).toEqual([]);
+    });
+
+    // The first half of a secure email change: nothing to exchange yet.
+    it('stays quiet for a callback with neither code nor error', async () => {
+      const { auth, events } = await subscribe();
+      await auth.handleNativeAuthCallback(
+        `${CALLBACK}#message=Confirmation+link+accepted.+Please+proceed+to+confirm+link+sent+to+the+other+email`
+      );
+      expect(events).toEqual([]);
+    });
+
+    it.each([
+      ['another host on our scheme', 'com.sprachschule.deutsch://settings?code=abc'],
+      ['another scheme', 'com.example.other://login-callback?code=abc'],
+    ])('ignores %s', async (_label, url) => {
+      const { auth, events } = await subscribe();
+      await auth.handleNativeAuthCallback(url);
+      expect(mockAuth.exchangeCodeForSession).not.toHaveBeenCalled();
+      expect(events).toEqual([]);
+    });
+
+    it('stops notifying a listener that unsubscribed', async () => {
+      const auth = await import('./auth.js');
+      const fn = vi.fn();
+      const off = auth.onNativeAuthCallback(fn);
+      off();
+      await auth.handleNativeAuthCallback(`${CALLBACK}?code=abc`);
+      expect(fn).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('onNativeAuthCallback', () => {
+    it('finishes a sign-in that opens the running app', async () => {
+      const { onNativeAuthCallback } = await import('./auth.js');
+      onNativeAuthCallback(() => {});
+      await vi.waitFor(() => expect(nativePlugins.urlListener).toBeTypeOf('function'));
+      nativePlugins.urlListener({ url: `${CALLBACK}?code=warm` });
+      await vi.waitFor(() => expect(mockAuth.exchangeCodeForSession).toHaveBeenCalledWith('warm'));
+    });
+
+    it('finishes a sign-in that cold-started the app', async () => {
+      nativePlugins.launchUrl = `${CALLBACK}?code=cold`;
+      const { onNativeAuthCallback } = await import('./auth.js');
+      onNativeAuthCallback(() => {});
+      await vi.waitFor(() => expect(mockAuth.exchangeCodeForSession).toHaveBeenCalledWith('cold'));
+    });
+
+    it('listens once however many subscribe', async () => {
+      const { onNativeAuthCallback } = await import('./auth.js');
+      onNativeAuthCallback(() => {});
+      onNativeAuthCallback(() => {});
+      await vi.waitFor(() => expect(nativePlugins.appAddListener).toHaveBeenCalled());
+      await new Promise((r) => setTimeout(r, 0));
+      expect(nativePlugins.appAddListener).toHaveBeenCalledTimes(1);
+    });
+
+    it('never loads the App plugin on the web', async () => {
+      delete window.Capacitor;
+      const { onNativeAuthCallback } = await import('./auth.js');
+      onNativeAuthCallback(() => {});
+      await new Promise((r) => setTimeout(r, 0));
+      expect(nativePlugins.appAddListener).not.toHaveBeenCalled();
+    });
   });
 });

@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../../lib/theme';
-import { authCallbackKind, authCallbackReason, isAuthConfigured } from '../../lib/auth.js';
+import {
+  authCallbackKind,
+  authCallbackReason,
+  isAuthConfigured,
+  onNativeAuthCallback,
+} from '../../lib/auth.js';
 import { SIGNUP_NOT_ALLOWED_MESSAGE } from '../../lib/signupAllowlist.js';
 import Button from '../ui/Button';
 import useFocusTrap from '../../lib/useFocusTrap.js';
@@ -16,6 +21,10 @@ function clearAuthParamsFromUrl() {
 /**
  * Explicit UI for the magic-link / PKCE auth callback.
  * Detection lives in authCallbackKind() — this is the visible half only.
+ *
+ * Web: the callback is this page's URL, read once at mount. Native: it
+ * arrives through the app's URL scheme at any time, so the same state is fed
+ * by onNativeAuthCallback as well.
  */
 export default function AuthCallbackLanding({
   status,
@@ -23,10 +32,10 @@ export default function AuthCallbackLanding({
   onSignedIn,
   onRequestNew,
 }) {
-  const [kind] = useState(() => (isAuthConfigured() ? authCallbackKind() : null));
+  const [kind, setKind] = useState(() => (isAuthConfigured() ? authCallbackKind() : null));
   // Captured at mount: clearAuthParamsFromUrl() wipes the URL, so reading the
   // reason lazily later would always come back null.
-  const [reason] = useState(() => (isAuthConfigured() ? authCallbackReason() : null));
+  const [reason, setReason] = useState(() => (isAuthConfigured() ? authCallbackReason() : null));
   const panelRef = useRef(null);
   const [phase, setPhase] = useState(() => {
     if (!kind) return null;
@@ -66,6 +75,18 @@ export default function AuthCallbackLanding({
     setPhase('rejected');
     clearAuthParamsFromUrl();
   }, [signupRejected]);
+
+  // A callback that reached the native app. Setting `kind` as well as `phase`
+  // re-arms the pending effect above, so success and the 15s timeout behave
+  // exactly as they do for a web callback.
+  useEffect(() => {
+    if (!isAuthConfigured()) return undefined;
+    return onNativeAuthCallback((event) => {
+      setKind(event.kind);
+      setReason(event.reason);
+      setPhase(event.kind === 'error' ? 'error' : 'pending');
+    });
+  }, []);
 
   useEffect(() => {
     // The success copy has no button (action: null), so nothing else ever

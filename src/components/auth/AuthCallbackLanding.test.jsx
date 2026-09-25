@@ -2,16 +2,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, act } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 
-const { isAuthConfigured, authCallbackKind, authCallbackReason } = vi.hoisted(() => ({
+const { isAuthConfigured, authCallbackKind, authCallbackReason, native } = vi.hoisted(() => ({
   isAuthConfigured: vi.fn(() => true),
   authCallbackKind: vi.fn(() => null),
   authCallbackReason: vi.fn(() => null),
+  // The landing's subscription to native deep-link callbacks. `emit` plays the
+  // part of the app's URL scheme delivering one.
+  native: { listeners: new Set(), emit: null },
 }));
+native.emit = (event) => native.listeners.forEach((fn) => fn(event));
 
 vi.mock('../../lib/auth.js', () => ({
   isAuthConfigured,
   authCallbackKind,
   authCallbackReason,
+  onNativeAuthCallback: (fn) => {
+    native.listeners.add(fn);
+    return () => native.listeners.delete(fn);
+  },
 }));
 
 import AuthCallbackLanding from './AuthCallbackLanding';
@@ -285,6 +293,76 @@ describe('AuthCallbackLanding', () => {
       );
       expect(await screen.findByText('Signed in')).toBeInTheDocument();
       expect(document.activeElement).toBe(trigger);
+    });
+  });
+
+  // In the native app the callback never appears in this page's URL. It
+  // arrives through the app's URL scheme, usually while the landing has long
+  // been mounted with nothing to show.
+  describe('native callbacks', () => {
+    it('shows Signing you in… when a callback arrives after mount', () => {
+      const { container } = render(
+        <AuthCallbackLanding status="anonymous" onSignedIn={() => {}} onRequestNew={() => {}} />
+      );
+      expect(container).toBeEmptyDOMElement();
+      act(() => native.emit({ kind: 'pending', reason: null }));
+      expect(screen.getByText('Signing you in…')).toBeInTheDocument();
+    });
+
+    it('moves to success and hands off once the session lands', async () => {
+      const onSignedIn = vi.fn();
+      const { rerender } = render(
+        <AuthCallbackLanding status="anonymous" onSignedIn={onSignedIn} onRequestNew={() => {}} />
+      );
+      act(() => native.emit({ kind: 'pending', reason: null }));
+      rerender(
+        <AuthCallbackLanding
+          status="authenticated"
+          onSignedIn={onSignedIn}
+          onRequestNew={() => {}}
+        />
+      );
+      expect(await screen.findByText('Signed in')).toBeInTheDocument();
+      expect(onSignedIn).toHaveBeenCalledTimes(1);
+    });
+
+    it('explains a cancelled consent with the same copy the web gets', async () => {
+      const onRequestNew = vi.fn();
+      render(
+        <AuthCallbackLanding status="anonymous" onSignedIn={() => {}} onRequestNew={onRequestNew} />
+      );
+      act(() => native.emit({ kind: 'error', reason: 'cancelled' }));
+      expect(screen.getByRole('heading', { name: 'Sign-in cancelled' })).toBeInTheDocument();
+      await userEvent.click(screen.getByRole('button', { name: 'Sign in again' }));
+      expect(onRequestNew).toHaveBeenCalledTimes(1);
+    });
+
+    it('turns a pending callback into an error when the exchange fails', () => {
+      render(
+        <AuthCallbackLanding status="anonymous" onSignedIn={() => {}} onRequestNew={() => {}} />
+      );
+      act(() => native.emit({ kind: 'pending', reason: null }));
+      act(() => native.emit({ kind: 'error', reason: 'expired' }));
+      expect(
+        screen.getByRole('heading', { name: 'That link expired — request a new one' })
+      ).toBeInTheDocument();
+    });
+
+    it('stops listening once unmounted', () => {
+      const { unmount } = render(
+        <AuthCallbackLanding status="anonymous" onSignedIn={() => {}} onRequestNew={() => {}} />
+      );
+      expect(native.listeners.size).toBe(1);
+      unmount();
+      expect(native.listeners.size).toBe(0);
+    });
+
+    it('does not subscribe when auth is unconfigured', () => {
+      isAuthConfigured.mockReturnValue(false);
+      render(
+        <AuthCallbackLanding status="anonymous" onSignedIn={() => {}} onRequestNew={() => {}} />
+      );
+      expect(native.listeners.size).toBe(0);
     });
   });
 });

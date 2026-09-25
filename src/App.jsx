@@ -86,6 +86,7 @@ import {
   humanAuthError,
 } from './lib/auth';
 import { signOutAndReset } from './lib/clearUserState';
+import { isNativeApp } from './lib/nativeApp';
 import { SYNC_ENABLED, start, stop, markDirty, loadRemoteDaily } from './lib/sync';
 import { startProgressFlush, stopProgressFlush, scheduleFlush } from './lib/progressQueue';
 import { setLevelBoostEnabled } from './lib/xpEntitlement';
@@ -472,19 +473,19 @@ export default function App() {
   };
 
   // One Google entry point for all three surfaces — the sheet, the gate and
-  // the trial wall each render the same button and call this. On success the
-  // browser leaves for Google, so `busy` is deliberately never cleared: the
-  // page is going away, and clearing it would re-enable the button for the
-  // moment before it does.
+  // the trial wall each render the same button and call this. On the web a
+  // successful start sends the tab to Google, so `busy` is deliberately never
+  // cleared there: the page is going away, and clearing it would re-enable the
+  // button for the moment before it does. The native app never leaves. Google
+  // opens in the system browser and signInWithGoogle settles once that browser
+  // closes, signed in or backed out, so the button must come back.
   const [googleBusy, setGoogleBusy] = useState(false);
   const handleGoogle = async () => {
     if (googleBusy) return;
     setGoogleBusy(true);
     const { error } = await signInWithGoogle();
-    if (error) {
-      setGoogleBusy(false);
-      showToast(humanAuthError(error));
-    }
+    if (error || isNativeApp()) setGoogleBusy(false);
+    if (error) showToast(humanAuthError(error));
   };
 
   // Preferences write LOCAL state and let the existing reconcile push them.

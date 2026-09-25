@@ -11,6 +11,14 @@ import {
   SIGNUP_NOT_ALLOWED_CODE,
   SIGNUP_NOT_ALLOWED_MESSAGE,
 } from './signupAllowlist.js';
+import {
+  isNativeApp,
+  isNativeAuthCallback,
+  listenForAppUrls,
+  openAuthBrowser,
+  closeAuthBrowser,
+  NATIVE_AUTH_CALLBACK_URL,
+} from './nativeApp.js';
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
@@ -32,6 +40,38 @@ export function isGoogleAuthConfigured() {
   return isAuthConfigured() && import.meta.env.VITE_GOOGLE_AUTH_ENABLED === 'true';
 }
 
+/**
+ * Where Supabase sends the learner back to after a magic link, an OAuth consent
+ * screen, or an email-change confirmation. Every one of those flows uses this
+ * value, so each environment needs one allow-list entry, not one per flow.
+ *
+ * Web: this origin. Native: the app's URL scheme. The webview's origin
+ * (capacitor://localhost, https://localhost) is not somewhere a mail app or
+ * the system browser can hand a link back to, so a native sign-in that
+ * redirected there opened the website instead of the app. Both values must be
+ * on the Supabase Redirect URLs allow-list: docs/MOBILE_AUTH_SETUP.md.
+ */
+export function authRedirectUrl() {
+  return isNativeApp() ? NATIVE_AUTH_CALLBACK_URL : window.location.origin;
+}
+
+// Native sign-in uses PKCE. The web keeps the implicit flow it has always used.
+//
+// A native callback travels through a URL scheme that any other app on the
+// device can also register. Under PKCE what travels is a one-time code that is
+// worthless without the verifier this webview stored when the flow started.
+// The implicit flow would hand an interceptor the session itself
+// (RFC 8252 §8.1). The same property blocks a crafted callback link from
+// signing the learner into someone else's account.
+//
+// The web stays implicit because PKCE ties a magic link to the browser that
+// requested it, and opening the email somewhere else would then fail.
+// detectSessionInUrl is off on native because the webview's own URL never
+// carries a callback. Callbacks arrive through handleNativeAuthCallback.
+function platformAuthOptions() {
+  return isNativeApp() ? { flowType: 'pkce', detectSessionInUrl: false } : {};
+}
+
 // @supabase/supabase-js pulls in ~816KB of source (auth, postgrest, storage,
 // realtime, functions) and none of it is needed to paint the app — a guest can
 // use every tab without it. It is loaded on demand instead, so it lands in its
@@ -51,7 +91,7 @@ function getClient() {
   if (!clientPromise) {
     clientPromise = import('@supabase/supabase-js').then(({ createClient }) => {
       const c = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-        auth: { persistSession: true, autoRefreshToken: true },
+        auth: { persistSession: true, autoRefreshToken: true, ...platformAuthOptions() },
       });
       for (const fn of clientReadyListeners) fn(c);
       return c;
@@ -186,14 +226,14 @@ export async function signInWithMagicLink(email) {
   if (!c) return NOT_CONFIGURED;
   return c.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: window.location.origin },
+    options: { emailRedirectTo: authRedirectUrl() },
   });
 }
 
 /**
- * Start the Google OAuth round trip. `redirectTo` is window.location.origin —
- * deliberately the same value signInWithMagicLink passes as emailRedirectTo,
- * so both flows need one allow-list entry per environment instead of two.
+ * Start the Google OAuth round trip. `redirectTo` is authRedirectUrl(), the
+ * same value signInWithMagicLink passes as emailRedirectTo, so both flows need
+ * one allow-list entry per environment instead of two.
  *
  * The flag is checked here as well as in the UI: a stale tab left open across
  * a deploy that switched Google off must not be able to start a flow into a
@@ -201,12 +241,40 @@ export async function signInWithMagicLink(email) {
  */
 export async function signInWithGoogle() {
   if (!isGoogleAuthConfigured()) return NOT_CONFIGURED;
+  return startOAuth('google');
+}
+
+const BROWSER_FAILED = { error: { message: 'Could not open the sign-in page.' } };
+
+/**
+ * Web: Supabase navigates this tab to the provider, and the promise settles
+ * as the page leaves.
+ *
+ * Native: the provider opens in the system browser (see openAuthBrowser for
+ * why it cannot be the webview). The promise settles once that browser has
+ * closed, whether the learner signed in or backed out, so the caller can
+ * re-enable its button. The session itself arrives separately, through
+ * handleNativeAuthCallback.
+ */
+async function startOAuth(provider) {
   const c = await getClient();
   if (!c) return NOT_CONFIGURED;
-  return c.auth.signInWithOAuth({
-    provider: 'google',
-    options: { redirectTo: window.location.origin },
+  if (!isNativeApp()) {
+    return c.auth.signInWithOAuth({ provider, options: { redirectTo: authRedirectUrl() } });
+  }
+  const { data, error } = await c.auth.signInWithOAuth({
+    provider,
+    options: { redirectTo: authRedirectUrl(), skipBrowserRedirect: true },
   });
+  if (error) return { data, error };
+  // The callback can only land if something is listening for it.
+  startNativeAuthCallbacks();
+  try {
+    await openAuthBrowser(data.url);
+  } catch {
+    return BROWSER_FAILED;
+  }
+  return { data, error: null };
 }
 
 export async function verifyCode(email, token) {
@@ -233,7 +301,7 @@ export async function verifyCode(email, token) {
 export async function requestEmailChange(email) {
   const c = await getClient();
   if (!c) return NOT_CONFIGURED;
-  return c.auth.updateUser({ email }, { emailRedirectTo: window.location.origin });
+  return c.auth.updateUser({ email }, { emailRedirectTo: authRedirectUrl() });
 }
 
 /**
@@ -248,6 +316,78 @@ export async function verifyEmailChange(email, token) {
   const c = await getClient();
   if (!c) return NOT_CONFIGURED;
   return c.auth.verifyOtp({ email, token, type: 'email_change' });
+}
+
+// ---------------------------------------------------------------------------
+// Native callbacks. On the web a callback is this page's own URL, which
+// supabase-js reads at load and AuthCallbackLanding reads at mount. In the
+// native app a callback arrives through the URL scheme, and it can arrive at
+// any moment, including while the app is already running.
+
+const nativeCallbackListeners = new Set();
+let nativeCallbacksStarted = false;
+
+function emitNativeCallback(event) {
+  for (const fn of nativeCallbackListeners) fn(event);
+}
+
+/** Start receiving callbacks through the app's URL scheme. Idempotent; inert on the web. */
+function startNativeAuthCallbacks() {
+  if (nativeCallbacksStarted || !isNativeApp()) return;
+  nativeCallbacksStarted = true;
+  listenForAppUrls((url) => {
+    handleNativeAuthCallback(url);
+  }).catch(() => {
+    // Plugin missing or failed to load. Allow a later subscriber to try again.
+    nativeCallbacksStarted = false;
+  });
+}
+
+/**
+ * Follow sign-in callbacks that reach the native app. `fn` receives
+ * `{ kind: 'pending' | 'error', reason }`, the vocabulary authCallbackKind and
+ * authCallbackReason already give the web landing, so AuthCallbackLanding
+ * shows the same screens on both. Subscribing also starts listening, so the
+ * landing (always mounted) catches a link that cold-starts the app. Returns an
+ * unsubscribe function.
+ */
+export function onNativeAuthCallback(fn) {
+  nativeCallbackListeners.add(fn);
+  startNativeAuthCallbacks();
+  return () => nativeCallbackListeners.delete(fn);
+}
+
+/**
+ * Finish a sign-in that came back through the app's URL scheme.
+ *
+ * Only a PKCE `?code=` is accepted. A link that carries tokens is ignored,
+ * because anyone can build one; see platformAuthOptions. A callback with
+ * neither a code nor an error is ignored as well. That is the first half of a
+ * secure email change ("now confirm the other address"): there is nothing to
+ * exchange yet, and nothing has failed.
+ */
+export async function handleNativeAuthCallback(url) {
+  if (!isNativeAuthCallback(url)) return;
+  closeAuthBrowser();
+  const loc = new URL(url);
+  if (authCallbackKind(loc) === 'error') {
+    emitNativeCallback({ kind: 'error', reason: authCallbackReason(loc) });
+    return;
+  }
+  const code = loc.searchParams.get('code');
+  if (!code) return;
+  emitNativeCallback({ kind: 'pending', reason: null });
+  let error;
+  try {
+    // Inside the try as well: offline, the client chunk itself can fail to load.
+    const c = await getClient();
+    error = c ? (await c.auth.exchangeCodeForSession(code)).error : NOT_CONFIGURED.error;
+  } catch (e) {
+    error = e;
+  }
+  if (!error) return; // onAuthStateChange delivers the session to useAuth.
+  const detail = `${error.code || ''} ${error.message || ''}`;
+  emitNativeCallback({ kind: 'error', reason: /expired/i.test(detail) ? 'expired' : 'failed' });
 }
 
 export async function signOut() {
