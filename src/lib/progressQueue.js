@@ -7,6 +7,7 @@
 
 import { applyEvent, TABS, LEVELS, VERDICTS } from './stats';
 import { addCounters, subCounters, clampCounters } from './sync/merge';
+import { apiUrl } from './apiUrl';
 
 export const QUEUE_KEY = 'deutsch-app-progress-queue-v1';
 
@@ -145,7 +146,7 @@ export async function flushQueue({
     while (!done) {
       let res;
       try {
-        res = await fetchImpl('/api/v1/progress/events', {
+        res = await fetchImpl(apiUrl('/api/v1/progress/events'), {
           method: 'POST',
           headers: {
             authorization: `Bearer ${token}`,

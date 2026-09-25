@@ -3,6 +3,7 @@ import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
 import { currentPeriodStart } from '../../_lib/leagueLogic.js';
 import { xpForDay } from '../../../src/lib/xpCore.js';
+import { withCors } from '../../_lib/origin.js';
 
 // Longest run of consecutive calendar days present in the sorted key list.
 export function longestStreak(dayKeys) {
@@ -65,7 +66,7 @@ export function publicAchievements(settingsData) {
     .map(([id]) => id);
 }
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'GET') return sendError(res, 'method_not_allowed', 'Method not allowed');
 
   let auth;
@@ -181,3 +182,5 @@ export default async function handler(req, res) {
     return sendError(res, 'server_error', 'Failed to load profile.');
   }
 }
+
+export default withCors(handler);

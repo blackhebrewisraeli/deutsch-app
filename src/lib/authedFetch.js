@@ -1,4 +1,5 @@
 import { getAccessToken, refreshAccessToken } from './auth.js';
+import { apiUrl } from './apiUrl.js';
 
 export const SESSION_EXPIRED_MESSAGE = 'Your session expired. Please sign in again and retry.';
 
@@ -29,7 +30,10 @@ export async function authedFetch(url, init = {}) {
   if (!token) throw new Error('Please sign in again.');
 
   const send = (bearer) =>
-    fetch(url, { ...init, headers: { ...init.headers, authorization: `Bearer ${bearer}` } });
+    fetch(apiUrl(url), {
+      ...init,
+      headers: { ...init.headers, authorization: `Bearer ${bearer}` },
+    });
 
   let res = await send(token);
   if (res.status === 401) {

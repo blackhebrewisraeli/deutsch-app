@@ -28,5 +28,10 @@ contract, arriving in phase B1). Spec:
   Upstream Anthropic **error responses pass through unchanged** (their own
   `{ "type": "error", "error": { ... } }` shape and status).
 
+- **CORS** is granted only to the native app's origins (`capacitor://localhost`,
+  `https://localhost`), by `withCors` in `api/_lib/origin.js`: the preflight is
+  answered `204`, the origin is echoed, and `Retry-After` is exposed. The web
+  app calls `/api` same-origin and needs none.
+
 - **Rate limits** are per client IP in B0 (per user id once B2 ships JWTs),
   fixed windows, best-effort per function instance until B1's durable store.

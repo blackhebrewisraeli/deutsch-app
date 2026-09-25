@@ -136,7 +136,7 @@ flowchart LR
 
 ## ⚡ Quick start
 
-**Prerequisites:** Node.js 20 (see `.nvmrc`) and npm.
+**Prerequisites:** Node.js 22 (see `.nvmrc`) and npm.
 
 ```bash
 git clone https://github.com/blackhebrewisraeli/deutsch-app.git

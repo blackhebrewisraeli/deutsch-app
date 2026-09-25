@@ -3,8 +3,9 @@ import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
 import { currentPeriodStart } from '../../_lib/leagueLogic.js';
 import { weeklyXpFromRows } from '../../_lib/weeklyXp.js';
+import { withCors } from '../../_lib/origin.js';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'POST') return sendError(res, 'method_not_allowed', 'Method not allowed');
 
   let auth;
@@ -52,3 +53,5 @@ export default async function handler(req, res) {
     return sendError(res, 'server_error', 'Failed to refresh league XP.');
   }
 }
+
+export default withCors(handler);

@@ -1,8 +1,9 @@
 import { sendError } from '../../_lib/respond.js';
 import { serviceClient } from '../../_lib/supabase.js';
 import { requireAuth } from '../../_lib/auth-middleware.js';
+import { withCors } from '../../_lib/origin.js';
 
-export default async function handler(req, res) {
+async function handler(req, res) {
   if (req.method !== 'PATCH') return sendError(res, 'method_not_allowed', 'Method not allowed');
 
   let auth;
@@ -34,3 +35,5 @@ export default async function handler(req, res) {
 
   return res.status(200).json({ handle: patch.handle ?? null });
 }
+
+export default withCors(handler);

@@ -1,5 +1,6 @@
 import { createPublicHandler } from '../../_lib/publicHandler.js';
 import { sendError } from '../../_lib/respond.js';
+import { withCors } from '../../_lib/origin.js';
 
 // Language-blind content lane. courseCode / level / tab are opaque identifiers
 // validated against closed sets; no German string appears in this file, and no
@@ -97,4 +98,4 @@ const handler = createPublicHandler({
   },
 });
 
-export default handler;
+export default withCors(handler);
