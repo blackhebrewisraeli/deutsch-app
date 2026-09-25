@@ -31,20 +31,14 @@ const EMPTY_SCORE = {
 
 // SPACE[16] is the original hub chip (64). #268 doubled it to 128, which still
 // reads as ~10–15% of the card. Desktop grows to 4× the chip so the mark is a
-// column, not a header button. Standard narrow layouts give it an equal track;
-// below 414px it steps down to a fixed 96px so the greeting remains the lead.
-// Never a bare `1fr` — minmax(0, 1fr) is what lets the text column shrink below
-// its content instead of pushing the page wide.
+// column, not a header button. Narrow layouts give it an equal track so it
+// remains a natural identity anchor instead of collapsing to a thumbnail. A
+// long greeting gives way through a two-line clamp below bp.tiny; avatar size
+// does not. Never a bare `1fr` — minmax(0, 1fr) is what lets both columns shrink
+// below their content instead of pushing the page wide.
 const AVATAR_DESKTOP = SPACE[16] * 4;
-const AVATAR_TINY = SPACE[12] * 2;
 const IDENTITY_COLUMNS_WIDE = `${AVATAR_DESKTOP}px minmax(0, 1fr)`;
 const IDENTITY_COLUMNS_NARROW = 'minmax(0, 1fr) minmax(0, 1fr)';
-const IDENTITY_COLUMNS_TINY = `${AVATAR_TINY}px minmax(0, 1fr)`;
-
-function identityColumns(wide, tiny) {
-  if (wide) return IDENTITY_COLUMNS_WIDE;
-  return tiny ? IDENTITY_COLUMNS_TINY : IDENTITY_COLUMNS_NARROW;
-}
 
 // Every below-bp.tiny adjustment, looked up once per render rather than
 // branched on at each use. Stat tiles take the full row; the level chip stacks
@@ -73,6 +67,18 @@ const TRUNCATE = {
   overflow: 'hidden',
   textOverflow: 'ellipsis',
   whiteSpace: 'nowrap',
+};
+
+// Every layer in the right-hand grid track declares the same boundary. This is
+// intentionally stronger than minWidth: 0 alone: width/maxWidth plus border-box
+// keep full-width task controls (including their padding and border) inside the
+// track. The object is also the append point for a future leaderboard below the
+// task stack — it will be another sibling in the same bounded column.
+const BOUNDED_COLUMN = {
+  width: '100%',
+  maxWidth: '100%',
+  minWidth: 0,
+  boxSizing: 'border-box',
 };
 
 const IDENTITY_HEADING_ID = 'home-identity-heading';
@@ -261,92 +267,99 @@ export default function PersonalHub({
   );
 
   const identityFacts = (
-    <Stack gap={2} style={{ minWidth: 0 }}>
-      <Stack gap={1} style={{ minWidth: 0 }}>
-        <Row
-          wrap={false}
-          align="flex-start"
-          gap={fit.headingRowGap}
+    <Stack gap={1} style={BOUNDED_COLUMN}>
+      <Row
+        wrap={false}
+        align="flex-start"
+        gap={fit.headingRowGap}
+        style={{
+          minWidth: 0,
+          // On the narrowest phones the level chip must not take width away
+          // from the learner's name. It sits under the greeting instead of
+          // turning the heading into a 70px-wide newspaper column.
+          flexDirection: fit.headingRowDirection,
+        }}
+      >
+        <Heading
+          id={IDENTITY_HEADING_ID}
+          level={2}
+          title={greeting}
           style={{
+            margin: 0,
+            overflowWrap: 'anywhere',
+            maxWidth: '100%',
+            lineHeight: 1.15,
+            flex: 1,
             minWidth: 0,
-            // On the narrowest phones the level chip must not take width away
-            // from the learner's name. It sits under the greeting instead of
-            // turning the heading into a 70px-wide newspaper column.
-            flexDirection: fit.headingRowDirection,
+            // Heading level 2 is 24px — same as a section title, smaller
+            // than the wordmark. This card's greeting is the identity
+            // display line; 4xl matches the masthead without touching
+            // Heading's global scale.
+            //
+            // Narrow steps down to 2xl, and that is not taste. At 320px the
+            // half-band avatar plus level chip left the greeting 77px —
+            // "Guten Tag" broke as "Gut / en / Tag". Stacking the chip and
+            // clamping the smaller display face lets the avatar keep its
+            // natural share without letting a long name grow the header.
+            fontSize: wide ? FONT_SIZE['4xl'] : FONT_SIZE['2xl'],
+            // Two lines preserve the welcome and as much of a long display
+            // name as the phone can carry. The full greeting remains the
+            // heading's accessible text and is also exposed by `title`.
+            ...fit.greetingClamp,
           }}
         >
-          <Heading
-            id={IDENTITY_HEADING_ID}
-            level={2}
-            title={greeting}
-            style={{
-              margin: 0,
-              overflowWrap: 'anywhere',
-              maxWidth: '100%',
-              lineHeight: 1.15,
-              flex: 1,
-              minWidth: 0,
-              // Heading level 2 is 24px — same as a section title, smaller
-              // than the wordmark. This card's greeting is the identity
-              // display line; 4xl matches the masthead without touching
-              // Heading's global scale.
-              //
-              // Narrow steps down to 2xl, and that is not taste. At 320px the
-              // old half-band avatar plus level chip left the greeting 77px —
-              // "Guten Tag" broke as "Gut / en / Tag". The compact avatar and
-              // stacked chip recover the width; the smaller display face keeps
-              // a long learner name readable inside the two-line clamp.
-              fontSize: wide ? FONT_SIZE['4xl'] : FONT_SIZE['2xl'],
-              // Two lines preserve the welcome and as much of a long display
-              // name as the phone can carry. The full greeting remains the
-              // heading's accessible text and is also exposed by `title`.
-              ...fit.greetingClamp,
-            }}
-          >
-            {greeting}
-          </Heading>
-          {/* The band chip beside a 36px greeting. It sat at 10px with the
+          {greeting}
+        </Heading>
+        {/* The band chip beside a 36px greeting. It sat at 10px with the
               widest tracking, which is the recipe for a label you SCAN past —
               this is a fact about the learner and reads as one at 11px. The
               trailing caps tracking is dropped so the glyphs are not pushed
               off-centre inside their own border. */}
-          <span
-            aria-label={copy.levelLabel?.(String(cefrLevel ?? '').toUpperCase())}
-            style={{
-              flexShrink: 0,
-              fontFamily: FONTS.mono,
-              fontSize: FONT_SIZE.ipa,
-              fontWeight: FONT_WEIGHT.bold,
-              letterSpacing: LETTER_SPACING.wider,
-              color: COLORS.ink,
-              border: `1px solid ${COLORS.mute}`,
-              borderRadius: RADIUS.sm,
-              padding: `${SPACE[1]}px ${SPACE[2]}px`,
-            }}
-          >
-            {String(cefrLevel ?? '').toUpperCase()}
-          </span>
-        </Row>
-        {/* `soft`, not `muted`. Supporting prose across the app is inkSoft and
+        <span
+          aria-label={copy.levelLabel?.(String(cefrLevel ?? '').toUpperCase())}
+          style={{
+            flexShrink: 0,
+            fontFamily: FONTS.mono,
+            fontSize: FONT_SIZE.ipa,
+            fontWeight: FONT_WEIGHT.bold,
+            letterSpacing: LETTER_SPACING.wider,
+            color: COLORS.ink,
+            border: `1px solid ${COLORS.mute}`,
+            borderRadius: RADIUS.sm,
+            padding: `${SPACE[1]}px ${SPACE[2]}px`,
+          }}
+        >
+          {String(cefrLevel ?? '').toUpperCase()}
+        </span>
+      </Row>
+      {/* `soft`, not `muted`. Supporting prose across the app is inkSoft and
             labels are mute; these two lines had it backwards, so the handle
             and the level — the two facts this card exists to state — were set
             in the quietest ink on the page. */}
-        {showsAccountLine && (
-          <Body size="sm" tone="soft" as="div" style={TRUNCATE}>
-            {[
-              profile?.handle ? `@${profile.handle}` : null,
-              createdAt ? copy.memberSince?.(createdAt) : null,
-            ]
-              .filter(Boolean)
-              .join(' · ')}
-          </Body>
-        )}
-      </Stack>
+      {showsAccountLine && (
+        <Body size="sm" tone="soft" as="div" style={TRUNCATE}>
+          {[
+            profile?.handle ? `@${profile.handle}` : null,
+            createdAt ? copy.memberSince?.(createdAt) : null,
+          ]
+            .filter(Boolean)
+            .join(' · ')}
+        </Body>
+      )}
+    </Stack>
+  );
 
-      {/* The Settings link stood here, between the level line and the today slot.
-          Nothing replaces it: both are direct children of this Stack, so the
-          gap collapses to a single SPACE step rather than leaving a hole. */}
-      {wide ? today : null}
+  // A dedicated, bounded right column: identity first, today's work second.
+  // A future Top 3 Leaderboard can be appended here as a third sibling without
+  // changing the outer two-column grid or nesting it inside either task board.
+  const rightColumn = (
+    <Stack data-testid="home-identity-content" gap={2} style={BOUNDED_COLUMN}>
+      {identityFacts}
+      {wide && today ? (
+        <div data-testid="home-today-column" style={BOUNDED_COLUMN}>
+          {today}
+        </div>
+      ) : null}
     </Stack>
   );
 
@@ -356,10 +369,13 @@ export default function PersonalHub({
         data-testid="home-identity-row"
         style={{
           display: 'grid',
-          gridTemplateColumns: identityColumns(wide, tiny),
+          gridTemplateColumns: wide ? IDENTITY_COLUMNS_WIDE : IDENTITY_COLUMNS_NARROW,
           gap: fit.identityGap,
           alignItems: 'start',
+          width: '100%',
+          maxWidth: '100%',
           minWidth: 0,
+          boxSizing: 'border-box',
         }}
       >
         <Stack gap={3} style={{ minWidth: 0 }}>
@@ -395,11 +411,11 @@ export default function PersonalHub({
             greeting (rather than nowrap) is the overflow behaviour — a handle
             is the name, and ellipsizing it would hide the one fact the hub
             exists to show. */}
-        {identityFacts}
+        {rightColumn}
       </div>
 
       {!wide && <div style={{ marginTop: SPACE[3], minWidth: 0 }}>{standing}</div>}
-      {!wide && today && <div style={{ marginTop: SPACE[3], minWidth: 0 }}>{today}</div>}
+      {!wide && today && <div style={{ ...BOUNDED_COLUMN, marginTop: SPACE[3] }}>{today}</div>}
 
       {recommended && (
         <div

@@ -4,8 +4,16 @@ import InteractiveCard from './ui/InteractiveCard';
 import { activePack } from '../packs';
 
 // Compact row padding — same recipe as MissionBoard. InteractiveCard's default
-// SPACE[4] is a tile inset; on a full-width quest row it is empty height.
-const ROW_PADDING = `${SPACE[2]}px ${SPACE[3]}px`;
+// SPACE[4] is a tile inset; on a full-width quest row it is empty height. A
+// one-stop vertical inset keeps the copy, ratio, and bar visually snug.
+const ROW_PADDING = `${SPACE[1]}px ${SPACE[2]}px`;
+
+const BOUNDED_BOARD = {
+  width: '100%',
+  maxWidth: '100%',
+  minWidth: 0,
+  boxSizing: 'border-box',
+};
 
 // The daily-quest board on Home.
 //
@@ -29,7 +37,7 @@ export default function QuestBoard({ quests = [], onGo }) {
   const allDone = quests.every((q) => q.done);
 
   return (
-    <section aria-labelledby="quests-heading">
+    <section aria-labelledby="quests-heading" style={BOUNDED_BOARD}>
       <h2
         id="quests-heading"
         style={{
@@ -44,8 +52,8 @@ export default function QuestBoard({ quests = [], onGo }) {
         {chrome.heading}
       </h2>
 
-      <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-        <Stack gap={1} as="div">
+      <ul style={{ ...BOUNDED_BOARD, listStyle: 'none', margin: 0, padding: 0 }}>
+        <Stack gap={1} as="div" style={BOUNDED_BOARD}>
           {quests.map((quest) => {
             const entry = copy[quest.id];
             if (!entry) return null;
@@ -57,10 +65,10 @@ export default function QuestBoard({ quests = [], onGo }) {
               chrome.progressLabel?.(quest) ?? `${quest.progress}/${quest.target}`;
 
             return (
-              <li key={quest.id}>
+              <li key={quest.id} style={BOUNDED_BOARD}>
                 <InteractiveCard
                   onClick={() => onGo?.(quest.tab, quest)}
-                  style={{ width: '100%', textAlign: 'left', padding: ROW_PADDING }}
+                  style={{ ...BOUNDED_BOARD, textAlign: 'left', padding: ROW_PADDING }}
                   aria-label={
                     quest.done
                       ? `${label} — ${chrome.doneLabel ?? 'done'}`
@@ -76,9 +84,10 @@ export default function QuestBoard({ quests = [], onGo }) {
                       gridTemplateColumns: 'auto minmax(0, 1fr)',
                       alignItems: 'start',
                       columnGap: SPACE[2],
+                      ...BOUNDED_BOARD,
                     }}
                   >
-                    <span aria-hidden="true" style={{ fontSize: FONT_SIZE.md, marginTop: 2 }}>
+                    <span aria-hidden="true" style={{ fontSize: FONT_SIZE.md }}>
                       {quest.done ? '✅' : entry.icon}
                     </span>
                     <div style={{ minWidth: 0 }}>
@@ -89,7 +98,7 @@ export default function QuestBoard({ quests = [], onGo }) {
                           minWidth: 0,
                           fontFamily: FONTS.body,
                           fontSize: FONT_SIZE.base,
-                          lineHeight: 1.4,
+                          lineHeight: 1.3,
                           color: quest.done ? COLORS.mute : COLORS.ink,
                           textDecoration: quest.done ? 'line-through' : 'none',
                           overflowWrap: 'anywhere',
@@ -102,9 +111,10 @@ export default function QuestBoard({ quests = [], onGo }) {
                         data-testid="quest-progress"
                         style={{
                           display: 'block',
-                          marginTop: SPACE[1],
+                          marginTop: 0,
                           fontFamily: FONTS.mono,
                           fontSize: FONT_SIZE.tag,
+                          lineHeight: 1.2,
                           color: quest.done ? COLORS.green : COLORS.mute,
                         }}
                       >

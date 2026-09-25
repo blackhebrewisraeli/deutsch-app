@@ -7,8 +7,16 @@ import { ListChecks } from 'lucide-react';
 
 // Compact row padding for Home list pills. InteractiveCard's default SPACE[4]
 // (16) is a deck-tile inset; on a full-width mission/quest row that reads as
-// empty vertical padding. SPACE[2]/SPACE[3] keeps the same control, shorter.
-const ROW_PADDING = `${SPACE[2]}px ${SPACE[3]}px`;
+// empty vertical padding. A one-stop vertical inset hugs the two text lines;
+// the wider inline inset keeps the icon and copy comfortably separated.
+const ROW_PADDING = `${SPACE[1]}px ${SPACE[2]}px`;
+
+const BOUNDED_BOARD = {
+  width: '100%',
+  maxWidth: '100%',
+  minWidth: 0,
+  boxSizing: 'border-box',
+};
 
 // The open-tasks board on Home.
 //
@@ -24,7 +32,7 @@ export default function MissionBoard({ missions = [], onGo }) {
   const chrome = activePack.content.missionsChrome ?? {};
 
   return (
-    <section aria-labelledby="missions-heading">
+    <section aria-labelledby="missions-heading" style={BOUNDED_BOARD}>
       <h2
         id="missions-heading"
         style={{
@@ -45,18 +53,18 @@ export default function MissionBoard({ missions = [], onGo }) {
         </StatusNote>
       ) : (
         // A real list, so a screen reader announces how many tasks are open.
-        <ul style={{ listStyle: 'none', margin: 0, padding: 0 }}>
-          <Stack gap={1} as="div">
+        <ul style={{ ...BOUNDED_BOARD, listStyle: 'none', margin: 0, padding: 0 }}>
+          <Stack gap={1} as="div" style={BOUNDED_BOARD}>
             {missions.map((mission) => {
               const entry = copy[mission.id];
               if (!entry) return null;
               const label = entry.text(mission);
               const destination = chrome.tabNames?.[mission.tab] ?? mission.tab;
               return (
-                <li key={mission.id}>
+                <li key={mission.id} style={BOUNDED_BOARD}>
                   <InteractiveCard
                     onClick={() => onGo?.(mission.tab, mission)}
-                    style={{ width: '100%', textAlign: 'left', padding: ROW_PADDING }}
+                    style={{ ...BOUNDED_BOARD, textAlign: 'left', padding: ROW_PADDING }}
                     // The visible row reads "⏰ 12 cards are due · Vokabeln",
                     // but an icon-only glyph carries no name, so the control
                     // gets an explicit one naming where it goes.
@@ -71,9 +79,10 @@ export default function MissionBoard({ missions = [], onGo }) {
                         gridTemplateColumns: 'auto minmax(0, 1fr)',
                         alignItems: 'start',
                         columnGap: SPACE[2],
+                        ...BOUNDED_BOARD,
                       }}
                     >
-                      <span aria-hidden="true" style={{ fontSize: FONT_SIZE.md, marginTop: 2 }}>
+                      <span aria-hidden="true" style={{ fontSize: FONT_SIZE.md }}>
                         {entry.icon}
                       </span>
                       <div style={{ minWidth: 0 }}>
@@ -84,7 +93,7 @@ export default function MissionBoard({ missions = [], onGo }) {
                             minWidth: 0,
                             fontFamily: FONTS.body,
                             fontSize: FONT_SIZE.base,
-                            lineHeight: 1.4,
+                            lineHeight: 1.3,
                             color: COLORS.ink,
                             overflowWrap: 'anywhere',
                           }}
@@ -96,9 +105,10 @@ export default function MissionBoard({ missions = [], onGo }) {
                           aria-hidden="true"
                           style={{
                             display: 'block',
-                            marginTop: SPACE[1],
+                            marginTop: 0,
                             fontFamily: FONTS.mono,
                             fontSize: FONT_SIZE.tag,
+                            lineHeight: 1.2,
                             color: COLORS.mute,
                           }}
                         >

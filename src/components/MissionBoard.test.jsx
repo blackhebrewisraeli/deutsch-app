@@ -20,8 +20,21 @@ describe('MissionBoard', () => {
   it('packs each row with compact padding instead of a tile inset', () => {
     render(<MissionBoard missions={[due]} />);
     expect(screen.getByRole('button')).toHaveStyle({
-      padding: `${SPACE[2]}px ${SPACE[3]}px`,
+      padding: `${SPACE[1]}px ${SPACE[2]}px`,
     });
+  });
+
+  it('bounds the board and rows inside the parent column', () => {
+    render(<MissionBoard missions={[due]} />);
+    const boundary = {
+      width: '100%',
+      maxWidth: '100%',
+      minWidth: '0',
+      boxSizing: 'border-box',
+    };
+    expect(screen.getByRole('region', { name: 'Missionen' })).toHaveStyle(boundary);
+    expect(screen.getByRole('button')).toHaveStyle(boundary);
+    expect(screen.getByRole('listitem')).toHaveStyle(boundary);
   });
 
   it('uses a display heading and lets card copy wrap inside its frame', () => {
@@ -34,7 +47,11 @@ describe('MissionBoard', () => {
       minWidth: '0',
       overflowWrap: 'anywhere',
     });
-    expect(screen.getByTestId('mission-destination')).toHaveStyle({ marginTop: `${SPACE[1]}px` });
+    expect(screen.getByTestId('mission-copy')).toHaveStyle({ lineHeight: '1.3' });
+    expect(screen.getByTestId('mission-destination')).toHaveStyle({
+      marginTop: '0',
+      lineHeight: '1.2',
+    });
   });
 
   // The whole reason InteractiveCard is mandated here: fourteen league rows
