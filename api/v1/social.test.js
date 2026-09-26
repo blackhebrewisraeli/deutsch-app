@@ -173,11 +173,11 @@ describe('isUserId', () => {
   });
 });
 
-describe('GET — search', () => {
+describe('POST — search', () => {
   it('returns matching people with the caller excluded', async () => {
     searchRows = [{ user_id: THEM, handle: 'sam', display_name: 'Sam', avatar_path: null }];
     const res = createRes();
-    await searchHandler(req('GET', { query: { q: 'sam' } }), res);
+    await searchHandler(req('POST', { body: { query: 'sam' } }), res);
 
     expect(res.statusCode).toBe(200);
     expect(res.body.results).toEqual([
@@ -194,7 +194,7 @@ describe('GET — search', () => {
   it('publishes ONLY public identity — never xp, streak, league or email', async () => {
     searchRows = [{ user_id: THEM, handle: 'sam', display_name: 'Sam', avatar_path: 'p.png' }];
     const res = createRes();
-    await searchHandler(req('GET', { query: { q: 'sam' } }), res);
+    await searchHandler(req('POST', { body: { query: 'sam' } }), res);
 
     expect(Object.keys(res.body.results[0]).sort()).toEqual([
       'avatar_path',
@@ -217,13 +217,13 @@ describe('GET — search', () => {
     ];
     edgeRows = [{ followed_id: THEM }];
     const res = createRes();
-    await searchHandler(req('GET', { query: { q: 'sam' } }), res);
+    await searchHandler(req('POST', { body: { query: 'sam' } }), res);
     expect(res.body.results.map((r) => r.is_following)).toEqual([true, false]);
   });
 
   it('a too-short term is an empty result, not an error', async () => {
     const res = createRes();
-    await searchHandler(req('GET', { query: { q: 'a' } }), res);
+    await searchHandler(req('POST', { body: { query: 'a' } }), res);
     expect(res.statusCode).toBe(200);
     expect(res.body.results).toEqual([]);
   });
@@ -232,7 +232,7 @@ describe('GET — search', () => {
     const db = mockDb();
     serviceClient.mockReturnValue(db);
     const res = createRes();
-    await searchHandler(req('GET', { query: { q: '' } }), res);
+    await searchHandler(req('POST', { body: { query: '' } }), res);
     // Only the guard chain's own blocked_at lookup touched the database.
     const tables = db.from.mock.calls.map(([t]) => t);
     expect(tables.filter((t) => t === 'profiles')).toHaveLength(1);
@@ -243,7 +243,7 @@ describe('GET — search', () => {
     const db = mockDb();
     serviceClient.mockReturnValue(db);
     searchRows = [];
-    await searchHandler(req('GET', { query: { q: 'sam' } }), createRes());
+    await searchHandler(req('POST', { body: { query: 'sam' } }), createRes());
 
     const search = db.from.mock.results
       .map((r) => r.value)
@@ -259,7 +259,7 @@ describe('GET — search', () => {
     const db = mockDb();
     serviceClient.mockReturnValue(db);
     searchRows = [];
-    await searchHandler(req('GET', { query: { q: 'sam' } }), createRes());
+    await searchHandler(req('POST', { body: { query: 'sam' } }), createRes());
 
     const search = db.from.mock.results
       .map((r) => r.value)
@@ -271,7 +271,7 @@ describe('GET — search', () => {
     const db = mockDb();
     serviceClient.mockReturnValue(db);
     searchRows = [{ user_id: THEM, handle: 'sam', display_name: null, avatar_path: null }];
-    await searchHandler(req('GET', { query: { q: 'sam' } }), createRes());
+    await searchHandler(req('POST', { body: { query: 'sam' } }), createRes());
 
     const edges = db.from.mock.results
       .map((r) => r.value)
@@ -369,14 +369,14 @@ describe('DELETE — unfollow', () => {
 });
 
 describe('route dispatch', () => {
-  it('sends each method to its own lane', async () => {
-    const get = createRes();
-    await route(req('GET', { query: { q: 'sam' } }), get);
-    expect(get.statusCode).toBe(200);
+  it('uses the POST operation discriminator for search and follow', async () => {
+    const search = createRes();
+    await route(req('POST', { body: { operation: 'search', query: 'sam' } }), search);
+    expect(search.statusCode).toBe(200);
 
-    const post = createRes();
-    await route(req('POST', { body: { userId: THEM } }), post);
-    expect(post.body.is_following).toBe(true);
+    const follow = createRes();
+    await route(req('POST', { body: { userId: THEM } }), follow);
+    expect(follow.body.is_following).toBe(true);
 
     const del = createRes();
     await route(req('DELETE', { query: { userId: THEM } }), del);

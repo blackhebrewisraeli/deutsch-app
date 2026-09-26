@@ -45,14 +45,19 @@ describe('isSearchable', () => {
 });
 
 describe('searchUsers', () => {
-  it('url-encodes the term rather than splicing it into the query string', async () => {
+  it('keeps the typed term out of the request URL', async () => {
     authedFetch.mockResolvedValue(ok({ results: [] }));
     await searchUsers('a&b=c d');
 
-    expect(authedFetch).toHaveBeenCalledWith(
-      '/api/v1/social?q=a%26b%3Dc%20d',
-      expect.objectContaining({ method: 'GET' })
+    const [url, init] = authedFetch.mock.calls[0];
+    expect(url).toBe('/api/v1/social');
+    expect(init).toEqual(
+      expect.objectContaining({
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+      })
     );
+    expect(JSON.parse(init.body)).toEqual({ operation: 'search', query: 'a&b=c d' });
   });
 
   it('returns the results array', async () => {
