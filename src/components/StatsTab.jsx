@@ -40,10 +40,10 @@ const CARD_BOUNDARY = {
   maxWidth: '100%',
   minWidth: 0,
   boxSizing: 'border-box',
-  alignSelf: 'start',
+  alignSelf: 'stretch',
 };
 
-function DashboardCard({ num, title, children, full = false, style }) {
+function DashboardCard({ num, title, children, full = false }) {
   return (
     <Surface
       as="section"
@@ -54,7 +54,6 @@ function DashboardCard({ num, title, children, full = false, style }) {
       style={{
         ...CARD_BOUNDARY,
         gridColumn: full ? '1 / -1' : undefined,
-        ...style,
       }}
     >
       <SectionLabel num={num} text={title} />
@@ -200,8 +199,8 @@ export default function StatsTab({
               data-testid="profile-analytics-grid"
               style={{
                 display: 'grid',
-                gridTemplateColumns: dashboardWide ? 'repeat(3, minmax(0, 1fr))' : 'minmax(0, 1fr)',
-                alignItems: 'start',
+                gridTemplateColumns: dashboardWide ? 'repeat(2, minmax(0, 1fr))' : 'minmax(0, 1fr)',
+                alignItems: 'stretch',
                 gap: SPACE[3],
                 minWidth: 0,
               }}
@@ -219,19 +218,11 @@ export default function StatsTab({
                 <AccuracyByLevel byLevel={accByLevel} />
               </DashboardCard>
 
-              <DashboardCard
-                num="E"
-                title="Vocab stats"
-                style={dashboardWide ? { gridColumn: '3', gridRow: '2 / span 2' } : undefined}
-              >
+              <DashboardCard num="E" title="Vocab stats">
                 <VocabSrsWidget srs={srs} now={nowMs} />
               </DashboardCard>
 
-              <DashboardCard
-                num="F"
-                title="Review — tap to re-attempt"
-                style={dashboardWide ? { gridColumn: '1 / span 2' } : undefined}
-              >
+              <DashboardCard num="F" title="Review — tap to re-attempt">
                 <ReviewFeed items={review} onReview={onReview ?? (() => {})} />
               </DashboardCard>
             </div>

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import StatsTab from './StatsTab';
 
 // --- Module mocks ---
@@ -134,32 +134,40 @@ describe('StatsTab — one consolidated page, no sub-tabs', () => {
     ).toBeTruthy();
   });
 
-  it.each([720, 1280])(
-    'places the compact analytics cards in a desktop mosaic at %spx',
-    (width) => {
-      setViewportWidth(width);
-      render(<StatsTab user={USER} />);
-      expect(screen.getByTestId('profile-analytics-grid')).toHaveStyle({
-        gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-      });
-      for (const name of ['By section', 'Accuracy by level', 'Vocab stats']) {
-        expect(screen.getByRole('region', { name })).toBeInTheDocument();
-      }
-      expect(screen.getByRole('region', { name: 'Vocab stats' })).toHaveStyle({
-        gridColumn: '3',
-        gridRow: '2 / span 2',
-      });
-      expect(screen.getByRole('region', { name: /Review/ })).toHaveStyle({
-        gridColumn: '1 / span 2',
-      });
+  it.each([720, 1280])('places analytics cards in the desktop hierarchy at %spx', (width) => {
+    setViewportWidth(width);
+    render(<StatsTab user={USER} />);
+    const grid = screen.getByTestId('profile-analytics-grid');
+    expect(grid).toHaveStyle({
+      gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+      alignItems: 'stretch',
+      gap: '12px',
+    });
+    expect(
+      within(grid)
+        .getAllByRole('region')
+        .map((card) => card.getAttribute('aria-label'))
+    ).toEqual([
+      'Last 12 months',
+      'By section',
+      'Accuracy by level',
+      'Vocab stats',
+      'Review — tap to re-attempt',
+    ]);
+    expect(screen.getByRole('region', { name: 'Last 12 months' })).toHaveStyle({
+      gridColumn: '1 / -1',
+    });
+    for (const card of within(grid).getAllByRole('region')) {
+      expect(card).toHaveStyle({ alignSelf: 'stretch' });
     }
-  );
+  });
 
   it.each([320, 375, 719])('stacks analytics cards in one bounded column at %spx', (width) => {
     setViewportWidth(width);
     render(<StatsTab user={USER} mobile={width < 640} />);
     expect(screen.getByTestId('profile-analytics-grid')).toHaveStyle({
       gridTemplateColumns: 'minmax(0, 1fr)',
+      gap: '12px',
       minWidth: '0',
     });
   });
