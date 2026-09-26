@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import PHRASES from '../../../scripts/seed-data/apify_raw_sentences.json';
+import PHRASES from '../../../scripts/seed-data/apify_raw_sentences.json' with { type: 'json' };
 import {
   TRAVEL_BASICS_DECK_DEFS,
   TRAVEL_BASICS_ID,

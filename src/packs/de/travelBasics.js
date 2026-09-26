@@ -5,7 +5,7 @@
 // due (lib/srs getDueCount), so folding 327 phrases into content.decks would
 // put all of them on the Stats nav badge and Home's SRS mission at once. DECKS
 // also feeds seed-lessons' vocab units, which this deck is not.
-import PHRASES from '../../../scripts/seed-data/apify_raw_sentences.json';
+import PHRASES from '../../../scripts/seed-data/apify_raw_sentences.json' with { type: 'json' };
 
 export const TRAVEL_BASICS_ID = 'travel-basics';
 
