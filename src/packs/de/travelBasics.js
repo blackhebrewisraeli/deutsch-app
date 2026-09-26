@@ -17,10 +17,14 @@ export const cefrFor = (de) => (de.trim().split(/\s+/).length < 4 ? 'A1' : 'A2')
 
 // "Good day (formal)" stays the shown gloss — the note is what tells the
 // formal and informal cards apart. The bare "Good day" is what a learner types,
-// so it is accepted too. ` ?` not `\s*`: an unbounded run before `\(` backtracks
-// quadratically (Sonar S5852), and no phrase has more than one space there.
+// so it is accepted too.
+//
+// Both quantifiers are bounded so the regex stays linear (Sonar S8786): ` ?`
+// not `\s*` before the note, and `[^()]` not `[^)]` inside it. `[^)]` can also
+// consume a `(`, so a run of unclosed parens restarts a full scan at each one.
+// No phrase nests parens or puts more than one space before a note.
 export const glossesFor = (en) => {
-  const bare = en.replace(/ ?\([^)]*\)/g, '').trim();
+  const bare = en.replace(/ ?\([^()]*\)/g, '').trim();
   return bare && bare !== en ? [en, bare] : [en];
 };
 

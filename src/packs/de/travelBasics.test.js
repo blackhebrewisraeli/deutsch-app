@@ -55,9 +55,14 @@ describe('Travel Basics', () => {
     );
   });
 
-  it('strips notes in linear time', () => {
+  // One input per quantifier that could backtrack: the space before the note,
+  // and the note body (unclosed parens restart the scan at every `(`).
+  it.each([
+    ['spaces', `${' '.repeat(50_000)}x`],
+    ['unclosed parens', '('.repeat(50_000)],
+  ])('strips notes in linear time — %s', (_, input) => {
     const t = performance.now();
-    glossesFor(`${' '.repeat(50_000)}x`);
+    glossesFor(input);
     expect(performance.now() - t).toBeLessThan(500);
   });
 
