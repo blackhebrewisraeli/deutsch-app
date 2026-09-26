@@ -8,6 +8,7 @@ import { isLearned, learnedInDeck } from '../lib/learnedWords';
 const {
   decks: PRESET_DECKS,
   interestDecks: PACK_INTEREST_DECKS,
+  phraseDecks: PHRASE_DECKS,
   interestTopics,
 } = activePack.content;
 const DEFAULT_DECK_ID = 'greetings';
@@ -129,7 +130,10 @@ export default function VocabTab({
     ? (PACK_INTEREST_DECKS[deckId] ?? [])
     : null;
   const activeDeck =
-    customCards ?? (isAuto ? (asyncDeck ?? []) : (PRESET_DECKS[deckId] ?? interestCards ?? []));
+    customCards ??
+    (isAuto
+      ? (asyncDeck ?? [])
+      : (PRESET_DECKS[deckId] ?? PHRASE_DECKS[deckId] ?? interestCards ?? []));
   const practiceLevel = clampMode(level, getUserLevel());
 
   // Deck changes must not keep the previous queue. React applies the id write
@@ -157,6 +161,7 @@ export default function VocabTab({
       customDecks?.[deckId] ||
       isAuto ||
       Object.hasOwn(PRESET_DECKS, deckId ?? '') ||
+      Object.hasOwn(PHRASE_DECKS, deckId ?? '') ||
       isEnabledInterestDeck(deckId, interestTopics, enabledInterests);
     if (!isKnown) selectDeck(DEFAULT_DECK_ID);
   }, [deckId, customDecks, isAuto, enabledInterests]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -386,6 +391,7 @@ export default function VocabTab({
     customDecks?.[deckId]?.name ||
     AUTO_DECKS.find((d) => d.id === deckId)?.name ||
     activePack.content.deckDefs?.[deckId]?.name ||
+    activePack.content.phraseDeckDefs?.[deckId]?.name ||
     activePack.content.interestDeckDefs?.[deckId]?.name ||
     deckId;
 
