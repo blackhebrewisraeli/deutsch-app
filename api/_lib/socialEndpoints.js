@@ -94,7 +94,7 @@ function targetId(req) {
 }
 
 export const searchHandler = createAccountHandler({
-  method: 'GET',
+  method: 'POST',
   // Typed input. The client debounces, so a real session sends far fewer than
   // this; the limit is here for the client that does not.
   ipRate: { windowMs: 60 * 1000, max: 60 },
@@ -102,7 +102,7 @@ export const searchHandler = createAccountHandler({
   name: 'social.search',
   failureMessage: 'Search failed.',
   run: async ({ req, res, auth, db }) => {
-    const query = sanitizeQuery(req.query?.q);
+    const query = sanitizeQuery(req.body?.query);
 
     // Too short is an EMPTY RESULT, not an error. The search box calls this on
     // the way down to an empty string as the learner deletes what they typed,

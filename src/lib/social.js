@@ -33,8 +33,10 @@ export function isSearchable(term) {
  *   a failure over an ordinary edit.
  */
 export async function searchUsers(term, { signal } = {}) {
-  const res = await authedFetch(`${ENDPOINT}?q=${encodeURIComponent(term ?? '')}`, {
-    method: 'GET',
+  const res = await authedFetch(ENDPOINT, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ operation: 'search', query: term ?? '' }),
     signal,
   });
   if (!res.ok) throw new Error(await errorMessage(res, 'Could not search right now.'));
