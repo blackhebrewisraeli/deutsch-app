@@ -64,6 +64,13 @@ export const BRAND = {
 };
 
 /**
+ * Light `ground`: the PWA manifest's `background_color` and the pre-JS shell's
+ * default ground. Mode-dependent in the app, pinned to light here for the
+ * reason splashSvg gives.
+ */
+export const SPLASH_GROUND = MODE_COLORS.light.ground;
+
+/**
  * Half-diagonal of the mark's bounding box once scaled into `size`.
  *
  * Android's maskable contract is a safe zone of the central circle at 80% of
@@ -86,6 +93,17 @@ export function maskableSafeRadius(size) {
 }
 
 /**
+ * Android's adaptive-icon contract, which is tighter than the web's maskable
+ * one: the foreground layer is a 108dp canvas, and only the central 66dp circle
+ * is guaranteed to survive every launcher mask and the parallax shift.
+ *
+ * @param {number} size foreground canvas edge, px
+ */
+export function adaptiveSafeRadius(size) {
+  return (size * 33) / 108;
+}
+
+/**
  * Render the mark onto a plane.
  *
  * @param {object} opts
@@ -94,9 +112,59 @@ export function maskableSafeRadius(size) {
  *                                    platform masks itself (maskable, iOS).
  * @param {number} opts.markHeight    em height of the mark, px
  * @param {number} [opts.dotRScale]   optical bump for the period at small sizes
+ * @param {boolean} [opts.plane]      false omits the plane, leaving the mark on
+ *                                    transparency — Android's adaptive
+ *                                    foreground, whose plane is its own layer.
  * @returns {string} standalone SVG, containing no <text> and no font reference
  */
-export function iconSvg({ size, radius, markHeight, dotRScale = 1 }) {
+export function iconSvg({ size, radius, markHeight, dotRScale = 1, plane = true }) {
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`,
+    ...iconBody({ size, radius, markHeight, dotRScale, plane }),
+    `</svg>`,
+    '',
+  ].join('\n');
+}
+
+/**
+ * A launch screen: the `any` icon, centred on the ivory ground.
+ *
+ * The same picture an installed PWA already shows on Android, which builds its
+ * splash from `background_color` (light `ground`, see vite.config.js) plus the
+ * icon — and the ground the pre-JS shell in index.html paints next, so the
+ * hand-off from native splash to web shell does not flash. A launch screen is
+ * as theme-blind as an icon: it is drawn before any JavaScript can read the
+ * stored mode, so it takes the light ground in both.
+ *
+ * @param {object} opts
+ * @param {number} opts.width     canvas width, px
+ * @param {number} opts.height    canvas height, px
+ * @param {number} opts.iconSize  edge of the centred icon, px
+ * @returns {string} standalone SVG, containing no <text> and no font reference
+ */
+export function splashSvg({ width, height, iconSize }) {
+  const x = round((width - iconSize) / 2);
+  const y = round((height - iconSize) / 2);
+  const icon = iconBody({
+    size: iconSize,
+    radius: round((iconSize * 96) / 512),
+    markHeight: round(iconSize / 2),
+    dotRScale: 1,
+    plane: true,
+  });
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">`,
+    `  <rect width="${width}" height="${height}" fill="${SPLASH_GROUND}"/>`,
+    `  <g transform="translate(${x} ${y})">`,
+    ...icon.map((line) => `  ${line}`),
+    `  </g>`,
+    `</svg>`,
+    '',
+  ].join('\n');
+}
+
+/** The plane and the mark, as SVG lines, for a `size`-edged canvas at 0,0. */
+function iconBody({ size, radius, markHeight, dotRScale, plane }) {
   const scale = markHeight / MARK.height;
   const markW = MARK.width * scale;
   const tx = (size - markW) / 2;
@@ -104,15 +172,14 @@ export function iconSvg({ size, radius, markHeight, dotRScale = 1 }) {
   const r = round(MARK.dotR * dotRScale);
 
   return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">`,
-    `  <rect width="${size}" height="${size}" rx="${radius}" fill="${BRAND.plane}"/>`,
+    ...(plane
+      ? [`  <rect width="${size}" height="${size}" rx="${radius}" fill="${BRAND.plane}"/>`]
+      : []),
     `  <g transform="translate(${round(tx)} ${round(ty)}) scale(${round(scale, 5)})">`,
     `    <path fill="${BRAND.ink}" fill-rule="evenodd" d="${MARK.outer} ${MARK.counter}"/>`,
     `    <circle cx="${MARK.dotCx}" cy="${MARK.dotCy}" r="${r}" fill="${BRAND.dot}"/>`,
     `  </g>`,
-    `</svg>`,
-    '',
-  ].join('\n');
+  ];
 }
 
 /**
