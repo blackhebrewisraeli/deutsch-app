@@ -4,10 +4,18 @@ import { join } from 'node:path';
 import {
   MARK,
   BRAND,
+  SPLASH_GROUND,
+  adaptiveSafeRadius,
   iconSvg,
   maskableClearance,
   maskableSafeRadius,
 } from '../scripts/gen-assets/mark.js';
+import {
+  ANDROID_COLORS,
+  NATIVE_ICONS,
+  NATIVE_SPLASHES,
+  colorResourceXml,
+} from '../scripts/gen-assets/native.js';
 
 /**
  * The brand assets are the one part of the app no other test can see: they are
@@ -231,5 +239,98 @@ describe('the social card fetches nothing at generation time', () => {
     // Prose moved to the sans on 2026-09-01; the old card still set its tagline
     // in Fraunces italic, which is display-only now.
     expect(card).not.toMatch(/font-style:\s*italic/);
+  });
+});
+
+describe('the native icons and launch screens', () => {
+  // `npx cap add` seeds both projects with Capacitor's own logo, and nothing
+  // in the web build or CI looks at them — a store build would have shipped it.
+  // Every file here is drawn by `npm run gen:assets` from native.js; these
+  // check the invariants a store upload or a launcher enforces.
+
+  /** PNG colour type, IHDR byte 25: 2 = RGB, 6 = RGBA. */
+  function pngColorType(file) {
+    return readFileSync(file)[25];
+  }
+
+  it('every generated icon exists at the size the generator drew', () => {
+    expect(NATIVE_ICONS.length).toBeGreaterThan(0);
+    for (const { file, size } of NATIVE_ICONS) {
+      expect(pngSize(file), file).toEqual({ width: size, height: size });
+    }
+  });
+
+  it('every generated launch screen exists at the size the generator drew', () => {
+    expect(NATIVE_SPLASHES.length).toBeGreaterThan(0);
+    for (const { file, width, height } of NATIVE_SPLASHES) {
+      expect(pngSize(file), file).toEqual({ width, height });
+    }
+  });
+
+  it('the iOS marketing icon carries no alpha channel', () => {
+    // App Store Connect rejects the upload otherwise ("can't be transparent or
+    // contain an alpha channel"), and nothing short of an archive-and-upload
+    // would surface it.
+    const [ios] = NATIVE_ICONS.filter((i) => i.file.startsWith('ios/'));
+    expect(ios.size).toBe(1024);
+    expect(pngColorType(ios.file)).toBe(2);
+  });
+
+  it('the iOS asset catalog points at the generated files', () => {
+    const icons = JSON.parse(
+      readFileSync('ios/App/App/Assets.xcassets/AppIcon.appiconset/Contents.json', 'utf8')
+    ).images.map((i) => i.filename);
+    const splashes = JSON.parse(
+      readFileSync('ios/App/App/Assets.xcassets/Splash.imageset/Contents.json', 'utf8')
+    ).images.map((i) => i.filename);
+    const generated = (dir) =>
+      [...NATIVE_ICONS, ...NATIVE_SPLASHES]
+        .filter((s) => s.file.includes(`/${dir}/`))
+        .map((s) => s.file.split('/').pop());
+    expect(icons.sort()).toEqual(generated('AppIcon.appiconset').sort());
+    expect(splashes.sort()).toEqual(generated('Splash.imageset').sort());
+  });
+
+  it('every adaptive foreground clears the 66dp safe circle', () => {
+    const adaptive = NATIVE_ICONS.filter((i) => i.adaptive);
+    expect(adaptive.length).toBe(5);
+    for (const icon of adaptive) {
+      expect(maskableClearance(icon), icon.file).toBeLessThanOrEqual(adaptiveSafeRadius(icon.size));
+    }
+  });
+
+  it('the maskable proportion would NOT clear it', () => {
+    // The negative control, and the reason the adaptive layer is sized on its
+    // own: Android's 66/108 circle is tighter than the web's 80% one, so the
+    // PWA maskable geometry reused here would be cropped.
+    const size = 432;
+    expect(maskableClearance({ markHeight: (size * 240) / 512 })).toBeGreaterThan(
+      adaptiveSafeRadius(size)
+    );
+  });
+
+  it('the Android colour resources are the generator output, unedited', () => {
+    // So a palette change in themeTokens.js reaches the launcher by re-running
+    // gen:assets, and a hand edit shows up here instead of drifting silently.
+    expect(ANDROID_COLORS.map((c) => c.value)).toEqual([BRAND.plane, SPLASH_GROUND]);
+    for (const color of ANDROID_COLORS) {
+      expect(readFileSync(color.file, 'utf8'), color.file).toBe(colorResourceXml(color));
+    }
+  });
+
+  it('the adaptive icon and the API 31+ launch theme use them', () => {
+    const res = 'android/app/src/main/res';
+    for (const shape of ['ic_launcher', 'ic_launcher_round']) {
+      const xml = readFileSync(`${res}/mipmap-anydpi-v26/${shape}.xml`, 'utf8');
+      expect(xml, shape).toMatch(
+        /<background android:drawable="@color\/ic_launcher_background"\s*\/>/
+      );
+      expect(xml, shape).toMatch(
+        /<foreground android:drawable="@mipmap\/ic_launcher_foreground"\s*\/>/
+      );
+    }
+    expect(readFileSync(`${res}/values/styles.xml`, 'utf8')).toMatch(
+      /<item name="windowSplashScreenBackground">@color\/splash_background<\/item>/
+    );
   });
 });
