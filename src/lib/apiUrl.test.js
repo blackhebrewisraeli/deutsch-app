@@ -17,6 +17,19 @@ describe('apiUrl', () => {
   });
 
   it.each([
+    'https://evil.example',
+    'https://deutsch-app-dusky.vercel.app.evil.example',
+    'https://evil.example@deutsch-app-dusky.vercel.app',
+    'https://deutsch-app-dusky.vercel.app/api',
+    'http://deutsch-app-dusky.vercel.app',
+  ])('refuses unapproved native API base %s', (base) => {
+    vi.stubEnv('VITE_API_BASE_URL', base);
+    expect(() => apiUrl('/api/v1/social')).toThrow(
+      'VITE_API_BASE_URL is not the approved API origin'
+    );
+  });
+
+  it.each([
     'https://evil.example/api/v1/social',
     '//evil.example/api/v1/social',
     '/auth/v1/token',

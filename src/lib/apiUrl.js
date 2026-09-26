@@ -1,16 +1,28 @@
+const NATIVE_API_ORIGIN = 'https://deutsch-app-dusky.vercel.app';
+
 // Every /api call goes through here. On the web VITE_API_BASE_URL is unset and
 // paths stay relative (same origin as the page). The native build sets it,
 // because a Capacitor webview is served from capacitor://localhost or
 // https://localhost, where a relative /api path resolves to nothing.
 // Read per call, not at import, so tests can stub the env.
 export function apiUrl(path) {
-  // Six of the ten callers attach the session's bearer token, so the target
-  // must be our API and nothing else. A path starting '/api/' can be neither
-  // absolute ('https://host') nor protocol-relative ('//host'), and the only
-  // host that ever goes in front of it is our own base.
+  // Authenticated callers attach the session's bearer token, so neither the
+  // path nor the native build configuration may choose the destination.
   if (typeof path !== 'string' || !path.startsWith('/api/')) {
     throw new TypeError(`apiUrl: not an /api path: ${String(path).slice(0, 80)}`);
   }
-  const base = import.meta.env.VITE_API_BASE_URL || '';
-  return (base.endsWith('/') ? base.slice(0, -1) : base) + path;
+
+  const configuredBase = import.meta.env.VITE_API_BASE_URL || '';
+  if (!configuredBase) return path;
+
+  const normalizedBase = configuredBase.endsWith('/')
+    ? configuredBase.slice(0, -1)
+    : configuredBase;
+  if (normalizedBase !== NATIVE_API_ORIGIN) {
+    throw new TypeError('apiUrl: VITE_API_BASE_URL is not the approved API origin');
+  }
+
+  // Return the trusted constant rather than environment-controlled input so a
+  // compromised or mistaken native build cannot exfiltrate bearer tokens.
+  return NATIVE_API_ORIGIN + path;
 }
