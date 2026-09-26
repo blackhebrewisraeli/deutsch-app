@@ -38,7 +38,7 @@ const tileStyle = {
  * parent (mocked today, AI-generated later) and sending goes through the same
  * onSend the free-text input uses.
  */
-export default function WordBank({ words, thinking, onSend, onSwitchToTyping }) {
+export default function WordBank({ words, thinking, onSend, onSwitchToTyping, sendLabel }) {
   const [bank] = useState(() => jumble(words));
   const [placed, setPlaced] = useState([]);
   const placedIds = new Set(placed.map((t) => t.id));
@@ -132,7 +132,12 @@ export default function WordBank({ words, thinking, onSend, onSwitchToTyping }) 
         })}
       </fieldset>
 
-      <ScaffoldActions canSend={canSend} onSend={send} onSwitchToTyping={onSwitchToTyping} />
+      <ScaffoldActions
+        canSend={canSend}
+        onSend={send}
+        onSwitchToTyping={onSwitchToTyping}
+        sendLabel={sendLabel}
+      />
     </div>
   );
 }

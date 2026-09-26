@@ -5,7 +5,12 @@ import { COLORS, FONTS, FONT_SIZE, RADIUS, SPACE } from '../../lib/theme';
  * The action row every scaffolded composer shares: the escape hatch to free
  * typing, and send. One component so WordBank and FillBlank cannot drift.
  */
-export default function ScaffoldActions({ canSend, onSend, onSwitchToTyping }) {
+export default function ScaffoldActions({
+  canSend,
+  onSend,
+  onSwitchToTyping,
+  sendLabel = 'Send chat message',
+}) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: SPACE[2] }}>
       <button
@@ -33,7 +38,7 @@ export default function ScaffoldActions({ canSend, onSend, onSwitchToTyping }) {
         data-focus-on-dark=""
         onClick={onSend}
         disabled={!canSend}
-        aria-label="Send chat message"
+        aria-label={sendLabel}
         style={{
           width: 40,
           height: 40,

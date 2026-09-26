@@ -22,7 +22,14 @@ const gapStyle = {
  * distractors in a native select; `typed` asks for it. Either way the whole
  * sentence goes through the shared onSend and the AI grades it like any turn.
  */
-export default function FillBlank({ mode, scaffold, thinking, onSend, onSwitchToTyping }) {
+export default function FillBlank({
+  mode,
+  scaffold,
+  thinking,
+  onSend,
+  onSwitchToTyping,
+  sendLabel,
+}) {
   const [options] = useState(() => shuffle([scaffold.answer, ...scaffold.distractors]));
   const [word, setWord] = useState('');
   const { before, after } = gapParts(scaffold);
@@ -87,7 +94,12 @@ export default function FillBlank({ mode, scaffold, thinking, onSend, onSwitchTo
         )}
         {after}
       </div>
-      <ScaffoldActions canSend={canSend} onSend={send} onSwitchToTyping={onSwitchToTyping} />
+      <ScaffoldActions
+        canSend={canSend}
+        onSend={send}
+        onSwitchToTyping={onSwitchToTyping}
+        sendLabel={sendLabel}
+      />
     </div>
   );
 }
