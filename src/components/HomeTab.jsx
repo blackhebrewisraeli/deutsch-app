@@ -24,6 +24,14 @@ import PlacementOfferBanner from './PlacementOfferBanner';
 // docs/superpowers/specs/2026-08-24-entry-flow-and-home-dashboard-design.md §7
 // for the original exclusion (E5), and the 2026-08-29 design §4.1 for the
 // identity that narrows it — identity, not administration.
+//
+// Capped and centred, not left to PageFrame's 1400px. At 1440 the card ran
+// 1336px wide and every Missionen / Tagesaufgaben row stretched to 1030px for
+// one short line of text. 896 (Tailwind's max-w-4xl) keeps the avatar column
+// at 256 and gives the task column ~590 — sized to its content. Below 928
+// the cap never binds, so phones and tablets are untouched.
+const PAGE_MAX_WIDTH = 896;
+
 export default function HomeTab({
   score,
   goalPct,
@@ -43,7 +51,7 @@ export default function HomeTab({
   const { remaining } = resolveRecommended(missions, 2, { classifiedLevel: cefrLevel });
 
   return (
-    <Stack gap={5}>
+    <Stack gap={5} style={{ maxWidth: PAGE_MAX_WIDTH, marginInline: 'auto' }}>
       {showPlacementOffer ? (
         <PlacementOfferBanner onRetake={onRetakePlacement} onDismiss={onDismissPlacementOffer} />
       ) : null}

@@ -166,6 +166,14 @@ describe('HomeTab', () => {
     expect(hub).toContainElement(screen.getByRole('region', { name: /recommended/i }));
     expect(screen.getByTestId('home-today-stack')).toHaveStyle({ gap: `${SPACE[3]}px` });
   });
+
+  it('caps the page at a readable width and centres it, instead of spanning the 1400px frame', () => {
+    render(<HomeTab {...hubProps} />);
+    const page = screen.getByRole('region', { name: /guten tag/i }).parentElement;
+    expect(page).toHaveStyle({ maxWidth: '896px' });
+    // jsdom does not expand margin-inline into left/right, so read it raw.
+    expect(page.style.marginInline).toBe('auto');
+  });
 });
 
 // The Settings link Home used to gate on isAuthConfigured() is gone entirely, so
