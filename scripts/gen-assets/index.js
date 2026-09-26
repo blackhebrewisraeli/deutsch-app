@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 /**
- * Regenerates every brand bitmap in public/ from one source of geometry.
+ * Regenerates every brand bitmap from one source of geometry: the web set in
+ * public/, and the launcher icons and launch screens in the iOS and Android
+ * projects (listed in native.js).
  *
  *   npm run gen:assets
  *
@@ -25,7 +27,14 @@ import { mkdir, stat, writeFile } from 'node:fs/promises';
 import { dirname, extname, join, normalize } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-import { iconSvg, maskableClearance, maskableSafeRadius } from './mark.js';
+import {
+  adaptiveSafeRadius,
+  iconSvg,
+  maskableClearance,
+  maskableSafeRadius,
+  splashSvg,
+} from './mark.js';
+import { ANDROID_COLORS, NATIVE_ICONS, NATIVE_SPLASHES, colorResourceXml } from './native.js';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const publicDir = join(root, 'public');
@@ -79,6 +88,16 @@ async function main() {
       );
     }
   }
+  for (const icon of NATIVE_ICONS.filter((i) => i.adaptive)) {
+    const clearance = maskableClearance(icon);
+    const safe = adaptiveSafeRadius(icon.size);
+    if (clearance > safe) {
+      throw new Error(
+        `${icon.file}: mark half-diagonal ${clearance.toFixed(1)} exceeds the ` +
+          `adaptive-icon safe radius ${safe.toFixed(1)} (66dp of 108dp). Reduce markHeight.`
+      );
+    }
+  }
 
   await mkdir(publicDir, { recursive: true });
 
@@ -91,12 +110,33 @@ async function main() {
     }
 
     for (const spec of ICONS) {
-      await rasteriseSvg(browser, iconSvg(spec), spec.size, join(publicDir, spec.file));
+      await rasteriseSvg(browser, iconSvg(spec), spec.size, spec.size, join(publicDir, spec.file));
       report(spec.file, `${spec.size}x${spec.size}`);
     }
 
     await shootSocial(browser, server.origin, join(publicDir, SOCIAL.file));
     report(SOCIAL.file, `${SOCIAL.width}x${SOCIAL.height}`);
+
+    for (const spec of NATIVE_ICONS) {
+      const out = join(root, spec.file);
+      await mkdir(dirname(out), { recursive: true });
+      await rasteriseSvg(browser, iconSvg(spec), spec.size, spec.size, out, {
+        transparent: spec.plane === false,
+      });
+      report(spec.file, `${spec.size}x${spec.size}`);
+    }
+
+    for (const spec of NATIVE_SPLASHES) {
+      const out = join(root, spec.file);
+      await mkdir(dirname(out), { recursive: true });
+      await rasteriseSvg(browser, splashSvg(spec), spec.width, spec.height, out);
+      report(spec.file, `${spec.width}x${spec.height}`);
+    }
+
+    for (const color of ANDROID_COLORS) {
+      await writeFile(join(root, color.file), colorResourceXml(color), 'utf8');
+      report(color.file, color.value);
+    }
   } finally {
     await browser.close();
     await server.close();
@@ -104,31 +144,37 @@ async function main() {
 }
 
 /**
- * Screenshot an SVG at exactly `size` x `size`.
+ * Screenshot an SVG at exactly `width` x `height`.
  *
  * The SVG is placed in a zero-margin document whose viewport is already the
- * target edge, and the page is captured rather than the element, so the output
+ * target size, and the page is captured rather than the element, so the output
  * is the canvas 1:1 with no scaling pass anywhere in the pipeline.
+ *
+ * Opaque by default, and that is load-bearing: Chromium then writes an RGB PNG
+ * with no alpha channel at all, which App Store Connect requires of the iOS
+ * icon. `transparent` is only for the Android adaptive foreground layer.
  *
  * @param {import('playwright').Browser} browser
  * @param {string} svg
- * @param {number} size
+ * @param {number} width
+ * @param {number} height
  * @param {string} out
+ * @param {{ transparent?: boolean }} [opts]
  */
-async function rasteriseSvg(browser, svg, size, out) {
+async function rasteriseSvg(browser, svg, width, height, out, { transparent = false } = {}) {
   const page = await browser.newPage({
-    viewport: { width: size, height: size },
+    viewport: { width, height },
     deviceScaleFactor: 1,
   });
   try {
     await page.setContent(
       `<!doctype html><html><head><style>
-         html,body{margin:0;padding:0;width:${size}px;height:${size}px;overflow:hidden}
+         html,body{margin:0;padding:0;width:${width}px;height:${height}px;overflow:hidden}
          svg{display:block}
        </style></head><body>${svg}</body></html>`,
       { waitUntil: 'load' }
     );
-    await page.screenshot({ path: out, type: 'png' });
+    await page.screenshot({ path: out, type: 'png', omitBackground: transparent });
   } finally {
     await page.close();
   }
