@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Sparkles } from 'lucide-react';
-import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, BORDER, RADIUS } from '../lib/theme';
+import { COLORS, FONTS, FONT_SIZE, LETTER_SPACING, SPACE, BORDER } from '../lib/theme';
 import { activePack } from '../packs';
 const {
   A1: TRANSLATE_SENTENCES_A1,
@@ -13,6 +13,7 @@ import ExerciseHeader from './translate/ExerciseHeader';
 import FeedbackButton from './FeedbackButton';
 import PromptCard from './translate/PromptCard';
 import ScaffoldExercise from './translate/ScaffoldExercise';
+import ModePicker from './translate/ModePicker';
 import TypingExercise from './translate/TypingExercise';
 import { TRANSLATE_MODES, defaultMode, toScaffold } from './translate/scaffold';
 import { INPUT_MODES } from '../lib/chatInputModes';
@@ -174,42 +175,7 @@ export default function TranslateTab({
 
         <PromptCard text={exercise.en} />
 
-        <label
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: SPACE[2],
-            marginBottom: SPACE[4],
-            fontFamily: FONTS.mono,
-            fontSize: FONT_SIZE.tag,
-            letterSpacing: LETTER_SPACING.caps,
-            color: COLORS.mute,
-          }}
-        >
-          MODE
-          <select
-            aria-label="Input mode"
-            value={mode}
-            onChange={(e) => setMode(e.target.value)}
-            style={{
-              flex: 1,
-              minWidth: 0,
-              fontFamily: FONTS.body,
-              fontSize: FONT_SIZE.lg,
-              color: COLORS.ink,
-              background: COLORS.surface,
-              border: BORDER.panel,
-              borderRadius: RADIUS.md,
-              padding: `${SPACE[1]}px ${SPACE[2]}px`,
-            }}
-          >
-            {TRANSLATE_MODES.map((m) => (
-              <option key={m.key} value={m.key}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ModePicker value={mode} onChange={setMode} />
 
         {shown === INPUT_MODES.FREE_TEXT ? (
           <TypingExercise
