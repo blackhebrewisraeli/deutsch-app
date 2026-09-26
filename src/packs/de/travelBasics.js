@@ -17,9 +17,10 @@ export const cefrFor = (de) => (de.trim().split(/\s+/).length < 4 ? 'A1' : 'A2')
 
 // "Good day (formal)" stays the shown gloss — the note is what tells the
 // formal and informal cards apart. The bare "Good day" is what a learner types,
-// so it is accepted too.
-const glossesFor = (en) => {
-  const bare = en.replace(/\s*\([^)]*\)/g, '').trim();
+// so it is accepted too. ` ?` not `\s*`: an unbounded run before `\(` backtracks
+// quadratically (Sonar S5852), and no phrase has more than one space there.
+export const glossesFor = (en) => {
+  const bare = en.replace(/ ?\([^)]*\)/g, '').trim();
   return bare && bare !== en ? [en, bare] : [en];
 };
 
