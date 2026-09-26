@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, Fragment } from 'react';
-import { Users, AlertTriangle } from 'lucide-react';
+import { Users, AlertTriangle, ArrowDown, ArrowUp } from 'lucide-react';
 import { useAuth, getSupabase } from '../../lib/auth.js';
 import { joinLeague, refreshLeague, fetchStandings, LEAGUES_ENABLED } from '../../lib/leagues.js';
 import { LEAGUE_SIZE, zoneCounts } from '../../lib/leagueZones.js';
@@ -157,8 +157,10 @@ export default function LeaderboardSection({ onSelectUser, onLeague, selfProfile
         const showRelegate = demote > 0 && relegationStart > promote && i === relegationStart;
         return (
           <Fragment key={row.user_id}>
-            {showPromote && <LeagueDivider text="↑ Promotion" color={COLORS.green} />}
-            {showRelegate && <LeagueDivider text="↓ Relegation" color={COLORS.red} />}
+            {showPromote && <LeagueDivider text="Promotion" color={COLORS.green} icon={ArrowUp} />}
+            {showRelegate && (
+              <LeagueDivider text="Relegation" color={COLORS.red} icon={ArrowDown} />
+            )}
             <LeagueRow
               rank={i + 1}
               member={isMe && selfProfile ? { ...row, profile: selfProfile } : row}

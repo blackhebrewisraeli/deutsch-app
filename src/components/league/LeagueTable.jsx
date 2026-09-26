@@ -153,7 +153,12 @@ function RowCells({ rank, member, isMe, copy }) {
         </span>
         {isMe ? <YouTag copy={copy} /> : null}
       </span>
-      <span style={XP_TEXT}>{leagueXpLabel(member.weekly_xp, copy)}</span>
+      {/* Full ink on the gold podium row. The subtle ink every other row uses
+          measured 2.37:1 on dark mode's goldSoft — the podium fill is a mid
+          tone there, not a tint. */}
+      <span style={{ ...XP_TEXT, color: rank === 1 ? COLORS.ink : COLORS.inkSoft }}>
+        {leagueXpLabel(member.weekly_xp, copy)}
+      </span>
     </>
   );
 }
@@ -251,8 +256,15 @@ export function LeagueEmptyRow({ rank, copy = leagueCopy() }) {
  * A labelled rule between two parts of the table: the promotion and relegation
  * cut-offs, and where the open seats begin. Decorative — the rows carry the
  * information — so it stays out of the list's item count.
+ *
+ * The zone colour is on the rules and the arrow, NOT on the label. The label
+ * sits on the recessed panel (paperDeep), where success green measured 4.32:1
+ * in light mode — under the 4.5:1 text floor the rendered-contrast audit holds.
+ * It was legible only while the list sat directly on the page ground. The
+ * label now uses the subtle ink every panel caption uses, and the green and red
+ * go to the non-text marks, which need 3:1.
  */
-export function LeagueDivider({ text, color = COLORS.mute }) {
+export function LeagueDivider({ text, color = COLORS.mute, icon: Icon = null }) {
   const rule = { flex: '1 1 0', height: 1, background: color, opacity: OPACITY.dim };
   return (
     <li
@@ -269,11 +281,14 @@ export function LeagueDivider({ text, color = COLORS.mute }) {
         fontWeight: FONT_WEIGHT.bold,
         letterSpacing: LETTER_SPACING.wide,
         textTransform: 'uppercase',
-        color,
+        color: COLORS.inkSoft,
       }}
     >
       <span style={rule} />
-      <span style={{ flexShrink: 0 }}>{text}</span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: SPACE[1], flexShrink: 0 }}>
+        {Icon ? <Icon size={FONT_SIZE.sm} color={color} strokeWidth={2.5} /> : null}
+        {text}
+      </span>
       <span style={rule} />
     </li>
   );
