@@ -5,6 +5,7 @@ import {
   TRAVEL_BASICS_ID,
   TRAVEL_BASICS_LEXICON,
   cefrFor,
+  glossesFor,
 } from './travelBasics';
 import { validateLexiconEntry } from '../validate';
 import { bestGlossMatch } from '../../lib/matching';
@@ -43,6 +44,26 @@ describe('Travel Basics', () => {
     const { en } = TRAVEL_BASICS_LEXICON['Guten Tag.'];
     expect(en[0]).toBe('Good day (formal)');
     expect(bestGlossMatch(en, 'Good day').distance).toBe(0);
+  });
+
+  it('strips a mid-string note without leaving a space before the punctuation', () => {
+    expect(glossesFor('Where is an automatic teller machine (ATM)?')[1]).toBe(
+      'Where is an automatic teller machine?'
+    );
+    expect(glossesFor('Emergency room (ER)/Accident and Emergency (A&E)')[1]).toBe(
+      'Emergency room/Accident and Emergency'
+    );
+  });
+
+  // One input per quantifier that could backtrack: the space before the note,
+  // and the note body (unclosed parens restart the scan at every `(`).
+  it.each([
+    ['spaces', `${' '.repeat(50_000)}x`],
+    ['unclosed parens', '('.repeat(50_000)],
+  ])('strips notes in linear time — %s', (_, input) => {
+    const t = performance.now();
+    glossesFor(input);
+    expect(performance.now() - t).toBeLessThan(500);
   });
 
   it('is a phrase deck, not a preset deck — unseen cards must not swell the due count', () => {
