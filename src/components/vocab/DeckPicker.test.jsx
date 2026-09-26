@@ -13,16 +13,19 @@ const props = {
 };
 
 describe('DeckPicker', () => {
-  it('renders the four curated decks', () => {
+  it('renders the curated decks and Travel Basics', () => {
     render(<DeckPicker {...props} />);
-    for (const name of ['Greetings', 'Food & Drink', 'Travel', 'Numbers']) {
+    for (const name of ['Greetings', 'Food & Drink', 'Travel 10', 'Numbers', 'Travel Basics 327']) {
       expect(screen.getByRole('button', { name: new RegExp(name) })).toBeInTheDocument();
     }
   });
 
   it('marks only the selected deck as pressed', () => {
     render(<DeckPicker {...props} deckId="travel" />);
-    expect(screen.getByRole('button', { name: /Travel/ })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /Travel 10/ })).toHaveAttribute(
+      'aria-pressed',
+      'true'
+    );
     expect(screen.getByRole('button', { name: /Greetings/ })).toHaveAttribute(
       'aria-pressed',
       'false'
@@ -353,7 +356,7 @@ describe('DeckPicker — collapsible (mobile)', () => {
     await userEvent.click(container.querySelector('summary'));
     expect(details.open).toBe(true);
 
-    await userEvent.click(screen.getByRole('button', { name: /Travel/ }));
+    await userEvent.click(screen.getByRole('button', { name: /Travel 10/ }));
     expect(onSelect).toHaveBeenCalledWith('travel');
     expect(details.open).toBe(false);
   });

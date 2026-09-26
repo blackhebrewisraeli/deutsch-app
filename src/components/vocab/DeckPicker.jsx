@@ -15,6 +15,7 @@ import { AUTO_DECKS, DECK_GROUPS } from '../../packs/de/autoDecks';
 import { filterCatalogByLevel } from '../../lib/levelGate';
 import { getUserLevel } from '../../lib/levelPref';
 import { INTERESTS_GROUP } from '../../lib/interests';
+import { TRAVEL_BASICS_DECK_DEFS } from '../../packs/de/travelBasics';
 
 // Tailwind max-w-md — keeps the picker a single readable column on a wide screen.
 const PICKER_MAX_WIDTH = 448;
@@ -81,6 +82,11 @@ const PRESETS = [
   { id: 'food', name: 'Food & Drink', count: 10 },
   { id: 'travel', name: 'Travel', count: 10 },
   { id: 'numbers', name: 'Numbers', count: 10 },
+  ...Object.entries(TRAVEL_BASICS_DECK_DEFS).map(([id, d]) => ({
+    id,
+    name: d.name,
+    count: d.cardIds.length,
+  })),
 ];
 
 /**
@@ -311,7 +317,8 @@ export default function DeckPicker({
           color: COLORS.mute,
         }}
       >
-        Vocabulary from Wiktionary (CC BY-SA), Tatoeba &amp; Leipzig (CC BY).
+        Vocabulary from Wiktionary (CC BY-SA), Tatoeba &amp; Leipzig (CC BY). Travel phrases from
+        Wikivoyage (CC BY-SA).
       </div>
     </div>
   );

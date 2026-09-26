@@ -2,6 +2,7 @@ import { useId } from 'react';
 import { COLORS, FONTS, FONT_SIZE, RADIUS, SHADOW, SPACE } from '../../lib/theme';
 import { AUTO_DECKS, DECK_GROUPS } from '../../packs/de/autoDecks';
 import { DECKS as PRESET_DECKS } from '../../packs/de/decks';
+import { TRAVEL_BASICS_DECK_DEFS } from '../../packs/de/travelBasics';
 import SectionLabel from '../ui/SectionLabel';
 import { filterCatalogByLevel } from '../../lib/levelGate';
 import { getUserLevel } from '../../lib/levelPref';
@@ -14,7 +15,10 @@ const groupsFor = (level, interestDecks) => {
   const groups = [
     {
       label: 'Preset decks',
-      items: Object.entries(PRESET_DECKS).map(([id, deck]) => ({ id, name: deck.name })),
+      items: Object.entries({ ...PRESET_DECKS, ...TRAVEL_BASICS_DECK_DEFS }).map(([id, deck]) => ({
+        id,
+        name: deck.name,
+      })),
     },
   ];
   if (interestDecks.length > 0) {

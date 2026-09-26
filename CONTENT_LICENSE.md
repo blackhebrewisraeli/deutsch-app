@@ -24,5 +24,6 @@ The German/English phrase pairs in `scripts/seed-data/apify_raw_sentences.json`
 are derived from the Wikivoyage "German phrasebook"
 (https://en.wikivoyage.org/wiki/German_phrasebook, revision 5347078; authors in
 the page history), licensed **CC BY-SA 4.0**
-(https://creativecommons.org/licenses/by-sa/4.0/). This is seed data and not yet
-shown in-app; give it in-app attribution like the lexicon's when it ships.
+(https://creativecommons.org/licenses/by-sa/4.0/). They ship in-app as the
+"Travel Basics" deck (`src/packs/de/travelBasics.js`), attributed in the
+vocabulary deck picker alongside the lexicon's sources.
